@@ -2,7 +2,7 @@
  * Navigation 타입 정의
  * 모든 화면의 route params를 여기서 중앙 관리
  */
-import type {GenerateResult} from '@/types';
+import type {GenerateResult, PostCreateData} from '@/types';
 
 /** Auth 스택 (비로그인 상태) */
 export type AuthStackParamList = {
@@ -32,5 +32,5 @@ export type RootStackParamList = {
   PostCreate: {result: GenerateResult; imageUri: string};
   PostComplete: {postId: number};
   PostDetail: {postId: number};
-  FridgeSelect: {latitude: number; longitude: number};
+  FridgeSelect: {postData?: Omit<PostCreateData, 'fridgeId'>; latitude?: number; longitude?: number};
 };

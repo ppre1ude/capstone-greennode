@@ -16,6 +16,10 @@ import MainTab from './MainTab';
 import LocationSetupScreen from '@/screens/location/LocationSetupScreen';
 import CameraScanScreen from '@/screens/camera/CameraScanScreen';
 import AnalysisResultScreen from '@/screens/camera/AnalysisResultScreen';
+import PostCreateScreen from '@/screens/post/PostCreateScreen';
+import FridgeSelectScreen from '@/screens/post/FridgeSelectScreen';
+import PostCompleteScreen from '@/screens/post/PostCompleteScreen';
+import PostDetailScreen from '@/screens/post/PostDetailScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -45,6 +49,23 @@ const AppNavigator = () => {
         <Stack.Screen
           name="AnalysisResult"
           component={AnalysisResultScreen}
+        />
+        <Stack.Screen
+          name="PostCreate"
+          component={PostCreateScreen}
+        />
+        <Stack.Screen
+          name="FridgeSelect"
+          component={FridgeSelectScreen}
+        />
+        <Stack.Screen
+          name="PostComplete"
+          component={PostCompleteScreen}
+          options={{gestureEnabled: false}}
+        />
+        <Stack.Screen
+          name="PostDetail"
+          component={PostDetailScreen}
         />
       </Stack.Navigator>
     </NavigationContainer>
