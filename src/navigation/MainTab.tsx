@@ -11,20 +11,16 @@ import type {MainTabParamList} from './types';
 import {colors} from '@/theme';
 
 import HomeScreen from '@/screens/home/HomeScreen';
+import MapScreen from '@/screens/map/MapScreen';
+import ChatListScreen from '@/screens/chat/ChatListScreen';
+import ProfileScreen from '@/screens/profile/ProfileScreen';
 
-// 임시 Placeholder 화면들 (Phase 3~6에서 교체 예정)
-const PlaceholderScreen = ({title}: {title: string}) => (
+const CameraPlaceholder = () => (
   <View style={placeholderStyles.container}>
-    <Text style={placeholderStyles.emoji}>🚧</Text>
-    <Text style={placeholderStyles.title}>{title}</Text>
-    <Text style={placeholderStyles.subtitle}>곧 만나요!</Text>
+    <Text style={placeholderStyles.emoji}>📷</Text>
+    <Text style={placeholderStyles.title}>AI 스캔</Text>
   </View>
 );
-
-const MapPlaceholder = () => <PlaceholderScreen title="지도" />;
-const CameraPlaceholder = () => <PlaceholderScreen title="AI 스캔" />;
-const ChatPlaceholder = () => <PlaceholderScreen title="채팅" />;
-const ProfilePlaceholder = () => <PlaceholderScreen title="내 정보" />;
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
@@ -72,7 +68,7 @@ const MainTab = () => {
       />
       <Tab.Screen
         name="Map"
-        component={MapPlaceholder}
+        component={MapScreen}
         options={{tabBarLabel: '지도'}}
       />
       {/* 
@@ -104,12 +100,12 @@ const MainTab = () => {
       />
       <Tab.Screen
         name="Chat"
-        component={ChatPlaceholder}
+        component={ChatListScreen}
         options={{tabBarLabel: '채팅'}}
       />
       <Tab.Screen
         name="Profile"
-        component={ProfilePlaceholder}
+        component={ProfileScreen}
         options={{tabBarLabel: '내정보'}}
       />
     </Tab.Navigator>
