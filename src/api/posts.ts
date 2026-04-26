@@ -13,12 +13,10 @@ const POSTS_PREFIX = '/api/v1/posts';
  */
 export const generatePost = async (
   image: {uri: string; type: string; name: string},
-  foodName: string,
   userHint?: string,
 ): Promise<ApiResponse<GenerateResult>> => {
   const formData = new FormData();
   formData.append('image', image as any);
-  formData.append('food_name', foodName);
   if (userHint) {
     formData.append('user_hint', userHint);
   }

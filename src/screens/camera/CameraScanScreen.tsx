@@ -11,7 +11,6 @@ import {
   View,
   Text,
   StyleSheet,
-  TextInput,
   TouchableOpacity,
   StatusBar,
   ActivityIndicator,
@@ -22,7 +21,6 @@ import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {RootStackParamList} from '@/navigation/types';
 import {Camera, useCameraDevice, useCameraPermission} from 'react-native-vision-camera';
 import {launchImageLibrary} from 'react-native-image-picker';
-import {colors} from '@/theme';
 import {styles} from './CameraScanScreen.styles';
 import {generatePost} from '@/api/posts';
 
@@ -31,7 +29,6 @@ type Props = NativeStackScreenProps<RootStackParamList, 'CameraScan'>;
 const CameraScanScreen = ({navigation}: Props) => {
   const {hasPermission, requestPermission} = useCameraPermission();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [foodName, setFoodName] = useState('');
   const device = useCameraDevice('back');
   const camera = useRef<any>(null);
 
@@ -100,18 +97,9 @@ const CameraScanScreen = ({navigation}: Props) => {
     type: string = 'image/jpeg',
     name: string = 'photo.jpg',
   ) => {
-    const normalizedFoodName = foodName.trim();
-    if (!normalizedFoodName) {
-      Alert.alert('식재료명 필요', 'AI 분석을 위해 식재료 이름을 입력해주세요.');
-      return;
-    }
-
     setIsAnalyzing(true);
     try {
-      const response = await generatePost(
-        {uri, type, name},
-        normalizedFoodName,
-      );
+      const response = await generatePost({uri, type, name});
 
       if (response.success && response.data) {
         navigation.replace('AnalysisResult', {
@@ -122,6 +110,12 @@ const CameraScanScreen = ({navigation}: Props) => {
         Alert.alert('분석 실패', response.message || 'AI 분석에 실패했습니다.');
       }
     } catch (error: any) {
+      console.warn('Generate post failed', {
+        message: error?.message,
+        status: error?.response?.status,
+        response: error?.response?.data,
+        image: {uri, type, name},
+      });
       const message = error?.response?.data?.message || '서버 오류가 발생했습니다.';
       Alert.alert('오류', message);
     } finally {
@@ -219,15 +213,6 @@ const CameraScanScreen = ({navigation}: Props) => {
 
       {/* 하단 컨트롤 */}
       <View style={styles.controls}>
-        <TextInput
-          style={styles.foodNameInput}
-          value={foodName}
-          onChangeText={setFoodName}
-          placeholder="식재료명 입력"
-          placeholderTextColor={colors.textPlaceholder}
-          editable={!isAnalyzing}
-        />
-
         <View style={styles.captureRow}>
           <TouchableOpacity
             style={styles.sideButton}
