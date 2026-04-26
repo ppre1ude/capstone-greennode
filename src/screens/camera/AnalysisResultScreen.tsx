@@ -25,12 +25,33 @@ import {colors} from '@/theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AnalysisResult'>;
 
+const getQualityMeta = (category?: string) => {
+  const normalized = (category || '').toLowerCase();
+
+  if (['fresh', 'good'].includes(normalized)) {
+    return {label: '신선', canShare: true};
+  }
+  if (['normal', 'mid', 'medium'].includes(normalized)) {
+    return {label: '보통', canShare: true};
+  }
+  if (['rotten', 'stale', 'bad'].includes(normalized)) {
+    return {label: '부패 의심', canShare: false};
+  }
+  return {label: category || '분석 중', canShare: true};
+};
+
 const AnalysisResultScreen = ({route, navigation}: Props) => {
   const {result, imageUri} = route.params;
 
-  const isFresh = result.aiAnalysis?.isFresh ?? false;
-  const score = result.aiAnalysis?.confidenceScore ?? 0;
-  const analysisMessage = result.aiAnalysis?.analysisMessage ?? '분석 결과를 불러올 수 없습니다.';
+  const quality = getQualityMeta(result.aiAnalysis?.category);
+  const detectedCrop =
+    result.detectedFruitKo ||
+    result.aiAnalysis?.detectedFruitKo ||
+    result.detectedFruit ||
+    result.aiAnalysis?.detectedFruit ||
+    '알 수 없음';
+  const analysisMessage =
+    result.aiAnalysis?.analysisMessage || '분석 결과를 불러올 수 없습니다.';
 
   return (
     <View style={styles.container}>
@@ -51,42 +72,46 @@ const AnalysisResultScreen = ({route, navigation}: Props) => {
         {/* 이미지 섹션 */}
         <View style={styles.imageSection}>
           <Image source={{uri: imageUri}} style={styles.scannedImage} />
-
-          {/* AI 결과 뱃지 */}
+          {/* AI result badge */}
           <View style={styles.resultBadgeContainer}>
             <View
               style={[
                 styles.resultBadge,
-                !isFresh && styles.resultBadgeError,
+                !quality.canShare && styles.resultBadgeError,
               ]}>
-              <Text style={styles.resultBadgeIcon}>{isFresh ? '✨' : '⚠️'}</Text>
+              <Text style={styles.resultBadgeIcon}>
+                {quality.canShare ? 'OK' : '!'}
+              </Text>
               <Text style={styles.resultBadgeText}>
-                {isFresh ? '나눔 권장' : '나눔 주의'}
+                {quality.canShare ? '나눔 가능' : '나눔 주의'}
               </Text>
             </View>
           </View>
         </View>
 
-        {/* 상세 분석 내용 */}
+        {/* analysis content */}
         <View style={styles.analysisCard}>
           <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>AI 신선도 리포트</Text>
-            <View style={styles.scoreCircle}>
-              <Text style={styles.scoreText}>{score}%</Text>
+            <Text style={styles.cardTitle}>AI 분석 결과</Text>
+            <View style={styles.qualityPill}>
+              <Text style={styles.qualityPillText}>{quality.label}</Text>
             </View>
           </View>
 
           <View style={styles.divider} />
 
-          {/* 추천 카테고리 */}
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>추천 카테고리</Text>
-            <Text style={styles.infoValue}>{result.suggestedCategory || '식재료'}</Text>
+            <Text style={styles.infoLabel}>판별 농산물</Text>
+            <Text style={styles.infoValue}>{detectedCrop}</Text>
           </View>
 
-          {/* 종합 평가 */}
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>품질 분류</Text>
+            <Text style={styles.infoValue}>{quality.label}</Text>
+          </View>
+
           <View style={styles.summaryBox}>
-            <Text style={styles.summaryTitle}>종합 평가</Text>
+            <Text style={styles.summaryTitle}>분석 메모</Text>
             <Text style={styles.summaryText}>{analysisMessage}</Text>
           </View>
         </View>
@@ -101,7 +126,7 @@ const AnalysisResultScreen = ({route, navigation}: Props) => {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.nextButton, !isFresh && styles.nextButtonDisabled]}
+          style={[styles.nextButton, !quality.canShare && styles.nextButtonDisabled]}
           onPress={() => {
             navigation.replace('PostCreate', {
               result,
@@ -214,18 +239,19 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.textPrimary,
   },
-  scoreCircle: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+  qualityPill: {
+    minWidth: 64,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: colors.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
     borderColor: colors.primary,
+    paddingHorizontal: 12,
   },
-  scoreText: {
-    fontSize: 16,
+  qualityPillText: {
+    fontSize: 14,
     fontWeight: '800',
     color: colors.primary,
   },
