@@ -12,7 +12,6 @@ import {
   View,
   Text,
   TextInput,
-  StyleSheet,
   TouchableOpacity,
   StatusBar,
   ScrollView,
@@ -23,13 +22,39 @@ import {
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {RootStackParamList} from '@/navigation/types';
 import {colors} from '@/theme';
+import {styles} from './PostCreateScreen.styles';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PostCreate'>;
 
 const CATEGORIES = ['과일', '채소', '가공식품', '유제품', '기타'];
 
+const QUALITY_LABELS: Record<string, string> = {
+  fresh: '신선',
+  normal: '보통',
+  mid: '보통',
+  stale: '부패 의심',
+  rotten: '부패 의심',
+};
+
+const getQualityLabel = (category?: string) => {
+  if (!category) {
+    return '분석 완료';
+  }
+
+  return QUALITY_LABELS[category.toLowerCase()] ?? category;
+};
+
+const formatDateOnly = (date: Date) => date.toISOString().slice(0, 10);
+
 const PostCreateScreen = ({route, navigation}: Props) => {
   const {result, imageUri} = route.params;
+  const detectedCrop =
+    result.detectedFruitKo ||
+    result.aiAnalysis?.detectedFruitKo ||
+    result.detectedFruit ||
+    result.aiAnalysis?.detectedFruit ||
+    '알 수 없음';
+  const qualityLabel = getQualityLabel(result.aiAnalysis?.category);
 
   const [title, setTitle] = useState(result.suggestedTitle || '');
   const [category, setCategory] = useState(result.suggestedCategory || '과일');
@@ -52,7 +77,7 @@ const PostCreateScreen = ({route, navigation}: Props) => {
         description,
         category,
         imageToken: result.imageToken,
-        expirationDate: expDate.toISOString(),
+        expirationDate: formatDateOnly(expDate),
       },
     });
   };
@@ -80,11 +105,23 @@ const PostCreateScreen = ({route, navigation}: Props) => {
           <Image source={{uri: imageUri}} style={styles.image} />
           <View style={styles.aiBadge}>
             <Text style={styles.aiBadgeIcon}>✨</Text>
-            <Text style={styles.aiBadgeText}>AI 자동 완성됨</Text>
+            <Text style={styles.aiBadgeText}>AI 분석 완료</Text>
           </View>
         </View>
 
         <View style={styles.form}>
+          <View style={styles.analysisCard}>
+            <View style={styles.analysisItem}>
+              <Text style={styles.analysisLabel}>판별 농산물</Text>
+              <Text style={styles.analysisValue}>{detectedCrop}</Text>
+            </View>
+            <View style={styles.analysisDivider} />
+            <View style={styles.analysisItem}>
+              <Text style={styles.analysisLabel}>품질 분류</Text>
+              <Text style={styles.analysisValue}>{qualityLabel}</Text>
+            </View>
+          </View>
+
           {/* 제목 */}
           <View style={styles.field}>
             <Text style={styles.label}>제목</Text>
@@ -99,7 +136,7 @@ const PostCreateScreen = ({route, navigation}: Props) => {
 
           {/* 카테고리 */}
           <View style={styles.field}>
-            <Text style={styles.label}>카테고리</Text>
+            <Text style={styles.label}>나눔 카테고리</Text>
             <View style={styles.categoryContainer}>
               {CATEGORIES.map(cat => (
                 <TouchableOpacity
@@ -152,153 +189,5 @@ const PostCreateScreen = ({route, navigation}: Props) => {
     </KeyboardAvoidingView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    height: 56,
-    paddingHorizontal: 16,
-    marginTop: Platform.OS === 'ios' ? 44 : 8,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
-  },
-  headerButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'flex-start',
-  },
-  headerIcon: {
-    fontSize: 22,
-    color: colors.primary,
-  },
-  headerTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: colors.textPrimary,
-  },
-  headerSpacer: {width: 40},
-  scrollContent: {
-    paddingBottom: 40,
-  },
-  imagePreview: {
-    height: 200,
-    backgroundColor: colors.surface,
-    position: 'relative',
-  },
-  image: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
-  },
-  aiBadge: {
-    position: 'absolute',
-    bottom: 16,
-    right: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(30, 98, 59, 0.9)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    gap: 4,
-  },
-  aiBadgeIcon: {fontSize: 12},
-  aiBadgeText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  form: {
-    padding: 24,
-    gap: 24,
-  },
-  field: {
-    gap: 8,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    marginLeft: 4,
-  },
-  input: {
-    height: 52,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    fontSize: 15,
-    color: colors.textPrimary,
-    backgroundColor: colors.surface,
-  },
-  textArea: {
-    height: 120,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 16,
-    fontSize: 15,
-    color: colors.textPrimary,
-    backgroundColor: colors.surface,
-  },
-  categoryContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  categoryChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: '#FFFFFF',
-  },
-  categoryChipActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  categoryText: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    fontWeight: '500',
-  },
-  categoryTextActive: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-  },
-  footer: {
-    paddingHorizontal: 24,
-    paddingBottom: Platform.OS === 'ios' ? 40 : 24,
-    paddingTop: 16,
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: colors.borderLight,
-  },
-  submitButton: {
-    height: 56,
-    backgroundColor: colors.primary,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  submitButtonDisabled: {
-    opacity: 0.5,
-  },
-  submitButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-});
 
 export default PostCreateScreen;
