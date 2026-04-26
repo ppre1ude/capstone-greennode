@@ -20,3 +20,11 @@ buildscript {
 }
 
 apply plugin: "com.facebook.react.rootproject"
+
+allprojects {
+    configurations.configureEach {
+        resolutionStrategy {
+            force("com.google.android.gms:play-services-location:21.0.1")
+        }
+    }
+}
