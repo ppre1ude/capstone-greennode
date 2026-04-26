@@ -57,10 +57,18 @@ const SplashScreen = ({navigation}: Props) => {
     const authState = useAuthStore.getState();
     if (authState.isLoading) {return;}
 
-    const navigate = async () => {
+    const doNavigate = async () => {
       if (authState.isLoggedIn) {
-        // TODO: Phase 2에서 Main으로 이동
-        // navigation.replace('Main');
+        // 로그인됨 → 위치 유무에 따라 분기
+        // AuthStack을 벗어나서 RootStack 레벨로 이동
+        const rootNav = navigation.getParent();
+        if (rootNav) {
+          if (authState.hasLocation) {
+            rootNav.reset({index: 0, routes: [{name: 'Main'}]});
+          } else {
+            rootNav.reset({index: 0, routes: [{name: 'LocationSetup'}]});
+          }
+        }
       } else {
         const onboarded = await hasOnboarded();
         if (onboarded) {
@@ -71,7 +79,7 @@ const SplashScreen = ({navigation}: Props) => {
       }
     };
 
-    navigate();
+    doNavigate();
   }, [isLoggedIn, useAuthStore(state => state.isLoading)]);
 
   return (

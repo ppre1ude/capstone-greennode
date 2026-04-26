@@ -58,6 +58,16 @@ const LoginEmailScreen = ({navigation}: Props) => {
         const meResponse = await getMe();
         if (meResponse.success && meResponse.data) {
           setUser(meResponse.data);
+
+          // 위치 유무에 따라 분기
+          const rootNav = navigation.getParent();
+          if (rootNav) {
+            if (meResponse.data.latitude !== null) {
+              rootNav.reset({index: 0, routes: [{name: 'Main'}]});
+            } else {
+              rootNav.reset({index: 0, routes: [{name: 'LocationSetup'}]});
+            }
+          }
         }
 
         // TODO: Phase 2에서 LocationSetup / Main 분기

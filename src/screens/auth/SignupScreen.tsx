@@ -78,8 +78,11 @@ const SignupScreen = ({navigation}: Props) => {
           setUser(meRes.data);
         }
 
-        // TODO: Phase 2에서 LocationSetup 이동
-        Alert.alert('🎉 환영합니다!', '회원가입이 완료되었습니다.');
+        // 회원가입 직후 → 항상 LocationSetup
+        const rootNav = navigation.getParent();
+        if (rootNav) {
+          rootNav.reset({index: 0, routes: [{name: 'LocationSetup'}]});
+        }
       }
     } catch (error: any) {
       const message =
