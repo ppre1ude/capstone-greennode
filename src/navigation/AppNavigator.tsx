@@ -14,6 +14,8 @@ import type {RootStackParamList} from './types';
 import AuthStack from './AuthStack';
 import MainTab from './MainTab';
 import LocationSetupScreen from '@/screens/location/LocationSetupScreen';
+import CameraScanScreen from '@/screens/camera/CameraScanScreen';
+import AnalysisResultScreen from '@/screens/camera/AnalysisResultScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -31,6 +33,18 @@ const AppNavigator = () => {
           name="Main"
           component={MainTab}
           options={{gestureEnabled: false}}
+        />
+        <Stack.Screen
+          name="CameraScan"
+          component={CameraScanScreen}
+          options={{
+            presentation: 'fullScreenModal',
+            animation: 'slide_from_bottom',
+          }}
+        />
+        <Stack.Screen
+          name="AnalysisResult"
+          component={AnalysisResultScreen}
         />
       </Stack.Navigator>
     </NavigationContainer>

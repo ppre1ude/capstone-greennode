@@ -17,7 +17,7 @@ export type AuthStackParamList = {
 export type MainTabParamList = {
   Home: undefined;
   Map: undefined;
-  CameraScan: undefined;
+  CameraDummy: undefined;
   Chat: undefined;
   Profile: undefined;
 };
@@ -27,6 +27,7 @@ export type RootStackParamList = {
   Auth: undefined;
   LocationSetup: undefined;
   Main: undefined;
+  CameraScan: undefined;
   AnalysisResult: {result: GenerateResult; imageUri: string};
   PostCreate: {result: GenerateResult; imageUri: string};
   PostComplete: {postId: number};

@@ -50,7 +50,7 @@ const TAB_ICONS: Record<string, {active: string; inactive: string}> = {
 const MainTab = () => {
   return (
     <Tab.Navigator
-      screenOptions={({route}) => ({
+      screenOptions={({route, navigation}) => ({
         headerShown: false,
         tabBarStyle: styles.tabBar,
         tabBarActiveTintColor: colors.primary,
@@ -75,13 +75,32 @@ const MainTab = () => {
         component={MapPlaceholder}
         options={{tabBarLabel: '지도'}}
       />
+      {/* 
+        카메라 탭: 실제 화면은 RootStack의 CameraScan을 띄웁니다.
+        여기서는 탭 바에 버튼만 렌더링하기 위해 더미 리스너를 사용합니다.
+      */}
       <Tab.Screen
-        name="CameraScan"
+        name="CameraDummy"
         component={CameraPlaceholder}
         options={{
           tabBarLabel: () => null,
-          tabBarButton: props => <CameraTabButton onPress={() => props.onPress?.(undefined as any)} />,
+          tabBarButton: props => (
+            <CameraTabButton 
+              onPress={() => {
+                // RootStack으로 이동
+                // @ts-ignore
+                props.onPress?.({} as any);
+              }} 
+            />
+          ),
         }}
+        listeners={({navigation}) => ({
+          tabPress: e => {
+            e.preventDefault();
+            // RootStack의 CameraScan으로 이동
+            navigation.getParent()?.navigate('CameraScan');
+          },
+        })}
       />
       <Tab.Screen
         name="Chat"
