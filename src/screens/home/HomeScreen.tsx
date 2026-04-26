@@ -20,6 +20,7 @@ import {
   StatusBar,
   Platform,
 } from 'react-native';
+import {useNavigation} from '@react-navigation/native';
 import type {Post} from '@/types';
 import {getNearbyPosts} from '@/api/posts';
 import {useAuthStore} from '@/store/authStore';
@@ -30,6 +31,7 @@ const HomeScreen = () => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const user = useAuthStore(state => state.user);
+  const navigation = useNavigation<any>();
 
   const fetchPosts = useCallback(async () => {
     if (!user?.latitude || !user?.longitude) {return;}
@@ -96,7 +98,9 @@ const HomeScreen = () => {
             <Text style={styles.heroSubtitle}>
               사진 한 장으로 나눔 가능 여부 확인
             </Text>
-            <TouchableOpacity style={styles.heroButton}>
+            <TouchableOpacity
+              style={styles.heroButton}
+              onPress={() => navigation.getParent()?.navigate('CameraScan')}>
               <Text style={styles.heroButtonText}>지금 시작하기</Text>
             </TouchableOpacity>
           </View>
@@ -134,9 +138,11 @@ const HomeScreen = () => {
                 <NearbyPostCard
                   key={post.id}
                   post={post}
-                  onPress={() => {
-                    // TODO: PostDetail로 이동 (Phase 4)
-                  }}
+                  onPress={() =>
+                    navigation.getParent()?.navigate('PostDetail', {
+                      postId: post.id,
+                    })
+                  }
                 />
               ))}
             </View>

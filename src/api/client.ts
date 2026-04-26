@@ -8,17 +8,11 @@
  * @see FRONTEND_INTEGRATION_GUIDE.md § 1~2
  */
 import axios, {InternalAxiosRequestConfig, AxiosError} from 'axios';
-import {Platform} from 'react-native';
 import {getToken, removeToken} from '@/utils/storage';
+import {API_BASE_URL} from '@/config/api';
+import {emitUnauthorized} from './authEvents';
 
-// ── Base URL 분기 ────────────────────────────────
-// Android 에뮬레이터: 10.0.2.2 = host의 localhost
-// iOS 시뮬레이터:     localhost 그대로 사용
-const BASE_URL = Platform.select({
-  android: 'http://10.0.2.2:8080',
-  ios: 'http://localhost:8080',
-  default: 'http://localhost:8080',
-});
+const BASE_URL = API_BASE_URL;
 
 const apiClient = axios.create({
   baseURL: BASE_URL,
@@ -47,7 +41,7 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401) {
       // JWT 만료 → 토큰 삭제, 앱에서 재로그인 유도
       await removeToken();
-      // TODO: Navigation reset to login (Phase 1에서 구현)
+      emitUnauthorized();
     }
     return Promise.reject(error);
   },

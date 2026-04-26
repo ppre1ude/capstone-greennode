@@ -11,6 +11,7 @@ import {
   View,
   Text,
   StyleSheet,
+  TextInput,
   TouchableOpacity,
   StatusBar,
   ActivityIndicator,
@@ -30,6 +31,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'CameraScan'>;
 const CameraScanScreen = ({navigation}: Props) => {
   const {hasPermission, requestPermission} = useCameraPermission();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [foodName, setFoodName] = useState('');
   const device = useCameraDevice('back');
   const camera = useRef<any>(null);
 
@@ -98,15 +100,17 @@ const CameraScanScreen = ({navigation}: Props) => {
     type: string = 'image/jpeg',
     name: string = 'photo.jpg',
   ) => {
+    const normalizedFoodName = foodName.trim();
+    if (!normalizedFoodName) {
+      Alert.alert('식재료명 필요', 'AI 분석을 위해 식재료 이름을 입력해주세요.');
+      return;
+    }
+
     setIsAnalyzing(true);
     try {
-      // TODO: 추후 food_name을 유저에게 물어보는 UI가 필요할 수 있음
-      // 현재 MVP에서는 AI가 추론하거나 더미 텍스트로 넘김
-      const foodName = 'food'; 
-      
       const response = await generatePost(
         {uri, type, name},
-        foodName,
+        normalizedFoodName,
       );
 
       if (response.success && response.data) {
@@ -211,20 +215,34 @@ const CameraScanScreen = ({navigation}: Props) => {
 
       {/* 하단 컨트롤 */}
       <View style={styles.controls}>
-        <TouchableOpacity style={styles.sideButton} onPress={handleGallery} disabled={isAnalyzing}>
-          <Text style={styles.sideButtonIcon}>🖼️</Text>
-        </TouchableOpacity>
+        <TextInput
+          style={styles.foodNameInput}
+          value={foodName}
+          onChangeText={setFoodName}
+          placeholder="식재료명 입력"
+          placeholderTextColor={colors.textPlaceholder}
+          editable={!isAnalyzing}
+        />
 
-        <TouchableOpacity 
-          style={[styles.shutterContainer, isAnalyzing && {opacity: 0.5}]} 
-          onPress={handleCapture}
-          disabled={isAnalyzing}>
-          <View style={styles.shutterButton} />
-        </TouchableOpacity>
+        <View style={styles.captureRow}>
+          <TouchableOpacity
+            style={styles.sideButton}
+            onPress={handleGallery}
+            disabled={isAnalyzing}>
+            <Text style={styles.sideButtonIcon}>🖼️</Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity style={styles.sideButton} disabled={isAnalyzing}>
-          <Text style={styles.sideButtonIcon}>🔄</Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.shutterContainer, isAnalyzing && {opacity: 0.5}]}
+            onPress={handleCapture}
+            disabled={isAnalyzing}>
+            <View style={styles.shutterButton} />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.sideButton} disabled={isAnalyzing}>
+            <Text style={styles.sideButtonIcon}>🔄</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );

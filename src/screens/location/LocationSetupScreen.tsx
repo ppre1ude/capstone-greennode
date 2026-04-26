@@ -18,13 +18,12 @@ import {
   PermissionsAndroid,
 } from 'react-native';
 import Geolocation from 'react-native-geolocation-service';
-import messaging from '@react-native-firebase/messaging';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {RootStackParamList} from '@/navigation/types';
 import {updateLocation} from '@/api/auth';
 import {useAuthStore} from '@/store/authStore';
-import {colors} from '@/theme';
 import {styles} from './LocationSetupScreen.styles';
+import {getFcmToken} from '@/services/deviceRegistration';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'LocationSetup'>;
 
@@ -42,20 +41,8 @@ const LocationSetupScreen = ({navigation}: Props) => {
   const setUser = useAuthStore(state => state.setUser);
 
   const preparePushToken = useCallback(async () => {
-    try {
-      if (Platform.OS === 'android' && Number(Platform.Version) >= 33) {
-        await PermissionsAndroid.request(
-          PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
-        );
-      }
-
-      await messaging().requestPermission();
-      await messaging().registerDeviceForRemoteMessages();
-      const token = await messaging().getToken();
-      setFcmToken(token);
-    } catch (error) {
-      console.warn('FCM token error:', error);
-    }
+    const token = await getFcmToken();
+    setFcmToken(token);
   }, []);
 
   const getCurrentPosition = useCallback(() => {

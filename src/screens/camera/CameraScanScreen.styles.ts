@@ -130,11 +130,24 @@ export const styles = StyleSheet.create({
   // 하단 컨트롤
   controls: {
     height: 160,
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+    paddingBottom: 20,
+    gap: 16,
+  },
+  foodNameInput: {
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    paddingHorizontal: 16,
+    color: colors.textPrimary,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  captureRow: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    paddingHorizontal: 32,
-    paddingBottom: 20,
   },
   sideButton: {
     width: 48,

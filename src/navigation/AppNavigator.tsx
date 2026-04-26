@@ -6,10 +6,16 @@
  * - 로그인 + 위치 미등록 → LocationSetup
  * - 로그인 + 위치 등록 → MainTab
  */
-import React from 'react';
-import {NavigationContainer} from '@react-navigation/native';
+import React, {useEffect} from 'react';
+import {
+  createNavigationContainerRef,
+  NavigationContainer,
+} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import type {RootStackParamList} from './types';
+import {onUnauthorized} from '@/api/authEvents';
+import {useAuthStore} from '@/store/authStore';
+import {refreshDeviceRegistration} from '@/services/deviceRegistration';
 
 import AuthStack from './AuthStack';
 import MainTab from './MainTab';
@@ -22,10 +28,35 @@ import PostCompleteScreen from '@/screens/post/PostCompleteScreen';
 import PostDetailScreen from '@/screens/post/PostDetailScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
+export const rootNavigationRef =
+  createNavigationContainerRef<RootStackParamList>();
 
 const AppNavigator = () => {
+  const user = useAuthStore(state => state.user);
+  const isLoggedIn = useAuthStore(state => state.isLoggedIn);
+  const logout = useAuthStore(state => state.logout);
+
+  useEffect(() => {
+    return onUnauthorized(async () => {
+      await logout();
+      if (rootNavigationRef.isReady()) {
+        rootNavigationRef.reset({index: 0, routes: [{name: 'Auth'}]});
+      }
+    });
+  }, [logout]);
+
+  useEffect(() => {
+    if (!isLoggedIn || !user) {
+      return;
+    }
+
+    refreshDeviceRegistration(user).catch(error => {
+      console.warn('Device registration refresh failed:', error);
+    });
+  }, [isLoggedIn, user]);
+
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={rootNavigationRef}>
       <Stack.Navigator screenOptions={{headerShown: false}}>
         <Stack.Screen name="Auth" component={AuthStack} />
         <Stack.Screen
