@@ -129,7 +129,6 @@ const MapScreen = () => {
         style={StyleSheet.absoluteFill}
         provider={PROVIDER_DEFAULT}
         initialRegion={initialRegion}
-        showsUserLocation={true}
         showsMyLocationButton={false}>
         {/* 반경 표시 원 */}
         <Circle

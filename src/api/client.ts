@@ -17,9 +17,6 @@ const BASE_URL = API_BASE_URL;
 const apiClient = axios.create({
   baseURL: BASE_URL,
   timeout: 15000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
 });
 
 // ── Request Interceptor: JWT 토큰 자동 주입 ──────
