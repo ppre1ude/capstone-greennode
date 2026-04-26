@@ -60,6 +60,9 @@ export const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
   },
+  statusSpinner: {
+    marginRight: 6,
+  },
   statusText: {
     color: '#FFFFFF',
     fontSize: 14,
@@ -169,6 +172,9 @@ export const styles = StyleSheet.create({
     borderColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  shutterDisabled: {
+    opacity: 0.5,
   },
   shutterButton: {
     width: 64,

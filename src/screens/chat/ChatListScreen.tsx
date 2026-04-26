@@ -84,17 +84,21 @@ const ChatListScreen = () => {
         keyExtractor={item => item.id}
         renderItem={renderItem}
         contentContainerStyle={styles.listContainer}
-        ItemSeparatorComponent={() => <View style={styles.separator} />}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyIcon}>💬</Text>
-            <Text style={styles.emptyText}>아직 채팅 내역이 없습니다.</Text>
-          </View>
-        }
+        ItemSeparatorComponent={ChatSeparator}
+        ListEmptyComponent={ChatEmpty}
       />
     </View>
   );
 };
+
+const ChatSeparator = () => <View style={styles.separator} />;
+
+const ChatEmpty = () => (
+  <View style={styles.emptyContainer}>
+    <Text style={styles.emptyIcon}>💬</Text>
+    <Text style={styles.emptyText}>아직 채팅 내역이 없습니다.</Text>
+  </View>
+);
 
 const styles = StyleSheet.create({
   container: {

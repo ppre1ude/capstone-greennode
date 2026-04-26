@@ -28,6 +28,7 @@ const SplashScreen = ({navigation}: Props) => {
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
   const checkAuth = useAuthStore(state => state.checkAuth);
   const isLoggedIn = useAuthStore(state => state.isLoggedIn);
+  const isLoading = useAuthStore(state => state.isLoading);
 
   useEffect(() => {
     // 로고 페이드인 + 스케일 애니메이션
@@ -51,7 +52,7 @@ const SplashScreen = ({navigation}: Props) => {
     }, 1500);
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [checkAuth, fadeAnim, scaleAnim]);
 
   useEffect(() => {
     const authState = useAuthStore.getState();
@@ -80,7 +81,7 @@ const SplashScreen = ({navigation}: Props) => {
     };
 
     doNavigate();
-  }, [isLoggedIn, useAuthStore(state => state.isLoading)]);
+  }, [isLoading, isLoggedIn, navigation]);
 
   return (
     <View style={styles.container}>
@@ -136,7 +137,7 @@ const LoadingDot = ({delay}: {delay: number}) => {
     );
     animation.start();
     return () => animation.stop();
-  }, []);
+  }, [delay, opacity]);
 
   return <Animated.View style={[styles.dot, {opacity}]} />;
 };

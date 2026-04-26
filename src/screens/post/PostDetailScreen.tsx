@@ -7,7 +7,7 @@
  *
  * @wireframe (별도 와이어프레임은 없으나, 피드 상세 기능을 위해 필요)
  */
-import React, {useEffect, useState} from 'react';
+import React, {useCallback, useEffect, useState} from 'react';
 import {
   View,
   Text,
@@ -36,11 +36,7 @@ const PostDetailScreen = ({route, navigation}: Props) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  useEffect(() => {
-    fetchPostDetail();
-  }, [postId]);
-
-  const fetchPostDetail = async () => {
+  const fetchPostDetail = useCallback(async () => {
     try {
       const response = await getPostDetail(postId);
       if (response.success && response.data) {
@@ -56,7 +52,11 @@ const PostDetailScreen = ({route, navigation}: Props) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [navigation, postId]);
+
+  useEffect(() => {
+    fetchPostDetail();
+  }, [fetchPostDetail]);
 
   const handleDelete = () => {
     Alert.alert(
@@ -77,7 +77,7 @@ const PostDetailScreen = ({route, navigation}: Props) => {
               } else {
                 Alert.alert('오류', response.message || '삭제에 실패했습니다.');
               }
-            } catch (error) {
+            } catch {
               Alert.alert('오류', '서버에 연결할 수 없습니다.');
             } finally {
               setIsDeleting(false);

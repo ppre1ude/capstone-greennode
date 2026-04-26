@@ -6,7 +6,7 @@
  *
  * @wireframe wireframe-foodlink/map.html
  */
-import React, {useState, useEffect, useRef} from 'react';
+import React, {useState, useEffect, useRef, useCallback} from 'react';
 import {
   View,
   Text,
@@ -38,11 +38,7 @@ const MapScreen = () => {
     longitudeDelta: 0.04,
   };
 
-  useEffect(() => {
-    fetchFridges();
-  }, [user]);
-
-  const fetchFridges = async () => {
+  const fetchFridges = useCallback(async () => {
     try {
       const lat = user?.latitude || 35.1595;
       const lng = user?.longitude || 126.9136;
@@ -53,7 +49,11 @@ const MapScreen = () => {
     } catch (error) {
       console.warn('Map: Failed to fetch fridges', error);
     }
-  };
+  }, [user?.latitude, user?.longitude]);
+
+  useEffect(() => {
+    fetchFridges();
+  }, [fetchFridges]);
 
   const handleMarkerPress = (fridge: Fridge, index: number) => {
     setSelectedFridgeId(fridge.id);

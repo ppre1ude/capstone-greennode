@@ -25,7 +25,11 @@ const CameraPlaceholder = () => (
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
 /** 중앙 FAB 카메라 버튼 */
-const CameraTabButton = ({onPress}: {onPress?: () => void}) => (
+const CameraTabButton = ({
+  onPress,
+}: {
+  onPress?: React.ComponentProps<typeof TouchableOpacity>['onPress'];
+}) => (
   <TouchableOpacity style={fabStyles.wrapper} onPress={onPress}>
     <View style={fabStyles.button}>
       <Text style={fabStyles.icon}>📷</Text>
@@ -43,33 +47,66 @@ const TAB_ICONS: Record<string, {active: string; inactive: string}> = {
   Profile: {active: '👤', inactive: '👤'},
 };
 
+const TabIcon = ({
+  routeName,
+  focused,
+}: {
+  routeName: keyof MainTabParamList;
+  focused: boolean;
+}) => {
+  const icons = TAB_ICONS[routeName];
+  return (
+    <Text style={styles.tabIcon}>
+      {focused ? icons?.active : icons?.inactive}
+    </Text>
+  );
+};
+
+const homeIcon = ({focused}: {focused: boolean}) => (
+  <TabIcon routeName="Home" focused={focused} />
+);
+
+const mapIcon = ({focused}: {focused: boolean}) => (
+  <TabIcon routeName="Map" focused={focused} />
+);
+
+const chatIcon = ({focused}: {focused: boolean}) => (
+  <TabIcon routeName="Chat" focused={focused} />
+);
+
+const profileIcon = ({focused}: {focused: boolean}) => (
+  <TabIcon routeName="Profile" focused={focused} />
+);
+
+const emptyLabel = () => null;
+
+const cameraTabButton = ({
+  onPress,
+}: {
+  onPress?: React.ComponentProps<typeof TouchableOpacity>['onPress'];
+}) => (
+  <CameraTabButton onPress={onPress} />
+);
+
 const MainTab = () => {
   return (
     <Tab.Navigator
-      screenOptions={({route, navigation}) => ({
+      screenOptions={{
         headerShown: false,
         tabBarStyle: styles.tabBar,
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textTertiary,
         tabBarLabelStyle: styles.tabLabel,
-        tabBarIcon: ({focused}) => {
-          const icons = TAB_ICONS[route.name];
-          return (
-            <Text style={styles.tabIcon}>
-              {focused ? icons?.active : icons?.inactive}
-            </Text>
-          );
-        },
-      })}>
+      }}>
       <Tab.Screen
         name="Home"
         component={HomeScreen}
-        options={{tabBarLabel: '홈'}}
+        options={{tabBarLabel: '홈', tabBarIcon: homeIcon}}
       />
       <Tab.Screen
         name="Map"
         component={MapScreen}
-        options={{tabBarLabel: '지도'}}
+        options={{tabBarLabel: '지도', tabBarIcon: mapIcon}}
       />
       {/* 
         카메라 탭: 실제 화면은 RootStack의 CameraScan을 띄웁니다.
@@ -79,16 +116,8 @@ const MainTab = () => {
         name="CameraDummy"
         component={CameraPlaceholder}
         options={{
-          tabBarLabel: () => null,
-          tabBarButton: props => (
-            <CameraTabButton 
-              onPress={() => {
-                // RootStack으로 이동
-                // @ts-ignore
-                props.onPress?.({} as any);
-              }} 
-            />
-          ),
+          tabBarLabel: emptyLabel,
+          tabBarButton: cameraTabButton,
         }}
         listeners={({navigation}) => ({
           tabPress: e => {
@@ -101,12 +130,12 @@ const MainTab = () => {
       <Tab.Screen
         name="Chat"
         component={ChatListScreen}
-        options={{tabBarLabel: '채팅'}}
+        options={{tabBarLabel: '채팅', tabBarIcon: chatIcon}}
       />
       <Tab.Screen
         name="Profile"
         component={ProfileScreen}
-        options={{tabBarLabel: '내정보'}}
+        options={{tabBarLabel: '내정보', tabBarIcon: profileIcon}}
       />
     </Tab.Navigator>
   );

@@ -4,7 +4,7 @@
  * PostCreateScreen에서 전달받은 postData에
  * 사용자가 선택한 fridgeId를 더해 최종적으로 서버에 게시글 등록 요청(createPost)
  */
-import React, {useEffect, useState} from 'react';
+import React, {useCallback, useEffect, useState} from 'react';
 import {
   View,
   Text,
@@ -34,16 +34,7 @@ const FridgeSelectScreen = ({route, navigation}: Props) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
-    if (user?.latitude && user?.longitude) {
-      fetchFridges(user.latitude, user.longitude);
-    } else {
-      Alert.alert('위치 정보 없음', '위치 정보를 확인할 수 없습니다.');
-      navigation.goBack();
-    }
-  }, [user]);
-
-  const fetchFridges = async (lat: number, lng: number) => {
+  const fetchFridges = useCallback(async (lat: number, lng: number) => {
     try {
       const response = await getAvailableFridges(lat, lng);
       if (response.success && response.data) {
@@ -54,7 +45,16 @@ const FridgeSelectScreen = ({route, navigation}: Props) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (user?.latitude && user?.longitude) {
+      fetchFridges(user.latitude, user.longitude);
+    } else {
+      Alert.alert('위치 정보 없음', '위치 정보를 확인할 수 없습니다.');
+      navigation.goBack();
+    }
+  }, [fetchFridges, navigation, user]);
 
   const handleComplete = async () => {
     if (!selectedFridgeId || !postData) {return;}

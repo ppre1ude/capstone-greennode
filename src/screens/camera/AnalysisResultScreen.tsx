@@ -57,7 +57,7 @@ const AnalysisResultScreen = ({route, navigation}: Props) => {
             <View
               style={[
                 styles.resultBadge,
-                !isFresh && {backgroundColor: colors.error},
+                !isFresh && styles.resultBadgeError,
               ]}>
               <Text style={styles.resultBadgeIcon}>{isFresh ? '✨' : '⚠️'}</Text>
               <Text style={styles.resultBadgeText}>
@@ -101,7 +101,7 @@ const AnalysisResultScreen = ({route, navigation}: Props) => {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.nextButton, !isFresh && {opacity: 0.6}]}
+          style={[styles.nextButton, !isFresh && styles.nextButtonDisabled]}
           onPress={() => {
             navigation.replace('PostCreate', {
               result,
@@ -179,6 +179,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 24,
     gap: 8,
+  },
+  resultBadgeError: {
+    backgroundColor: colors.error,
   },
   resultBadgeIcon: {
     fontSize: 18,
@@ -300,6 +303,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 4,
+  },
+  nextButtonDisabled: {
+    opacity: 0.6,
   },
   nextText: {
     fontSize: 16,

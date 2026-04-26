@@ -41,7 +41,7 @@ const PostCompleteScreen = ({navigation}: Props) => {
         useNativeDriver: true,
       }),
     ]).start();
-  }, []);
+  }, [opacityAnim, scaleAnim]);
 
   const handleGoHome = () => {
     // RootStack을 처음부터 리셋하여 Main으로 이동
@@ -64,7 +64,8 @@ const PostCompleteScreen = ({navigation}: Props) => {
           <Text style={styles.icon}>🎉</Text>
         </Animated.View>
 
-        <Animated.View style={{opacity: opacityAnim, alignItems: 'center'}}>
+        <Animated.View
+          style={[styles.resultContent, {opacity: opacityAnim}]}>
           <Text style={styles.title}>나눔 등록 완료!</Text>
           <Text style={styles.subtitle}>
             선택하신 냉장고 주변 이웃들에게{'\n'}나눔 알림(푸시)이 전송되었습니다.
@@ -119,6 +120,9 @@ const styles = StyleSheet.create({
   },
   icon: {
     fontSize: 56,
+  },
+  resultContent: {
+    alignItems: 'center',
   },
   title: {
     fontSize: 28,

@@ -61,7 +61,7 @@ const CameraScanScreen = ({navigation}: Props) => {
         ]),
       ).start();
     }
-  }, [hasPermission, device]);
+  }, [hasPermission, device, scanLineAnim]);
 
   const handleCapture = async () => {
     if (!camera.current) {return;}
@@ -161,7 +161,11 @@ const CameraScanScreen = ({navigation}: Props) => {
         
         {isAnalyzing ? (
           <View style={styles.statusBadge}>
-            <ActivityIndicator size="small" color="#FFFFFF" style={{marginRight: 6}} />
+            <ActivityIndicator
+              size="small"
+              color="#FFFFFF"
+              style={styles.statusSpinner}
+            />
             <Text style={styles.statusText}>신선도를 분석 중입니다...</Text>
           </View>
         ) : (
@@ -233,7 +237,7 @@ const CameraScanScreen = ({navigation}: Props) => {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.shutterContainer, isAnalyzing && {opacity: 0.5}]}
+            style={[styles.shutterContainer, isAnalyzing && styles.shutterDisabled]}
             onPress={handleCapture}
             disabled={isAnalyzing}>
             <View style={styles.shutterButton} />
