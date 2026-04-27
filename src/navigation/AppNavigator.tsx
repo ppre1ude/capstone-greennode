@@ -1,0 +1,106 @@
+/**
+ * 루트 앱 네비게이터
+ * Auth 상태 + 위치 등록 여부에 따라 분기
+ *
+ * - 비로그인 → AuthStack
+ * - 로그인 + 위치 미등록 → LocationSetup
+ * - 로그인 + 위치 등록 → MainTab
+ */
+import React, {useEffect} from 'react';
+import {
+  createNavigationContainerRef,
+  NavigationContainer,
+} from '@react-navigation/native';
+import {createNativeStackNavigator} from '@react-navigation/native-stack';
+import type {RootStackParamList} from './types';
+import {onUnauthorized} from '@/api/authEvents';
+import {useAuthStore} from '@/store/authStore';
+import {refreshDeviceRegistration} from '@/services/deviceRegistration';
+
+import AuthStack from './AuthStack';
+import MainTab from './MainTab';
+import LocationSetupScreen from '@/screens/location/LocationSetupScreen';
+import CameraScanScreen from '@/screens/camera/CameraScanScreen';
+import AnalysisResultScreen from '@/screens/camera/AnalysisResultScreen';
+import PostCreateScreen from '@/screens/post/PostCreateScreen';
+import FridgeSelectScreen from '@/screens/post/FridgeSelectScreen';
+import PostCompleteScreen from '@/screens/post/PostCompleteScreen';
+import PostDetailScreen from '@/screens/post/PostDetailScreen';
+
+const Stack = createNativeStackNavigator<RootStackParamList>();
+export const rootNavigationRef =
+  createNavigationContainerRef<RootStackParamList>();
+
+const AppNavigator = () => {
+  const user = useAuthStore(state => state.user);
+  const isLoggedIn = useAuthStore(state => state.isLoggedIn);
+  const logout = useAuthStore(state => state.logout);
+
+  useEffect(() => {
+    return onUnauthorized(async () => {
+      await logout();
+      if (rootNavigationRef.isReady()) {
+        rootNavigationRef.reset({index: 0, routes: [{name: 'Auth'}]});
+      }
+    });
+  }, [logout]);
+
+  useEffect(() => {
+    if (!isLoggedIn || !user) {
+      return;
+    }
+
+    refreshDeviceRegistration(user).catch(error => {
+      console.warn('Device registration refresh failed:', error);
+    });
+  }, [isLoggedIn, user]);
+
+  return (
+    <NavigationContainer ref={rootNavigationRef}>
+      <Stack.Navigator screenOptions={{headerShown: false}}>
+        <Stack.Screen name="Auth" component={AuthStack} />
+        <Stack.Screen
+          name="LocationSetup"
+          component={LocationSetupScreen}
+          options={{gestureEnabled: false}}
+        />
+        <Stack.Screen
+          name="Main"
+          component={MainTab}
+          options={{gestureEnabled: false}}
+        />
+        <Stack.Screen
+          name="CameraScan"
+          component={CameraScanScreen}
+          options={{
+            presentation: 'fullScreenModal',
+            animation: 'slide_from_bottom',
+          }}
+        />
+        <Stack.Screen
+          name="AnalysisResult"
+          component={AnalysisResultScreen}
+        />
+        <Stack.Screen
+          name="PostCreate"
+          component={PostCreateScreen}
+        />
+        <Stack.Screen
+          name="FridgeSelect"
+          component={FridgeSelectScreen}
+        />
+        <Stack.Screen
+          name="PostComplete"
+          component={PostCompleteScreen}
+          options={{gestureEnabled: false}}
+        />
+        <Stack.Screen
+          name="PostDetail"
+          component={PostDetailScreen}
+        />
+      </Stack.Navigator>
+    </NavigationContainer>
+  );
+};
+
+export default AppNavigator;

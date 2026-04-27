@@ -2,6 +2,19 @@ apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.withInputStream { localProperties.load(it) }
+}
+
+def googleServicesJson = file("google-services.json")
+if (googleServicesJson.exists()) {
+    apply plugin: "com.google.gms.google-services"
+} else {
+    logger.warn("google-services.json not found; Firebase services are installed but disabled for this build.")
+}
+
 /**
  * This is the configuration block to customize your React Native Android app.
  * By default you don't need to apply any configuration, just uncomment the lines you need.
@@ -84,6 +97,9 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
+        manifestPlaceholders = [
+            googleMapsApiKey: localProperties.getProperty("GOOGLE_MAPS_API_KEY", "")
+        ]
     }
     signingConfigs {
         debug {
