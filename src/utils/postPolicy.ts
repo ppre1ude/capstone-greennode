@@ -41,18 +41,18 @@ export const getQualityMeta = (category?: string | null): QualityMeta => {
   const normalized = (category || '').toLowerCase();
 
   if (SHAREABLE_CATEGORIES.has(normalized)) {
-    if (['normal', 'mid', 'medium'].includes(normalized)) {
-      return {label: '보통', canShare: true};
-    }
-    return {label: '신선', canShare: true};
+    return {label: '상태가 좋아 보여요', canShare: true};
   }
 
   if (UNSAFE_CATEGORIES.has(normalized)) {
-    return {label: '부패 의심', canShare: false};
+    return {label: '나눔 기준에 맞지 않아요', canShare: false};
   }
 
   if (REJECTED_CATEGORIES.has(normalized)) {
-    return {label: '등록 불가', canShare: false};
+    if (['low_quality', 'low-quality'].includes(normalized)) {
+      return {label: '사진으로 상태를 확인하기 어려워요', canShare: false};
+    }
+    return {label: '식재료 사진으로 확인되지 않았어요', canShare: false};
   }
 
   if (REVIEW_CATEGORIES.has(normalized)) {

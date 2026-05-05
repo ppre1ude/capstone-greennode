@@ -1,14 +1,14 @@
 # AI QA Fixtures and Camera Checklist
 
-> 기준일: 2026-05-05
+> 기준일: 2026-05-06
 > 목적: AI 분석 실패 UX, false-positive 정책, 실제 기기 카메라 검증을 반복 가능하게 만든다.
 
 ## Fixture Set
 
 | ID | 케이스 | 필요한 이미지 | 기대 결과 | 판정 기준 |
 | --- | --- | --- | --- | --- |
-| `fresh-single` | 신선 성공 | 외관이 잘 보이는 단일 과일/채소 사진 | `Fresh` 또는 `Normal`, `canShare=true`, 게시글 작성 진입 가능 | 분석 결과와 작성 화면에 식재료명/신선도/신뢰도가 표시된다. |
-| `stale-or-rotten` | 부패 의심 | 무름, 곰팡이, 변색이 보이는 과일/채소 사진 | `Stale/Bad/Rotten` 또는 generate 400 | 앱은 등록 화면으로 보내지 않고 서버 `detail/message`를 사용자에게 보여준다. |
+| `fresh-single` | 신선 성공 | 외관이 잘 보이는 단일 과일/채소 사진 | `Fresh` 또는 `Normal`, `canShare=true`, 나눔 식재료 등록 진입 가능 | 분석 결과와 작성 화면에 식재료명/상태/신뢰도가 표시된다. |
+| `stale-or-rotten` | 나눔 기준 미충족 | 무름, 곰팡이, 변색이 보이는 과일/채소 사진 | `Stale/Bad/Rotten` 또는 generate 400 | 앱은 등록 화면으로 보내지 않고 `나눔 기준에 맞지 않아요` 계열 문구를 보여준다. |
 | `not-food` | 비식재료 | 책상, 방, 전자기기 등 식재료가 아닌 사진 | generate 400 또는 `확인 필요` | 식재료 나눔으로 바로 등록되지 않는다. |
 | `screenshot-or-ui` | 스크린샷/아이콘 | 앱 화면 캡처, 런처 아이콘, 지도 캡처 | generate 400 또는 `확인 필요` | 실제 식재료 사진이 아닌데 `Fresh`로 통과하면 false-positive 버그로 기록한다. |
 | `low-quality` | 흐림/어두움/가림 | 흔들림, 저조도, 부분 가림 사진 | 낮은 confidence 또는 실패 | `확인 필요` 또는 재촬영 안내가 표시된다. |
@@ -34,7 +34,7 @@ FOODLINK_API_BASE_URL=http://localhost:8080 FOODLINK_ACCESS_TOKEN=<token> npm ru
 ```
 
 - fixture 파일이 없으면 해당 항목은 `skipped`로 기록된다.
-- 실패/검토 케이스는 generate 400, 등록 불가 category, 낮은 confidence, 또는 검토 사유 enum 중 하나를 기대한다.
+- 실패/검토 케이스는 generate 400, 나눔 기준 미충족 category, 낮은 confidence, 또는 검토 사유 enum 중 하나를 기대한다.
 - 8MB 초과 대용량 이미지는 앱의 업로드 전 차단 정책과 동일하게 클라이언트 검증 대상으로 본다.
 
 ## False-positive Policy
@@ -44,7 +44,7 @@ FOODLINK_API_BASE_URL=http://localhost:8080 FOODLINK_ACCESS_TOKEN=<token> npm ru
 앱 책임:
 
 - generate 실패의 `message` 또는 `detail`을 사용자에게 그대로 이해 가능한 문구로 표시한다.
-- `canShare=false`, generate 400, `not_food/non_food/low_quality/screenshot/ui_screenshot` category 또는 `rejectionReason`은 게시글 작성/최종 등록으로 진행하지 않는다.
+- `canShare=false`, generate 400, `not_food/non_food/low_quality/screenshot/ui_screenshot` category 또는 `rejectionReason`은 나눔 식재료 작성/최종 등록으로 진행하지 않는다.
 - 낮은 confidence는 즉시 등록 차단이 아니라 `확인 필요`로 보여주고 재촬영/갤러리/수동 확인을 유도한다.
 
 서버/AI 책임:
@@ -70,7 +70,7 @@ FOODLINK_API_BASE_URL=http://localhost:8080 FOODLINK_ACCESS_TOKEN=<token> npm ru
 4. AI 스캔 화면에 진입한다.
 5. 실제 카메라로 `fresh-single` 사진을 촬영한다.
 6. logcat에서 `VisionCamera_*.jpg` 파일 URI 생성과 `/posts/generate` 호출을 확인한다.
-7. 분석 결과 화면에서 식재료명, 신선도 등급, confidence, `나눔 가능/확인 필요/나눔 주의` 상태를 확인한다.
+7. 분석 결과 화면에서 식재료명, 신선도 등급, confidence, `나눔 가능/확인 필요/나눔 기준 미충족` 상태를 확인한다.
 8. `stale-or-rotten`, `not-food`, `low-quality` 케이스를 반복한다.
 9. 실패 케이스에서 앱이 멈추지 않고 재촬영/갤러리 선택 대안을 제공하는지 확인한다.
 

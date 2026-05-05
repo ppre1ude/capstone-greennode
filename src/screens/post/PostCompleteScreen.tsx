@@ -1,5 +1,5 @@
 /**
- * PostCompleteScreen — 게시글 등록 완료 화면
+ * PostCompleteScreen — 나눔 식재료 등록 완료 화면
  *
  * 나눔 등록 성공 시 띄워주는 피드백 화면.
  * Lottie 또는 애니메이션 처리 가능, MVP에서는 단순 아이콘과 텍스트 제공.
@@ -79,7 +79,7 @@ const PostCompleteScreen = ({navigation}: Props) => {
               <Text style={styles.pushTime}>방금 전</Text>
             </View>
             <Text style={styles.pushTitle}>새로운 나눔이 등록되었어요!</Text>
-            <Text style={styles.pushBody}>근처 공유 냉장고에 신선한 식재료가 등록되었습니다.</Text>
+            <Text style={styles.pushBody}>근처 공유 냉장고에 나눔 식재료가 등록되었습니다.</Text>
           </View>
         </Animated.View>
       </View>

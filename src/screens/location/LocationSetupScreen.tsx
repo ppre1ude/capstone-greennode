@@ -2,7 +2,7 @@
  * LocationSetupScreen — 최초 1회 위치 등록
  *
  * GPS 권한 요청 → 현재 위치 탐색 → 지도에 표시 → 서버 등록
- * 위치가 설정되어야 근처 게시글/냉장고 조회 가능
+ * 위치가 설정되어야 근처 나눔 식재료/냉장고 조회 가능
  *
  * @wireframe wireframe-foodlink/location-setup.html
  */

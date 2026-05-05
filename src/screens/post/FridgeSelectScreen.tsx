@@ -2,7 +2,7 @@
  * FridgeSelectScreen — 나눔을 등록할 공유 냉장고 선택 화면
  *
  * PostCreateScreen에서 전달받은 postData에
- * 사용자가 선택한 fridgeId를 더해 최종적으로 서버에 게시글 등록 요청(createPost)
+ * 사용자가 선택한 fridgeId를 더해 최종적으로 서버에 나눔 식재료 등록 요청(createPost)
  */
 import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {
@@ -73,8 +73,8 @@ const FridgeSelectScreen = ({route, navigation}: Props) => {
 
     if (qualityCanShare === false || !isShareableCategory(qualityCategory)) {
       Alert.alert(
-        '나눔 등록 불가',
-        '부패가 의심되는 식재료는 나눔으로 등록할 수 없습니다. 다시 촬영해주세요.',
+        '나눔 기준에 맞지 않아요',
+        '이 식재료는 나눔 기준에 맞는 상태로 확인되지 않았어요. 다시 촬영해주세요.',
       );
       return;
     }

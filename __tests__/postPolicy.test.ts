@@ -14,7 +14,7 @@ describe('post policy', () => {
     'blocks unsafe quality category %s',
     category => {
       expect(getQualityMeta(category)).toEqual({
-        label: '부패 의심',
+        label: '나눔 기준에 맞지 않아요',
         canShare: false,
       });
       expect(isShareableCategory(category)).toBe(false);
@@ -25,17 +25,37 @@ describe('post policy', () => {
     'not_food',
     'non_food',
     'not-food',
-    'low_quality',
-    'low-quality',
     'screenshot',
     'ui_screenshot',
-  ])('blocks explicit AI rejection category %s', category => {
+  ])('blocks non-food AI rejection category %s', category => {
     expect(getQualityMeta(category)).toEqual({
-      label: '등록 불가',
+      label: '식재료 사진으로 확인되지 않았어요',
       canShare: false,
     });
     expect(isShareableCategory(category)).toBe(false);
   });
+
+  it.each(['low_quality', 'low-quality'])(
+    'blocks low-quality AI rejection category %s',
+    category => {
+      expect(getQualityMeta(category)).toEqual({
+        label: '사진으로 상태를 확인하기 어려워요',
+        canShare: false,
+      });
+      expect(isShareableCategory(category)).toBe(false);
+    },
+  );
+
+  it.each(['fresh', 'good', 'normal', 'mid', 'medium', 'Fresh', 'Normal'])(
+    'uses one user-facing label for shareable quality category %s',
+    category => {
+      expect(getQualityMeta(category)).toEqual({
+        label: '상태가 좋아 보여요',
+        canShare: true,
+      });
+      expect(isShareableCategory(category)).toBe(true);
+    },
+  );
 
   it.each(['uncertain', 'review_required', 'multi_object_review'])(
     'keeps review-only category %s shareable with 확인 필요 label',
@@ -47,13 +67,6 @@ describe('post policy', () => {
     },
   );
 
-  it.each(['fresh', 'good', 'normal', 'mid', 'medium', 'Fresh', 'Normal'])(
-    'allows shareable quality category %s',
-    category => {
-      expect(isShareableCategory(category)).toBe(true);
-    },
-  );
-
   it('blocks generated analysis results when the server marks the item unsafe', () => {
     expect(
       canShareAnalysisResult({
@@ -61,7 +74,7 @@ describe('post policy', () => {
           isFresh: false,
           confidenceScore: 0.2,
           category: 'Bad',
-          analysisMessage: '부패가 의심됩니다.',
+          analysisMessage: '나눔 기준에 맞지 않는 상태입니다.',
         },
       }),
     ).toBe(false);
@@ -76,7 +89,7 @@ describe('post policy', () => {
         rejectionReason: 'not_food',
         analysisMessage: '식재료가 아닌 이미지입니다.',
       }),
-    ).toEqual({label: '등록 불가', canShare: false});
+    ).toEqual({label: '식재료 사진으로 확인되지 않았어요', canShare: false});
   });
 
   it('uses authorId as the post ownership contract', () => {
