@@ -1,8 +1,34 @@
-# MVP 검증 및 다음 스프린트 To-do
+# FoodLink Validation And Backlog
 
 > 목적: 중간 발표 전에 급하게 구현한 MVP 기능을 실제로 검증하고, 그 결과를 바탕으로 다음 스프린트 백로그를 정리한다.
 >
 > 이 문서는 "발표 전까지 구현할 목록"이 아니라, 이미 만든 MVP의 현재 상태를 확인하기 위한 검증/정리 문서다.
+
+## Agent Workflow
+
+- Authority: verified MVP behavior, QA evidence, bug classification, backlog
+  candidates, acceptance criteria, and follow-up work.
+- Read before: fixing bugs, validating user flows, changing backlog priority,
+  claiming a feature is done, or planning a sprint slice.
+- Update when: a validation result changes, a bug is fixed, a backlog item is
+  reprioritized, or a new risk is discovered.
+- Required evidence: environment, reproduction steps, actual result, expected
+  result, related code/API, and next action.
+- Related workflows: `qa`, `diagnose`, `triage-issue`, `tdd`, `to-issues`.
+- Source-of-truth conflicts: verified runtime/API behavior recorded here wins
+  over summary claims in [IMPLEMENTATION_STATUS.md](./IMPLEMENTATION_STATUS.md).
+  Domain naming still defers to [DOMAIN_MODEL.md](./DOMAIN_MODEL.md).
+
+## Evidence And Backlog Gates
+
+- Evidence entry: every new validation result should identify date, environment,
+  flow, actual result, evidence, and follow-up.
+- Backlog entry: every next-sprint item should include classification, priority,
+  background, current behavior, expected behavior, acceptance criteria,
+  verification method, and related files/API.
+- Completion claim: a checked item must point to either automated tests,
+  API/server evidence, emulator QA, real-device QA, or an explicitly documented
+  reason verification was skipped.
 
 ## 진행 원칙
 
@@ -114,7 +140,7 @@
 ### Codex 작업 지시 예시
 
 ```text
-docs/MVP_VALIDATION_AND_NEXT_SPRINT_TODO.md의 "1. MVP 핵심 플로우 검증"을 기준으로 현재 코드에서 로그인, 위치 등록, 사진 촬영, AI 분석, 게시글 등록 흐름을 추적해줘.
+docs/VALIDATION_AND_BACKLOG.md의 "1. MVP 핵심 플로우 검증"을 기준으로 현재 코드에서 로그인, 위치 등록, 사진 촬영, AI 분석, 게시글 등록 흐름을 추적해줘.
 
 코드를 먼저 읽고 실제 플로우를 설명한 뒤, 각 체크 항목이 현재 구현상 가능한지/불가능한지/검증이 필요한지 분류해줘. 필요한 경우 에뮬레이터나 로그를 사용해서 검증하고, 결과를 문서에 업데이트해줘.
 ```
@@ -199,7 +225,7 @@ MVP가 성공 케이스만 동작하는 상태인지, 실패 상황에서도 앱
 ### Codex 작업 지시 예시
 
 ```text
-docs/MVP_VALIDATION_AND_NEXT_SPRINT_TODO.md의 "2. 실패 케이스와 예외 처리 검증"을 기준으로 현재 앱의 예외 처리 상태를 점검해줘.
+docs/VALIDATION_AND_BACKLOG.md의 "2. 실패 케이스와 예외 처리 검증"을 기준으로 현재 앱의 예외 처리 상태를 점검해줘.
 
 특히 부패 상태가 나쁨일 때 게시글 등록 실패 처리, API/AI 서버 실패 처리, 권한 거부 처리, 중복 등록 방지를 중점적으로 봐줘. 실제 코드 위치와 함께 버그/미구현/정책 결정 필요 항목으로 분류해줘.
 ```
@@ -329,7 +355,7 @@ image=@android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png; type=image/png
 | 항목 | 결론 | 근거 | 후속 작업 |
 | --- | --- | --- | --- |
 | 앱 이미지 데이터 | 확인됨 | 카메라/갤러리 모두 `{uri, type, name}` 형태로 `generatePost()`에 전달된다. | 파일 크기/해상도/압축 정책 추가 |
-| generate request | 확인됨 | OpenAPI는 `multipart/form-data`, `image` 필수, `user_hint` 선택으로 정의한다. | `FRONTEND_INTEGRATION_GUIDE.md` 갱신 완료. 앱/서버 category enum 정합성은 별도 구현 필요 |
+| generate request | 확인됨 | OpenAPI는 `multipart/form-data`, `image` 필수, `user_hint` 선택으로 정의한다. | `API_INTEGRATION_CONTRACT.md` 갱신 완료. 앱/서버 category enum 정합성은 별도 구현 필요 |
 | API -> AI 내부 payload | 미확인 | 현재 repo에는 백엔드/AI 서버 코드가 없다. OpenAPI도 앱과 API 서버 사이 계약만 보여준다. | 백엔드 코드 또는 서버 로그로 별도 검증 |
 | raw AI 서버 응답 | 미확인 | 앱이 받는 것은 API 서버가 정리한 `PostGenerateResult`이다. | AI 서버 원 응답 schema 확보 |
 | 대표 객체 처리 | 현재 계약은 단일 객체 | 응답 schema가 `detectedFruit`/`detectedFruitKo` 단일 문자열만 제공한다. 배열, bounding box, object id 필드가 없다. | multi-object를 하려면 `detections[]` 같은 새 계약 필요 |
@@ -349,7 +375,7 @@ image=@android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png; type=image/png
 ### Codex 작업 지시 예시
 
 ```text
-docs/MVP_VALIDATION_AND_NEXT_SPRINT_TODO.md의 "3. AI 파이프라인 데이터 흐름 검증"을 기준으로 이미지 업로드부터 AI 응답이 게시글 생성 데이터로 바뀌는 과정을 추적해줘.
+docs/VALIDATION_AND_BACKLOG.md의 "3. AI 파이프라인 데이터 흐름 검증"을 기준으로 이미지 업로드부터 AI 응답이 게시글 생성 데이터로 바뀌는 과정을 추적해줘.
 
 관련 코드 파일, request/response 형태, 현재 사용되는 AI 결과 필드, 부패 상태가 나쁨일 때 차단되는 위치를 정리해줘. 가능하면 로그를 추가하거나 기존 로그를 확인해서 실제 데이터 예시도 남겨줘.
 ```
@@ -440,7 +466,7 @@ docs/MVP_VALIDATION_AND_NEXT_SPRINT_TODO.md의 "3. AI 파이프라인 데이터 
 ### Codex 작업 지시 예시
 
 ```text
-docs/MVP_VALIDATION_AND_NEXT_SPRINT_TODO.md의 "4. 한 장 촬영 UX와 multi-object 정책 정리"를 바탕으로 현재 코드와 AI 파이프라인 구조에서 한 장 촬영 흐름을 유지할 때의 리스크를 정리해줘.
+docs/VALIDATION_AND_BACKLOG.md의 "4. 한 장 촬영 UX와 multi-object 정책 정리"를 바탕으로 현재 코드와 AI 파이프라인 구조에서 한 장 촬영 흐름을 유지할 때의 리스크를 정리해줘.
 
 현재 구현으로 대응 가능한 것과 정책 결정이 필요한 것을 나누고, 다음 스프린트에 넣을 수 있는 작은 작업 단위로 쪼개줘.
 ```
@@ -545,7 +571,7 @@ docs/MVP_VALIDATION_AND_NEXT_SPRINT_TODO.md의 "4. 한 장 촬영 UX와 multi-ob
 ### Codex 작업 지시 예시
 
 ```text
-docs/MVP_VALIDATION_AND_NEXT_SPRINT_TODO.md의 "5. 미구현 기능 상태 점검"을 기준으로 현재 코드에서 각 기능이 구현됨/부분 구현/미구현/목업인지 분류해줘.
+docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준으로 현재 코드에서 각 기능이 구현됨/부분 구현/미구현/목업인지 분류해줘.
 
 다음 스프린트에서 먼저 해야 할 기능을 근거와 함께 우선순위로 정리하고, 채팅 탭은 유지/제거/축소 중 어떤 선택이 현실적인지 코드 구조와 검증 비용 관점에서 판단해줘.
 ```
@@ -774,7 +800,7 @@ docs/MVP_VALIDATION_AND_NEXT_SPRINT_TODO.md의 "5. 미구현 기능 상태 점�
 ### Codex 작업 지시 예시
 
 ```text
-docs/MVP_VALIDATION_AND_NEXT_SPRINT_TODO.md의 검증 결과를 바탕으로 다음 스프린트 백로그 초안을 만들어줘.
+docs/VALIDATION_AND_BACKLOG.md의 검증 결과를 바탕으로 다음 스프린트 백로그 초안을 만들어줘.
 
 각 항목은 작업명, 분류, 우선순위, 배경, 현재 동작, 기대 동작, acceptance criteria, 검증 방법, 관련 파일/화면/API를 포함해야 해. 구현 작업과 정책 결정 작업을 분리해줘.
 ```

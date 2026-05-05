@@ -1,10 +1,26 @@
-# FoodLink — 프로젝트 개요
+# FoodLink Product Brief
 
 > **최종 수정일**: 2026-05-05
 > **프로젝트명**: FoodLink (패키지명: greennode)  
 > **플랫폼**: React Native (Android / iOS)
 
 ---
+
+## Agent Workflow
+
+- Authority: product vision, MVP boundaries, user flow, and deferred feature
+  scope.
+- Read before: changing user-visible behavior, adding/removing a feature,
+  changing a screen's purpose, or reprioritizing MVP work.
+- Update when: MVP scope, feature status, user flow, or product positioning
+  changes.
+- Required evidence: decision reason, affected user flow, and whether the change
+  is implemented, partial, deferred, or validation-only.
+- Related workflows: `grill-me`, `to-prd`, `to-issues`, `request-refactor-plan`.
+- Source-of-truth conflicts: domain naming defers to
+  [DOMAIN_MODEL.md](./DOMAIN_MODEL.md), API reality defers to
+  [API_INTEGRATION_CONTRACT.md](./API_INTEGRATION_CONTRACT.md), and verified
+  QA status defers to [VALIDATION_AND_BACKLOG.md](./VALIDATION_AND_BACKLOG.md).
 
 ## 서비스 정의
 
@@ -16,7 +32,7 @@
 
 2026-05-05 검증 기준으로 앱은 이메일 로그인, 위치 등록, 갤러리 이미지 기반 실제 AI 분석, 실제 게시글 생성, 냉장고 선택, 홈/지도 기본 조회까지 동작한다. 다만 아래 항목은 아직 목표 상태와 차이가 있다.
 
-- 도메인 용어 기준은 [CONTEXT.md](../CONTEXT.md)를 따른다. 특히 `default_location`은 쓰지 않고, 사용자 위치는 **동네 위치**와 **위치 미설정 사용자**로 구분한다.
+- 도메인 용어 기준은 [DOMAIN_MODEL.md](./DOMAIN_MODEL.md)를 따른다. 특히 `default_location`은 쓰지 않고, 사용자 위치는 **동네 위치**와 **위치 미설정 사용자**로 구분한다.
 - 카메라 셔터 촬영은 `react-native-vision-camera@5` API에 맞춰 수정됐고, 에뮬레이터에서 촬영 파일 생성 및 실제 `/posts/generate` 호출까지 재검증됐다. 실제 기기 촬영은 별도 확인이 남았다.
 - AI 응답은 현재 단일 대표 객체(`detectedFruit`) 중심으로 처리한다. multi-object detection은 다음 스프린트 연구/계약 설계 항목이다.
 - `Stale/Bad/Rotten` 또는 `canShare=false` 상태는 분석 결과, 게시글 작성, 최종 등록 단계에서 등록을 차단한다.
@@ -95,10 +111,10 @@
 
 - **서버**: NHN Cloud (SSH 터널 경유)
 - **Base URL**: `http://10.0.2.2:8080` (Android 에뮬레이터 기준)
-- **API 명세**: [FRONTEND_INTEGRATION_GUIDE.md](../FRONTEND_INTEGRATION_GUIDE.md) 참고
+- **API 명세**: [API_INTEGRATION_CONTRACT.md](./API_INTEGRATION_CONTRACT.md) 참고
 - **Swagger UI**: `http://localhost:8080/docs` (SSH 터널 연결 후)
 - **Firebase 프로젝트**: `foodlink-cf8e7`
-- **MVP 검증 문서**: [MVP_VALIDATION_AND_NEXT_SPRINT_TODO.md](./MVP_VALIDATION_AND_NEXT_SPRINT_TODO.md)
+- **MVP 검증 문서**: [VALIDATION_AND_BACKLOG.md](./VALIDATION_AND_BACKLOG.md)
 
 ---
 
@@ -114,5 +130,5 @@
 
 | 문서 | 경로 | 설명 |
 |------|------|------|
-| API 연동 가이드 | [FRONTEND_INTEGRATION_GUIDE.md](../FRONTEND_INTEGRATION_GUIDE.md) | 백엔드 API 명세 및 연동 방법 |
+| API 연동 계약 | [API_INTEGRATION_CONTRACT.md](./API_INTEGRATION_CONTRACT.md) | 백엔드 API 명세 및 연동 방법 |
 | 디자인 시스템 | [DESIGN_SYSTEM.md](./DESIGN_SYSTEM.md) | 컬러, 타이포그래피, 스페이싱 토큰 |

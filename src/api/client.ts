@@ -5,7 +5,7 @@
  * - JWT Bearer Token 자동 주입
  * - 401 수신 시 토큰 삭제 (재로그인 유도)
  *
- * @see FRONTEND_INTEGRATION_GUIDE.md § 1~2
+ * @see docs/API_INTEGRATION_CONTRACT.md § 1~2
  */
 import axios, {InternalAxiosRequestConfig, AxiosError} from 'axios';
 import {getToken, removeToken} from '@/utils/storage';

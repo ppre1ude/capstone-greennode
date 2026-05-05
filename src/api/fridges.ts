@@ -1,6 +1,6 @@
 /**
  * Fridges API 함수
- * @see FRONTEND_INTEGRATION_GUIDE.md § 4.9~4.10
+ * @see docs/API_INTEGRATION_CONTRACT.md § 4.9~4.10
  */
 import apiClient from './client';
 import type {ApiResponse, Fridge} from '@/types';

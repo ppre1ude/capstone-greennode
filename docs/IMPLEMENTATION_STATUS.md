@@ -1,8 +1,22 @@
-# FoodLink — 프론트엔드 구현 현황 리포트
+# FoodLink Implementation Status
 
 > **작성일**: 2026-05-05
 > **기준 브랜치**: `codex/p2-fixture-search-notifications`
-> **기준 문서**: [`MVP_VALIDATION_AND_NEXT_SPRINT_TODO.md`](./MVP_VALIDATION_AND_NEXT_SPRINT_TODO.md)
+> **기준 문서**: [`VALIDATION_AND_BACKLOG.md`](./VALIDATION_AND_BACKLOG.md)
+
+## Agent Workflow
+
+- Authority: current implementation state summarized as implemented, partial,
+  mock, missing, needs validation, bug, or deferred.
+- Read before: reporting status, deciding whether work is already done, or
+  preparing release/sprint summaries.
+- Update when: a feature moves between status categories or verification changes
+  what the team can claim.
+- Required evidence: verification command, runtime/API evidence, or a pointer to
+  the validation entry that proves the status.
+- Related workflows: `document-release`, `retro`, `qa`, `triage-issue`.
+- Source-of-truth conflicts: verified results in
+  [VALIDATION_AND_BACKLOG.md](./VALIDATION_AND_BACKLOG.md) win over this summary.
 
 이 문서는 초기 Phase 1~6 구현 리포트를 2026-05-05 MVP 검증 결과 기준으로 갱신한 것이다. 과거 문서의 일괄 완료 표현은 실제 서버/기기 검증 결과를 반영하지 못하므로, 현재는 `구현됨`, `부분 구현`, `목업`, `미구현`, `검증 필요`, `버그`로 분리한다.
 
@@ -142,4 +156,4 @@ npm test -- --runInBand
 node ./node_modules/typescript/bin/tsc --noEmit
 ```
 
-실제 앱/서버 검증은 [`MVP_VALIDATION_AND_NEXT_SPRINT_TODO.md`](./MVP_VALIDATION_AND_NEXT_SPRINT_TODO.md)의 각 섹션 결과와 시연/검증용 데이터 준비 항목을 기준으로 한다.
+실제 앱/서버 검증은 [`VALIDATION_AND_BACKLOG.md`](./VALIDATION_AND_BACKLOG.md)의 각 섹션 결과와 시연/검증용 데이터 준비 항목을 기준으로 한다.

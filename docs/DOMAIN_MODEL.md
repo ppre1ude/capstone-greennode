@@ -1,4 +1,19 @@
-# FoodLink Context
+# FoodLink Domain Model
+
+## Agent Workflow
+
+- Authority: canonical FoodLink domain language, relationships, and ambiguity
+  resolution.
+- Read before: changing names for screens, API fields, statuses, policies, or
+  user-facing domain concepts.
+- Update when: a new canonical term is introduced, an avoid term is found in
+  active docs/code, or a relationship between concepts changes.
+- Required evidence: canonical term, avoid terms, relationship rule, and an
+  example dialogue when the ambiguity is likely to recur.
+- Related workflows: `domain-model`, `ubiquitous-language`, `grill-me`.
+- Source-of-truth conflicts: this document wins for terminology. If API fields
+  use different names, document the translation in
+  [API_INTEGRATION_CONTRACT.md](./API_INTEGRATION_CONTRACT.md).
 
 FoodLink는 사용자가 식재료를 AI로 확인하고, 가까운 공유 냉장고에 연결해 이웃에게 나눔 게시글로 노출하는 로컬 식재료 나눔 컨텍스트다.
 

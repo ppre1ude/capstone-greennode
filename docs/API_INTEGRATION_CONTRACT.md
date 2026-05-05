@@ -1,12 +1,29 @@
-# FoodLink 프론트엔드 연동 가이드
+# FoodLink API Integration Contract
 
 > **문서 목적**: React Native 프론트엔드 개발자가 백엔드 API와 연동할 때 필요한 모든 정보
 >
 > **기준일**: 2026-05-05
-> **검증 기준**: `GET /openapi.json`, 실제 앱/API 검증, `docs/MVP_VALIDATION_AND_NEXT_SPRINT_TODO.md`
-> **도메인 용어 기준**: [`CONTEXT.md`](./CONTEXT.md)
+> **검증 기준**: `GET /openapi.json`, 실제 앱/API 검증, [VALIDATION_AND_BACKLOG.md](./VALIDATION_AND_BACKLOG.md)
+> **도메인 용어 기준**: [DOMAIN_MODEL.md](./DOMAIN_MODEL.md)
 
 ---
+
+## Agent Workflow
+
+- Authority: frontend/server request and response contract, auth behavior, SSH
+  tunnel setup, image URL handling, AI generate semantics, and FCM integration
+  assumptions.
+- Read before: changing API clients, response types, request payloads, auth
+  flows, image upload/display behavior, location registration, fridge queries,
+  or FCM handling.
+- Update when: OpenAPI, actual server response, app interpretation, or error
+  handling contract changes.
+- Required evidence: endpoint, request shape, response shape, observed status
+  code, and whether the basis is OpenAPI, live API, or app QA.
+- Related workflows: `tdd`, `diagnose`, `qa`, `triage-issue`.
+- Source-of-truth conflicts: actual verified server behavior wins over stale
+  examples. Product scope defers to [PRODUCT_BRIEF.md](./PRODUCT_BRIEF.md), and
+  domain naming defers to [DOMAIN_MODEL.md](./DOMAIN_MODEL.md).
 
 ## 1. 서버 접속 방법
 

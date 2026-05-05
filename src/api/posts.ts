@@ -1,6 +1,6 @@
 /**
  * Posts API 함수
- * @see FRONTEND_INTEGRATION_GUIDE.md § 4.4~4.8
+ * @see docs/API_INTEGRATION_CONTRACT.md § 4.4~4.8
  */
 import apiClient, {BASE_URL} from './client';
 import type {ApiResponse, Post, GenerateResult, PostCreateData} from '@/types';
