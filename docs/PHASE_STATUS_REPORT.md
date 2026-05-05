@@ -1,86 +1,149 @@
-# FoodLink — 프론트엔드 페이즈별 구현 현황 리포트
+# FoodLink — 프론트엔드 구현 현황 리포트
 
-> **작성일**: 2026-04-26  
-> **브랜치**: `ui/workflow`
+> **작성일**: 2026-05-05
+> **기준 브랜치**: `feat/mvpflow` / `codex/docs-consistency`
+> **기준 문서**: [`MVP_VALIDATION_AND_NEXT_SPRINT_TODO.md`](./MVP_VALIDATION_AND_NEXT_SPRINT_TODO.md)
 
-본 문서는 초기 기획된 프론트엔드 개발 플랜(Phase 1 ~ Phase 6)을 기준으로, 현재까지의 **구현 완료 사항**과 **미완성(추후 과제) 사항**을 점검하고, 앞으로 유저가 수행해야 할 **Next Steps(향후 과제)**를 안내하기 위해 작성되었습니다.
-
----
-
-## 1. 페이즈별 진행 현황 요약 (Phase 1 ~ 6)
-
-초기 계획했던 모든 페이즈의 **UI/UX 및 네비게이션 흐름, 로컬 로직 처리는 100% 구현 완료**되었습니다.
-
-### ✅ Phase 1: 기반 세팅 및 인증 (Auth) — **완료**
-- **구현 사항**:
-  - `SplashScreen` (자동 로그인 검증 로직)
-  - `OnboardingScreen` (기능 소개)
-  - `LoginScreen` & `LoginEmailScreen` (소셜 및 이메일 로그인 UI)
-  - `SignupScreen` (회원가입, Zod 기반 유효성 검증)
-  - **상태/통신**: `Zustand` 기반 `authStore`, `axios` 인터셉터 및 JWT 토큰 관리 로직 연동
-
-### ✅ Phase 2: 위치 설정 및 메인 화면 — **완료**
-- **구현 사항**:
-  - `LocationSetupScreen` (초기 가입 시 GPS 권한 요청 및 위치 등록)
-  - `HomeScreen` (반경 내 나눔 게시글 피드, AI 스캔 배너, Pull-to-refresh)
-  - `MainTab` (하단 네비게이션 바, 중앙 FAB 구조)
-
-### ✅ Phase 3: 카메라 촬영 및 AI 분석 — **완료**
-- **구현 사항**:
-  - `CameraScanScreen` (`react-native-vision-camera` 네이티브 카메라 연동, 갤러리 폴백, 스캔 애니메이션)
-  - `AnalysisResultScreen` (AI 신선도 판별 결과, 권장/주의 상태 분기)
-
-### ✅ Phase 4: 게시글 등록 흐름 — **완료**
-- **구현 사항**:
-  - `PostCreateScreen` (AI 추천 제목/카테고리 폼 자동 완성)
-  - `FridgeSelectScreen` (나눔할 근처 공유 냉장고 탐색 및 라디오 버튼 선택)
-  - `PostCompleteScreen` (등록 성공 및 이웃 푸시 알림 모의 피드백)
-  - `PostDetailScreen` (피드 상세 조회 및 본인 글 나눔 취소(삭제) 기능)
-
-### ✅ Phase 5: 지도 및 냉장고 탐색 — **완료**
-- **구현 사항**:
-  - `MapScreen` (`react-native-maps` 연동, 반경 2km 원 표시, 냉장고 마커 시각화)
-  - 지도 마커와 하단 가로 스크롤 캐러셀(Carousel) 카드 연동
-
-### ✅ Phase 6: 알림 및 내 정보 — **완료**
-- **구현 사항**:
-  - `ProfileScreen` (유저 닉네임, 신뢰도 온도 🌡️, 포인트 대시보드, 로그아웃 기능)
-  - `ChatListScreen` (나눔 메시지 및 푸시 알림 확인용 UI)
+이 문서는 초기 Phase 1~6 구현 리포트를 2026-05-05 MVP 검증 결과 기준으로 갱신한 것이다. 과거 문서의 일괄 완료 표현은 실제 서버/기기 검증 결과를 반영하지 못하므로, 현재는 `구현됨`, `부분 구현`, `목업`, `미구현`, `검증 필요`, `버그`로 분리한다.
 
 ---
 
-## 2. 미완성 사항 (향후 구현 과제)
+## 1. 현재 상태 요약
 
-현재 프론트엔드의 화면 단은 모두 완성되었으나, 실제 프로덕션 수준의 서비스를 위해 **백엔드/시스템 통합 측면에서 다음 항목들이 남아 있습니다.**
+| 영역 | 상태 | 요약 |
+| --- | --- | --- |
+| 이메일 인증/로그인 | 구현됨 | 이메일 회원가입, 로그인, JWT 저장, `/auth/me` 조회가 동작한다. 소셜 로그인과 이메일 verification은 미구현이다. |
+| 최초 위치 등록 | 구현됨 | 위치 없는 유저는 `LocationSetup`으로 이동하고 `/auth/me/location`에 좌표와 FCM 토큰을 저장한다. |
+| 위치 재설정 | 미구현 | 홈 위치 헤더와 프로필 설정 메뉴가 위치 재설정으로 연결되지 않는다. |
+| AI 분석 | 부분 구현 | mock 파이프라인은 제거됐고 실제 `/posts/generate` 호출이 동작한다. 에뮬레이터 카메라 셔터는 실패했고 갤러리 경로만 검증됐다. |
+| 게시글 등록 | 부분 구현 | 실제 `generate -> imageToken -> createPost` 흐름으로 서버 게시글 생성이 확인됐다. 부패 의심/등록 불가 상태 차단 guard는 없다. |
+| 게시글 상세/삭제 | 버그 있음 | 실제 상세 응답은 `authorId`를 반환하지만 앱 타입/화면은 `userId`를 기대한다. 작성자 삭제 버튼 판단에 영향이 있다. |
+| 홈 주변 게시글 | 부분 구현 | `/posts/nearby` 데이터를 카드로 표시한다. API 실패와 빈 상태가 UI에서 분리되지 않는다. |
+| 지도/냉장고 | 부분 구현 | `/fridges/nearby`, `/fridges/available` 조회와 지도 마커/냉장고 선택은 동작한다. 주변 냉장고 없음 상태는 서버 필터 확인이 필요하다. |
+| FCM | 부분 구현 | FCM 토큰 등록은 있다. 실제 수신 handler, 알림함, 읽음 상태는 없다. |
+| 채팅 | 목업 | `ChatListScreen`은 정적 mock 데이터만 표시한다. WebSocket/API 계약은 없다. |
+| 통계/탄소 절감 | 목업 | 홈/프로필의 탄소 절감량, 포인트, 신선도 온도는 하드코딩이다. |
+| 검색 | 미구현 | 홈 검색 아이콘과 지도 입력은 동작하지 않는다. 서버 검색 API도 없다. |
 
-1. **실제 Push Notification 연동 (FCM)**
-   - 알림/채팅 탭(`ChatListScreen`) 및 등록 완료 모의 푸시 화면은 현재 더미 데이터로 동작합니다.
-   - `@react-native-firebase/messaging` 라이브러리를 추가하여, 백엔드로부터 실제 기기 푸시를 받는 로직이 필요합니다.
-2. **QR 코드 인증 흐름 구현 (MVP 후순위)**
-   - 냉장고에 도착해 짐을 넣고 "QR 코드를 스캔"하여 나눔을 최종 확정 짓는 플로우의 UI와 로직은 아직 제작되지 않았습니다. (현재는 앱 상에서만 완료 처리됨)
-3. **채팅 (Chat) 시스템 고도화**
-   - 1:1 메시징이 필요하다면, WebSocket 통신 또는 채팅 API 연동 작업이 필요합니다.
+---
+
+## 2. Phase별 현실 기준
+
+### Phase 1: 기반 세팅 및 인증
+
+- 상태: 부분 완료
+- 완료:
+  - `SplashScreen`, `OnboardingScreen`, `LoginScreen`, `LoginEmailScreen`, `SignupScreen`
+  - 이메일 회원가입/로그인 API 연동
+  - JWT 저장과 401 처리
+- 남은 작업:
+  - 소셜 로그인 버튼은 `준비 중` Alert만 표시하므로 숨김/보류/실구현 중 결정 필요
+  - 이메일 verification은 서버/API/화면 모두 없음
+
+### Phase 2: 위치 설정 및 홈
+
+- 상태: 부분 완료
+- 완료:
+  - 최초 위치 등록
+  - 홈 주변 게시글 조회와 pull-to-refresh
+  - 홈 빈 상태 표시
+- 남은 작업:
+  - 위치 재설정 진입점 연결
+  - 홈 API 실패 상태와 빈 상태 분리
+  - 홈 통계/탄소 절감 mock 정리
+
+### Phase 3: 카메라 촬영 및 AI 분석
+
+- 상태: 부분 완료
+- 완료:
+  - 갤러리 이미지 선택 후 실제 AI generate 호출
+  - 실제 AI 응답의 `detectedFruit`, `aiAnalysis`, `imageToken` 수신
+  - 분석 결과 화면 표시
+- 남은 작업:
+  - 실제 기기 카메라 셔터 검증
+  - 촬영 실패/분석 실패 fallback 개선
+  - confidence 표시와 `확인 필요` 상태 추가
+  - 부패 의심 상태에서 실제 등록 차단
+
+### Phase 4: 게시글 등록 흐름
+
+- 상태: 부분 완료
+- 완료:
+  - AI 추천 제목/설명/카테고리 기반 작성 화면
+  - 냉장고 선택
+  - 실제 `POST /api/v1/posts` 생성
+  - 완료 화면
+- 남은 작업:
+  - `authorId/userId` 계약 불일치 수정
+  - 등록 완료 후 홈 목록 refresh 보장
+  - imageToken 만료/중복 등록/idempotency 검증
+  - 유통기한 기본 3일 자동값 정책 정리
+
+### Phase 5: 지도 및 냉장고 탐색
+
+- 상태: 부분 완료
+- 완료:
+  - 지도, 반경 원, 냉장고 마커, 하단 캐러셀
+  - 실제 냉장고 목록 조회
+- 남은 작업:
+  - 위치 미설정 상태에서 기본 좌표 fallback 제거 또는 CTA 표시
+  - 주변 냉장고 없음 fixture/API 검증
+  - 냉장고 상세/내부 아이템 정책 결정
+  - 지도 검색 입력 동작 연결
+
+### Phase 6: 알림 및 내 정보
+
+- 상태: 목업/부분 완료
+- 완료:
+  - 프로필 기본 정보 표시
+  - 로그아웃
+  - FCM 토큰 등록 시도
+- 남은 작업:
+  - 프로필 수정/내 나눔/관심/받은 나눔 메뉴 연결
+  - FCM 수신 handler와 알림함 구현
+  - 채팅 탭 제거 또는 알림함으로 축소
+  - mock 통계 제거
 
 ---
 
-## 3. 유저의 다음 할 일 (Next Steps)
+## 3. 다음 작업 우선순위
 
-프론트엔드 개발자(유저님)가 이어서 작업해야 할 최우선 순위 항목들입니다.
+### P0
 
-### 📝 Step 1: 백엔드 API 통합 테스트
-- `src/api/` 폴더 아래에 생성된 함수들(`auth.ts`, `posts.ts`, `fridges.ts`)을 실제 백엔드(NHN Cloud FastAPI 서버)와 연결해 봅니다.
-- **체크리스트**:
-  - [ ] 백엔드 서버 구동 및 엔드포인트 주소(BASE_URL) 확인
-  - [ ] 회원가입/로그인 후 토큰이 정상적으로 넘어오고 AsyncStorage에 저장되는지 확인
-  - [ ] AI 스캔 (`/api/v1/posts/generate`) 시 Multipart/form-data 이미지가 잘 전송되고 신선도 결과를 받아오는지 확인
+1. `authorId/userId` 계약 불일치 수정
+2. 부패 의심/등록 불가 상태에서 실제 등록 차단
 
-### 📝 Step 2: 실기기(Device) 빌드 및 네이티브 모듈 검증
-- 카메라(`vision-camera`), 지도(`maps`), GPS(`geolocation`)는 에뮬레이터에서 완벽한 테스트가 어렵습니다.
-- 안드로이드 공기계나 iOS 기기(아이폰)에 직접 앱을 빌드해서 카메라 화질과 지도 마커 로딩 속도를 점검해야 합니다.
+### P1
 
-### 📝 Step 3: 에러 핸들링 및 예외 처리 고도화
-- GPS 권한 거부 시, 카메라 권한 거부 시 대체할 UI 플로우(Fallback) 꼼꼼하게 다듬기
-- 네트워크 오프라인 상태(Offline) 대비 문구 띄우기
+1. 홈/지도/냉장고 목록 실패 상태와 빈 상태 분리
+2. 위치 재설정 진입점 연결
+3. 실제 기기 카메라 촬영 경로 재검증 및 fallback 개선
+4. AI confidence와 `확인 필요` 상태 도입
+
+### P2
+
+1. 검색 MVP 범위 결정
+2. FCM 수신/알림함 범위 정의
+3. 목업 통계 정리
+4. multi-object detection 계약 연구
+
+### 보류
+
+- WebSocket 기반 실시간 채팅
+- 소셜 로그인 전체 구현
+- 이메일 verification 전체 예외 케이스
+- 냉장고 내부 inventory
 
 ---
-**요약:** 껍데기(UI)와 로직의 뼈대(Store, API 함수)는 모두 준비되었습니다! 이제 **"백엔드와의 실제 통신(API 연동)"과 "실기기 테스트"**에 집중하시면 됩니다.
+
+## 4. 검증 명령
+
+현재 자동 테스트 기준:
+
+```bash
+npm run lint -- --quiet
+npm test -- --runInBand
+node ./node_modules/typescript/bin/tsc --noEmit
+```
+
+실제 앱/서버 검증은 [`MVP_VALIDATION_AND_NEXT_SPRINT_TODO.md`](./MVP_VALIDATION_AND_NEXT_SPRINT_TODO.md)의 각 섹션 결과와 시연/검증용 데이터 준비 항목을 기준으로 한다.

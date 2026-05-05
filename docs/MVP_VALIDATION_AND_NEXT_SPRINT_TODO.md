@@ -318,7 +318,7 @@ image=@android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png; type=image/png
 | 항목 | 결론 | 근거 | 후속 작업 |
 | --- | --- | --- | --- |
 | 앱 이미지 데이터 | 확인됨 | 카메라/갤러리 모두 `{uri, type, name}` 형태로 `generatePost()`에 전달된다. | 파일 크기/해상도/압축 정책 추가 |
-| generate request | 확인됨 | OpenAPI는 `multipart/form-data`, `image` 필수, `user_hint` 선택으로 정의한다. | `FRONTEND_INTEGRATION_GUIDE.md`의 `food_name` 필수 설명은 갱신 필요 |
+| generate request | 확인됨 | OpenAPI는 `multipart/form-data`, `image` 필수, `user_hint` 선택으로 정의한다. | `FRONTEND_INTEGRATION_GUIDE.md` 갱신 완료. 앱/서버 category enum 정합성은 별도 구현 필요 |
 | API -> AI 내부 payload | 미확인 | 현재 repo에는 백엔드/AI 서버 코드가 없다. OpenAPI도 앱과 API 서버 사이 계약만 보여준다. | 백엔드 코드 또는 서버 로그로 별도 검증 |
 | raw AI 서버 응답 | 미확인 | 앱이 받는 것은 API 서버가 정리한 `PostGenerateResult`이다. | AI 서버 원 응답 schema 확보 |
 | 대표 객체 처리 | 현재 계약은 단일 객체 | 응답 schema가 `detectedFruit`/`detectedFruitKo` 단일 문자열만 제공한다. 배열, bounding box, object id 필드가 없다. | multi-object를 하려면 `detections[]` 같은 새 계약 필요 |
@@ -329,7 +329,7 @@ image=@android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png; type=image/png
 
 #### 다음 스프린트 AI 보강 작업 후보
 
-1. API 계약 문서 갱신: `food_name` 필수 여부, 최종 등록 content type, category enum을 OpenAPI 기준으로 정리한다.
+1. category enum 정합성 고정: `Fresh/Normal/Stale/Bad/Rotten` 등 서버 문자열과 앱 품질 라벨 매핑을 테스트로 고정한다.
 2. stale/bad 테스트 fixture 확보: `Fresh` 외에 `Normal`, `Stale/Bad/Rotten` 응답을 실제 이미지 또는 서버 fixture로 재현한다.
 3. confidence 정책 추가: 낮은 confidence일 때 재촬영, 수동 입력, 등록 차단 중 하나로 결정한다.
 4. 부패 의심 등록 차단 구현: `canShare=false`일 때 화면 이동과 최종 등록을 모두 막는다.
