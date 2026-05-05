@@ -15,7 +15,7 @@
 | 이메일 인증/로그인 | 구현됨 | 이메일 회원가입, 로그인, JWT 저장, `/auth/me` 조회가 동작한다. 소셜 로그인과 이메일 verification은 미구현이다. |
 | 최초 위치 등록 | 구현됨 | 위치 없는 유저는 `LocationSetup`으로 이동하고 `/auth/me/location`에 좌표와 FCM 토큰을 저장한다. |
 | 위치 재설정 | 구현됨 | 홈 위치 헤더와 프로필 `동네 위치 재설정` 메뉴에서 `LocationSetup`으로 재진입한다. |
-| AI 분석 | 부분 구현 | mock 파이프라인은 제거됐고 실제 `/posts/generate` 호출이 동작한다. confidence 표시와 `확인 필요` 상태가 추가됐다. 실제 기기 카메라 셔터 검증은 남았다. |
+| AI 분석 | 부분 구현 | mock 파이프라인은 제거됐고 실제 `/posts/generate` 호출이 동작한다. confidence 표시와 `확인 필요` 상태가 추가됐다. 에뮬레이터 셔터 촬영은 파일 생성 및 API 호출까지 재검증됐고, 실제 기기 검증은 남았다. |
 | 게시글 등록 | 부분 구현 | 실제 `generate -> imageToken -> createPost` 흐름으로 서버 게시글 생성이 확인됐다. `canShare=false`는 분석 결과, 작성, 최종 등록 단계에서 차단한다. |
 | 게시글 상세/삭제 | 수정됨 | 실제 상세 응답의 `authorId` 기준으로 작성자 여부를 판단한다. 구형 fixture를 위해 `userId` fallback만 남겼다. |
 | 홈 주변 게시글 | 부분 구현 | `/posts/nearby` 데이터를 카드로 표시한다. API 실패와 빈 상태는 UI에서 분리됐다. |

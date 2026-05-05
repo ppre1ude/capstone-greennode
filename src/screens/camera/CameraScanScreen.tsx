@@ -19,7 +19,13 @@ import {
 } from 'react-native';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {RootStackParamList} from '@/navigation/types';
-import {Camera, useCameraDevice, useCameraPermission} from 'react-native-vision-camera';
+import {
+  Camera,
+  type CameraRef,
+  useCameraDevice,
+  useCameraPermission,
+  usePhotoOutput,
+} from 'react-native-vision-camera';
 import {launchImageLibrary} from 'react-native-image-picker';
 import {styles} from './CameraScanScreen.styles';
 import {generatePost} from '@/api/posts';
@@ -30,7 +36,8 @@ const CameraScanScreen = ({navigation}: Props) => {
   const {hasPermission, requestPermission} = useCameraPermission();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const device = useCameraDevice('back');
-  const camera = useRef<any>(null);
+  const photoOutput = usePhotoOutput({containerFormat: 'jpeg'});
+  const camera = useRef<CameraRef>(null);
 
   // 스캔 라인 애니메이션
   const scanLineAnim = useRef(new Animated.Value(0)).current;
@@ -92,10 +99,13 @@ const CameraScanScreen = ({navigation}: Props) => {
     }
 
     try {
-      const photo = await camera.current.takePhoto({
-        flash: 'off',
-      });
-      processImage(`file://${photo.path}`);
+      const photo = await photoOutput.capturePhotoToFile(
+        {
+          flashMode: 'off',
+        },
+        {},
+      );
+      processImage(`file://${photo.filePath}`);
     } catch (error) {
       console.warn('Capture error', error);
       Alert.alert(
@@ -200,8 +210,7 @@ const CameraScanScreen = ({navigation}: Props) => {
           style={StyleSheet.absoluteFill}
           device={device}
           isActive={!isAnalyzing}
-          // @ts-ignore
-          photo={true}
+          outputs={[photoOutput]}
         />
 
         {/* 스캔 프레임 UI */}

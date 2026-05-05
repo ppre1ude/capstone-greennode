@@ -17,7 +17,7 @@
 - P0 `canShare=false` 등록 차단: `AnalysisResultScreen` 버튼 disabled, `PostCreateScreen` 진입 후 guard, `FridgeSelectScreen` 최종 등록 guard를 추가했다.
 - P1 목록 실패/빈 상태 분리: 홈 주변 게시글, 지도 냉장고, 등록 가능 냉장고 목록에 loading/error/empty 상태와 retry UI를 분리했다.
 - P1 위치 재설정: 홈 위치 헤더와 프로필 `동네 위치 재설정` 메뉴에서 `LocationSetup`으로 재진입한다.
-- P1 카메라 fallback: 카메라 권한 없음, 장치 없음, 셔터 실패 시 갤러리 선택 대안을 제공한다. 실제 기기 셔터 촬영 검증은 아직 남았다.
+- P1 카메라 촬영/fallback: `react-native-vision-camera@5`의 `usePhotoOutput().capturePhotoToFile()` 경로로 수정했다. 에뮬레이터에서 촬영 파일 생성 및 실제 `/posts/generate` 호출까지 확인했고, 실제 기기 셔터 검증은 아직 남았다.
 - P1 confidence: `confidenceScore`를 분석 결과/작성 화면에 표시하고 60% 미만은 즉시 차단 대신 `확인 필요`로 분기한다.
 - 회귀 테스트: `__tests__/postPolicy.test.ts`에서 품질 정책, confidence, 작성자 판단을 고정한다.
 
@@ -88,8 +88,8 @@
 | 최초 위치 등록 화면 분기 | 정상 동작 | 위치 없는 계정으로 로그인 후 앱이 `동네 설정` 화면으로 자연스럽게 이동했다. | UI 검증, `src/screens/auth/LoginEmailScreen.tsx`, `src/navigation/AppNavigator.tsx` | 유지 |
 | 위치 등록 후 홈/지도/게시글 등록 반영 | 정상 동작 | `이 위치로 설정하기` 후 `/auth/me`에 좌표가 저장됐다. 홈은 `내 동네`로 표시되고, 지도와 냉장고 선택 화면은 실제 냉장고 목록을 조회했다. | `PUT /api/v1/auth/me/location`, `HomeScreen`, `MapScreen`, `FridgeSelectScreen` | 유지 |
 | 위치 재설정 기능 | 미구현 | 위치 재설정으로 연결되는 UI/액션이 없다. 프로필의 설정 메뉴도 동작하지 않는다. | `src/screens/profile/ProfileScreen.tsx` | 다음 스프린트 버그/미구현 후보 |
-| 사진 촬영 후 이미지 파일 생성 | 버그 | 카메라 화면 진입은 됐지만 에뮬레이터에서 셔터를 누르면 `촬영 오류: 사진을 촬영할 수 없습니다.` Alert가 떴다. 갤러리 선택으로는 이미지 URI를 받아 다음 화면으로 진행 가능했다. | UI 검증, `src/screens/camera/CameraScanScreen.tsx` | 실제 기기 촬영 검증, 에뮬레이터 카메라 fallback 개선 |
-| 촬영/선택 이미지 API 전달 | 정상 동작 | mock 제거 후 release 앱에서 갤러리 선택 이미지가 실제 `POST /api/v1/posts/generate`로 전달됐다. 직접 API 검증에서도 동일 엔드포인트가 200을 반환했다. | `src/api/posts.ts`, `src/screens/camera/CameraScanScreen.tsx` | 카메라 셔터 촬영 경로는 별도 기기 검증 필요 |
+| 사진 촬영 후 이미지 파일 생성 | 정상 동작 | `takePhoto()` 호출을 `usePhotoOutput().capturePhotoToFile()`로 수정한 뒤 에뮬레이터 셔터에서 `file:///data/user/0/com.greennode/cache/VisionCamera_*.jpg` 파일 URI가 생성됐다. | UI 검증, `src/screens/camera/CameraScanScreen.tsx`, logcat | 실제 기기 촬영 검증 |
+| 촬영/선택 이미지 API 전달 | 정상 동작 | mock 제거 후 release 앱에서 갤러리 선택 이미지와 셔터 촬영 이미지가 실제 `POST /api/v1/posts/generate`로 전달됐다. 셔터 촬영 재검증에서는 서버가 부패 상태 400으로 거부해 API 도달이 확인됐다. | `src/api/posts.ts`, `src/screens/camera/CameraScanScreen.tsx`, logcat | 부패/실패 응답 전용 UX 보강 |
 | AI 분석 결과 표시 | 정상 동작 | 실제 AI 응답이 `분석 결과` 화면에 표시됐다. 재검증 결과는 `바나나`, `신선`, confidence 100%, 분석 메모 `식재료가 신선합니다. 나눔이 가능합니다.`였다. mock 고정값인 `사과`가 아니었다. | `src/screens/camera/AnalysisResultScreen.tsx` | stale/bad fixture로 부패 의심 결과 추가 검증 |
 | AI 결과의 게시글 생성 기본값 반영 | 정상 동작 | 실제 AI 응답 기반으로 `나눔 등록` 화면에 `바나나`, `신선`, 제목 `신선한 바나나 나눔합니다`, 설명 기본값이 채워졌다. | `src/screens/post/PostCreateScreen.tsx` | 유지 |
 | 게시글 등록 후 홈 목록 반영 | 부분 검증 | 냉장고 선택 후 실제 `POST /api/v1/posts`가 성공했고 완료 화면이 표시됐다. 서버에는 테스트 게시글 id `6`이 생성됐고 검증 후 삭제했다. 홈 목록 재진입 반영은 테스트 게시글 정리 전에 별도 확인하지 못했다. | `src/api/posts.ts`, `src/screens/post/PostCompleteScreen.tsx`, `src/screens/home/HomeScreen.tsx` | 등록 완료 후 홈 목록 refresh/재진입 반영을 회귀 테스트로 추가 |
@@ -98,7 +98,7 @@
 #### 해결/잔여 버그 목록
 
 1. 해결됨: `USE_MOCK_AI_PIPELINE`을 제거했고, `generatePost()`와 `createPost()`가 실제 서버를 호출하도록 수정했다. 실제 앱에서 AI 분석, 게시글 생성, 완료 화면까지 검증했고 테스트 게시글은 삭제했다.
-2. 카메라 화면에서 에뮬레이터 셔터 촬영이 실패하고 `촬영 오류` Alert가 뜬다. 갤러리 fallback은 동작한다.
+2. 해결됨: 에뮬레이터 셔터 촬영 TypeError는 `react-native-vision-camera@5` API 변경에 맞춰 수정했고, 촬영 파일 생성 및 실제 API 호출까지 확인했다.
 3. 위치 없는 유저가 지도에 강제 진입하면 기본 좌표로 냉장고 API를 호출해 위치 설정이 된 것처럼 보일 수 있다.
 4. 위치 재설정 기능이 UI에 없다.
 
@@ -398,7 +398,7 @@ docs/MVP_VALIDATION_AND_NEXT_SPRINT_TODO.md의 "3. AI 파이프라인 데이터 
 | 한 장으로 충분한 케이스 | 정책 결정 필요 | 외관이 잘 보이는 단일 과일/채소, 포장 밖에서 상태를 충분히 볼 수 있는 식재료는 한 장 촬영으로 처리 가능하다. 현재 실제 검증도 단일 대표 객체 응답을 전제로 통과했다. | `GenerateResult.detectedFruit`, `aiAnalysis.category` | 데모/검증 이미지는 단일 객체 중심으로 준비 |
 | 한 장으로 어려운 케이스 | 정책 결정 필요 | 유통기한 라벨, 포장 내부 상태, 절단면, 냄새/촉감, 캔/불투명 포장, 어두움/흔들림/가림, 여러 음식이 섞인 사진은 한 장만으로 신뢰하기 어렵다. | 현재 UI에는 보조 질문/추가 촬영 단계 없음 | 낮은 confidence 또는 불확실 상태에서 재촬영/수동 수정으로 보낸다 |
 | 라벨/유통기한/내부 상태 | 미구현 | 앱은 유통기한을 이미지에서 읽지 않고 게시글 생성 시 기본 3일 후로 설정한다. 라벨 OCR, 포장 내부 상태 확인, 유통기한 수동 입력 필드는 없다. | `PostCreateScreen`의 `expDate + 3일` | 유통기한 수동 입력 또는 라벨 사진/OCR은 다음 스프린트 후보 |
-| 잘못 찍은 사진 재촬영 UI | 부분 구현 | 분석 결과 화면에는 `다시 촬영` 버튼이 있다. 하지만 촬영 실패/분석 실패 Alert에는 `OK`만 있고 재촬영/갤러리/수동 입력 선택지가 없다. 에뮬레이터 셔터 검증에서도 `촬영 오류`, `사진을 촬영할 수 없습니다.` Alert만 표시됐다. | `AnalysisResultScreen` footer, `CameraScanScreen` catch Alert, logcat `Capture error TypeError: undefined is not a function` | 실패 Alert를 액션형 대안으로 변경 |
+| 잘못 찍은 사진 재촬영 UI | 부분 구현 | 분석 결과 화면에는 `다시 촬영` 버튼이 있다. 촬영 실패 Alert는 갤러리 선택 대안을 제공한다. 분석 실패 Alert는 아직 서버 오류 문구 중심이다. | `AnalysisResultScreen` footer, `CameraScanScreen` catch Alert | 분석 실패 Alert를 재촬영/갤러리/수동 입력 액션형 대안으로 변경 |
 | AI confidence 표시/활용 | 미구현 | API와 타입에는 `confidenceScore`가 있지만 UI 표시, 등록 차단, 재촬영 요구, 수동 입력 분기에는 사용하지 않는다. | `AiAnalysis.confidenceScore`, `AnalysisResultScreen`, `PostCreateScreen` | threshold 정책과 UI 상태 추가 |
 | confidence 낮을 때 등록 차단 | 정책 결정 필요 | 현재는 낮은 confidence를 앱이 판단하지 못한다. 부패 의심 category만 `canShare=false`로 계산하지만 `이대로 나눔하기` 버튼은 실제로 disabled 되지 않는다. | `AnalysisResultScreen.getQualityMeta()`, CTA `onPress` | confidence만으로 즉시 차단하지 말고 `확인 필요` 상태로 분기 |
 | confidence 낮을 때 재촬영 | 미구현 | 낮은 confidence 전용 문구나 재촬영 강제 흐름이 없다. | `AnalysisResultScreen`, `CameraScanScreen` | `confidenceScore < threshold`면 재촬영 CTA를 강조 |
@@ -427,7 +427,7 @@ docs/MVP_VALIDATION_AND_NEXT_SPRINT_TODO.md의 "3. AI 파이프라인 데이터 
 4. 유통기한 기본 3일 자동값 대신 수동 입력 필드를 추가하거나, 최소한 작성 화면에서 수정 가능하게 만든다.
 5. multi-object 검증용 이미지 세트를 준비한다: 단일 객체, 여러 객체, 흐림/어두움, 라벨/유통기한 포함, 포장 내부 미노출, 부패 의심.
 6. API 초안에 `detections[]` 응답 계약을 추가하고, 대표 객체 1개 처리와 객체별 분리 등록 중 어느 UX가 맞는지 별도 검증한다.
-7. 에뮬레이터 셔터에서 `Capture error TypeError: undefined is not a function`가 발생하므로 실제 기기 또는 Vision Camera 설정으로 촬영 경로를 재검증한다.
+7. 완료: 에뮬레이터 셔터의 `Capture error TypeError: undefined is not a function`는 `usePhotoOutput().capturePhotoToFile()` 적용 후 사라졌고, 촬영 파일이 API로 전달됐다.
 
 ### 산출물
 
@@ -660,7 +660,7 @@ docs/MVP_VALIDATION_AND_NEXT_SPRINT_TODO.md의 "5. 미구현 기능 상태 점�
 - 분류: 검증 필요
 - 우선순위: P1
 - 배경: 에뮬레이터에서 셔터 촬영 시 `Capture error TypeError: undefined is not a function`가 발생했다.
-- 현재 동작: 갤러리 선택은 동작하지만 카메라 셔터 촬영은 에뮬레이터에서 실패한다.
+- 현재 동작: `react-native-vision-camera@5` API에 맞춰 `usePhotoOutput().capturePhotoToFile()`로 수정했고, 에뮬레이터에서 촬영 파일 생성 및 API 호출까지 확인했다.
 - 기대 동작: 실제 기기에서는 촬영 파일이 생성되고, 실패 시 갤러리 선택/수동 입력 대안이 제공된다.
 - Acceptance Criteria:
   - [ ] 실제 Android 기기에서 촬영 파일 URI가 생성된다.
