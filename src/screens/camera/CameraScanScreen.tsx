@@ -29,6 +29,7 @@ import {
 import {launchImageLibrary} from 'react-native-image-picker';
 import {styles} from './CameraScanScreen.styles';
 import {generatePost} from '@/api/posts';
+import {getApiErrorMessage} from '@/utils/apiError';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CameraScan'>;
 
@@ -143,8 +144,11 @@ const CameraScanScreen = ({navigation}: Props) => {
         response: error?.response?.data,
         image: {uri, type, name},
       });
-      const message = error?.response?.data?.message || '서버 오류가 발생했습니다.';
-      Alert.alert('오류', message);
+      const message = getApiErrorMessage(error, 'AI 분석에 실패했습니다.');
+      Alert.alert('분석 실패', message, [
+        {text: '다시 촬영', style: 'cancel'},
+        {text: '갤러리 선택', onPress: handleGallery},
+      ]);
     } finally {
       setIsAnalyzing(false);
     }

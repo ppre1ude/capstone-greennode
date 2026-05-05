@@ -250,7 +250,7 @@ Content-Type: multipart/form-data
 | AI 서버 장애 | "AI 분석 서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요." |
 | 비이미지 파일 | "지원하지 않는 파일 형식입니다. JPEG, PNG, WebP 이미지만 업로드 가능합니다." |
 
-> 프론트에서는 `success === false`일 때 `message`를 Toast/Alert로 표시하면 됨.
+> 프론트에서는 실패 응답의 `message` 또는 FastAPI 형식의 `detail`을 Toast/Alert로 표시한다.
 
 > 용어 기준: `Fresh/Normal/Stale/Bad/Rotten`은 **신선도 등급**이다. `Stale/Bad/Rotten`은 **부패 의심**으로 보고 `canShare=false`일 때 분석 결과, 작성, 최종 등록 단계에서 모두 막는다.
 
@@ -461,7 +461,7 @@ GET /posts/nearby → 근처 게시글 카드
 - [ ] 로그인 필드명은 `username` (email 아님)
 - [ ] **게시글 등록 전 반드시 generate 호출** → imageToken 획득
 - [ ] **게시글 등록 시 이미지 파일 보내지 않음** → `application/x-www-form-urlencoded`의 `data=<JSON>`에 imageToken 포함
-- [ ] generate에서 400 수신 시 `message`를 Toast/Alert로 표시
+- [ ] generate에서 400 수신 시 `message` 또는 `detail`을 Toast/Alert로 표시
 - [ ] imageToken은 1시간 내 사용 (만료 시 다시 촬영)
 - [ ] generate API Form 필드는 `image`, 선택 `user_hint`
 - [ ] 이미지 URL은 상대경로 → Base URL 붙여서 사용

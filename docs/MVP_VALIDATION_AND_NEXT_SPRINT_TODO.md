@@ -20,6 +20,7 @@
 - P1 카메라 촬영/fallback: `react-native-vision-camera@5`의 `usePhotoOutput().capturePhotoToFile()` 경로로 수정했다. 에뮬레이터에서 촬영 파일 생성 및 실제 `/posts/generate` 호출까지 확인했고, 실제 기기 셔터 검증은 아직 남았다.
 - P1 confidence: `confidenceScore`를 분석 결과/작성 화면에 표시하고 60% 미만은 즉시 차단 대신 `확인 필요`로 분기한다.
 - 회귀 테스트: `__tests__/postPolicy.test.ts`에서 품질 정책, confidence, 작성자 판단을 고정한다.
+- AI QA fixture/실기기 체크리스트: [AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md](./AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md)에 성공/실패/false-positive/대용량/실제 기기 촬영 검증 기준을 정리했다.
 
 ## 권장 작업 순서
 
@@ -166,8 +167,8 @@ MVP가 성공 케이스만 동작하는 상태인지, 실패 상황에서도 앱
 | 항목 | 판정 | 현재 동작/근거 | 후속 작업 |
 | --- | --- | --- | --- |
 | 부패 의심 등록 차단 | 구현됨 | `AnalysisResultScreen`은 `canShare=false`일 때 CTA를 disabled 처리하고, `PostCreateScreen`/`FridgeSelectScreen`에도 최종 품질 가드가 있다. | stale/bad fixture로 회귀 검증 |
-| 부패 의심 실패 이유 표시 | 버그 | 실제 셔터 재검증에서 서버는 400 `detail`로 등록 불가 사유를 반환했지만 앱 Alert는 일반 서버 오류로 표시했다. | API 오류의 `detail`도 사용자 문구로 표시하고 재촬영/갤러리 대안을 제공 |
-| 실패 후 대안 흐름 | 부분 구현 | 분석 결과 화면에는 재촬영과 작성 화면 진입이 있다. 하지만 분석 실패 Alert는 확인 버튼뿐이고, 서버 generate 400 이후 대안 CTA가 없다. | 실패 Alert 이후 재촬영/갤러리/수동 입력 선택지를 제공한다. |
+| 부패 의심 실패 이유 표시 | 구현됨, fixture 검증 필요 | `generatePost` 실패나 서버 에러는 `message`뿐 아니라 `detail`도 Alert에 표시한다. 실제 stale/bad fixture는 아직 확보하지 못했다. | stale/bad fixture 또는 테스트 이미지를 확보하고, 부패 사유 문구를 실제 앱에서 검증한다. |
+| 실패 후 대안 흐름 | 부분 구현 | 분석 결과 화면에는 재촬영과 작성 화면 진입이 있다. generate 실패 Alert는 `다시 촬영`/`갤러리 선택` 대안을 제공한다. 수동 입력 CTA는 아직 없다. | 실패 Alert에 수동 입력 선택지를 추가할지 결정한다. |
 | API 서버 연결 실패 | 부분 구현 | 홈/지도/냉장고 목록은 error/empty 상태와 retry UI를 분리했다. 위치 등록, 게시글 상세, 게시글 생성은 여전히 화면별 Alert 중심이다. | API 오류 문구 추출과 retry 패턴을 공통화한다. |
 | AI 서버 연결 실패 | 추가 검증 필요 | `postMultipart`는 네트워크 오류와 30초 타임아웃을 reject하고 `CameraScanScreen`이 Alert를 띄운다. mock 제거 후 실제 성공 경로는 검증했지만, AI 서버 중단/타임아웃 fault injection은 아직 하지 않았다. | AI 서버 중단/타임아웃 케이스를 실제 환경에서 재검증한다. |
 | 네트워크 끊김 | 미흡 | 공통 offline 상태가 없고, 화면별로 Alert 또는 로그만 남긴다. 홈/지도는 실패가 빈 상태처럼 보일 수 있다. | 공통 네트워크 에러 문구와 retry 패턴을 정한다. |
@@ -182,7 +183,7 @@ MVP가 성공 케이스만 동작하는 상태인지, 실패 상황에서도 앱
 
 #### 버그/미구현 후보
 
-- 부패 의심 등록 차단은 구현됐지만, 서버 400 `detail`이 일반 서버 오류로 표시되는 UX 버그가 남았다.
+- 부패 의심 등록 차단은 구현됐고, 서버 400 `detail`도 Alert에 표시하도록 수정했다. 실제 stale/bad fixture 검증이 남았다.
 - mock 파이프라인은 제거되어 실제 성공 경로는 확인됐다. 다만 부패 판정 fixture, AI 장애, 중복 생성 같은 실패 경로는 아직 별도 재현이 필요하다.
 - 홈/지도/냉장고 목록 조회 실패는 error/empty 상태가 분리됐지만, 네트워크 끊김/공통 오류 문구는 아직 화면별로 흩어져 있다.
 - 카메라/위치 권한 거부 후 대체 흐름이 부족하다.
@@ -191,7 +192,7 @@ MVP가 성공 케이스만 동작하는 상태인지, 실패 상황에서도 앱
 
 #### 다음 스프린트 처리 제안
 
-- 우선순위 1: 부패 의심 실패 사유 표시, stale/bad fixture 확보, 실제 게시글 생성의 중복 방지 검증
+- 우선순위 1: stale/bad fixture 확보, 부패 의심 실패 사유 실제 앱 검증, 실제 게시글 생성의 중복 방지 검증
 - 우선순위 2: API/AI/네트워크 실패 공통 UX, 권한 거부 대체 흐름, 목록 화면 retry 상태
 - 우선순위 3: 대용량 이미지 압축/제한, 중복 등록 idempotency, 검색 기능 또는 MVP 제외 결정
 
@@ -601,28 +602,30 @@ docs/MVP_VALIDATION_AND_NEXT_SPRINT_TODO.md의 "5. 미구현 기능 상태 점�
 
 - 분류: 버그
 - 우선순위: P0
-- 배경: `AnalysisResultScreen`은 `canShare=false`일 때 CTA를 흐리게 보이게만 하고 실제 이동을 막지 않는다.
-- 현재 동작: `Stale/Bad/Rotten` 계열도 `PostCreate`로 이동할 수 있고, `PostCreateScreen`/`FridgeSelectScreen`에는 품질 가드가 없다.
+- 상태: 완료, fixture 회귀 검증 필요
+- 배경: `AnalysisResultScreen`은 과거에 `canShare=false`일 때 CTA를 흐리게 보이게만 하고 실제 이동을 막지 않았다.
+- 현재 동작: `AnalysisResultScreen`, `PostCreateScreen`, `FridgeSelectScreen`에서 부패 의심 신선도 등급의 등록 진행을 차단한다.
 - 기대 동작: 등록 불가 상태에서는 분석 결과 화면, 게시글 작성 화면, 최종 등록 직전에서 모두 차단한다.
 - Acceptance Criteria:
-  - [ ] `canShare=false`이면 `이대로 나눔하기` 버튼이 실제 disabled 처리된다.
-  - [ ] route 직접 진입 또는 상태 조작으로 `PostCreate`에 들어가도 최종 등록 전에 차단된다.
-  - [ ] 사용자에게 재촬영/갤러리 선택/수동 확인 중 최소 하나의 대안이 제공된다.
+  - [x] `canShare=false`이면 `이대로 나눔하기` 버튼이 실제 disabled 처리된다.
+  - [x] route 직접 진입 또는 상태 조작으로 `PostCreate`/`FridgeSelect`에 들어가도 최종 등록 전에 차단된다.
+  - [x] 사용자에게 재촬영/갤러리 선택 중 최소 하나의 대안이 제공된다.
 - 검증 방법: `AnalysisResultScreen` 단위 테스트, stale/bad fixture 기반 수동 QA, `FridgeSelectScreen` 최종 등록 guard 테스트
 - 관련 파일/화면/API: `src/screens/camera/AnalysisResultScreen.tsx`, `src/screens/post/PostCreateScreen.tsx`, `src/screens/post/FridgeSelectScreen.tsx`
-- 비고: 2번 실패 케이스, 3번 AI 파이프라인, 4번 UX 정책의 공통 최우선 항목이다.
+- 비고: 실제 stale/bad fixture가 아직 없어 수동 QA는 남아 있다.
 
 ## 게시글 상세 authorId/userId 계약 불일치 수정
 
 - 분류: 버그
 - 우선순위: P0
+- 상태: 완료
 - 배경: 실제 `GET /api/v1/posts/{id}` 응답은 `authorId`를 반환하지만 앱 `Post` 타입과 `PostDetailScreen`은 `userId`를 사용한다.
-- 현재 동작: 내가 만든 게시글이어도 `user?.id === post.userId`가 false가 되어 삭제 버튼이 표시되지 않을 수 있다.
+- 현재 동작: 작성자 판단은 `authorId` 기준으로 처리하고, 구형 fixture를 위해 `userId` fallback만 남겨둔다.
 - 기대 동작: API 응답 계약과 앱 타입/화면 로직이 일치하고, 작성자에게 삭제 버튼이 표시된다.
 - Acceptance Criteria:
-  - [ ] `Post` 타입이 실제 API 응답의 작성자 필드를 반영한다.
-  - [ ] 기존 목록/상세/삭제 UI가 동일한 작성자 판단 기준을 사용한다.
-  - [ ] 작성자 계정에서는 삭제 버튼이 보이고, 타 계정에서는 보이지 않는다.
+  - [x] `Post` 타입이 실제 API 응답의 작성자 필드를 반영한다.
+  - [x] 상세/삭제 UI가 동일한 작성자 판단 기준을 사용한다.
+  - [x] 작성자 계정에서는 삭제 버튼이 보이고, 타 계정에서는 보이지 않는다.
 - 검증 방법: 실제 post id `7` 상세 조회, 작성자/타 사용자 로그인 QA, 타입 체크
 - 관련 파일/화면/API: `src/types/post.ts`, `src/screens/post/PostDetailScreen.tsx`, `GET /api/v1/posts/{id}`
 - 비고: 7번 데이터 준비 중 실제 응답으로 추가 발견.
@@ -631,13 +634,14 @@ docs/MVP_VALIDATION_AND_NEXT_SPRINT_TODO.md의 "5. 미구현 기능 상태 점�
 
 - 분류: 버그
 - 우선순위: P1
+- 상태: 완료, 네트워크 fault injection QA 필요
 - 배경: 목록 조회 실패가 `console.warn`에만 남고 화면은 빈 상태처럼 보일 수 있다.
-- 현재 동작: 홈/지도/냉장고 목록 API 실패 시 사용자에게 retry나 오류 상태가 없다.
+- 현재 동작: 홈/지도/냉장고 목록 API 실패 시 오류 문구와 retry UI를 표시한다.
 - 기대 동작: API 실패와 실제 데이터 없음이 UI에서 구분된다.
 - Acceptance Criteria:
-  - [ ] 홈 주변 게시글 조회 실패 시 오류 문구와 다시 시도 버튼이 표시된다.
-  - [ ] 지도/냉장고 목록 조회 실패 시 오류 문구와 다시 시도 버튼이 표시된다.
-  - [ ] 정상 빈 상태 문구는 API 성공 + 데이터 0건일 때만 표시된다.
+  - [x] 홈 주변 게시글 조회 실패 시 오류 문구와 다시 시도 버튼이 표시된다.
+  - [x] 지도/냉장고 목록 조회 실패 시 오류 문구와 다시 시도 버튼이 표시된다.
+  - [x] 정상 빈 상태 문구는 API 성공 + 데이터 0건일 때만 표시된다.
 - 검증 방법: API base URL 오류 주입, 네트워크 차단 QA, 컴포넌트 테스트
 - 관련 파일/화면/API: `HomeScreen`, `MapScreen`, `FridgeSelectScreen`, `/posts/nearby`, `/fridges/nearby`, `/fridges/available`
 
@@ -645,12 +649,13 @@ docs/MVP_VALIDATION_AND_NEXT_SPRINT_TODO.md의 "5. 미구현 기능 상태 점�
 
 - 분류: 미구현
 - 우선순위: P1
+- 상태: 완료, 권한 거부 UX 보강 남음
 - 배경: 최초 위치 등록은 구현됐지만 위치 재설정 UI는 연결되지 않았다.
-- 현재 동작: 홈 위치 헤더와 프로필 설정 메뉴가 위치 재설정으로 이동하지 않는다.
+- 현재 동작: 홈 위치 헤더와 프로필 `동네 위치 재설정` 메뉴에서 `LocationSetup`으로 재진입한다.
 - 기대 동작: 사용자가 홈 또는 프로필에서 현재 위치 재설정 화면으로 진입할 수 있다.
 - Acceptance Criteria:
-  - [ ] 홈 위치 헤더 또는 프로필 설정에서 `LocationSetup` 재진입이 가능하다.
-  - [ ] 기존 위치가 있는 사용자도 새 좌표를 `/auth/me/location`에 저장할 수 있다.
+  - [x] 홈 위치 헤더 또는 프로필 설정에서 `LocationSetup` 재진입이 가능하다.
+  - [x] 기존 위치가 있는 사용자도 새 좌표를 `/auth/me/location`에 저장할 수 있다.
   - [ ] 위치 권한 거부 시 설정/재시도 안내가 표시된다.
 - 검증 방법: 위치 있는 계정으로 재설정 QA, `/auth/me` 좌표 변경 확인
 - 관련 파일/화면/API: `HomeScreen`, `ProfileScreen`, `LocationSetupScreen`, `PUT /api/v1/auth/me/location`
@@ -659,6 +664,7 @@ docs/MVP_VALIDATION_AND_NEXT_SPRINT_TODO.md의 "5. 미구현 기능 상태 점�
 
 - 분류: 검증 필요
 - 우선순위: P1
+- 상태: 에뮬레이터 검증 완료, 실제 기기 미검증
 - 배경: 에뮬레이터에서 셔터 촬영 시 `Capture error TypeError: undefined is not a function`가 발생했다.
 - 현재 동작: `react-native-vision-camera@5` API에 맞춰 `usePhotoOutput().capturePhotoToFile()`로 수정했고, 에뮬레이터에서 촬영 파일 생성 및 API 호출까지 확인했다.
 - 기대 동작: 실제 기기에서는 촬영 파일이 생성되고, 실패 시 갤러리 선택/수동 입력 대안이 제공된다.
@@ -668,20 +674,37 @@ docs/MVP_VALIDATION_AND_NEXT_SPRINT_TODO.md의 "5. 미구현 기능 상태 점�
   - [ ] 촬영/갤러리 모두 `generatePost()`까지 도달한다.
 - 검증 방법: 실제 기기 QA, 에뮬레이터 fallback QA, logcat 확인
 - 관련 파일/화면/API: `CameraScanScreen`, `react-native-vision-camera`, `POST /api/v1/posts/generate`
+- 체크리스트: [AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md](./AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md)
 
 ## AI confidence와 확인 필요 상태 도입
 
 - 분류: 정책 결정 필요
 - 우선순위: P1
+- 상태: 부분 완료, fixture 검증 필요
 - 배경: API는 `confidenceScore`를 반환하지만 앱은 표시/분기/차단에 사용하지 않는다.
-- 현재 동작: `Fresh`면 confidence와 관계없이 나눔 가능처럼 보인다.
+- 현재 동작: `confidenceScore`를 분석 결과/작성 화면에 표시하고, 낮은 confidence는 `확인 필요`로 분기한다.
 - 기대 동작: 낮은 confidence는 즉시 차단이 아니라 `확인 필요` 상태로 분기하고 재촬영/수동 입력을 유도한다.
 - Acceptance Criteria:
-  - [ ] confidence가 분석 결과 화면에 표시된다.
-  - [ ] threshold 미만일 때 `확인 필요` 상태와 대안 CTA가 표시된다.
-  - [ ] threshold 값과 정책이 문서화된다.
+  - [x] confidence가 분석 결과 화면에 표시된다.
+  - [x] threshold 미만일 때 `확인 필요` 상태가 표시된다.
+  - [x] threshold 값과 정책이 문서화된다.
 - 검증 방법: mock/fixture 응답으로 confidence 0.4/0.7/1.0 테스트, 수동 QA
 - 관련 파일/화면/API: `AiAnalysis.confidenceScore`, `AnalysisResultScreen`, `PostCreateScreen`
+
+## AI false-positive 차단 계약 정리
+
+- 분류: 정책 결정/서버 계약
+- 우선순위: P1
+- 상태: 정책 초안 작성, 서버/AI 계약 반영 필요
+- 배경: 에뮬레이터 QA에서 비식재료/스크린샷성 이미지가 `바나나 / 신선 / 100%`로 통과했다.
+- 현재 동작: 앱은 서버 AI 결과를 신뢰하므로 비식재료 여부를 자체 판별하지 않는다.
+- 기대 동작: 서버/AI는 비식재료, 스크린샷, 앱 아이콘, 실내 배경을 `Fresh` 식재료로 반환하지 않는다.
+- Acceptance Criteria:
+  - [ ] `not_food`, `low_quality`, `multi_object_review` 등 실패/검토 사유 enum을 서버 계약에 추가한다.
+  - [ ] 비식재료/스크린샷 fixture는 generate 400 또는 `확인 필요`로 처리된다.
+  - [ ] 앱은 서버 실패 사유를 사용자에게 보여주고 등록을 진행하지 않는다.
+- 검증 방법: [AI QA fixture 문서](./AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md)의 `not-food`, `screenshot-or-ui`, `low-quality` fixture로 반복 호출
+- 관련 파일/화면/API: `POST /api/v1/posts/generate`, `CameraScanScreen`, `AnalysisResultScreen`
 
 #### P2: 다음 스프린트 범위 조정 후보
 
@@ -808,15 +831,15 @@ docs/MVP_VALIDATION_AND_NEXT_SPRINT_TODO.md의 검증 결과를 바탕으로 다
 }
 ```
 
-주의: 상세 응답은 `authorId`를 반환한다. 앱 타입/상세 화면의 `userId` 기대와 다르므로 6번 백로그에 버그로 올렸다.
+주의: 상세 응답은 `authorId`를 반환한다. 앱은 `authorId` 기준으로 작성자 여부를 판단하고, 구형 fixture 호환을 위해 `userId` fallback만 남긴다.
 
 #### 아직 준비하지 못한 fixture
 
 | 항목 | 상태 | 이유 | 다음 액션 |
 | --- | --- | --- | --- |
-| AI 실패 케이스 이미지 | 미준비 | 현재 확보한 실제 이미지는 성공 케이스뿐이다. 서버 generate 400을 안정적으로 재현하는 이미지가 필요하다. | 어두움/흔들림/비식재료/너무 가까운 사진 세트 확보 |
-| 부패 상태 `나쁨` 이미지 | 미준비 | 실제 `Stale/Bad/Rotten` 응답을 만드는 테스트 이미지가 없다. | 부패 의심 과일/채소 fixture 또는 서버 fixture 모드 준비 |
-| multi-object 예시 이미지 | 미준비 | 여러 식재료가 동시에 담긴 실제 사진이 없다. 현재 API 계약도 단일 대표 객체만 반환한다. | 단일 접시에 여러 식재료가 있는 사진과 여러 개체가 분리된 사진을 각각 준비 |
+| AI 실패 케이스 이미지 | 미준비 | 현재 확보한 실제 이미지는 성공 케이스뿐이다. 서버 generate 400을 안정적으로 재현하는 이미지가 필요하다. | [AI QA fixture 문서](./AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md)의 `not-food`, `screenshot-or-ui`, `low-quality` 세트 확보 |
+| 부패 상태 `나쁨` 이미지 | 미준비 | 실제 `Stale/Bad/Rotten` 응답을 만드는 테스트 이미지가 없다. | [AI QA fixture 문서](./AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md)의 `stale-or-rotten` fixture 또는 서버 fixture 모드 준비 |
+| multi-object 예시 이미지 | 미준비 | 여러 식재료가 동시에 담긴 실제 사진이 없다. 현재 API 계약도 단일 대표 객체만 반환한다. | [AI QA fixture 문서](./AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md)의 `multi-object` fixture 확보 |
 | 주변 냉장고 없음 위치 | 준비 실패 | `0,0`, 제주, 부산, 뉴욕 좌표에서도 `/fridges/nearby`가 3건을 반환했다. 반경 필터가 기대와 다를 가능성이 있다. | 서버 냉장고 거리 필터를 확인하거나 no-fridge fixture를 백엔드에 추가 |
 
 #### 재현 명령 요약

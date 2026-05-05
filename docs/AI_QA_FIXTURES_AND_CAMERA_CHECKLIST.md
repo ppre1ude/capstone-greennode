@@ -1,0 +1,74 @@
+# AI QA Fixtures and Camera Checklist
+
+> 기준일: 2026-05-05
+> 목적: AI 분석 실패 UX, false-positive 정책, 실제 기기 카메라 검증을 반복 가능하게 만든다.
+
+## Fixture Set
+
+| ID | 케이스 | 필요한 이미지 | 기대 결과 | 판정 기준 |
+| --- | --- | --- | --- | --- |
+| `fresh-single` | 신선 성공 | 외관이 잘 보이는 단일 과일/채소 사진 | `Fresh` 또는 `Normal`, `canShare=true`, 게시글 작성 진입 가능 | 분석 결과와 작성 화면에 식재료명/신선도/신뢰도가 표시된다. |
+| `stale-or-rotten` | 부패 의심 | 무름, 곰팡이, 변색이 보이는 과일/채소 사진 | `Stale/Bad/Rotten` 또는 generate 400 | 앱은 등록 화면으로 보내지 않고 서버 `detail/message`를 사용자에게 보여준다. |
+| `not-food` | 비식재료 | 책상, 방, 전자기기 등 식재료가 아닌 사진 | generate 400 또는 `확인 필요` | 식재료 나눔으로 바로 등록되지 않는다. |
+| `screenshot-or-ui` | 스크린샷/아이콘 | 앱 화면 캡처, 런처 아이콘, 지도 캡처 | generate 400 또는 `확인 필요` | 실제 식재료 사진이 아닌데 `Fresh`로 통과하면 false-positive 버그로 기록한다. |
+| `low-quality` | 흐림/어두움/가림 | 흔들림, 저조도, 부분 가림 사진 | 낮은 confidence 또는 실패 | `확인 필요` 또는 재촬영 안내가 표시된다. |
+| `large-image` | 대용량 이미지 | 8MB 이상 또는 고해상도 원본 | 압축 후 성공 또는 명확한 실패 | 앱이 멈추지 않고 진행률/오류 문구를 제공한다. |
+| `multi-object` | 여러 식재료 | 한 장에 서로 다른 식재료가 2개 이상 있는 사진 | 현재는 대표 객체 1개 처리 | multi-object는 `detections[]` 계약 전까지 정책 검증용으로만 쓴다. |
+
+## Fixture Storage Rule
+
+- 실제 식재료 사진은 저작권/개인정보가 없는 파일만 사용한다.
+- 커밋 가능한 작은 샘플은 `docs/qa-fixtures/`에 둔다.
+- 원본 대용량 이미지는 git에 넣지 말고 로컬 또는 공유 드라이브에 보관한 뒤 파일명과 결과만 문서에 기록한다.
+- 권장 파일명: `{id}-{expected}-{YYYYMMDD}.jpg`
+  - 예: `fresh-single-fresh-20260505.jpg`
+  - 예: `stale-or-rotten-rejected-20260505.jpg`
+
+## False-positive Policy
+
+현재 앱은 이미지 내용을 직접 판별하지 않고 서버의 AI 결과를 신뢰한다. 따라서 비식재료/스크린샷을 막는 1차 책임은 서버/AI 파이프라인에 둔다.
+
+앱 책임:
+
+- generate 실패의 `message` 또는 `detail`을 사용자에게 그대로 이해 가능한 문구로 표시한다.
+- `canShare=false` 또는 generate 400은 게시글 작성/최종 등록으로 진행하지 않는다.
+- 낮은 confidence는 즉시 등록 차단이 아니라 `확인 필요`로 보여주고 재촬영/갤러리/수동 확인을 유도한다.
+
+서버/AI 책임:
+
+- 비식재료, 스크린샷, 앱 아이콘, 실내 배경은 `Fresh` 식재료로 반환하지 않는다.
+- 식재료 여부가 불확실하면 `confidence`를 낮게 반환하거나 generate 400으로 거부한다.
+- 장기적으로는 `not_food`, `low_quality`, `multi_object_review` 같은 실패/검토 사유 enum을 제공한다.
+
+## Actual Android Device Camera Checklist
+
+사전 조건:
+
+- 실제 Android 기기가 USB 디버깅으로 연결되어 있어야 한다.
+- `adb devices -l`에 `emulator`가 아닌 물리 기기가 `device` 상태로 보여야 한다.
+- SSH 터널 또는 동일 네트워크 API base URL이 실제 기기에서 접근 가능해야 한다.
+
+검증 절차:
+
+1. release APK를 설치한다.
+2. 앱을 실행하고 검증 계정으로 로그인한다.
+3. 동네 위치가 등록되어 있는지 확인한다.
+4. AI 스캔 화면에 진입한다.
+5. 실제 카메라로 `fresh-single` 사진을 촬영한다.
+6. logcat에서 `VisionCamera_*.jpg` 파일 URI 생성과 `/posts/generate` 호출을 확인한다.
+7. 분석 결과 화면에서 식재료명, 신선도 등급, confidence, `나눔 가능/확인 필요/나눔 주의` 상태를 확인한다.
+8. `stale-or-rotten`, `not-food`, `low-quality` 케이스를 반복한다.
+9. 실패 케이스에서 앱이 멈추지 않고 재촬영/갤러리 선택 대안을 제공하는지 확인한다.
+
+기록할 증거:
+
+- 기기 모델, Android 버전, 앱 빌드 종류
+- fixture 파일명 또는 촬영 대상 설명
+- 분석 결과 화면 스크린샷
+- 실패 Alert 스크린샷
+- logcat의 `Generate post failed` 또는 성공 응답 요약
+
+현재 상태:
+
+- 2026-05-05 확인 시 연결 장치는 `emulator-5554`뿐이었다.
+- 실제 기기 카메라 검증은 물리 기기 연결 후 진행해야 한다.
