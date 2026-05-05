@@ -15,3 +15,9 @@
 | `multi-object` | `multi-object-review-YYYYMMDD.jpg` | 필요 |
 
 대용량 원본이나 개인정보가 포함될 수 있는 사진은 이 디렉터리에 커밋하지 않는다. 결과만 `docs/AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md`에 기록한다.
+
+반복 검증 기준은 `manifest.json`에 기록한다. 실제 이미지가 준비되면 아래 명령을 실행한다.
+
+```bash
+FOODLINK_API_BASE_URL=http://localhost:8080 FOODLINK_ACCESS_TOKEN=<token> npm run qa:ai-fixtures
+```

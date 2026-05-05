@@ -6,7 +6,7 @@
  *
  * @wireframe wireframe-foodlink/map.html
  */
-import React, {useState, useEffect, useRef, useCallback} from 'react';
+import React, {useState, useEffect, useRef, useCallback, useMemo} from 'react';
 import {
   View,
   Text,
@@ -22,6 +22,7 @@ import MapView, {Marker, Circle, PROVIDER_DEFAULT} from 'react-native-maps';
 import {getNearbyFridges} from '@/api/fridges';
 import {useAuthStore} from '@/store/authStore';
 import type {Fridge} from '@/types';
+import {filterFridges} from '@/utils/fridgeSearch';
 import {colors} from '@/theme';
 import {styles} from './MapScreen.styles';
 
@@ -33,9 +34,14 @@ const MapScreen = () => {
     'loading' | 'ready' | 'empty' | 'error'
   >('loading');
   const [fridgeError, setFridgeError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [selectedFridgeId, setSelectedFridgeId] = useState<number | null>(null);
   const mapRef = useRef<MapView>(null);
   const flatListRef = useRef<FlatList>(null);
+  const displayedFridges = useMemo(
+    () => filterFridges(fridges, searchQuery),
+    [fridges, searchQuery],
+  );
 
   // 기본 좌표 (유저 위치 없으면 광주 전남대)
   const initialRegion = {
@@ -76,6 +82,15 @@ const MapScreen = () => {
   useEffect(() => {
     fetchFridges();
   }, [fetchFridges]);
+
+  useEffect(() => {
+    if (
+      selectedFridgeId != null &&
+      !displayedFridges.some(fridge => fridge.id === selectedFridgeId)
+    ) {
+      setSelectedFridgeId(null);
+    }
+  }, [displayedFridges, selectedFridgeId]);
 
   const handleMarkerPress = (fridge: Fridge, index: number) => {
     setSelectedFridgeId(fridge.id);
@@ -141,6 +156,8 @@ const MapScreen = () => {
             style={styles.searchInput}
             placeholder="동네 이름이나 냉장고 이름 검색"
             placeholderTextColor={colors.textPlaceholder}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
           />
         </View>
       </View>
@@ -165,7 +182,7 @@ const MapScreen = () => {
         />
 
         {/* 냉장고 마커 */}
-        {fridges.map((fridge, index) => (
+        {displayedFridges.map((fridge, index) => (
           <Marker
             key={fridge.id}
             coordinate={{
@@ -224,10 +241,10 @@ const MapScreen = () => {
               </Text>
             </TouchableOpacity>
           </View>
-        ) : fridges.length > 0 ? (
+        ) : displayedFridges.length > 0 ? (
           <FlatList
             ref={flatListRef}
-            data={fridges}
+            data={displayedFridges}
             keyExtractor={item => item.id.toString()}
             renderItem={renderFridgeCard}
             horizontal
@@ -238,7 +255,21 @@ const MapScreen = () => {
           />
         ) : (
           <View style={styles.emptyCard}>
-            <Text style={styles.emptyText}>근처에 냉장고가 없습니다.</Text>
+            <Text style={styles.emptyTitle}>
+              {fridges.length > 0 ? '검색 결과가 없습니다' : '근처에 냉장고가 없습니다'}
+            </Text>
+            <Text style={styles.emptyText}>
+              {fridges.length > 0
+                ? '다른 동네 이름이나 냉장고 이름으로 검색해보세요.'
+                : '동네 위치를 다시 설정하거나 잠시 후 다시 확인해주세요.'}
+            </Text>
+            {searchQuery ? (
+              <TouchableOpacity
+                style={styles.retryButton}
+                onPress={() => setSearchQuery('')}>
+                <Text style={styles.retryButtonText}>검색 초기화</Text>
+              </TouchableOpacity>
+            ) : null}
           </View>
         )}
       </View>

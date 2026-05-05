@@ -21,8 +21,8 @@
 - AI 응답은 현재 단일 대표 객체(`detectedFruit`) 중심으로 처리한다. multi-object detection은 다음 스프린트 연구/계약 설계 항목이다.
 - `Stale/Bad/Rotten` 또는 `canShare=false` 상태는 분석 결과, 게시글 작성, 최종 등록 단계에서 등록을 차단한다.
 - 비식재료/스크린샷 false-positive는 서버/AI 계약에서 우선 차단하고, 앱은 실패 사유를 표시하는 방향으로 정리했다. fixture 기준은 [AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md](./AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md)를 따른다.
-- FCM은 토큰 등록까지만 앱에서 구현됐고, foreground/background 수신 처리와 알림함은 미구현이다.
-- 채팅, 유저 통계, 탄소 절감액, 소셜 로그인, 이메일 verification은 목업 또는 미구현 상태다.
+- FCM은 토큰 등록과 빈 알림함 탭까지만 앱에서 구현됐고, foreground/background 수신 처리와 읽음 상태는 미구현이다.
+- 채팅은 MVP에서 보류하고 알림함으로 축소했다. 유저 통계와 탄소 절감액은 실제 지표 API가 없어 `준비 중`으로 표시한다. 소셜 로그인, 이메일 verification은 미구현 상태다.
 
 ---
 
@@ -48,7 +48,8 @@
 ### 4. 실시간 푸시 알림 (FCM)
 - 새 식재료 등록 시 2km 내 사용자에게 자동 알림을 보내는 것이 목표
 - **현재 앱 구현**: Firebase Messaging 의존성, Android 알림 권한, FCM 토큰 등록
-- **미구현**: 실제 알림 수신 handler, 알림 목록, 읽음 상태, 알림 탭 데이터 연동
+- **현재 UI 범위**: 빈 알림함 탭
+- **미구현**: 실제 알림 수신 handler, 알림 목록 API, 읽음 상태, 알림 탭 데이터 연동
 
 ---
 

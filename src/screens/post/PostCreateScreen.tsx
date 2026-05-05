@@ -25,7 +25,7 @@ import type {RootStackParamList} from '@/navigation/types';
 import {colors} from '@/theme';
 import {
   getConfidencePercent,
-  getQualityMeta,
+  getAnalysisQualityMeta,
   needsAnalysisReview,
 } from '@/utils/postPolicy';
 import {styles} from './PostCreateScreen.styles';
@@ -44,12 +44,14 @@ const PostCreateScreen = ({route, navigation}: Props) => {
     result.detectedFruit ||
     result.aiAnalysis?.detectedFruit ||
     '알 수 없음';
-  const quality = getQualityMeta(result.aiAnalysis?.category);
+  const quality = getAnalysisQualityMeta(result.aiAnalysis);
   const confidencePercent = getConfidencePercent(
     result.aiAnalysis?.confidenceScore,
   );
   const needsReview =
-    quality.canShare && needsAnalysisReview(result.aiAnalysis?.confidenceScore);
+    quality.canShare &&
+    (quality.label === '확인 필요' ||
+      needsAnalysisReview(result.aiAnalysis?.confidenceScore));
 
   const [title, setTitle] = useState(result.suggestedTitle || '');
   const [category, setCategory] = useState(result.suggestedCategory || '과일');
@@ -83,6 +85,7 @@ const PostCreateScreen = ({route, navigation}: Props) => {
         expirationDate: formatDateOnly(expDate),
       },
       qualityCategory: result.aiAnalysis?.category,
+      qualityCanShare: quality.canShare,
     });
   };
 

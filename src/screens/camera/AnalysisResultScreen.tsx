@@ -24,7 +24,7 @@ import type {RootStackParamList} from '@/navigation/types';
 import {colors} from '@/theme';
 import {
   getConfidencePercent,
-  getQualityMeta,
+  getAnalysisQualityMeta,
   needsAnalysisReview,
 } from '@/utils/postPolicy';
 
@@ -33,12 +33,14 @@ type Props = NativeStackScreenProps<RootStackParamList, 'AnalysisResult'>;
 const AnalysisResultScreen = ({route, navigation}: Props) => {
   const {result, imageUri} = route.params;
 
-  const quality = getQualityMeta(result.aiAnalysis?.category);
+  const quality = getAnalysisQualityMeta(result.aiAnalysis);
   const confidencePercent = getConfidencePercent(
     result.aiAnalysis?.confidenceScore,
   );
   const needsReview =
-    quality.canShare && needsAnalysisReview(result.aiAnalysis?.confidenceScore);
+    quality.canShare &&
+    (quality.label === '확인 필요' ||
+      needsAnalysisReview(result.aiAnalysis?.confidenceScore));
   const statusLabel = !quality.canShare
     ? '나눔 주의'
     : needsReview

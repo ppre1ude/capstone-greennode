@@ -93,12 +93,13 @@ const HomeScreen = () => {
           <Text style={styles.chevron}>▾</Text>
         </TouchableOpacity>
         <View style={styles.headerIcons}>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate('Map')}>
             <Text style={styles.iconEmoji}>🔍</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.bellWrapper}>
+          <TouchableOpacity
+            style={styles.bellWrapper}
+            onPress={() => navigation.navigate('Chat')}>
             <Text style={styles.iconEmoji}>🔔</Text>
-            <View style={styles.notifDot} />
           </TouchableOpacity>
         </View>
       </View>
@@ -135,15 +136,15 @@ const HomeScreen = () => {
         {/* 통계 카드 */}
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
-            <Text style={styles.statLabel}>오늘의 나눔</Text>
+            <Text style={styles.statLabel}>주변 나눔</Text>
             <Text style={styles.statValue}>
               {posts.length > 0 ? `${posts.length}건` : '—'}
             </Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={styles.statLabel}>탄소 절감액</Text>
+            <Text style={styles.statLabel}>탄소 절감</Text>
             <Text style={[styles.statValue, {color: colors.primary}]}>
-              {posts.length > 0 ? '0.8kg' : '—'}
+              준비 중
             </Text>
           </View>
         </View>

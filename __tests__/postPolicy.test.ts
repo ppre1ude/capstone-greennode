@@ -1,5 +1,6 @@
 import {
   canShareAnalysisResult,
+  getAnalysisQualityMeta,
   getConfidencePercent,
   getPostAuthorId,
   getQualityMeta,
@@ -17,6 +18,32 @@ describe('post policy', () => {
         canShare: false,
       });
       expect(isShareableCategory(category)).toBe(false);
+    },
+  );
+
+  it.each([
+    'not_food',
+    'non_food',
+    'not-food',
+    'low_quality',
+    'low-quality',
+    'screenshot',
+    'ui_screenshot',
+  ])('blocks explicit AI rejection category %s', category => {
+    expect(getQualityMeta(category)).toEqual({
+      label: '등록 불가',
+      canShare: false,
+    });
+    expect(isShareableCategory(category)).toBe(false);
+  });
+
+  it.each(['uncertain', 'review_required', 'multi_object_review'])(
+    'keeps review-only category %s shareable with 확인 필요 label',
+    category => {
+      expect(getQualityMeta(category)).toEqual({
+        label: '확인 필요',
+        canShare: true,
+      });
     },
   );
 
@@ -38,6 +65,18 @@ describe('post policy', () => {
         },
       }),
     ).toBe(false);
+  });
+
+  it('blocks generated analysis results when the server returns a rejection reason', () => {
+    expect(
+      getAnalysisQualityMeta({
+        isFresh: true,
+        confidenceScore: 0.98,
+        category: 'Fresh',
+        rejectionReason: 'not_food',
+        analysisMessage: '식재료가 아닌 이미지입니다.',
+      }),
+    ).toEqual({label: '등록 불가', canShare: false});
   });
 
   it('uses authorId as the post ownership contract', () => {

@@ -4,7 +4,7 @@
  * PostCreateScreen에서 전달받은 postData에
  * 사용자가 선택한 fridgeId를 더해 최종적으로 서버에 게시글 등록 요청(createPost)
  */
-import React, {useCallback, useEffect, useState} from 'react';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {
   View,
   Text,
@@ -28,7 +28,7 @@ import {styles} from './FridgeSelectScreen.styles';
 type Props = NativeStackScreenProps<RootStackParamList, 'FridgeSelect'>;
 
 const FridgeSelectScreen = ({route, navigation}: Props) => {
-  const {postData, qualityCategory} = route.params;
+  const {postData, qualityCategory, qualityCanShare} = route.params;
   const user = useAuthStore(state => state.user);
 
   const [fridges, setFridges] = useState<Fridge[]>([]);
@@ -36,6 +36,7 @@ const FridgeSelectScreen = ({route, navigation}: Props) => {
   const [isLoading, setIsLoading] = useState(true);
   const [fridgeError, setFridgeError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSubmittingRef = useRef(false);
 
   const fetchFridges = useCallback(async (lat: number, lng: number) => {
     setIsLoading(true);
@@ -68,8 +69,9 @@ const FridgeSelectScreen = ({route, navigation}: Props) => {
 
   const handleComplete = async () => {
     if (!selectedFridgeId || !postData) {return;}
+    if (isSubmittingRef.current) {return;}
 
-    if (!isShareableCategory(qualityCategory)) {
+    if (qualityCanShare === false || !isShareableCategory(qualityCategory)) {
       Alert.alert(
         '나눔 등록 불가',
         '부패가 의심되는 식재료는 나눔으로 등록할 수 없습니다. 다시 촬영해주세요.',
@@ -77,6 +79,7 @@ const FridgeSelectScreen = ({route, navigation}: Props) => {
       return;
     }
 
+    isSubmittingRef.current = true;
     setIsSubmitting(true);
     try {
       const response = await createPost({
@@ -92,6 +95,7 @@ const FridgeSelectScreen = ({route, navigation}: Props) => {
     } catch (error) {
       Alert.alert('오류', getApiErrorMessage(error));
     } finally {
+      isSubmittingRef.current = false;
       setIsSubmitting(false);
     }
   };

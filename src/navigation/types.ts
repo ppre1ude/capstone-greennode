@@ -35,6 +35,7 @@ export type RootStackParamList = {
   FridgeSelect: {
     postData?: Omit<PostCreateData, 'fridgeId'>;
     qualityCategory?: string;
+    qualityCanShare?: boolean;
     latitude?: number;
     longitude?: number;
   };
