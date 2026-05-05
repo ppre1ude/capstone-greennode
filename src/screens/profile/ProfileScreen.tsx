@@ -17,10 +17,12 @@ import {
   StatusBar,
   Platform,
 } from 'react-native';
+import {useNavigation} from '@react-navigation/native';
 import {useAuthStore} from '@/store/authStore';
 import {colors} from '@/theme';
 
 const MENU_ITEMS = [
+  {id: 'location', title: '동네 위치 재설정', icon: '📍'},
   {id: 'my-posts', title: '내 나눔 내역', icon: '📝'},
   {id: 'bookmark', title: '관심 식재료', icon: '❤️'},
   {id: 'history', title: '받은 나눔 내역', icon: '🎁'},
@@ -31,6 +33,7 @@ const MENU_ITEMS = [
 const ProfileScreen = () => {
   const user = useAuthStore(state => state.user);
   const logoutStore = useAuthStore(state => state.logout);
+  const navigation = useNavigation<any>();
 
   const handleLogout = () => {
     Alert.alert('로그아웃', '정말 로그아웃 하시겠습니까?', [
@@ -47,6 +50,15 @@ const ProfileScreen = () => {
 
   const trustScore = 85; // MVP Mock
   const points = 1250; // MVP Mock
+
+  const handleMenuPress = (id: string) => {
+    if (id === 'location') {
+      navigation.getParent()?.navigate('LocationSetup', {allowBack: true});
+      return;
+    }
+
+    Alert.alert('준비 중', '아직 연결되지 않은 메뉴입니다.');
+  };
 
   return (
     <View style={styles.container}>
@@ -117,6 +129,7 @@ const ProfileScreen = () => {
           {MENU_ITEMS.map((item, index) => (
             <TouchableOpacity
               key={item.id}
+              onPress={() => handleMenuPress(item.id)}
               style={[
                 styles.menuItem,
                 index === MENU_ITEMS.length - 1 && styles.menuItemLast,

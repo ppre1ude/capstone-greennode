@@ -11,6 +11,16 @@
 - Codex에게 작업을 맡길 때는 한 번에 큰 기능 전체를 맡기기보다, 아래의 작업 묶음 단위로 검증하게 한다.
 - 검증 결과는 재현 절차, 실제 결과, 기대 결과, 관련 로그/파일, 다음 액션까지 남긴다.
 
+## 2026-05-05 P0/P1 코드 보강 현황
+
+- P0 `authorId/userId` 계약 불일치: `PostDetailScreen`이 `authorId` 기준으로 작성자 여부를 판단하도록 수정했다. 구형 fixture용 `userId` fallback은 `postPolicy`에만 남겼다.
+- P0 `canShare=false` 등록 차단: `AnalysisResultScreen` 버튼 disabled, `PostCreateScreen` 진입 후 guard, `FridgeSelectScreen` 최종 등록 guard를 추가했다.
+- P1 목록 실패/빈 상태 분리: 홈 주변 게시글, 지도 냉장고, 등록 가능 냉장고 목록에 loading/error/empty 상태와 retry UI를 분리했다.
+- P1 위치 재설정: 홈 위치 헤더와 프로필 `동네 위치 재설정` 메뉴에서 `LocationSetup`으로 재진입한다.
+- P1 카메라 fallback: 카메라 권한 없음, 장치 없음, 셔터 실패 시 갤러리 선택 대안을 제공한다. 실제 기기 셔터 촬영 검증은 아직 남았다.
+- P1 confidence: `confidenceScore`를 분석 결과/작성 화면에 표시하고 60% 미만은 즉시 차단 대신 `확인 필요`로 분기한다.
+- 회귀 테스트: `__tests__/postPolicy.test.ts`에서 품질 정책, confidence, 작성자 판단을 고정한다.
+
 ## 권장 작업 순서
 
 1. MVP 핵심 플로우 검증

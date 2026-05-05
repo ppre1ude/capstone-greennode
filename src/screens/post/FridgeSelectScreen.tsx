@@ -20,35 +20,44 @@ import {getAvailableFridges} from '@/api/fridges';
 import {createPost} from '@/api/posts';
 import {useAuthStore} from '@/store/authStore';
 import type {Fridge} from '@/types';
+import {isShareableCategory} from '@/utils/postPolicy';
 import {colors} from '@/theme';
 import {styles} from './FridgeSelectScreen.styles';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'FridgeSelect'>;
 
 const FridgeSelectScreen = ({route, navigation}: Props) => {
-  const {postData} = route.params;
+  const {postData, qualityCategory} = route.params;
   const user = useAuthStore(state => state.user);
 
   const [fridges, setFridges] = useState<Fridge[]>([]);
   const [selectedFridgeId, setSelectedFridgeId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [fridgeError, setFridgeError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const fetchFridges = useCallback(async (lat: number, lng: number) => {
+    setIsLoading(true);
+    setFridgeError(null);
     try {
       const response = await getAvailableFridges(lat, lng);
       if (response.success && response.data) {
         setFridges(response.data);
+      } else {
+        setFridges([]);
+        setFridgeError(response.message || '등록 가능한 냉장고를 불러오지 못했습니다.');
       }
     } catch (error) {
       console.warn('Failed to fetch fridges', error);
+      setFridges([]);
+      setFridgeError('서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.');
     } finally {
       setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    if (user?.latitude && user?.longitude) {
+    if (user?.latitude != null && user?.longitude != null) {
       fetchFridges(user.latitude, user.longitude);
     } else {
       Alert.alert('위치 정보 없음', '위치 정보를 확인할 수 없습니다.');
@@ -58,6 +67,14 @@ const FridgeSelectScreen = ({route, navigation}: Props) => {
 
   const handleComplete = async () => {
     if (!selectedFridgeId || !postData) {return;}
+
+    if (!isShareableCategory(qualityCategory)) {
+      Alert.alert(
+        '나눔 등록 불가',
+        '부패가 의심되는 식재료는 나눔으로 등록할 수 없습니다. 다시 촬영해주세요.',
+      );
+      return;
+    }
 
     setIsSubmitting(true);
     try {
@@ -128,6 +145,20 @@ const FridgeSelectScreen = ({route, navigation}: Props) => {
           <View style={styles.centerBox}>
             <ActivityIndicator size="large" color={colors.primary} />
             <Text style={styles.loadingText}>주변 냉장고를 찾는 중...</Text>
+          </View>
+        ) : fridgeError ? (
+          <View style={styles.centerBox}>
+            <Text style={styles.errorTitle}>냉장고를 불러오지 못했습니다</Text>
+            <Text style={styles.errorSubtitle}>{fridgeError}</Text>
+            <TouchableOpacity
+              style={styles.retryButton}
+              onPress={() => {
+                if (user?.latitude != null && user?.longitude != null) {
+                  fetchFridges(user.latitude, user.longitude);
+                }
+              }}>
+              <Text style={styles.retryButtonText}>다시 시도</Text>
+            </TouchableOpacity>
           </View>
         ) : fridges.length === 0 ? (
           <View style={styles.centerBox}>

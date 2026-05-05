@@ -60,20 +60,6 @@ const CameraScanScreen = ({navigation}: Props) => {
     }
   }, [hasPermission, device, scanLineAnim]);
 
-  const handleCapture = async () => {
-    if (!camera.current) {return;}
-    
-    try {
-      const photo = await camera.current.takePhoto({
-        flash: 'off',
-      });
-      processImage(`file://${photo.path}`);
-    } catch (error) {
-      console.warn('Capture error', error);
-      Alert.alert('촬영 오류', '사진을 촬영할 수 없습니다.');
-    }
-  };
-
   const handleGallery = async () => {
     try {
       const result = await launchImageLibrary({
@@ -89,6 +75,37 @@ const CameraScanScreen = ({navigation}: Props) => {
       }
     } catch (error) {
       console.warn('Gallery error', error);
+    }
+  };
+
+  const handleCapture = async () => {
+    if (!camera.current) {
+      Alert.alert(
+        '카메라 준비 실패',
+        '카메라를 사용할 수 없습니다. 갤러리에서 사진을 선택할 수 있습니다.',
+        [
+          {text: '취소', style: 'cancel'},
+          {text: '갤러리 선택', onPress: handleGallery},
+        ],
+      );
+      return;
+    }
+
+    try {
+      const photo = await camera.current.takePhoto({
+        flash: 'off',
+      });
+      processImage(`file://${photo.path}`);
+    } catch (error) {
+      console.warn('Capture error', error);
+      Alert.alert(
+        '촬영 오류',
+        '사진 촬영에 실패했습니다. 갤러리에서 기존 사진을 선택할 수 있습니다.',
+        [
+          {text: '취소', style: 'cancel'},
+          {text: '갤러리 선택', onPress: handleGallery},
+        ],
+      );
     }
   };
 
@@ -127,6 +144,9 @@ const CameraScanScreen = ({navigation}: Props) => {
     return (
       <View style={styles.centerContainer}>
         <Text style={styles.permissionText}>카메라 권한이 필요합니다.</Text>
+        <TouchableOpacity style={styles.galleryFallbackButton} onPress={handleGallery}>
+          <Text style={styles.galleryFallbackText}>갤러리에서 선택하기</Text>
+        </TouchableOpacity>
       </View>
     );
   }

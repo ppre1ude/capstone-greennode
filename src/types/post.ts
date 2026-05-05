@@ -10,7 +10,8 @@ export interface Post {
   imageUrl: string;
   expirationDate: string;
   fridgeId: number;
-  userId: number;
+  authorId: number;
+  userId?: number;
   createdAt: string;
   updatedAt: string;
 }

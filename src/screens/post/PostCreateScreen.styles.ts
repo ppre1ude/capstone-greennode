@@ -87,14 +87,26 @@ export const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   analysisValue: {
-    fontSize: 17,
+    fontSize: 15,
     fontWeight: '800',
     color: colors.textPrimary,
+  },
+  analysisValueWarning: {
+    color: colors.warning,
   },
   analysisDivider: {
     width: 1,
     marginHorizontal: 16,
     backgroundColor: colors.border,
+  },
+  reviewNotice: {
+    marginTop: -16,
+    padding: 12,
+    borderRadius: 10,
+    backgroundColor: '#FEF3C7',
+    color: colors.textSecondary,
+    fontSize: 13,
+    lineHeight: 19,
   },
   field: {
     gap: 8,

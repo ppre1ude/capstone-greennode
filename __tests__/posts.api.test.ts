@@ -146,7 +146,7 @@ describe('posts API contract', () => {
       json: async () => ({
         success: true,
         message: 'created',
-        data: {id: 10, ...postData, imageUrl: '/static/posts/10.jpg', userId: 1},
+        data: {id: 10, ...postData, imageUrl: '/static/posts/10.jpg', authorId: 1},
       }),
     } satisfies MockFetchResponse);
 

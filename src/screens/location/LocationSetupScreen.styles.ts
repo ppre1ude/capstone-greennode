@@ -19,6 +19,16 @@ export const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.textPrimary,
   },
+  headerBackButton: {
+    width: 36,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+  },
+  headerBackText: {
+    fontSize: 22,
+    color: colors.primary,
+  },
   // 지도 영역
   mapArea: {
     flex: 1,
