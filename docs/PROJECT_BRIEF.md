@@ -16,6 +16,7 @@
 
 2026-05-05 검증 기준으로 앱은 이메일 로그인, 위치 등록, 갤러리 이미지 기반 실제 AI 분석, 실제 게시글 생성, 냉장고 선택, 홈/지도 기본 조회까지 동작한다. 다만 아래 항목은 아직 목표 상태와 차이가 있다.
 
+- 도메인 용어 기준은 [CONTEXT.md](../CONTEXT.md)를 따른다. 특히 `default_location`은 쓰지 않고, 사용자 위치는 **동네 위치**와 **위치 미설정 사용자**로 구분한다.
 - 카메라 셔터 촬영은 `react-native-vision-camera@5` API에 맞춰 수정됐고, 에뮬레이터에서 촬영 파일 생성 및 실제 `/posts/generate` 호출까지 재검증됐다. 실제 기기 촬영은 별도 확인이 남았다.
 - AI 응답은 현재 단일 대표 객체(`detectedFruit`) 중심으로 처리한다. multi-object detection은 다음 스프린트 연구/계약 설계 항목이다.
 - `Stale/Bad/Rotten` 또는 `canShare=false` 상태는 분석 결과, 게시글 작성, 최종 등록 단계에서 등록을 차단한다.
@@ -29,7 +30,7 @@
 ### 1. Vision AI 신선도 판별
 - 사진 한 장으로 식재료의 종류와 신선도를 즉시 분석
 - **기획/백엔드 목표**: YOLOv8 기반 객체 탐지, ResNet-50 기반 신선도 분류
-- **현재 앱 계약**: `POST /api/v1/posts/generate`가 `PostGenerateResult`를 반환하고, 앱은 단일 대표 객체와 `Fresh/Normal/Stale/Bad/Rotten` 계열 문자열을 매핑한다.
+- **현재 앱 계약**: `POST /api/v1/posts/generate`가 `PostGenerateResult`를 반환하고, 앱은 단일 대표 객체와 `Fresh/Normal/Stale/Bad/Rotten` 계열 **신선도 등급** 문자열을 매핑한다.
 - **현재 앱 정책**: 부패 의심 상태는 등록 차단, 낮은 confidence는 `확인 필요` 상태로 표시한다.
 
 ### 2. GIS 기반 로컬 매칭
@@ -40,7 +41,7 @@
 
 ### 3. 공유 냉장고 시스템
 - 오프라인 공유 냉장고에 식재료를 보관
-- 냉장고별 가용 상태(available) 실시간 확인
+- 등록 가능한 공유 냉장고 목록 확인
 - 등록 시 냉장고를 선택하여 연결
 
 ### 4. 실시간 푸시 알림 (FCM)
