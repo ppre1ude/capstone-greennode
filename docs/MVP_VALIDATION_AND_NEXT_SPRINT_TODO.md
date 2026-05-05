@@ -28,28 +28,74 @@
 
 ### To-do
 
-- [ ] 로그인 시 유저 테이블에 유저가 정상 생성되는지 확인
-- [ ] 기존 유저가 다시 로그인할 때 유저 정보가 정상 업데이트되는지 확인
-- [ ] 최초 로그인 직후 `default_location = NULL` 상태가 실제로 발생하는지 확인
-- [ ] `default_location = NULL` 상태에서 홈 화면이 깨지지 않는지 확인
-- [ ] `default_location = NULL` 상태에서 지도 화면이 깨지지 않는지 확인
-- [ ] `default_location = NULL` 상태에서 검색 화면이 깨지지 않는지 확인
-- [ ] `default_location = NULL` 상태에서 게시글 등록 플로우가 깨지지 않는지 확인
-- [ ] 최초 위치 등록 화면으로 자연스럽게 이어지는지 확인
-- [ ] 최초 위치 등록 후 홈/지도/게시글 등록에서 위치 데이터가 반영되는지 확인
-- [ ] 위치 재설정 기능이 실제 위치 데이터와 UI에 반영되는지 확인
-- [ ] 사진 촬영 후 이미지 파일이 생성되는지 확인
-- [ ] 촬영한 이미지가 API 서버로 정상 전달되는지 확인
-- [ ] AI 분석 결과가 앱 화면에 정상 표시되는지 확인
-- [ ] AI 분석 결과가 게시글 생성 화면의 기본값으로 정상 반영되는지 확인
-- [ ] 게시글 등록 성공 후 홈 화면 또는 관련 목록에 반영되는지 확인
-- [ ] 게시글 등록 성공 후 지도/냉장고 관련 화면에 반영되는지 확인
+- [x] 로그인 시 유저 테이블에 유저가 정상 생성되는지 확인
+- [x] 기존 유저가 다시 로그인할 때 유저 정보가 정상 업데이트되는지 확인
+- [x] 최초 로그인 직후 `default_location = NULL` 상태가 실제로 발생하는지 확인
+- [x] `default_location = NULL` 상태에서 홈 화면이 깨지지 않는지 확인
+- [x] `default_location = NULL` 상태에서 지도 화면이 깨지지 않는지 확인
+- [x] `default_location = NULL` 상태에서 검색 화면이 깨지지 않는지 확인
+- [x] `default_location = NULL` 상태에서 게시글 등록 플로우가 깨지지 않는지 확인
+- [x] 최초 위치 등록 화면으로 자연스럽게 이어지는지 확인
+- [x] 최초 위치 등록 후 홈/지도/게시글 등록에서 위치 데이터가 반영되는지 확인
+- [x] 위치 재설정 기능이 실제 위치 데이터와 UI에 반영되는지 확인
+- [x] 사진 촬영 후 이미지 파일이 생성되는지 확인
+- [x] 촬영한 이미지가 API 서버로 정상 전달되는지 확인
+- [x] AI 분석 결과가 앱 화면에 정상 표시되는지 확인
+- [x] AI 분석 결과가 게시글 생성 화면의 기본값으로 정상 반영되는지 확인
+- [x] 게시글 등록 성공 후 홈 화면 또는 관련 목록에 반영되는지 확인
+- [x] 게시글 등록 성공 후 지도/냉장고 관련 화면에 반영되는지 확인
 
 ### 산출물
 
 - 핵심 플로우 검증 결과 표
 - 발견한 버그 목록
 - 다음 스프린트에서 반드시 고칠 항목 목록
+
+### 검증 결과 (2026-05-05)
+
+#### 검증 환경
+
+- API: SSH 터널 `localhost:8080 -> NHN-Cloud-Server:80`, `/docs` 200 확인
+- 앱: Android 에뮬레이터 `Medium_Phone_API_36.1`, `com.greennode`, Metro `0.0.0.0:8081`
+- 검증 계정: `codex_ui_20260505160056@example.com`
+- 기준 코드: `src/config/api.ts`에서 `USE_MOCK_AI_PIPELINE = true`
+- 주의: 앱 타입에는 `default_location` 필드가 없고 `User.latitude`, `User.longitude`가 `null`인지로 위치 등록 여부를 판단한다.
+
+#### 핵심 플로우 검증 결과 표
+
+| 항목 | 분류 | 검증 결과 | 근거/관련 위치 | 다음 액션 |
+|---|---|---|---|---|
+| 로그인 시 유저 생성 | 정상 동작 | 신규 이메일 계정을 API로 생성하면 `latitude`, `longitude`가 `null`인 유저가 생성된다. 앱 이메일 로그인도 성공한다. | `POST /api/v1/auth/signup`, `POST /api/v1/auth/login`, `src/screens/auth/SignupScreen.tsx`, `src/screens/auth/LoginEmailScreen.tsx` | 소셜 로그인에서 "로그인 시 유저 생성" 정책은 별도 검증 필요 |
+| 기존 유저 재로그인 시 유저 정보 업데이트 | 정상 동작 | 로그인 후 `getMe()`로 최신 유저 정보를 받아 `authStore`에 반영한다. 위치가 있는 유저는 `refreshDeviceRegistration()`으로 위치/FCM 갱신을 시도한다. | `src/screens/auth/LoginEmailScreen.tsx`, `src/store/authStore.ts`, `src/services/deviceRegistration.ts` | FCM 토큰 실패 시 사용자 영향은 2번 실패 케이스에서 추가 검증 |
+| 최초 로그인 직후 위치 `NULL` 상태 | 정상 동작 | 검증 계정 생성 직후 서버 응답과 `/auth/me`에서 `latitude = null`, `longitude = null` 확인. | `GET /api/v1/auth/me` | 문서 용어를 `default_location`에서 `latitude/longitude` 기준으로 맞추기 |
+| 위치 `NULL` 상태의 홈 화면 | 검증 필요 | 정상 UI 흐름에서는 위치 없는 유저가 `Main`으로 들어가지 않고 `LocationSetup`으로 이동한다. 코드상 홈은 위치가 없으면 API 호출을 스킵하고 빈 상태를 보여준다. | `src/screens/home/HomeScreen.tsx` | 강제 진입 테스트 또는 컴포넌트 테스트 추가 |
+| 위치 `NULL` 상태의 지도 화면 | 버그 | 정상 UI 흐름에서는 접근 불가지만, 코드상 지도는 위치가 없으면 광주 전남대 기본 좌표로 냉장고 API를 호출한다. 위치 미설정 사용자에게 실제 주변 데이터처럼 보일 수 있다. | `src/screens/map/MapScreen.tsx` | 위치 미설정 시 지도 API 호출 차단 또는 위치 등록 CTA 표시 |
+| 위치 `NULL` 상태의 검색 화면 | 미구현 | 독립 검색 화면이 없다. 홈 검색 아이콘과 지도 검색 입력 UI만 있고 검색 플로우는 연결되어 있지 않다. | `src/screens/home/HomeScreen.tsx`, `src/screens/map/MapScreen.tsx` | 검색 기능은 5번 미구현 기능 점검에서 백로그화 |
+| 위치 `NULL` 상태의 게시글 등록 | 검증 필요 | 정상 UI 흐름에서는 위치 등록 전 메인/카메라 진입이 막힌다. 코드상 `FridgeSelect`는 위치 없을 때 Alert 후 `goBack()` 처리한다. | `src/screens/post/FridgeSelectScreen.tsx` | 강제 진입 테스트 추가 및 위치 등록 CTA로 개선 |
+| 최초 위치 등록 화면 분기 | 정상 동작 | 위치 없는 계정으로 로그인 후 앱이 `동네 설정` 화면으로 자연스럽게 이동했다. | UI 검증, `src/screens/auth/LoginEmailScreen.tsx`, `src/navigation/AppNavigator.tsx` | 유지 |
+| 위치 등록 후 홈/지도/게시글 등록 반영 | 정상 동작 | `이 위치로 설정하기` 후 `/auth/me`에 좌표가 저장됐다. 홈은 `내 동네`로 표시되고, 지도와 냉장고 선택 화면은 실제 냉장고 목록을 조회했다. | `PUT /api/v1/auth/me/location`, `HomeScreen`, `MapScreen`, `FridgeSelectScreen` | 유지 |
+| 위치 재설정 기능 | 미구현 | 위치 재설정으로 연결되는 UI/액션이 없다. 프로필의 설정 메뉴도 동작하지 않는다. | `src/screens/profile/ProfileScreen.tsx` | 다음 스프린트 버그/미구현 후보 |
+| 사진 촬영 후 이미지 파일 생성 | 버그 | 카메라 화면 진입은 됐지만 에뮬레이터에서 셔터를 누르면 `촬영 오류: 사진을 촬영할 수 없습니다.` Alert가 떴다. 갤러리 선택으로는 이미지 URI를 받아 다음 화면으로 진행 가능했다. | UI 검증, `src/screens/camera/CameraScanScreen.tsx` | 실제 기기 촬영 검증, 에뮬레이터 카메라 fallback 개선 |
+| 촬영/선택 이미지 API 전달 | 검증 필요 | 현재 앱은 `USE_MOCK_AI_PIPELINE = true`라서 앱 화면에서는 실제 generate API를 호출하지 않는다. 별도 API 직접 호출에서는 `POST /api/v1/posts/generate`가 `image`만으로 200 응답했다. | `src/config/api.ts`, `src/api/posts.ts` | MVP 실제 검증 전 mock flag 해제 후 앱에서 재검증 |
+| AI 분석 결과 표시 | 정상 동작 | 갤러리 이미지 선택 후 mock AI 결과가 `분석 결과` 화면에 표시됐다. `사과`, `신선`, 분석 메모 표시 확인. | `src/screens/camera/AnalysisResultScreen.tsx` | 실제 AI 응답으로 재검증 |
+| AI 결과의 게시글 생성 기본값 반영 | 정상 동작 | `나눔 등록` 화면에 제목 `신선한 사과 나눔합니다`, 카테고리 `과일`, 설명 기본값이 채워졌다. | `src/screens/post/PostCreateScreen.tsx` | 유지 |
+| 게시글 등록 후 홈 목록 반영 | 버그 | 완료 화면은 뜨지만 홈은 여전히 `아직 근처에 나눔이 없어요` 상태다. 서버 `GET /posts/nearby`도 `0`건이었다. 원인은 `USE_MOCK_AI_PIPELINE = true`일 때 `createPost()`도 mock 응답만 반환하고 서버 저장을 하지 않기 때문이다. | `src/api/posts.ts`, `src/screens/post/PostCompleteScreen.tsx`, `src/screens/home/HomeScreen.tsx` | `generate` mock과 `createPost` mock을 분리하거나 실제 등록 API를 사용하도록 수정 |
+| 게시글 등록 후 지도/냉장고 관련 반영 | 버그 | 완료 화면은 뜨지만 서버에 게시글이 저장되지 않으므로 지도/냉장고 관련 화면에 새 게시글이 반영될 수 없다. 현재 지도는 냉장고 목록만 표시한다. | `src/api/posts.ts`, `src/screens/map/MapScreen.tsx` | 등록 성공 후 실제 post 저장 및 관련 목록/상세 연결 정책 정리 |
+
+#### 발견한 버그 목록
+
+1. `USE_MOCK_AI_PIPELINE = true`일 때 `createPost()`도 mock 처리되어 완료 화면은 뜨지만 서버 DB와 홈 목록에 게시글이 반영되지 않는다.
+2. 카메라 화면에서 에뮬레이터 셔터 촬영이 실패하고 `촬영 오류` Alert가 뜬다. 갤러리 fallback은 동작한다.
+3. 위치 없는 유저가 지도에 강제 진입하면 기본 좌표로 냉장고 API를 호출해 위치 설정이 된 것처럼 보일 수 있다.
+4. 위치 재설정 기능이 UI에 없다.
+
+#### 다음 스프린트에서 반드시 고칠 항목
+
+1. AI mock flag를 `generate` 전용으로 분리하고, 게시글 등록은 실제 `POST /api/v1/posts`를 호출하게 하거나 mock 모드임을 화면/환경에서 명확히 분리한다.
+2. 실제 기기에서 카메라 촬영 파일 생성과 `react-native-vision-camera` 설정을 검증한다. 에뮬레이터에서는 갤러리 선택 fallback을 검증 경로로 명시한다.
+3. 위치 미설정 상태에서 홈/지도/게시글 등록에 강제 진입했을 때 위치 등록 CTA로 되돌리는 공통 가드를 추가한다.
+4. 위치 재설정 진입점을 프로필 또는 홈 위치 헤더에 연결한다.
+5. 독립 검색 화면/검색 결과 상태는 현재 미구현으로 분리해 다음 스프린트 백로그에 넣는다.
 
 ### Codex 작업 지시 예시
 
