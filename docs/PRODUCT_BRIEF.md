@@ -171,7 +171,7 @@ MVP에서 공급자는 `requested` 이후 별도 승인 행동을 하지 않는�
 - 수요자는 상세 화면에서 `나눔 신청하기`를 누른다.
 - MVP 목표 상태 전환은 `available -> requested`다.
 - `requested`는 신청 접수이며 예약 확정이 아니다.
-- 백엔드는 `POST /posts/{id}/requests`, `share_requested` 알림, 403/409 상태 처리를 구현했다. 프론트는 상세 CTA와 알림함을 이 계약에 맞게 연결해야 한다.
+- 백엔드는 `POST /posts/{id}/requests`, `share_requested` 알림, 403/409 상태 처리를 구현했다. 프론트는 상세 CTA와 로컬 알림함을 이 계약에 맞게 연결했다. 실제 기기 FCM foreground/background/terminated QA는 남아 있다.
 - 채팅은 MVP에서 보류하고 알림함/신청 흐름으로 축소한다.
 
 ### 6. 환경 성취 지표

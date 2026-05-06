@@ -15,3 +15,12 @@ export type {
   ShareRequestResult,
   Fridge,
 } from './post';
+export type {
+  FcmStringDataPayload,
+  FoodLinkFcmPayload,
+  FoodLinkNotificationType,
+  NotificationRecord,
+  NotificationSource,
+  ShareCreatedFcmPayload,
+  ShareRequestedFcmPayload,
+} from './notification';

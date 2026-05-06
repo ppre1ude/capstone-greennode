@@ -117,7 +117,7 @@
 | confidenceScore       | Stage 2 신선도 분류 softmax max 확률로 확정. 백엔드 표시 가이드는 0.9 이상 높음, 0.9 미만 확인 필요 | 앱 기준을 `confidenceScore < 0.9`로 갱신. 단독 등록 차단은 하지 않음                           | 0.4/0.7/1.0 fixture로 확인 필요 표시 QA                |
 | rejection reason enum | `not_food`, `low_quality` 등은 Post-MVP                                                             | 앱은 enum을 받으면 방어적으로 처리 가능                                                        | false-positive fixture는 후속 계약 검증으로 유지       |
 | Stale 최종 등록 방어  | `Stale`이면 generate 400, `imageToken` 미발급. create는 무효/만료 토큰 400                          | 프론트도 `canShare=false` UX 가드를 갖고 있음                                                  | 서버가 최종 방어선임을 전제로 stale/token 실패 UX 검증 |
-| 알림                  | `share_created`, `share_requested` payload 구현                                                     | 토큰 등록만 있고 수신 handler/알림함 없음                                                      | FCM 수신/탭 연동 작업화                                |
+| 알림                  | `share_created`, `share_requested` payload 구현                                                     | FCM 수신 handler와 로컬 알림함 구현. 읽음 상태 API 없음                                        | 실제 기기 foreground/background/terminated 수신 QA     |
 | 냉장고별 나눔 식재료  | `GET /fridges/{id}/posts?status=available` 구현/검증                                                | 지도에서 선택 냉장고 내부 available 목록 노출 구현. VM/API 런타임 QA 필요                     | 실제 앱에서 냉장고 선택 -> 내부 목록 -> 상세 이동 검증 |
 
 ## 2026-05-05 P0/P1 코드 보강 현황
@@ -634,19 +634,19 @@ docs/VALIDATION_AND_BACKLOG.md의 "4. 한 장 촬영 UX와 multi-object 정책 �
 | 홈 데이터 없음 상태       | 구현됨                         | 나눔 식재료가 없으면 `아직 근처에 나눔이 없어요` 빈 상태를 표시한다.                                                                                                                                                                                                 | API 실패와 진짜 빈 상태를 구분하는 에러 UI 추가.                                                          |
 | 검색 기능                 | 부분 구현                      | 홈 검색 아이콘은 지도 탭으로 이동하고, 지도 검색 입력은 공유 냉장고 이름/주소 로컬 필터로 동작한다. 서버 OpenAPI에는 검색 엔드포인트가 없다.                                                                                                                         | 나눔 식재료/동네 서버 검색은 후속 범위로 분리.                                                            |
 | 검색 결과 없음            | 구현됨                         | MVP 검색은 지도 공유 냉장고 이름/주소 로컬 필터로 제한했다. 결과 없음 상태와 검색 초기화가 있다.                                                                                                                                                                     | 나눔 식재료/동네 서버 검색은 후속 범위로 분리.                                                            |
-| 푸쉬 알림                 | 부분 구현, 백엔드 payload 확정 | Firebase Messaging 의존성, Android 알림 권한, FCM 토큰 등록은 있다. 백엔드는 `share_created`, `share_requested`와 camelCase payload를 구현했다. foreground/background 수신 처리, 알림 목록, 읽음 상태는 없다. 채팅 탭 mock 데이터는 제거하고 빈 알림함으로 축소했다. | 수신 handler와 알림함을 `type`, `postId`, `requestId`, `fruitName`, `fridgeName` 기준으로 구현.           |
+| 푸쉬 알림                 | 프론트 코드 연동 완료, 실제 기기 QA 필요 | Firebase Messaging 의존성, Android 알림 권한, FCM 토큰 등록이 있다. `share_created`, `share_requested` foreground/background/opened/initial handler를 구현했고, payload는 문자열 + camelCase(`type`, `postId`, `requestId`, `fruitName`, `fridgeName`)로 검증한다. 알림함은 로컬 수신 기록/빈 상태 중심이며 읽음 상태 API는 없다. | 실제 기기에서 foreground/background/terminated 수신과 알림 탭 라우팅을 검증한다. |
 | 유저 프로필               | 부분 구현                      | 닉네임/이메일은 실제 유저 정보를 표시한다. 프로필 수정, 메뉴 이동, 내 나눔/관심/받은 나눔은 연결되어 있지 않다.                                                                                                                                                      | 프로필 수정 또는 내 나눔 내역 중 하나만 우선 연결.                                                        |
 | 유저 통계                 | 정리됨                         | 신선도 온도, 포인트, 탄소 절감량의 하드코딩 숫자를 제거하고 `준비 중` 상태로 표시한다.                                                                                                                                                                               | 실제 지표를 넣으려면 계산식과 API 계약을 먼저 정의.                                                       |
 | 냉장고별 나눔 식재료 조회 | 프론트 코드 연동 완료, VM QA 필요 | 지도에서 특정 냉장고를 선택하면 `GET /fridges/{id}/posts?status=available`로 내부 available 목록을 조회한다. loading/error/empty/list 상태를 분리하고 항목 탭 시 상세로 이동한다.                                                                                                                                                 | 실제 VM/API에서 냉장고 선택, 빈 목록, 오류 상태, 상세 이동을 재검증한다. 별도 inventory 개념은 후속으로 분리. |
 | 지도 근처 냉장고 조회     | 구현됨                         | `MapScreen`이 `/fridges/nearby`, `FridgeSelectScreen`이 `/fridges/available`을 호출한다. 1번 검증에서 실제 냉장고 목록 표시를 확인했다.                                                                                                                              | 위치 미설정 기본 좌표 fallback과 API 실패 UI 보강.                                                        |
-| 채팅 탭                   | 축소됨                         | `ChatListScreen`의 `MOCK_CHATS`를 제거하고 탭 라벨을 `알림`으로 바꿨다. WebSocket, 채팅방 상세, 메시지 송수신 API는 없다.                                                                                                                                            | MVP에서는 알림함으로 유지하고 WebSocket 채팅은 보류.                                                      |
+| 채팅 탭                   | 알림함으로 축소/구현됨         | `ChatListScreen`의 `MOCK_CHATS`를 제거하고 탭 라벨을 `알림`으로 바꿨다. 현재는 FCM 수신 기록/빈 상태를 보여준다. WebSocket, 채팅방 상세, 메시지 송수신 API는 없다.                                                                                                 | MVP에서는 알림함으로 유지하고 WebSocket 채팅은 보류.                                                      |
 | WebSocket 채팅            | 미구현/보류 권장               | 코드와 OpenAPI 모두 실시간 채팅 계약이 없다. 구현/검증 비용이 크다.                                                                                                                                                                                                  | 다음 스프린트에서는 단순 문의/예약 CTA 또는 알림함으로 축소한다.                                          |
 
 #### 다음 스프린트 우선순위 제안
 
 1. 나눔 신청 API 연동: 코드 연동은 완료됐다. 실제 VM/API에서 201/403/409와 홈 목록 제외 동작을 재검증한다.
 2. 냉장고별 나눔 식재료 조회: 코드 연동은 완료됐다. 실제 VM/API에서 선택 냉장고 내부 목록과 상세 이동을 재검증한다.
-3. FCM 수신 handler와 알림함: `share_created`, `share_requested` payload를 foreground/background 수신 흐름에 연결한다.
+3. FCM 수신 handler와 알림함: 코드 연동은 완료됐다. 실제 기기에서 foreground/background/terminated 수신과 알림함 기록을 재검증한다.
 4. confidence fixture QA: `confidenceScore` 0.4/0.7/1.0에서 확인 필요 표시가 기대대로 동작하는지 검증한다.
 5. 실제 기기/fixture QA: `Stale`, `unknown`, 무효 `imageToken`, 실제 카메라 촬영 케이스를 증거로 남긴다.
 
@@ -937,17 +937,21 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
 
 ## FCM 수신 처리와 알림함 범위 정의
 
-- 분류: 부분 구현
+- 분류: 기능 구현
 - 우선순위: P2
 - 배경: FCM 토큰 등록은 있지만 알림 수신/목록/읽음 처리는 없다.
-- 현재 동작: 완료 화면은 그대로 두고, 채팅 탭의 가짜 채팅/알림 mock 데이터는 제거했다. 탭 라벨은 `알림`으로 축소했고 빈 알림함 상태를 표시한다.
-- 기대 동작: 다음 스프린트에서는 WebSocket 채팅 대신 알림함 또는 단순 신청 흐름으로 축소한다.
+- 현재 동작: FCM token은 `/auth/me/location`으로 등록한다. `share_created`, `share_requested` handler는 foreground/background/opened/initial 메시지를 로컬 알림함에 기록한다. 알림 열기와 알림함 항목 탭은 `PostDetail`로 이동하며, `share_requested`는 내 나눔 관리 화면이 없으므로 상세 fallback을 쓴다.
+- 기대 동작: MVP에서는 WebSocket 채팅 대신 알림함과 단순 신청 흐름으로 축소한다. 읽음 상태 API는 후속으로 분리한다.
 - Acceptance Criteria:
-  - [ ] foreground/background 알림 수신 handler가 정의된다.
+  - [x] foreground/background 알림 수신 handler가 정의된다.
+  - [x] FCM `data` payload는 문자열 + camelCase로 검증한다.
+  - [x] `share_created`는 홈 또는 상세로 이동한다.
+  - [x] `share_requested`는 MVP에서 상세 화면으로 fallback한다.
+  - [x] 알림함은 수신 기록/빈 상태 중심으로 두고 읽음 상태 API는 후속으로 분리한다.
   - [x] 알림함으로 유지하고 WebSocket 채팅은 보류한다.
   - [x] mock 알림 데이터가 빈 알림함 상태로 대체된다.
 - 검증 방법: FCM 테스트 메시지 수신 QA, 앱 foreground/background 확인
-- 관련 파일/화면/API: `deviceRegistration.ts`, `ChatListScreen`, Firebase Messaging
+- 관련 파일/화면/API: `notifications.ts`, `notificationStore.ts`, `ChatListScreen`, `index.js`, `AppNavigator`, Firebase Messaging
 
 ## multi-object detection 연구/계약 초안
 

@@ -147,7 +147,7 @@ Host NHN-Cloud-Server
 | 나눔 신청하기              | `POST /posts/{id}/requests` 구현, 성공 시 201                                             | 반영 완료. `requestShare(postId)`, 상세 CTA, 성공/실패 UI, 상태 갱신 구현                       |
 | 신청 동시 경합 방지        | `SELECT ... FOR UPDATE` + 단일 트랜잭션. 첫 신청만 201, 이후 409                          | 반영 완료. 409를 정상 race 결과로 보고 `다른 사용자가 먼저 신청했어요` 문구와 CTA 비활성화 처리 |
 | 작성자 본인 신청 차단      | 403                                                                                       | 반영 완료. 작성자 CTA 숨김, 403 fallback은 `내가 등록한 나눔 식재료예요`                        |
-| 신청 알림                  | `share_requested` FCM payload 구현                                                        | foreground/background 수신 handler와 알림함 연결                                                |
+| 신청 알림                  | `share_requested` FCM payload 구현                                                        | 반영 완료. foreground/background/opened/initial 수신 기록, 알림함, 상세 fallback 라우팅 구현    |
 | 냉장고별 나눔 식재료       | `GET /fridges/{id}/posts?status=available` 구현                                           | 반영 완료. 지도에서 선택 냉장고의 내부 available 목록, loading/error/empty/list 상태, 상세 이동 구현 |
 | Post 응답 구조             | `title/description/category` 제거, `detectedFruitKo/freshnessLabel/confidenceScore` 추가  | 반영 완료. `src/types/post.ts`, `createPost()`, 홈 카드, 상세, 등록 확인 화면은 새 구조 사용    |
 | 나눔 기준 미충족 서버 방어 | `Stale`이면 generate 400이고 `imageToken` 미발급. create는 유효한 `imageToken` 없으면 400 | 프론트 `canShare`는 UX 가드로 유지하되 서버가 최종 방어선임을 전제로 오류 처리                  |
@@ -529,7 +529,7 @@ const imageFullUrl = `${BASE_URL}${post.imageUrl}`;
 
 ## 6. FCM 푸시 알림
 
-현재 앱은 FCM 토큰을 받아 `/auth/me/location`에 등록하는 단계까지 구현되어 있다. 백엔드는 나눔 식재료 등록 시 `share_created`, 나눔 신청 시 `share_requested` 알림을 발송한다. FCM 제약상 `data` payload의 모든 값은 문자열이며, 키는 camelCase다. foreground/background 수신 handler와 알림함 연동은 아직 프론트에 구현되어 있지 않다.
+현재 앱은 FCM 토큰을 받아 `/auth/me/location`에 등록하고, `share_created`, `share_requested` 수신 기록을 알림함에 저장한다. 백엔드는 나눔 식재료 등록 시 `share_created`, 나눔 신청 시 `share_requested` 알림을 발송한다. FCM 제약상 `data` payload의 모든 값은 문자열이며, 키는 camelCase다. 읽음 상태 API와 서버 알림 목록 API는 아직 없다.
 
 ### 설정 순서
 
@@ -548,19 +548,19 @@ const fcmToken = await messaging().getToken();
 
 ### 알림 수신
 
-```javascript
-messaging().onMessage(async msg => {
-  // 포그라운드 알림
-  const postId = msg.data?.postId;
-  const type = msg.data?.type;
-  // 알림 배너 표시
-});
-
-messaging().onNotificationOpenedApp(msg => {
-  // 백그라운드 알림 터치
-  navigation.navigate('PostDetail', { postId: Number(msg.data?.postId) });
-});
+```typescript
+type FoodLinkFcmPayload =
+  | {type: 'share_created'; postId: string; fruitName: string; fridgeName: string}
+  | {type: 'share_requested'; postId: string; requestId: string; fruitName: string; fridgeName: string};
 ```
+
+앱 구현 기준:
+
+- `index.js`에서 background handler를 등록한다.
+- `AppNavigator`에서 foreground, opened-app, initial-notification handler를 등록한다.
+- handler는 `data` payload가 문자열 + camelCase인지 검증하고, 유효한 이벤트만 로컬 알림함에 저장한다.
+- foreground 수신은 즉시 화면을 이동하지 않고 알림함 기록만 남긴다.
+- background/terminated 상태에서 알림을 열면 대상 화면으로 이동한다.
 
 수신 분기 기준:
 
@@ -662,4 +662,4 @@ GET /posts/nearby → 근처 available 나눔 식재료
 - [ ] 나눔 식재료 상세 작성자 판단은 실제 응답의 `authorId` 기준으로 처리
 - [x] 백엔드 Phase 1.5 Post 구조 반영: `title/description/category` 의존 제거, `detectedFruitKo/freshnessLabel/confidenceScore/status` 사용
 - [x] 나눔 신청 API 연동: `POST /posts/{id}/requests`, 201/403/409 처리, 신청 후 상세/홈 상태 갱신
-- [ ] FCM payload는 camelCase `postId`, `requestId`, `fruitName`, `fridgeName`, `type` 사용
+- [x] FCM payload는 문자열 + camelCase `postId`, `requestId`, `fruitName`, `fridgeName`, `type` 사용

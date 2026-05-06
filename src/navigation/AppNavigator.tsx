@@ -7,15 +7,17 @@
  * - 로그인 + 위치 등록 → MainTab
  */
 import React, {useEffect} from 'react';
-import {
-  createNavigationContainerRef,
-  NavigationContainer,
-} from '@react-navigation/native';
+import {NavigationContainer} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import type {RootStackParamList} from './types';
+import {rootNavigationRef} from './rootNavigation';
 import {onUnauthorized} from '@/api/authEvents';
 import {useAuthStore} from '@/store/authStore';
 import {refreshDeviceRegistration} from '@/services/deviceRegistration';
+import {
+  flushPendingNotificationNavigation,
+  registerForegroundNotificationHandlers,
+} from '@/services/notifications';
 
 import AuthStack from './AuthStack';
 import MainTab from './MainTab';
@@ -28,8 +30,6 @@ import PostCompleteScreen from '@/screens/post/PostCompleteScreen';
 import PostDetailScreen from '@/screens/post/PostDetailScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
-export const rootNavigationRef =
-  createNavigationContainerRef<RootStackParamList>();
 
 const AppNavigator = () => {
   const user = useAuthStore(state => state.user);
@@ -55,8 +55,12 @@ const AppNavigator = () => {
     });
   }, [isLoggedIn, user]);
 
+  useEffect(() => registerForegroundNotificationHandlers(), []);
+
   return (
-    <NavigationContainer ref={rootNavigationRef}>
+    <NavigationContainer
+      ref={rootNavigationRef}
+      onReady={flushPendingNotificationNavigation}>
       <Stack.Navigator screenOptions={{headerShown: false}}>
         <Stack.Screen name="Auth" component={AuthStack} />
         <Stack.Screen

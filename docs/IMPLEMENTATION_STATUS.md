@@ -28,7 +28,7 @@
 - 백엔드 계약 변경: Post의 `title`, `description`, `category` 컬럼이 제거되고 `detectedFruitKo`, `freshnessLabel`, `confidenceScore` 중심 구조로 바뀌었다.
 - AI 계약 확정: 백엔드 label은 `Fresh`, `Mid`, `Stale`, `unknown`이며, `Mid`는 기존 프론트의 `Normal` 그룹이다. `confidenceScore`는 Stage 2 신선도 분류 softmax max 확률이다. 제품 기준은 백엔드 활용 가이드를 따라 0.9 미만을 `확인 필요` 구간으로 본다.
 - 서버 최종 방어선: `Stale`이면 generate 400으로 `imageToken`이 발급되지 않고, create는 무효/만료 토큰을 400으로 거부한다. 프론트 `canShare`는 UX 가드다.
-- 프론트 현재 상태: Post 구조 변경, 나눔 신청 API, 냉장고별 나눔 식재료 조회는 React Native 코드에 반영됐다. `src/types/post.ts`, `createPost()` payload, 홈 카드/상세/등록 화면은 `detectedFruitKo`, `freshnessLabel`, `confidenceScore`, `status`, `imageToken` 중심으로 동작한다. 상세 화면은 `requestShare(postId)`로 `available -> requested`를 처리하고 홈 refresh 신호를 보낸다. 지도는 선택된 냉장고의 `GET /fridges/{id}/posts?status=available` 결과를 loading/error/empty/list 상태로 보여주고 항목 탭 시 상세로 이동한다. FCM 수신 handler는 아직 미연동이다.
+- 프론트 현재 상태: Post 구조 변경, 나눔 신청 API, 냉장고별 나눔 식재료 조회, FCM 수신 기록/알림함은 React Native 코드에 반영됐다. `src/types/post.ts`, `createPost()` payload, 홈 카드/상세/등록 화면은 `detectedFruitKo`, `freshnessLabel`, `confidenceScore`, `status`, `imageToken` 중심으로 동작한다. 상세 화면은 `requestShare(postId)`로 `available -> requested`를 처리하고 홈 refresh 신호를 보낸다. 지도는 선택된 냉장고의 `GET /fridges/{id}/posts?status=available` 결과를 loading/error/empty/list 상태로 보여주고 항목 탭 시 상세로 이동한다. FCM은 문자열 + camelCase payload를 검증해 로컬 알림함에 기록하고, opened/initial 알림은 상세 화면으로 라우팅한다.
 
 ---
 
@@ -45,7 +45,7 @@
 | 홈 주변 나눔 식재료        | 부분 구현                         | `/posts/nearby` 데이터를 카드로 표시한다. 홈 카드는 `detectedFruitKo`, `freshnessLabel`, `confidenceScore`, `status`를 사용한다. API 실패와 빈 상태는 UI에서 분리됐다. 위치가 없으면 API를 호출하지 않고 위치 설정 CTA를 표시한다. 홈은 냉장고보다 available 나눔 식재료를 먼저 보여주는 화면이다. 홈 포커스와 등록 완료 refresh token 변경 시 재조회한다.                                                                 |
 | 지도/냉장고                | 프론트 코드 연동 완료, VM QA 필요 | `/fridges/nearby`, `/fridges/available` 조회와 지도 마커/냉장고 선택은 동작한다. 지도에서 냉장고를 선택하면 `GET /fridges/{id}/posts?status=available`로 내부 available 나눔 식재료를 조회하고, loading/error/empty/list 상태를 분리한다. 목록 항목은 `PostDetail`로 이동한다. 위치가 없으면 지도 기본 좌표 fallback 없이 위치 설정 CTA를 표시한다. 주변 냉장고 없음 상태는 서버 필터 확인이 필요하다.                    |
 | 나눔 신청                  | 프론트 코드 연동 완료, VM QA 필요 | 백엔드는 `POST /posts/{id}/requests`, `available -> requested`, `SELECT ... FOR UPDATE` 경합 처리, 작성자 403, 중복/경합 409, 신청 알림을 구현/검증했다. 프론트는 `requestShare(postId)`, 상세 CTA, 201/403/409 UX, 홈 refresh store를 구현했다. 실제 VM API 201/403/409 런타임 QA는 남았다.                                                                                                                               |
-| FCM                        | 부분 구현, 백엔드 payload 확정    | FCM 토큰 등록은 있다. 백엔드는 `share_created`, `share_requested` 타입과 camelCase payload(`postId`, `requestId`, `fruitName`, `fridgeName`)를 확정했다. 실제 수신 handler, 알림 목록, 읽음 상태는 없다. 탭은 빈 알림함으로 축소했다.                                                                                                                                                                                      |
+| FCM                        | 프론트 코드 연동 완료, 실제 기기 QA 필요 | FCM 토큰 등록과 `share_created`, `share_requested` 수신 handler가 있다. payload는 문자열 + camelCase(`postId`, `requestId`, `fruitName`, `fridgeName`, `type`)로 검증한다. foreground/background/opened/initial 알림은 로컬 알림함에 기록하고, 알림 열기와 알림함 항목 탭은 `PostDetail`로 이동한다. `share_requested`는 내 나눔 관리 화면이 없으므로 MVP에서 상세 fallback을 쓴다. 읽음 상태 API는 없다. |
 | 채팅                       | 보류                              | 정적 채팅 mock 데이터는 제거했다. WebSocket/API 계약은 없다.                                                                                                                                                                                                                                                                                                                                                               |
 | 통계/탄소 절감             | 정리됨                            | 실제 지표 API가 없는 홈/프로필 mock 숫자는 제거하고 준비 중 상태로 표시한다.                                                                                                                                                                                                                                                                                                                                               |
 | 검색                       | 부분 구현                         | MVP 검색은 지도 공유 냉장고 이름/주소 로컬 필터로 제한했다. 서버 검색 API는 없다.                                                                                                                                                                                                                                                                                                                                          |
@@ -118,14 +118,18 @@
 
 ### Phase 6: 알림 및 내 정보
 
-- 상태: 목업/부분 완료
+- 상태: 프론트 코드 연동 완료, 실제 기기 QA 필요
 - 완료:
   - 프로필 기본 정보 표시
   - 로그아웃
   - FCM 토큰 등록 시도
+  - `share_created`, `share_requested` foreground/background/opened/initial 수신 handler
+  - 문자열 + camelCase FCM payload 검증
+  - 로컬 알림함 수신 기록/빈 상태
+  - 알림 열기와 알림함 항목 탭 시 `PostDetail` fallback 라우팅
 - 남은 작업:
   - 프로필 수정/내 나눔/관심/받은 나눔 메뉴 연결
-  - `share_created`, `share_requested` FCM 수신 handler와 알림함 구현
+  - 실제 기기 FCM foreground/background/terminated 수신 QA
   - 나눔 신청하기 실제 VM API 201/403/409 QA
   - 알림 읽음 상태/API 계약 구현
   - 실제 활동 지표 API 계약 구현
@@ -153,7 +157,7 @@
 ### P2
 
 1. 완료: 검색 MVP 범위는 지도 공유 냉장고 이름/주소 로컬 필터로 결정
-2. 부분 완료: FCM 탭은 빈 알림함으로 축소. `share_created`/`share_requested` 수신/읽음 handler는 남음
+2. 완료, 실제 기기 QA 필요: FCM 수신 handler와 알림함. `share_created`/`share_requested` foreground/background/opened/initial 수신 기록, 문자열 + camelCase payload 검증, 상세 fallback 라우팅을 구현했다. 읽음 상태 API는 후속이다.
 3. 완료: 홈/프로필 목업 통계 숫자 제거
 4. multi-object detection 계약 연구
 
