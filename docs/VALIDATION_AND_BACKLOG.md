@@ -76,7 +76,7 @@
 - MVP는 `available -> requested`까지 검증한다.
 - `requested`는 신청 접수이며 예약 확정이 아니다.
 - MVP에서 `requested` 이후 공급자 승인/거절 액션은 없다.
-- 첫 신청 이후 추가 신청을 막는 정책을 권장하지만, 최종 기획 확인은 남아 있다.
+- 첫 신청 이후 추가 신청은 막는다. 백엔드는 첫 신청 성공 시 `available -> requested`를 원자적으로 처리하고, 작성자 본인 신청은 403, 이미 `requested`인 나눔 식재료의 추가 신청은 409로 거절한다.
 - 관리자 화면은 제품 범위에는 포함하지만, 공유 냉장고/지도/신청 흐름이 안정화된 뒤 후순위로 제작한다. MVP 운영 제어는 수동 운영으로 시작한다.
 
 ### 홈과 지도 역할
@@ -89,18 +89,36 @@
 
 ### AI 판정과 사용자 문구
 
-- `Fresh`와 `Normal`은 사용자 흐름에서 모두 `상태가 좋아 보여요`와 `나눔 가능`으로 통합 표시한다.
-- `Stale`, `Bad`, `Rotten`은 AI/백엔드가 `Stale`의 의미를 더 정확히 정의하기 전까지 보수적으로 나눔 기준 미충족으로 분류하고 등록하지 않는다.
-- `not_food`, `non_food`, `low_quality`, `screenshot`, `ui_screenshot`은 등록하지 않는다.
-- `confidenceScore`는 차단 정책이 아니라 보조 표시/검토 신호다. 이 값이 무엇에 대한 confidence인지 AI/백엔드 계약에서 추가 정의해야 한다.
+- 백엔드 AI label은 `Fresh`, `Mid`, `Stale`이다. 기존 프론트 문서의 `Normal`은 `Mid`와 같은 나눔 가능 그룹으로 번역한다.
+- `Fresh`와 `Mid`는 사용자 흐름에서 모두 `상태가 좋아 보여요`와 `나눔 가능`으로 통합 표시한다.
+- `Stale`은 나눔 기준 미충족으로 분류하고 등록하지 않는다. `Bad`, `Rotten`은 현재 백엔드 label은 아니지만 방어적 호환 label로 내려오면 같은 차단 그룹으로 처리한다.
+- `not_food`, `non_food`, `low_quality`, `screenshot`, `ui_screenshot` rejection reason enum은 Post-MVP 백엔드 항목이다. 앱은 enum이 내려오면 등록하지 않도록 방어적으로 처리하되, 현재 MVP 서버 계약은 `is_fresh`, `freshnessLabel`, `analysisMessage`를 우선한다.
+- `confidenceScore`는 Stage 2 신선도 분류 모델의 softmax max 확률이다. 차단 정책이 아니라 보조 표시/검토 신호다.
 - 사용자-facing 부정 문구는 `부패`, `상함`, `썩음`, `나쁨`, `AI 실패`가 아니라 `나눔 기준에 맞지 않아요`, `식재료 사진으로 확인되지 않았어요`, `사진으로 상태를 확인하기 어려워요` 계열을 쓴다.
 
 ### 후속 결정 필요
 
-- AI/백엔드와 `Stale`의 정확한 의미를 정의한다.
-- AI/백엔드와 `confidenceScore`가 무엇의 confidence인지 정의한다.
-- 첫 신청 이후 추가 신청을 막는 정책을 기획자와 최종 확인한다.
+- `not_food`, `low_quality`, `review_required` 등 rejection reason enum은 Post-MVP에서 백엔드와 확정한다.
+- 프론트는 백엔드 Phase 1.5의 Post 구조 변경(`title/description/category` 제거, `detectedFruitKo/freshnessLabel/confidenceScore` 추가)을 코드에 반영한다.
+- 프론트는 백엔드가 구현한 `POST /posts/{id}/requests`와 `GET /fridges/{id}/posts?status=available`를 연동한다.
 - `requested` 이후 `reserved`, `completed`, `cancelled`, `expired` 흐름은 후속 버전에서 설계한다.
+
+## 2026-05-06 백엔드 Phase 1.5 반영 상태
+
+백엔드가 프론트 변경 공지 문서 기준으로 VM 배포와 검증을 완료했다. 이 섹션은 프론트 검증/백로그 관점에서 백엔드 답변을 재분류한다.
+
+| 항목 | 백엔드 상태 | 프론트 상태 | 다음 액션 |
+| --- | --- | --- | --- |
+| 나눔 신청 API | `POST /posts/{id}/requests` 구현, 201/403/409 VM 검증 완료 | 미연동. 상세 CTA는 `나눔 신청하기 (준비중)` | API client, 상세 CTA, 성공/실패 UI, 목록/상세 갱신 구현 |
+| 신청 동시 경합 | `SELECT ... FOR UPDATE` + 단일 트랜잭션으로 첫 신청만 성공. 이후 요청은 409 | 프론트는 아직 신청 API가 없어 race 결과 처리도 없음 | 409를 오류라기보다 정상 경합 결과로 처리하고 CTA 비활성화 |
+| 나눔 상태 | `available`, `requested`, `completed` 존재. `/posts/nearby`는 available만 반환 | 타입/상세 CTA가 requested 흐름을 아직 반영하지 않음 | `Post.status` 타입과 상세/홈 상태 처리 갱신 |
+| Post 구조 | `title/description/category` 제거, `detectedFruitKo/freshnessLabel/confidenceScore` 추가 | `src/types/post.ts`, 카드/상세/등록 화면이 구형 필드에 의존 | P0로 타입/API/화면 재정렬 |
+| AI label | `Fresh/Mid/Stale/unknown`, `Mid`는 기존 `Normal` 그룹 | 앱 정책은 `normal/mid/medium` 매핑을 일부 허용. `unknown` 전용 UX는 명시적이지 않음 | 문서와 테스트 fixture를 `Fresh/Mid/Stale` 기준으로 정리하고 `unknown`은 확인/실패 상태로 처리 |
+| confidenceScore | Stage 2 신선도 분류 softmax max 확률로 확정. 백엔드 표시 가이드는 0.9 이상 높음, 0.5~0.9 확인 필요 | 현재 앱은 60% 미만만 `확인 필요`로 분기 | UX 기준 충돌을 기록하고 프론트 threshold를 90%로 바꿀지 별도 결정 |
+| rejection reason enum | `not_food`, `low_quality` 등은 Post-MVP | 앱은 enum을 받으면 방어적으로 처리 가능 | false-positive fixture는 후속 계약 검증으로 유지 |
+| Stale 최종 등록 방어 | `Stale`이면 generate 400, `imageToken` 미발급. create는 무효/만료 토큰 400 | 프론트도 `canShare=false` UX 가드를 갖고 있음 | 서버가 최종 방어선임을 전제로 stale/token 실패 UX 검증 |
+| 알림 | `share_created`, `share_requested` payload 구현 | 토큰 등록만 있고 수신 handler/알림함 없음 | FCM 수신/탭 연동 작업화 |
+| 냉장고별 나눔 식재료 | `GET /fridges/{id}/posts?status=available` 구현/검증 | 지도/냉장고 상세 미연동 | 지도에서 냉장고 내부 available 목록 노출 구현 |
 
 ## 2026-05-05 P0/P1 코드 보강 현황
 
@@ -111,7 +129,7 @@
 - P1 위치 미설정 공통 가드: 홈, 지도, AI 스캔 진입점, 냉장고 선택 화면이 `getRegisteredLocation()` 기준을 공유한다. 위치가 없으면 주변 API를 호출하지 않고 `LocationSetup` CTA를 표시한다.
 - P1 등록 완료 후 홈 재조회: `PostCompleteScreen`이 홈 탭에 `nearbyPostsRefreshToken`을 전달하고, `HomeScreen`은 포커스/토큰 변경 시 `/posts/nearby`를 다시 조회한다.
 - P1 카메라 촬영/fallback: `react-native-vision-camera@5`의 `usePhotoOutput().capturePhotoToFile()` 경로로 수정했다. 에뮬레이터에서 촬영 파일 생성 및 실제 `/posts/generate` 호출까지 확인했고, 실제 기기 셔터 검증은 아직 남았다.
-- P1 confidence: `confidenceScore`를 분석 결과/작성 화면에 표시하고 60% 미만은 즉시 차단 대신 `확인 필요`로 분기한다.
+- P1 confidence: `confidenceScore`를 분석 결과/작성 화면에 표시하고 현재 앱은 60% 미만을 즉시 차단 대신 `확인 필요`로 분기한다. 백엔드 답변은 0.9 미만을 확인 필요 구간으로 보는 활용 가이드를 제시했으므로, 프론트 UX 기준 재결정이 필요하다.
 - 회귀 테스트: `__tests__/postPolicy.test.ts`에서 품질 정책, confidence, 작성자 판단을 고정한다. `__tests__/postComplete.navigation.test.tsx`, `__tests__/home.nearbyRefresh.test.tsx`에서 등록 완료 홈 복귀와 `/posts/nearby` 재조회 신호를 고정한다.
 - AI QA fixture/실기기 체크리스트: [AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md](./AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md)에 성공/실패/false-positive/대용량/실제 기기 촬영 검증 기준을 정리했다.
 
@@ -183,8 +201,8 @@
 | 위치 등록 후 홈/지도/나눔 식재료 등록 반영 | 정상 동작 | `이 위치로 설정하기` 후 `/auth/me`에 좌표가 저장됐다. 홈은 `내 동네`로 표시되고, 지도와 냉장고 선택 화면은 실제 냉장고 목록을 조회했다. | `PUT /api/v1/auth/me/location`, `HomeScreen`, `MapScreen`, `FridgeSelectScreen` | 유지 |
 | 위치 재설정 기능 | 정상 동작 | 홈 위치 헤더와 프로필 `동네 위치 재설정` 메뉴에서 `LocationSetup`으로 재진입한다. | `src/screens/home/HomeScreen.tsx`, `src/screens/profile/ProfileScreen.tsx`, `src/screens/location/LocationSetupScreen.tsx` | 권한 거부 상태 전용 CTA 보강 |
 | 사진 촬영 후 이미지 파일 생성 | 정상 동작 | `takePhoto()` 호출을 `usePhotoOutput().capturePhotoToFile()`로 수정한 뒤 에뮬레이터 셔터에서 `file:///data/user/0/com.greennode/cache/VisionCamera_*.jpg` 파일 URI가 생성됐다. | UI 검증, `src/screens/camera/CameraScanScreen.tsx`, logcat | 실제 기기 촬영 검증 |
-| 촬영/선택 이미지 API 전달 | 정상 동작 | mock 제거 후 release 앱에서 갤러리 선택 이미지와 셔터 촬영 이미지가 실제 `POST /api/v1/posts/generate`로 전달됐다. 셔터 촬영 재검증에서는 서버가 나눔 기준 미충족 상태 400으로 거부해 API 도달이 확인됐다. | `src/api/posts.ts`, `src/screens/camera/CameraScanScreen.tsx`, logcat | 부패/실패 응답 전용 UX 보강 |
-| AI 분석 결과 표시 | 정상 동작 | 실제 AI 응답이 `분석 결과` 화면에 표시됐다. 재검증 결과는 `바나나`, `신선`, confidence 100%, 분석 메모 `식재료가 신선합니다. 나눔이 가능합니다.`였다. mock 고정값인 `사과`가 아니었다. | `src/screens/camera/AnalysisResultScreen.tsx` | stale/bad fixture로 나눔 기준 미충족 결과 추가 검증 |
+| 촬영/선택 이미지 API 전달 | 정상 동작 | mock 제거 후 release 앱에서 갤러리 선택 이미지와 셔터 촬영 이미지가 실제 `POST /api/v1/posts/generate`로 전달됐다. 셔터 촬영 재검증에서는 서버가 나눔 기준 미충족 상태 400으로 거부해 API 도달이 확인됐다. | `src/api/posts.ts`, `src/screens/camera/CameraScanScreen.tsx`, logcat | 나눔 기준 미충족/실패 응답 전용 UX 보강 |
+| AI 분석 결과 표시 | 정상 동작 | 실제 AI 응답이 `분석 결과` 화면에 표시됐다. 재검증 결과는 `바나나`, `신선`, confidence 100%, 분석 메모 `식재료가 신선합니다. 나눔이 가능합니다.`였다. mock 고정값인 `사과`가 아니었다. | `src/screens/camera/AnalysisResultScreen.tsx` | `Stale` fixture로 나눔 기준 미충족 결과 추가 검증 |
 | AI 결과의 나눔 식재료 생성 기본값 반영 | 정상 동작 | 실제 AI 응답 기반으로 `나눔 등록` 화면에 `바나나`, `신선`, 제목 `신선한 바나나 나눔합니다`, 설명 기본값이 채워졌다. | `src/screens/post/PostCreateScreen.tsx` | 유지 |
 | 나눔 식재료 등록 후 홈 목록 반영 | 구현됨, 런타임 재검증 필요 | 냉장고 선택 후 실제 `POST /api/v1/posts` 성공과 완료 화면 표시까지 확인했다. 코드상 완료 화면의 홈 복귀는 홈 탭에 `nearbyPostsRefreshToken`을 전달하고, 홈은 포커스/토큰 변경 시 `/posts/nearby`를 재조회한다. | `src/screens/post/PostCompleteScreen.tsx`, `src/screens/home/HomeScreen.tsx`, `__tests__/postComplete.navigation.test.tsx`, `__tests__/home.nearbyRefresh.test.tsx` | 실제 앱에서 등록 직후 홈 목록 반영을 한 번 더 재검증 |
 | 나눔 식재료 등록 후 지도/냉장고 관련 반영 | 부분 검증 | 냉장고 선택 화면에서 실제 냉장고 목록 `광주역 공유냉장고`, `충장로 공유냉장고`, `전남대학교 공유냉장고`가 표시됐고, 선택한 냉장고로 실제 나눔 식재료 생성까지 성공했다. 현재 지도는 냉장고 목록 중심이라 나눔 식재료 지도 반영 정책은 별도 정리가 필요하다. | `src/api/posts.ts`, `src/screens/map/MapScreen.tsx`, `src/screens/post/FridgeSelectScreen.tsx` | 지도/냉장고 상세에서 나눔 식재료를 어떻게 노출할지 정책 결정 |
@@ -219,8 +237,8 @@ MVP가 성공 케이스만 동작하는 상태인지, 실패 상황에서도 앱
 
 ### To-do
 
-- [x] 나눔 기준 미충족 상태가 `나쁨`일 때 나눔 식재료 등록이 막히는지 확인
-- [x] 나눔 기준 미충족 상태가 `나쁨`일 때 사용자에게 실패 이유가 표시되는지 확인
+- [x] 나눔 기준 미충족 상태(`Stale`)일 때 나눔 식재료 등록이 막히는지 확인
+- [x] 나눔 기준 미충족 상태(`Stale`)일 때 사용자에게 실패 이유가 표시되는지 확인
 - [x] 실패 후 재촬영, 수동 수정, 이전 화면 이동 등 대안이 있는지 확인
 - [x] API 서버 연결 실패 시 앱이 멈추지 않는지 확인
 - [x] AI 서버 연결 실패 시 앱이 멈추지 않는지 확인
@@ -258,8 +276,8 @@ MVP가 성공 케이스만 동작하는 상태인지, 실패 상황에서도 앱
 
 | 항목 | 판정 | 현재 동작/근거 | 후속 작업 |
 | --- | --- | --- | --- |
-| 나눔 기준 미충족 등록 차단 | 구현됨 | `AnalysisResultScreen`은 `canShare=false`일 때 CTA를 disabled 처리하고, `PostCreateScreen`/`FridgeSelectScreen`에도 최종 품질 가드가 있다. | stale/bad fixture로 회귀 검증 |
-| 나눔 기준 미충족 실패 이유 표시 | 구현됨, fixture 검증 필요 | `generatePost` 실패나 서버 에러는 `message`뿐 아니라 `detail`도 Alert에 표시한다. 실제 stale/bad fixture는 아직 확보하지 못했다. | stale/bad fixture 또는 테스트 이미지를 확보하고, 나눔 기준 미충족 사유 문구를 실제 앱에서 검증한다. |
+| 나눔 기준 미충족 등록 차단 | 구현됨 | `AnalysisResultScreen`은 `canShare=false`일 때 CTA를 disabled 처리하고, `PostCreateScreen`/`FridgeSelectScreen`에도 최종 품질 가드가 있다. | `Stale` fixture로 회귀 검증 |
+| 나눔 기준 미충족 실패 이유 표시 | 구현됨, fixture 검증 필요 | `generatePost` 실패나 서버 에러는 `message`뿐 아니라 `detail`도 Alert에 표시한다. 실제 `Stale` fixture는 아직 확보하지 못했다. | `Stale` fixture 또는 테스트 이미지를 확보하고, 나눔 기준 미충족 사유 문구를 실제 앱에서 검증한다. |
 | 실패 후 대안 흐름 | 부분 구현 | 분석 결과 화면에는 재촬영과 작성 화면 진입이 있다. generate 실패 Alert는 `다시 촬영`/`갤러리 선택` 대안을 제공한다. 수동 입력 CTA는 아직 없다. | 실패 Alert에 수동 입력 선택지를 추가할지 결정한다. |
 | API 서버 연결 실패 | 부분 구현 | 홈/지도/냉장고 목록은 error/empty 상태와 retry UI를 분리했다. 위치 등록, 나눔 식재료 상세, 나눔 식재료 생성은 여전히 화면별 Alert 중심이다. | API 오류 문구 추출과 retry 패턴을 공통화한다. |
 | AI 서버 연결 실패 | 추가 검증 필요 | `postMultipart`는 네트워크 오류와 30초 타임아웃을 reject하고 `CameraScanScreen`이 Alert를 띄운다. mock 제거 후 실제 성공 경로는 검증했지만, AI 서버 중단/타임아웃 fault injection은 아직 하지 않았다. | AI 서버 중단/타임아웃 케이스를 실제 환경에서 재검증한다. |
@@ -275,7 +293,7 @@ MVP가 성공 케이스만 동작하는 상태인지, 실패 상황에서도 앱
 
 #### 버그/미구현 후보
 
-- 나눔 기준 미충족 등록 차단은 구현됐고, 서버 400 `detail`도 Alert에 표시하도록 수정했다. 실제 stale/bad fixture 검증이 남았다.
+- 나눔 기준 미충족 등록 차단은 구현됐고, 서버 400 `detail`도 Alert에 표시하도록 수정했다. 실제 `Stale` fixture 검증이 남았다.
 - mock 파이프라인은 제거되어 실제 성공 경로는 확인됐다. 다만 나눔 기준 미충족 판정 fixture, AI 장애, 중복 생성 같은 실패 경로는 아직 별도 재현이 필요하다.
 - 홈/지도/냉장고 목록 조회 실패는 error/empty 상태가 분리됐지만, 네트워크 끊김/공통 오류 문구는 아직 화면별로 흩어져 있다.
 - 카메라/위치 권한 거부 후 대체 흐름이 부족하다.
@@ -284,7 +302,7 @@ MVP가 성공 케이스만 동작하는 상태인지, 실패 상황에서도 앱
 
 #### 다음 스프린트 처리 제안
 
-- 우선순위 1: stale/bad fixture 확보, 나눔 기준 미충족 실패 사유 실제 앱 검증, 실제 나눔 식재료 생성의 중복 방지 검증
+- 우선순위 1: `Stale` fixture 확보, 나눔 기준 미충족 실패 사유 실제 앱 검증, 실제 나눔 식재료 생성의 중복 방지 검증
 - 우선순위 2: API/AI/네트워크 실패 공통 UX, 권한 거부 대체 흐름, 목록 화면 retry 상태
 - 우선순위 3: 서버 idempotency, 네트워크 끊김 UX, 업로드 진행률, 검색 서버 확장 여부 결정
 
@@ -293,7 +311,7 @@ MVP가 성공 케이스만 동작하는 상태인지, 실패 상황에서도 앱
 ```text
 docs/VALIDATION_AND_BACKLOG.md의 "2. 실패 케이스와 예외 처리 검증"을 기준으로 현재 앱의 예외 처리 상태를 점검해줘.
 
-특히 나눔 기준 미충족 상태가 나쁨일 때 나눔 식재료 등록 실패 처리, API/AI 서버 실패 처리, 권한 거부 처리, 중복 등록 방지를 중점적으로 봐줘. 실제 코드 위치와 함께 버그/미구현/정책 결정 필요 항목으로 분류해줘.
+특히 나눔 기준 미충족 상태(`Stale`)일 때 나눔 식재료 등록 실패 처리, API/AI 서버 실패 처리, 권한 거부 처리, 중복 등록 방지를 중점적으로 봐줘. 실제 코드 위치와 함께 버그/미구현/정책 결정 필요 항목으로 분류해줘.
 ```
 
 ## 3. AI 파이프라인 데이터 흐름 검증
@@ -315,8 +333,8 @@ docs/VALIDATION_AND_BACKLOG.md의 "2. 실패 케이스와 예외 처리 검증"�
 - [ ] 한 이미지에 여러 음식이 있을 때 결과가 어떻게 나오는지 확인
 - [x] AI confidence 값이 있는지 확인
 - [x] AI confidence 값이 있다면 현재 UI/로직에서 사용되는지 확인
-- [x] 부패도 판단 기준이 `좋음/보통/나쁨`인지, 다른 상태값이 있는지 확인
-- [x] `나쁨` 상태가 어느 레이어에서 등록 실패로 바뀌는지 확인
+- [x] 신선도 등급 기준이 `Fresh/Mid/Stale`인지 확인
+- [x] `Stale` 상태가 어느 레이어에서 등록 실패로 바뀌는지 확인
 
 ### 테스트 이미지 후보
 
@@ -360,22 +378,23 @@ docs/VALIDATION_AND_BACKLOG.md의 "2. 실패 케이스와 예외 처리 검증"�
    - 인증: `Authorization: Bearer {token}`
    - 전송: `XMLHttpRequest`, timeout 30초
 3. 서버가 `PostGenerateResult`를 반환한다.
-   - 추천 나눔 식재료 필드: `suggestedTitle`, `suggestedDescription`, `suggestedCategory`
+   - 백엔드 Phase 1.5 이전 응답에는 `suggestedTitle`, `suggestedDescription`, `suggestedCategory`가 있었지만, 현재 백엔드는 LLM 비활성화와 Post 구조 제거 방향으로 바뀌었다.
    - 감지 객체 필드: `detectedFruit`, `detectedFruitKo`
-   - AI 필드: `aiAnalysis.isFresh`, `confidenceScore`, `category`, `analysisMessage`, `analysisSkipped`
+   - AI/신선도 필드: `isFresh`, `freshnessLabel`, `confidenceScore`, `aiAnalysis.isFresh`, `aiAnalysis.category`, `analysisMessage`, `analysisSkipped`
    - 최종 등록 연결 필드: `imageToken`
 4. `AnalysisResultScreen`은 route param의 `result`와 `imageUri`만 사용한다.
-   - `aiAnalysis.category`를 `fresh/good`, `normal/mid/medium`, `rotten/stale/bad`로 매핑한다.
-   - `confidenceScore`는 화면 표시나 차단 조건으로 직접 사용하지 않는다.
-   - `canShare=false`여도 CTA 스타일만 흐려지고 실제 이동은 막히지 않는다.
+   - 현재 앱은 `aiAnalysis.category`를 `fresh/good`, `normal/mid/medium`, `rotten/stale/bad`로 방어 매핑한다.
+   - 새 백엔드 기준은 `Fresh/Mid/Stale`이며, `Mid`는 `Normal` 그룹으로 처리해야 한다.
+   - `confidenceScore`는 화면 표시와 `확인 필요` 분기에만 쓰고 단독 차단 조건으로 직접 사용하지 않는다.
 5. `PostCreateScreen`은 AI 응답을 나눔 식재료 초깃값으로 변환한다.
-   - 제목/설명/카테고리: `suggestedTitle`, `suggestedDescription`, `suggestedCategory`
+   - 현재 앱은 제목/설명/카테고리: `suggestedTitle`, `suggestedDescription`, `suggestedCategory`에 의존한다.
+   - 백엔드 Phase 1.5 이후에는 Post 저장 구조가 `detectedFruitKo`, `freshnessLabel`, `confidenceScore` 중심이므로 프론트 작성 화면의 구형 필드 의존 제거가 필요하다.
    - 판별 농산물: `detectedFruitKo || aiAnalysis.detectedFruitKo || detectedFruit || aiAnalysis.detectedFruit`
    - 이미지 원본은 다시 보내지 않고 `imageToken`만 다음 화면으로 넘긴다.
 6. `FridgeSelectScreen`은 냉장고 선택 후 `POST /api/v1/posts`를 호출한다.
    - 현재 서버 OpenAPI 기준 content type은 `application/x-www-form-urlencoded`
-   - body는 `data=<JSON 문자열>`이고 JSON 안에 `title`, `description`, `category`, `fridgeId`, `expirationDate`, `imageToken`이 들어간다.
-   - 통합 가이드의 `multipart/form-data` 예시는 현재 OpenAPI/앱 구현과 다르므로 갱신이 필요하다.
+   - 현재 앱 body는 `data=<JSON 문자열>`이고 JSON 안에 `title`, `description`, `category`, `fridgeId`, `expirationDate`, `imageToken`을 넣는다.
+   - 백엔드 Phase 1.5 이후 `title`, `description`, `category` 컬럼이 제거됐으므로 `PostCreateData`와 request payload를 재검증해야 한다.
 
 #### 실제 request/response 예시
 
@@ -389,7 +408,7 @@ Content-Type: multipart/form-data
 image=@android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png; type=image/png
 ```
 
-응답 요약:
+응답 요약(2026-05-05 검증 당시 예시, Phase 1.5 이후 재검증 필요):
 
 ```json
 {
@@ -426,16 +445,16 @@ image=@android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png; type=image/png
 | raw AI 서버 응답 | 미확인 | 앱이 받는 것은 API 서버가 정리한 `PostGenerateResult`이다. | AI 서버 원 응답 schema 확보 |
 | 대표 객체 처리 | 현재 계약은 단일 객체 | 응답 schema가 `detectedFruit`/`detectedFruitKo` 단일 문자열만 제공한다. 배열, bounding box, object id 필드가 없다. | multi-object를 하려면 `detections[]` 같은 새 계약 필요 |
 | multi-object 실제 성능 | 미확인 | 여러 음식이 있는 테스트 이미지를 아직 호출하지 않았다. | 테스트 이미지 세트 준비 후 generate 반복 검증 |
-| confidence | 화면 표시/확인 필요 분기 구현 | `confidenceScore`는 분석 결과/작성 화면에 표시되고, 낮은 confidence는 `확인 필요`로 분기한다. 단, confidence만으로 즉시 등록 차단하지는 않는다. | threshold와 사용자 확인 UX를 실제 fixture로 검증 |
-| 신선도 등급 | 서버 값은 문자열 | 확인된 값은 `Fresh`; 앱은 `fresh/good`, `normal/mid/medium`, `rotten/stale/bad`를 **신선도 등급**으로 매핑한다. `Fresh/Normal` 계열은 나눔 가능, `Stale/Bad/Rotten` 계열은 나눔 기준 미충족이다. | category enum을 서버와 앱에서 고정 |
-| 나눔 기준 미충족 등록 가드 | 구현됨 | `AnalysisResultScreen`, `PostCreateScreen`, `FridgeSelectScreen`에서 `canShare=false`일 때 등록 진행과 최종 등록을 차단한다. | stale/bad fixture로 회귀 검증 |
+| confidence | 정의 확정, 화면 표시/확인 필요 분기 구현 | `confidenceScore`는 Stage 2 신선도 분류 softmax max 확률이다. 분석 결과/작성 화면에 표시되고, 낮은 confidence는 `확인 필요`로 분기한다. 단, confidence만으로 즉시 등록 차단하지는 않는다. 현재 앱 기준은 60% 미만, 백엔드 활용 가이드는 0.9 미만 확인 필요 구간이라 UX 기준 재결정이 필요하다. | threshold와 사용자 확인 UX를 실제 fixture로 검증 |
+| 신선도 등급 | 백엔드 enum 확정 | 백엔드 값은 `Fresh/Mid/Stale`이다. `Fresh/Mid`는 나눔 가능, `Stale`은 나눔 기준 미충족이다. 앱의 `normal/mid/medium`, `bad/rotten` 매핑은 방어적 호환으로 유지할 수 있다. | `Fresh/Mid/Stale` fixture로 서버와 앱 매핑을 고정 |
+| 나눔 기준 미충족 등록 가드 | 구현됨 | `AnalysisResultScreen`, `PostCreateScreen`, `FridgeSelectScreen`에서 `canShare=false`일 때 등록 진행과 최종 등록을 차단한다. | `Stale` fixture로 회귀 검증 |
 
 #### 다음 스프린트 AI 보강 작업 후보
 
-1. category enum 정합성 고정: `Fresh/Normal/Stale/Bad/Rotten` 등 서버 문자열과 앱 품질 라벨 매핑을 테스트로 고정한다.
-2. stale/bad 테스트 fixture 확보: `Fresh` 외에 `Normal`, `Stale/Bad/Rotten` 응답을 실제 이미지 또는 서버 fixture로 재현한다.
-3. confidence 정책 추가: 낮은 confidence일 때 재촬영, 수동 입력, 등록 차단 중 하나로 결정한다.
-4. 나눔 기준 미충족 등록 차단 회귀 검증: `canShare=false`일 때 화면 이동과 최종 등록이 계속 막히는지 stale/bad fixture로 확인한다.
+1. category enum 정합성 고정: 백엔드 기준 `Fresh/Mid/Stale`과 앱 품질 라벨 매핑을 테스트로 고정한다.
+2. `Stale` 테스트 fixture 확보: `Fresh/Mid` 외에 `Stale` 응답을 실제 이미지 또는 서버 fixture로 재현한다.
+3. confidence UX 보강: 낮은 confidence일 때 재촬영 강조, 수동 입력, 단순 확인 중 어떤 CTA를 둘지 결정한다. 이때 현재 앱의 60% 기준과 백엔드 활용 가이드의 90% 기준 중 어느 것을 제품 기준으로 삼을지 명시한다.
+4. 나눔 기준 미충족 등록 차단 회귀 검증: `canShare=false`일 때 화면 이동과 최종 등록이 계속 막히는지 `Stale` fixture로 확인한다.
 5. multi-object 연구 항목 분리: 현재 계약은 단일 객체이므로 다음 스프린트에서는 `detections[]` 응답 구조와 UI 표시 방식을 먼저 설계한다.
 
 ### Codex 작업 지시 예시
@@ -443,7 +462,7 @@ image=@android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png; type=image/png
 ```text
 docs/VALIDATION_AND_BACKLOG.md의 "3. AI 파이프라인 데이터 흐름 검증"을 기준으로 이미지 업로드부터 AI 응답이 나눔 식재료 생성 데이터로 바뀌는 과정을 추적해줘.
 
-관련 코드 파일, request/response 형태, 현재 사용되는 AI 결과 필드, 나눔 기준 미충족 상태가 나쁨일 때 차단되는 위치를 정리해줘. 가능하면 로그를 추가하거나 기존 로그를 확인해서 실제 데이터 예시도 남겨줘.
+관련 코드 파일, request/response 형태, 현재 사용되는 AI 결과 필드, 나눔 기준 미충족 상태(`Stale`)일 때 차단되는 위치를 정리해줘. 가능하면 로그를 추가하거나 기존 로그를 확인해서 실제 데이터 예시도 남겨줘.
 ```
 
 ## 4. 한 장 촬영 UX와 multi-object 정책 정리
@@ -463,14 +482,14 @@ docs/VALIDATION_AND_BACKLOG.md의 "3. AI 파이프라인 데이터 흐름 검증
 - [x] AI confidence가 낮을 때 수동 입력으로 넘길지 정하기
 - [x] 여러 음식이 감지될 때 하나의 나눔 식재료로 처리할지 정하기
 - [x] 여러 음식이 감지될 때 객체별로 분리 등록할지 정하기
-- [x] 여러 객체 중 하나라도 `나쁨`이면 전체 등록을 막을지 정하기
+- [x] 여러 객체 중 하나라도 `Stale`이면 전체 등록을 막을지 정하기
 - [x] 여러 객체별로 나눔 기준 미충족 상태를 표시할지 정하기
 - [x] multi-object detection을 지금 MVP에 붙일지, 다음 스프린트 연구/검증 항목으로 둘지 정하기
 
 ### 권장 정책 초안
 
 - 기본 흐름은 한 장 촬영으로 유지한다.
-- AI confidence가 낮거나, 여러 객체가 감지되거나, 부패 판단이 불확실하면 추가 확인을 요구한다.
+- AI confidence가 낮거나, 여러 객체가 감지되거나, 신선도/나눔 기준 판단이 불확실하면 추가 확인을 요구한다.
 - 추가 확인은 처음부터 여러 장 촬영을 강제하기보다 재촬영 또는 수동 수정으로 처리한다.
 - multi-object detection은 바로 필수 기능으로 넣기보다, 먼저 현재 파이프라인에 붙일 수 있는 지점과 판단 기준을 검증한다.
 
@@ -498,7 +517,7 @@ docs/VALIDATION_AND_BACKLOG.md의 "3. AI 파이프라인 데이터 흐름 검증
 | confidence 낮을 때 수동 입력 | 부분 구현 | 분석 성공 뒤 나눔 식재료 작성 화면에서 제목/카테고리/설명은 수정 가능하다. 하지만 낮은 confidence 또는 분석 실패에서 바로 수동 입력으로 넘기는 흐름은 없다. | `PostCreateScreen` TextInput, category chip | `수동으로 입력` CTA 추가 |
 | 여러 음식 하나의 나눔 식재료 처리 | 현재 구조상 단일 대표 객체만 가능 | 현재 응답 계약은 `detectedFruit`, `detectedFruitKo` 단일 문자열이다. `detections[]`, bounding box, object id가 없다. | OpenAPI `PostGenerateResult`, `PostAIResult`, `src/types/post.ts` | MVP에서는 대표 객체 1개 나눔 식재료로만 처리 |
 | 여러 음식 객체별 분리 등록 | 미구현 | 앱 내 route param, 타입, 나눔 식재료 작성 화면이 모두 단일 결과를 전제로 한다. 객체별 분리 등록 UX가 없다. | `RootStackParamList`, `GenerateResult`, `PostCreateScreen` | 다음 스프린트에서 계약/UX 먼저 설계 |
-| 여러 객체 중 하나라도 나쁨일 때 차단 | 미구현 | multi-object 결과가 없어서 객체별 `나쁨` 판단 자체가 불가능하다. 서버 설명상 `Stale`/AI 장애는 generate 단계에서 400으로 거부되는 흐름이므로 앱은 실패 Alert만 받는다. | OpenAPI `generate` 설명, `CameraScanScreen` error handling | multi-object 도입 시 보수적으로 전체 확인 필요 상태 처리 |
+| 여러 객체 중 하나라도 `Stale`일 때 차단 | 미구현 | multi-object 결과가 없어서 객체별 `Stale` 판단 자체가 불가능하다. 서버 설명상 `Stale`/AI 장애는 generate 단계에서 400으로 거부되는 흐름이므로 앱은 실패 Alert만 받는다. | OpenAPI `generate` 설명, `CameraScanScreen` error handling | multi-object 도입 시 보수적으로 전체 확인 필요 상태 처리 |
 | 객체별 나눔 기준 미충족 상태 표시 | 미구현 | 단일 `category`만 표시한다. 객체별 상태, confidence, 박스 표시 UI가 없다. | `AnalysisResultScreen` 품질 분류, `PostCreateScreen` 분석 카드 | `detections[]` 계약 이후 표시 방식 설계 |
 | multi-object 적용 시점 | 정책 결정 | 지금 MVP에는 붙이지 않는다. 현재 파이프라인은 단일 이미지/단일 대표 객체 계약이라 multi-object를 붙이면 API 계약, 결과 화면, 나눔 식재료 작성/분리 등록 UX가 동시에 바뀐다. | `PostGenerateResult` 필드 목록, 앱 route 구조 | 다음 스프린트 연구/검증 항목으로 분리 |
 
@@ -508,13 +527,13 @@ docs/VALIDATION_AND_BACKLOG.md의 "3. AI 파이프라인 데이터 흐름 검증
 - 한 장 촬영은 `단일 식재료 + 외관이 충분히 보임 + Fresh/Mid + confidence 기준 이상`일 때만 바로 진행한다.
 - 라벨, 유통기한, 내부 상태가 핵심인 식재료는 AI가 확정하지 않고 `확인 필요`로 분기한다.
 - 낮은 confidence는 단독 등록 차단 사유로 확정하지 않는다. 대신 재촬영, 갤러리 재선택, 수동 입력 중 하나를 요구한다.
-- `Stale/Bad/Rotten` 또는 서버 generate 400은 직접 나눔 등록으로 보내지 않고 재촬영/수동 확인으로 돌린다.
+- `Stale` 또는 서버 generate 400은 직접 나눔 등록으로 보내지 않고 재촬영/수동 확인으로 돌린다. `Bad/Rotten`은 현재 백엔드 label은 아니지만 내려오면 같은 차단 그룹으로 방어 처리한다.
 - multi-object detection은 MVP 필수 기능이 아니라 다음 스프린트의 API 계약/UX 연구 항목으로 둔다.
 - multi-object를 도입할 경우 먼저 `detections[]` 계약을 정의한다. 최소 필드는 `label`, `labelKo`, `confidence`, `qualityCategory`, `bbox`다.
 
 #### 다음 스프린트 작업 후보
 
-1. 나눔 기준 미충족(`canShare=false`) 등록 차단을 stale/bad fixture로 회귀 검증한다.
+1. 나눔 기준 미충족(`canShare=false`) 등록 차단을 `Stale` fixture로 회귀 검증한다.
 2. 낮은 confidence fixture로 `확인 필요` 상태와 작성 화면 표시를 검증한다.
 3. 분석 실패/촬영 실패 Alert를 `다시 촬영`, `갤러리에서 선택`, `수동 입력` 액션으로 바꾼다.
 4. 유통기한 기본 3일 자동값 대신 수동 입력 필드를 추가하거나, 최소한 작성 화면에서 수정 가능하게 만든다.
@@ -558,7 +577,7 @@ docs/VALIDATION_AND_BACKLOG.md의 "4. 한 장 촬영 UX와 multi-object 정책 �
 - [x] 푸쉬 알림 구현 상태 확인
 - [x] 유저 프로필 구현 상태 확인
 - [x] 유저 통계 표시 여부 결정
-- [x] 냉장고 내부 아이템 조회 구현 상태 확인
+- [x] 냉장고별 나눔 식재료 조회 구현 상태 확인
 - [x] 지도에서 근처 냉장고 조회가 실제 데이터로 동작하는지 확인
 - [x] 채팅 탭을 유지할지 제거할지 결정
 - [x] 채팅을 WebSocket으로 구현할지 단순 문의/예약 기능으로 축소할지 결정
@@ -578,7 +597,7 @@ docs/VALIDATION_AND_BACKLOG.md의 "4. 한 장 촬영 UX와 multi-object 정책 �
 
 - 검색 기능
 - 유저 프로필/통계
-- 냉장고 내부 아이템 조회
+- 냉장고별 나눔 식재료 조회
 - 푸쉬 알림
 - 소셜 로그인/이메일 인증 보강
 
@@ -595,8 +614,8 @@ docs/VALIDATION_AND_BACKLOG.md의 "4. 한 장 촬영 UX와 multi-object 정책 �
 
 - 코드 점검: `src/screens/auth/*`, `src/screens/home/HomeScreen.tsx`, `src/screens/map/MapScreen.tsx`, `src/screens/profile/ProfileScreen.tsx`, `src/screens/chat/ChatListScreen.tsx`, `src/screens/location/LocationSetupScreen.tsx`, `src/api/*`, `src/services/deviceRegistration.ts`
 - API 계약 확인: `GET /openapi.json`
-- 확인된 서버 API: `/auth/signup`, `/auth/login`, `/auth/me`, `/auth/me/location`, `/posts`, `/posts/generate`, `/posts/nearby`, `/fridges/nearby`, `/fridges/available`
-- 미확인/부재 API: 소셜 로그인, 이메일 verification, 검색, 유저 통계, 냉장고 내부 아이템, 채팅/WebSocket
+- 확인된 서버 API: `/auth/signup`, `/auth/login`, `/auth/me`, `/auth/me/location`, `/posts`, `/posts/generate`, `/posts/nearby`, `/posts/{id}/requests`, `/fridges/nearby`, `/fridges/available`, `/fridges/{id}/posts`
+- 미확인/부재 API: 소셜 로그인, 이메일 verification, 검색, 유저 통계, 채팅/WebSocket, 알림 읽음 상태
 
 #### 기능별 구현 상태
 
@@ -608,14 +627,14 @@ docs/VALIDATION_AND_BACKLOG.md의 "4. 한 장 촬영 UX와 multi-object 정책 �
 | 위치 재설정 | 구현됨 | 홈 위치 헤더와 프로필 `동네 위치 재설정` 메뉴에서 `LocationSetup`으로 재진입한다. API는 `/auth/me/location`을 재사용한다. | 권한 거부/수동 위치 입력 UX 보강. |
 | 주변 나눔 수 | 부분 구현/임시 | 홈 통계는 `posts.length`를 `주변 나눔`으로 표시한다. pagination 전 현재 조회 결과 수 기준이다. | 실제 통계로 유지하려면 기준과 API를 정의한다. |
 | 탄소 절감액 | 정리됨 | 홈과 프로필의 고정 kg 값을 제거하고 `준비 중`으로 표시한다. 계산식/API는 없다. | 실제 지표를 넣으려면 계산식과 API 계약을 먼저 정의한다. |
-| 내 주변 실시간 나눔 | 부분 구현 | `getNearbyPosts()`로 실제 주변 나눔 식재료를 가져와 카드로 표시한다. 실시간 구독, pagination, `전체보기` 동작은 없다. | 등록 완료 후 refresh 보장, 전체보기/상세 연결 UX 보강. |
+| 내 주변 실시간 나눔 | 부분 구현 | `getNearbyPosts()`로 실제 주변 available 나눔 식재료를 가져와 카드로 표시한다. 백엔드 기준 `/posts/nearby`는 requested를 자동 제외한다. 실시간 구독, pagination, `전체보기` 동작은 없다. | 신청 성공 후 requested 항목이 홈에서 사라지는지 프론트 연동/QA. |
 | 홈 데이터 없음 상태 | 구현됨 | 나눔 식재료가 없으면 `아직 근처에 나눔이 없어요` 빈 상태를 표시한다. | API 실패와 진짜 빈 상태를 구분하는 에러 UI 추가. |
 | 검색 기능 | 부분 구현 | 홈 검색 아이콘은 지도 탭으로 이동하고, 지도 검색 입력은 공유 냉장고 이름/주소 로컬 필터로 동작한다. 서버 OpenAPI에는 검색 엔드포인트가 없다. | 나눔 식재료/동네 서버 검색은 후속 범위로 분리. |
 | 검색 결과 없음 | 구현됨 | MVP 검색은 지도 공유 냉장고 이름/주소 로컬 필터로 제한했다. 결과 없음 상태와 검색 초기화가 있다. | 나눔 식재료/동네 서버 검색은 후속 범위로 분리. |
-| 푸쉬 알림 | 부분 구현 | Firebase Messaging 의존성, Android 알림 권한, FCM 토큰 등록은 있다. foreground/background 수신 처리, 알림 목록, 읽음 상태는 없다. 채팅 탭 mock 데이터는 제거하고 빈 알림함으로 축소했다. | “FCM 토큰 등록 + 빈 알림함”까지만 구현으로 범위를 명확히 하고 수신 핸들러를 별도 작업화. |
+| 푸쉬 알림 | 부분 구현, 백엔드 payload 확정 | Firebase Messaging 의존성, Android 알림 권한, FCM 토큰 등록은 있다. 백엔드는 `share_created`, `share_requested`와 camelCase payload를 구현했다. foreground/background 수신 처리, 알림 목록, 읽음 상태는 없다. 채팅 탭 mock 데이터는 제거하고 빈 알림함으로 축소했다. | 수신 handler와 알림함을 `type`, `postId`, `requestId`, `fruitName`, `fridgeName` 기준으로 구현. |
 | 유저 프로필 | 부분 구현 | 닉네임/이메일은 실제 유저 정보를 표시한다. 프로필 수정, 메뉴 이동, 내 나눔/관심/받은 나눔은 연결되어 있지 않다. | 프로필 수정 또는 내 나눔 내역 중 하나만 우선 연결. |
 | 유저 통계 | 정리됨 | 신선도 온도, 포인트, 탄소 절감량의 하드코딩 숫자를 제거하고 `준비 중` 상태로 표시한다. | 실제 지표를 넣으려면 계산식과 API 계약을 먼저 정의. |
-| 냉장고 내부 아이템 조회 | 미구현 | 지도/선택 화면은 냉장고 목록만 조회한다. 냉장고 상세/내부 아이템 API와 화면이 없다. | 나눔 식재료를 냉장고별로 볼 것인지, 별도 inventory를 둘 것인지 정책 결정. |
+| 냉장고별 나눔 식재료 조회 | 백엔드 구현, 프론트 미연동 | 지도/선택 화면은 냉장고 목록만 조회한다. 백엔드는 `GET /fridges/{id}/posts?status=available`를 구현/검증했다. | 지도/냉장고 상세에서 냉장고별 available 나눔 식재료 목록을 노출한다. 별도 inventory 개념은 후속으로 분리. |
 | 지도 근처 냉장고 조회 | 구현됨 | `MapScreen`이 `/fridges/nearby`, `FridgeSelectScreen`이 `/fridges/available`을 호출한다. 1번 검증에서 실제 냉장고 목록 표시를 확인했다. | 위치 미설정 기본 좌표 fallback과 API 실패 UI 보강. |
 | 채팅 탭 | 축소됨 | `ChatListScreen`의 `MOCK_CHATS`를 제거하고 탭 라벨을 `알림`으로 바꿨다. WebSocket, 채팅방 상세, 메시지 송수신 API는 없다. | MVP에서는 알림함으로 유지하고 WebSocket 채팅은 보류. |
 | WebSocket 채팅 | 미구현/보류 권장 | 코드와 OpenAPI 모두 실시간 채팅 계약이 없다. 구현/검증 비용이 크다. | 다음 스프린트에서는 단순 문의/예약 CTA 또는 알림함으로 축소한다. |
@@ -625,14 +644,16 @@ docs/VALIDATION_AND_BACKLOG.md의 "4. 한 장 촬영 UX와 multi-object 정책 �
 1. 위치 재설정 연결: 이미 있는 `/auth/me/location`과 `LocationSetup`을 재사용할 수 있어 비용 대비 효과가 크다.
 2. 홈/지도 목록 실패 UI: 현재 API 실패가 빈 상태처럼 보일 수 있으므로, retry와 에러 상태를 분리한다.
 3. 검색 MVP 범위 결정: 서버 검색 없이 지도 냉장고명 로컬 필터부터 시작할지 결정한다.
-4. 푸쉬 범위 명확화: FCM 토큰 등록은 있으므로, 실제 수신 핸들러와 알림함을 별도 이슈로 분리한다.
-5. 목업 통계 정리: 탄소 절감액, 포인트, 신선도 온도는 실제 지표가 아니므로 숨김/준비 중/실제 API 중 하나로 결정한다.
+4. 나눔 신청 API 연동: 백엔드 계약이 확정됐으므로 상세 CTA, 201/403/409 처리, 홈/상세 상태 갱신을 우선 구현한다.
+5. Post 구조 재정렬: 백엔드가 `title/description/category`를 제거했으므로 프론트 타입과 화면을 `detectedFruitKo/freshnessLabel/confidenceScore` 기준으로 갱신한다.
+6. 푸쉬 범위 명확화: FCM 토큰 등록은 있으므로, 실제 수신 핸들러와 알림함을 별도 이슈로 분리한다.
+7. 목업 통계 정리: 탄소 절감액, 포인트, 신선도 온도는 실제 지표가 아니므로 숨김/준비 중/실제 API 중 하나로 결정한다.
 
 #### 채팅 탭 결정
 
 - 결정: WebSocket 채팅은 보류하고, 현재 탭은 `알림함`으로 축소한다.
 - 이유: 현재 구현은 정적 mock 데이터뿐이고, 서버 계약도 없다. 실시간 채팅은 인증, 방 생성, 메시지 저장, 읽음 상태, 푸쉬 연동까지 필요해서 MVP 다음 스프린트의 핵심 리스크를 키운다.
-- 현실적인 대안: 나눔 식재료 상세의 `나눔 신청하기` CTA를 먼저 만들고, 신청 상태/푸쉬 알림/알림함으로 흐름을 단순화한다.
+- 현실적인 대안: 백엔드가 구현한 나눔 식재료 상세의 `나눔 신청하기` API를 먼저 연결하고, 신청 상태/푸쉬 알림/알림함으로 흐름을 단순화한다.
 
 ### Codex 작업 지시 예시
 
@@ -690,21 +711,72 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
 
 #### P0/P1: 다음 스프린트 필수 후보
 
+## 백엔드 Phase 1.5 Post 구조 변경 프론트 반영
+
+- 분류: 서버 계약 변경 대응
+- 우선순위: P0
+- 상태: 미구현
+- 배경: 백엔드가 Post 컬럼에서 `title`, `description`, `category`를 제거하고 `detectedFruitKo`, `freshnessLabel`, `confidenceScore`를 추가했다. 현재 프론트 타입과 화면은 여전히 구형 작성/표시 필드에 의존한다.
+- 현재 동작: `src/types/post.ts`의 `Post`와 `PostCreateData`는 `title`, `description`, `category`를 필수로 보고, 홈 카드/상세/등록 화면도 이 필드들을 사용한다.
+- 기대 동작: 프론트는 백엔드 Phase 1.5 응답 구조를 기준으로 나눔 식재료명, 신선도 등급, confidence, 이미지, 냉장고, 상태를 표시한다. 사용자-facing 문구는 `나눔 식재료` 기준을 유지한다.
+- Acceptance Criteria:
+  - [ ] `Post` 타입이 `detectedFruitKo`, `freshnessLabel`, `confidenceScore`, `status`를 반영한다.
+  - [ ] `PostCreateData`와 `createPost()` payload가 백엔드 새 계약에 맞게 갱신된다.
+  - [ ] 홈 카드와 상세 화면이 `title/description/category` 없이도 깨지지 않는다.
+  - [ ] `Fresh/Mid/Stale` 매핑과 `Mid = Normal 그룹` 정책이 테스트로 고정된다.
+- 검증 방법: typecheck, unit test, 실제 `GET /posts/{id}`/`POST /posts` VM API 검증, 앱 카드/상세 QA
+- 관련 파일/화면/API: `src/types/post.ts`, `src/api/posts.ts`, `HomeScreen`, `PostDetailScreen`, `PostCreateScreen`, `POST /api/v1/posts`, `GET /api/v1/posts/{id}`
+
+## 나눔 신청 API 프론트 연동
+
+- 분류: 미구현
+- 우선순위: P1
+- 상태: 백엔드 구현 완료, 프론트 미연동
+- 배경: MVP 수요자 흐름인 `available -> requested`가 백엔드에 구현됐다. 현재 상세 화면 CTA는 `나눔 신청하기 (준비중)`이다.
+- 현재 동작: 상세 화면에서 신청 API를 호출하지 않는다.
+- 기대 동작: 수요자가 available 나눔 식재료 상세에서 `나눔 신청하기`를 누르면 `POST /api/v1/posts/{post_id}/requests`를 호출하고, 성공 시 신청 접수 상태를 표시한다.
+- Acceptance Criteria:
+  - [ ] `requestShare(postId)` API client가 추가된다.
+  - [ ] 성공 201 응답에서 `request`와 갱신된 `post.status=requested`를 처리한다.
+  - [ ] 작성자 본인 신청 403은 CTA 숨김/비활성화 또는 fallback 문구로 처리한다.
+  - [ ] 중복/경합 409는 `이미 신청이 접수된 나눔이에요` 계열 문구와 CTA 비활성화로 처리한다.
+  - [ ] 신청 성공 후 상세 상태와 홈 `/posts/nearby` 재조회 또는 항목 제거가 보장된다.
+- 검증 방법: API client unit test, PostDetail interaction test, 실제 VM API 201/403/409 QA
+- 관련 파일/화면/API: `src/api/posts.ts`, `src/types/post.ts`, `PostDetailScreen`, `HomeScreen`, `POST /api/v1/posts/{post_id}/requests`
+
+## 냉장고별 나눔 식재료 조회 프론트 연동
+
+- 분류: 미구현
+- 우선순위: P1
+- 상태: 백엔드 구현 완료, 프론트 미연동
+- 배경: 지도는 주변 공유 냉장고와 그 안의 available 나눔 식재료를 탐색하는 화면이다. 백엔드는 `GET /fridges/{id}/posts?status=available`를 구현했다.
+- 현재 동작: 지도는 냉장고 목록/마커/캐러셀 중심이며, 특정 냉장고 안의 나눔 식재료 목록을 보여주지 않는다.
+- 기대 동작: 사용자가 지도에서 냉장고를 선택하면 해당 냉장고의 available 나눔 식재료를 확인하고 상세/신청 흐름으로 이동할 수 있다.
+- Acceptance Criteria:
+  - [ ] `getFridgePosts(fridgeId, status='available')` API client가 추가된다.
+  - [ ] 냉장고 선택 시 loading/error/empty/list 상태가 분리된다.
+  - [ ] 목록 항목은 나눔 식재료 상세로 이동한다.
+  - [ ] 위치 미설정 상태에서는 기존 위치 설정 CTA 가드를 유지한다.
+- 검증 방법: API client unit test, 지도 냉장고 선택 QA, empty/error 상태 QA
+- 관련 파일/화면/API: `src/api/fridges.ts` 또는 `src/api/posts.ts`, `MapScreen`, `PostDetailScreen`, `GET /api/v1/fridges/{fridge_id}/posts`
+
 ## 나눔 기준 미충족/등록 차단 상태에서 실제 등록 차단
 
 - 분류: 버그
 - 우선순위: P0
-- 상태: 완료, fixture 회귀 검증 필요
+- 상태: 앱 가드 완료, 서버 최종 방어 확인됨, fixture 회귀 검증 필요
 - 배경: `AnalysisResultScreen`은 과거에 `canShare=false`일 때 CTA를 흐리게 보이게만 하고 실제 이동을 막지 않았다.
-- 현재 동작: `AnalysisResultScreen`, `PostCreateScreen`, `FridgeSelectScreen`에서 나눔 기준 미충족 신선도 등급의 등록 진행을 차단한다.
-- 기대 동작: 등록 차단 상태에서는 분석 결과 화면, 나눔 식재료 작성 화면, 최종 등록 직전에서 모두 차단한다.
+- 현재 동작: `AnalysisResultScreen`, `PostCreateScreen`, `FridgeSelectScreen`에서 나눔 기준 미충족 신선도 등급의 등록 진행을 차단한다. 백엔드는 `Stale` generate 결과에 `imageToken`을 발급하지 않고, 무효/만료 토큰 create를 400으로 막는다.
+- 기대 동작: 등록 차단 상태에서는 분석 결과 화면, 나눔 식재료 작성 화면, 최종 등록 직전에서 모두 차단한다. 프론트 가드를 우회해도 서버가 등록을 막는다.
 - Acceptance Criteria:
   - [x] `canShare=false`이면 `이대로 나눔하기` 버튼이 실제 disabled 처리된다.
   - [x] route 직접 진입 또는 상태 조작으로 `PostCreate`/`FridgeSelect`에 들어가도 최종 등록 전에 차단된다.
   - [x] 사용자에게 재촬영/갤러리 선택 중 최소 하나의 대안이 제공된다.
-- 검증 방법: `AnalysisResultScreen` 단위 테스트, stale/bad fixture 기반 수동 QA, `FridgeSelectScreen` 최종 등록 guard 테스트
+  - [x] 서버는 `Stale` 분석 결과에 대해 `imageToken`을 발급하지 않는다.
+  - [x] 서버는 무효/만료 `imageToken`으로 최종 등록을 막는다.
+- 검증 방법: `AnalysisResultScreen` 단위 테스트, `Stale` fixture 기반 수동 QA, `FridgeSelectScreen` 최종 등록 guard 테스트, generate 400/token 400 API QA
 - 관련 파일/화면/API: `src/screens/camera/AnalysisResultScreen.tsx`, `src/screens/post/PostCreateScreen.tsx`, `src/screens/post/FridgeSelectScreen.tsx`
-- 비고: 실제 stale/bad fixture가 아직 없어 수동 QA는 남아 있다.
+- 비고: 실제 `Stale` fixture가 아직 없어 수동 QA는 남아 있다.
 
 ## 나눔 식재료 상세 authorId/userId 계약 불일치 수정
 
@@ -802,16 +874,17 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
 
 ## AI confidence와 확인 필요 상태 도입
 
-- 분류: 정책 결정 필요
+- 분류: 정책 결정 완료, UX 보강 필요
 - 우선순위: P1
-- 상태: 부분 완료, fixture 검증 필요
-- 배경: API는 `confidenceScore`를 반환하지만 앱은 표시/분기/차단에 사용하지 않는다.
-- 현재 동작: `confidenceScore`를 분석 결과/작성 화면에 표시하고, 낮은 confidence는 `확인 필요`로 분기한다.
+- 상태: 부분 완료, threshold 재결정 및 fixture 검증 필요
+- 배경: 백엔드가 `confidenceScore`를 Stage 2 신선도 분류 모델의 softmax max 확률로 확정했다.
+- 현재 동작: `confidenceScore`를 분석 결과/작성 화면에 표시하고, 현재 앱 기준으로 60% 미만이면 `확인 필요`로 분기한다.
 - 기대 동작: 낮은 confidence는 즉시 차단이 아니라 `확인 필요` 상태로 분기하고 재촬영/수동 입력을 유도한다.
 - Acceptance Criteria:
   - [x] confidence가 분석 결과 화면에 표시된다.
   - [x] threshold 미만일 때 `확인 필요` 상태가 표시된다.
-  - [x] threshold 값과 정책이 문서화된다.
+  - [x] 현재 threshold 값과 정책이 문서화된다.
+  - [ ] 백엔드 활용 가이드인 0.9 미만 확인 필요 기준을 프론트 UX에 반영할지 결정한다.
 - 검증 방법: mock/fixture 응답으로 confidence 0.4/0.7/1.0 테스트, 수동 QA
 - 관련 파일/화면/API: `AiAnalysis.confidenceScore`, `AnalysisResultScreen`, `PostCreateScreen`
 
@@ -819,12 +892,12 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
 
 - 분류: 정책 결정/서버 계약
 - 우선순위: P1
-- 상태: 앱 방어 로직/fixture 반복 검증 스크립트 추가, 서버/AI 계약 반영 필요
+- 상태: 앱 방어 로직/fixture 반복 검증 스크립트 추가, rejection reason enum은 Post-MVP
 - 배경: 에뮬레이터 QA에서 비식재료/스크린샷성 이미지가 `바나나 / 신선 / 100%`로 통과했다.
-- 현재 동작: 앱은 이미지 내용을 자체 판별하지 않지만, 서버가 `not_food/non_food/low_quality/screenshot/ui_screenshot` category 또는 `rejectionReason`을 주면 등록 차단으로 처리한다. `multi_object_review/review_required`는 `확인 필요`로 표시한다.
+- 현재 동작: 앱은 이미지 내용을 자체 판별하지 않는다. 서버가 `not_food/non_food/low_quality/screenshot/ui_screenshot` category 또는 `rejectionReason`을 주면 등록 차단으로 처리한다. 다만 백엔드 Phase 1.5 기준 해당 enum은 아직 구현되지 않았고 Post-MVP로 기록됐다.
 - 기대 동작: 서버/AI는 비식재료, 스크린샷, 앱 아이콘, 실내 배경을 `Fresh` 식재료로 반환하지 않는다.
 - Acceptance Criteria:
-  - [ ] `not_food`, `low_quality`, `multi_object_review` 등 실패/검토 사유 enum을 서버 계약에 추가한다.
+  - [ ] Post-MVP에서 `not_food`, `low_quality`, `multi_object_review` 등 실패/검토 사유 enum을 서버 계약에 추가한다.
   - [ ] 비식재료/스크린샷 fixture는 generate 400 또는 `확인 필요`로 처리된다.
   - [x] 앱은 서버 실패 사유를 사용자에게 보여주고 등록을 진행하지 않는다.
 - 검증 방법: [AI QA fixture 문서](./AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md)의 `not-food`, `screenshot-or-ui`, `low-quality` fixture로 `npm run qa:ai-fixtures` 반복 호출
@@ -893,7 +966,7 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
 - WebSocket 기반 실시간 채팅: 서버 계약과 앱 구조가 없으므로 보류. `알림함` 또는 `나눔 신청하기`로 축소한다.
 - 소셜 로그인 전체 구현: 이메일 로그인 MVP가 동작하므로 우선순위 낮음. 버튼을 숨기거나 준비 중으로 명확히 둔다.
 - 이메일 verification 전체 예외 케이스: 인증 메일/OTP 서버 계약이 없어 보류.
-- 냉장고 내부 inventory: 현재 서버는 냉장고 목록만 제공한다. 냉장고별 나눔 식재료 목록으로 대체할지 먼저 결정한다.
+- 냉장고 내부 inventory: 별도 재고 관리 개념은 보류한다. 단, 백엔드가 냉장고별 available 나눔 식재료 조회 API를 구현했으므로 지도/냉장고 상세 탐색은 별도 프론트 작업으로 진행한다.
 
 ### Codex 작업 지시 예시
 
@@ -917,7 +990,7 @@ docs/VALIDATION_AND_BACKLOG.md의 검증 결과를 바탕으로 다음 스프린
 - [x] 검증용 나눔 식재료 데이터 준비
 - [x] AI 성공 케이스 이미지 준비
 - [ ] AI 실패 케이스 이미지 준비
-- [ ] 나눔 기준 미충족 상태 `나쁨` 케이스 이미지 준비
+- [ ] 나눔 기준 미충족 상태 `Stale` 케이스 이미지 준비
 - [ ] multi-object 예시 이미지 준비
 - [ ] 주변 냉장고 없음 상태를 확인할 수 있는 위치 준비
 - [x] 나눔 식재료 없음 상태를 확인할 수 있는 조건 준비
@@ -962,7 +1035,7 @@ docs/VALIDATION_AND_BACKLOG.md의 검증 결과를 바탕으로 다음 스프린
 | 항목 | 상태 | 이유 | 다음 액션 |
 | --- | --- | --- | --- |
 | AI 실패 케이스 이미지 | 미준비 | 현재 확보한 실제 이미지는 성공 케이스뿐이다. 서버 generate 400을 안정적으로 재현하는 이미지가 필요하다. | [AI QA fixture 문서](./AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md)의 `not-food`, `screenshot-or-ui`, `low-quality` 세트 확보 |
-| 나눔 기준 미충족 상태 `나쁨` 이미지 | 미준비 | 실제 `Stale/Bad/Rotten` 응답을 만드는 테스트 이미지가 없다. | [AI QA fixture 문서](./AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md)의 `stale-or-rotten` fixture 또는 서버 fixture 모드 준비 |
+| 나눔 기준 미충족 상태 `Stale` 이미지 | 미준비 | 실제 `Stale` 응답을 만드는 테스트 이미지가 없다. | [AI QA fixture 문서](./AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md)의 `stale-or-rotten` fixture 또는 서버 fixture 모드 준비 |
 | multi-object 예시 이미지 | 미준비 | 여러 식재료가 동시에 담긴 실제 사진이 없다. 현재 API 계약도 단일 대표 객체만 반환한다. | [AI QA fixture 문서](./AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md)의 `multi-object` fixture 확보 |
 | 주변 냉장고 없음 위치 | 준비 실패 | `0,0`, 제주, 부산, 뉴욕 좌표에서도 `/fridges/nearby`가 3건을 반환했다. 반경 필터가 기대와 다를 가능성이 있다. | 서버 냉장고 거리 필터를 확인하거나 no-fridge fixture를 백엔드에 추가 |
 
@@ -988,7 +1061,7 @@ GET /api/v1/fridges/available?latitude=35.1595&longitude=126.9136&radius_km=2.0
 - 위치 등록 후 앱의 주요 화면이 정상적으로 위치를 사용하고 있는가?
 - 사진 촬영 데이터가 AI 파이프라인까지 실제로 전달되는가?
 - AI 응답이 나눔 식재료 등록 데이터로 어떻게 변환되는가?
-- 나눔 기준 미충족 상태가 `나쁨`일 때 사용자는 무엇을 보게 되는가?
+- 나눔 기준 미충족 상태(`Stale`)일 때 사용자는 무엇을 보게 되는가?
 - 서버/API/AI/권한/네트워크 실패 시 앱이 멈추지 않는가?
 - 한 장 촬영 흐름은 유지할 것인가, 조건부 추가 확인을 붙일 것인가?
 - multi-object detection은 다음 스프린트의 구현 대상인가, 연구/검증 대상인가?

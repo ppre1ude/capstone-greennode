@@ -6,7 +6,7 @@
       "case": "신선 성공",
       "localPath": "docs/qa-fixtures/fresh-single-fresh-20260505.jpg",
       "expectedOutcome": "shareable",
-      "expectedCategories": ["Fresh", "Normal"],
+      "expectedCategories": ["Fresh", "Mid"],
       "notes": "식재료 하나가 선명하게 보이는 과일/채소 사진"
     },
     {
@@ -14,7 +14,7 @@
       "case": "나눔 기준 미충족",
       "localPath": "docs/qa-fixtures/stale-or-rotten-rejected-20260505.jpg",
       "expectedOutcome": "rejected",
-      "expectedCategories": ["Stale", "Bad", "Rotten"],
+      "expectedCategories": ["Stale"],
       "notes": "무름, 곰팡이, 변색이 보이는 과일/채소 사진"
     },
     {

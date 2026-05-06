@@ -20,6 +20,16 @@
 
 이 문서는 초기 Phase 1~6 구현 리포트를 2026-05-05 MVP 검증 결과 기준으로 갱신한 것이다. 과거 문서의 일괄 완료 표현은 실제 서버/기기 검증 결과를 반영하지 못하므로, 현재는 `구현됨`, `부분 구현`, `목업`, `미구현`, `검증 필요`, `버그`로 분리한다.
 
+## 2026-05-06 백엔드 Phase 1.5 동기화
+
+백엔드가 `TEAM_FLOW_CHANGE_NOTICE_2026-05-06.md`를 반영해 VM 배포와 검증을 완료했다. 프론트 상태 문서에서는 이 답변을 다음 기준으로 해석한다.
+
+- 백엔드 구현 완료: `share_requests` 테이블, `POST /posts/{id}/requests`, `available -> requested`, `SELECT ... FOR UPDATE` 동시 경합 처리, 403/409 처리, `share_created`/`share_requested` 알림, `GET /fridges/{id}/posts?status=available`.
+- 백엔드 계약 변경: Post의 `title`, `description`, `category` 컬럼이 제거되고 `detectedFruitKo`, `freshnessLabel`, `confidenceScore` 중심 구조로 바뀌었다.
+- AI 계약 확정: 백엔드 label은 `Fresh`, `Mid`, `Stale`, `unknown`이며, `Mid`는 기존 프론트의 `Normal` 그룹이다. `confidenceScore`는 Stage 2 신선도 분류 softmax max 확률이다. 백엔드 활용 가이드는 0.9 미만을 확인 필요 구간으로 보지만, 현재 앱은 60% 미만 기준을 사용한다.
+- 서버 최종 방어선: `Stale`이면 generate 400으로 `imageToken`이 발급되지 않고, create는 무효/만료 토큰을 400으로 거부한다. 프론트 `canShare`는 UX 가드다.
+- 프론트 현재 상태: 위 백엔드 계약은 아직 React Native 코드에 반영되지 않았다. 현재 `src/types/post.ts`, 카드/상세/등록 화면, 상세 CTA는 구형 Post 구조와 `나눔 신청하기 (준비중)` 상태를 사용한다.
+
 ---
 
 ## 1. 현재 상태 요약
@@ -29,13 +39,13 @@
 | 이메일 인증/로그인 | 구현됨 | 이메일 회원가입, 로그인, JWT 저장, `/auth/me` 조회가 동작한다. 소셜 로그인과 이메일 verification은 미구현이다. |
 | 최초 위치 등록 | 구현됨 | 위치 없는 유저는 `LocationSetup`으로 이동하고 `/auth/me/location`에 좌표와 FCM 토큰을 저장한다. 홈/지도/나눔 등록 강제 진입도 위치 설정 CTA로 되돌린다. |
 | 위치 재설정 | 구현됨 | 홈 위치 헤더와 프로필 `동네 위치 재설정` 메뉴에서 `LocationSetup`으로 재진입한다. |
-| AI 분석 | 부분 구현 | mock 파이프라인은 제거됐고 실제 `/posts/generate` 호출이 동작한다. confidence 표시와 `확인 필요` 상태가 추가됐다. `confidenceScore`는 차단 기준이 아니라 보조 표시로 둔다. 에뮬레이터 셔터 촬영은 파일 생성 및 API 호출까지 재검증됐고, 실제 기기 검증은 남았다. |
-| 나눔 식재료 등록 | 부분 구현 | 실제 `generate -> imageToken -> createPost` 흐름으로 서버 등록이 확인됐다. 현재 API/code의 `post`는 도메인상 나눔 식재료를 뜻한다. `canShare=false`는 분석 결과, 작성, 최종 등록 단계에서 차단한다. 등록 완료 후 홈 복귀는 주변 목록 재조회 신호를 전달한다. |
-| 나눔 식재료 상세/삭제 | 수정됨 | 실제 상세 응답의 `authorId` 기준으로 작성자 여부를 판단한다. 구형 fixture를 위해 `userId` fallback만 남겼다. |
+| AI 분석 | 부분 구현 | mock 파이프라인은 제거됐고 실제 `/posts/generate` 호출이 동작한다. 백엔드 기준 label은 `Fresh/Mid/Stale/unknown`이며 `Mid`는 기존 `Normal` 그룹이다. `confidenceScore`는 Stage 2 신선도 분류 softmax max 확률이고 차단 기준이 아니다. 현재 앱은 60% 미만을 확인 필요로 보지만 백엔드는 0.9 미만 확인 필요 활용 가이드를 제시했다. 에뮬레이터 셔터 촬영은 파일 생성 및 API 호출까지 재검증됐고, 실제 기기 검증은 남았다. |
+| 나눔 식재료 등록 | 부분 구현, 백엔드 계약 갱신 반영 필요 | 실제 `generate -> imageToken -> createPost` 흐름으로 서버 등록이 확인됐다. 다만 백엔드 Phase 1.5에서 Post의 `title/description/category`가 제거되어 현재 프론트 작성 화면과 타입을 `detectedFruitKo/freshnessLabel/confidenceScore` 중심으로 재정렬해야 한다. `canShare=false`는 분석 결과, 작성, 최종 등록 단계에서 차단한다. 등록 완료 후 홈 복귀는 주변 목록 재조회 신호를 전달한다. |
+| 나눔 식재료 상세/삭제 | 부분 구현, 백엔드 계약 갱신 반영 필요 | 실제 상세 응답의 `authorId` 기준으로 작성자 여부를 판단한다. 백엔드 응답 구조가 `detectedFruitKo/freshnessLabel/confidenceScore` 중심으로 바뀌었으므로 상세 화면의 구형 `title/description/category` 의존을 제거해야 한다. |
 | 홈 주변 나눔 식재료 | 부분 구현 | `/posts/nearby` 데이터를 카드로 표시한다. API 실패와 빈 상태는 UI에서 분리됐다. 위치가 없으면 API를 호출하지 않고 위치 설정 CTA를 표시한다. 홈은 냉장고보다 available 나눔 식재료를 먼저 보여주는 화면이다. 홈 포커스와 등록 완료 refresh token 변경 시 재조회한다. |
-| 지도/냉장고 | 부분 구현 | `/fridges/nearby`, `/fridges/available` 조회와 지도 마커/냉장고 선택은 동작한다. 제품상 지도는 주변 공유 냉장고와 그 안의 available 나눔 식재료 탐색 화면이지만, 현재 구현은 냉장고 목록/선택까지다. 위치가 없으면 지도 기본 좌표 fallback 없이 위치 설정 CTA를 표시한다. API 실패와 빈 상태는 분리됐고, 주변 냉장고 없음 상태는 서버 필터 확인이 필요하다. |
-| 나눔 신청 | 미구현 | MVP 목표 흐름은 수요자가 상세 화면에서 `나눔 신청하기`를 눌러 `available -> requested`로 전환하는 것이다. `requested`는 신청 접수이며 예약 확정이 아니다. |
-| FCM | 부분 구현 | FCM 토큰 등록은 있다. 실제 수신 handler, 알림 목록, 읽음 상태는 없다. 탭은 빈 알림함으로 축소했다. |
+| 지도/냉장고 | 부분 구현, 백엔드 API 추가됨 | `/fridges/nearby`, `/fridges/available` 조회와 지도 마커/냉장고 선택은 동작한다. 백엔드는 `GET /fridges/{id}/posts?status=available`도 구현했지만 프론트는 아직 냉장고별 나눔 식재료 목록을 노출하지 않는다. 위치가 없으면 지도 기본 좌표 fallback 없이 위치 설정 CTA를 표시한다. API 실패와 빈 상태는 분리됐고, 주변 냉장고 없음 상태는 서버 필터 확인이 필요하다. |
+| 나눔 신청 | 백엔드 구현 완료, 프론트 미연동 | 백엔드는 `POST /posts/{id}/requests`, `available -> requested`, `SELECT ... FOR UPDATE` 경합 처리, 작성자 403, 중복/경합 409, 신청 알림을 구현/검증했다. 프론트 상세 CTA는 아직 `나눔 신청하기 (준비중)`이며 API client, 상태 갱신, 403/409 UX가 필요하다. |
+| FCM | 부분 구현, 백엔드 payload 확정 | FCM 토큰 등록은 있다. 백엔드는 `share_created`, `share_requested` 타입과 camelCase payload(`postId`, `requestId`, `fruitName`, `fridgeName`)를 확정했다. 실제 수신 handler, 알림 목록, 읽음 상태는 없다. 탭은 빈 알림함으로 축소했다. |
 | 채팅 | 보류 | 정적 채팅 mock 데이터는 제거했다. WebSocket/API 계약은 없다. |
 | 통계/탄소 절감 | 정리됨 | 실제 지표 API가 없는 홈/프로필 mock 숫자는 제거하고 준비 중 상태로 표시한다. |
 | 검색 | 부분 구현 | MVP 검색은 지도 공유 냉장고 이름/주소 로컬 필터로 제한했다. 서버 검색 API는 없다. |
@@ -75,7 +85,8 @@
   - 분석 결과 화면 표시
 - 남은 작업:
   - 실제 기기 카메라 셔터 검증
-  - stale/bad fixture로 나눔 기준 미충족 결과 재검증
+  - `Stale` fixture로 나눔 기준 미충족 결과 재검증
+  - confidence 확인 필요 threshold를 현재 60%로 유지할지, 백엔드 가이드대로 90% 미만으로 올릴지 결정
   - 분석 실패 후 수동 입력 CTA 추가 여부 결정
 
 ### Phase 4: 나눔 식재료 등록 흐름
@@ -89,7 +100,8 @@
   - 위치 미설정 상태의 냉장고 선택 강제 진입 시 `/fridges/available` 호출 차단과 위치 설정 CTA 표시
   - 등록 완료 후 홈 복귀 시 `/posts/nearby` 재조회 신호 전달과 홈 포커스 재조회
 - 남은 작업:
-  - imageToken 만료/중복 등록/idempotency 검증
+  - 백엔드 Phase 1.5 Post 구조 반영: `title/description/category` 의존 제거, `detectedFruitKo/freshnessLabel/confidenceScore` 사용
+  - `Stale` generate 400과 `imageToken` 미발급/무효 토큰 create 400 UX 검증
   - 유통기한 기본 3일 자동값 정책 정리
 
 ### Phase 5: 지도 및 냉장고 탐색
@@ -101,8 +113,7 @@
   - 위치 미설정 상태에서는 전남대 기본 좌표 fallback 없이 위치 설정 CTA 표시
 - 남은 작업:
   - 주변 냉장고 없음 fixture/API 검증
-  - 냉장고 상세/내부 아이템 정책 결정
-  - 냉장고별 available 나눔 식재료 노출 정책 결정
+  - 백엔드가 구현한 `GET /fridges/{id}/posts?status=available`를 지도/냉장고 상세에 연동
 
 ### Phase 6: 알림 및 내 정보
 
@@ -113,8 +124,8 @@
   - FCM 토큰 등록 시도
 - 남은 작업:
   - 프로필 수정/내 나눔/관심/받은 나눔 메뉴 연결
-  - FCM 수신 handler와 알림함 구현
-  - 나눔 신청하기와 `available -> requested` 상태 전환 구현
+  - `share_created`, `share_requested` FCM 수신 handler와 알림함 구현
+  - 나눔 신청하기 API 연동과 `available -> requested` 상태 반영
   - 알림 읽음 상태/API 계약 구현
   - 실제 활동 지표 API 계약 구현
 
@@ -126,6 +137,7 @@
 
 1. 완료: `authorId/userId` 계약 불일치 수정
 2. 완료: 나눔 기준 미충족/등록 차단 상태에서 실제 등록 차단
+3. 신규: 백엔드 Phase 1.5 Post 구조 변경 반영. `src/types/post.ts`, `PostCreateData`, 카드/상세/등록 화면의 `title/description/category` 의존을 제거하고 `detectedFruitKo/freshnessLabel/confidenceScore` 중심으로 갱신
 
 ### P1
 
@@ -133,13 +145,14 @@
 2. 완료: 위치 재설정 진입점 연결
 3. 완료: 위치 미설정 강제 진입 공통 가드와 위치 설정 CTA 정리
 4. 부분 완료: 카메라 실패 시 갤러리 fallback 개선. 실제 기기 촬영 재검증은 남음
-5. 완료: AI confidence 표시와 `확인 필요` 상태 도입
-6. 미구현: 나눔 신청하기, 첫 신청 이후 추가 신청 차단, `available -> requested` 상태 전환
+5. 부분 완료: AI confidence 표시와 `확인 필요` 상태 도입. 현재 60% threshold와 백엔드 0.9 활용 가이드 중 프론트 UX 기준 결정 필요
+6. 백엔드 완료/프론트 미구현: 나눔 신청하기 API 연동, 첫 신청 이후 추가 신청 차단, `available -> requested` 상태 전환, 403/409 처리
+7. 백엔드 완료/프론트 미구현: 냉장고별 나눔 식재료 조회 API 연동
 
 ### P2
 
 1. 완료: 검색 MVP 범위는 지도 공유 냉장고 이름/주소 로컬 필터로 결정
-2. 부분 완료: FCM 탭은 빈 알림함으로 축소. 수신/읽음 handler는 남음
+2. 부분 완료: FCM 탭은 빈 알림함으로 축소. `share_created`/`share_requested` 수신/읽음 handler는 남음
 3. 완료: 홈/프로필 목업 통계 숫자 제거
 4. multi-object detection 계약 연구
 
@@ -148,7 +161,7 @@
 - WebSocket 기반 실시간 채팅
 - 소셜 로그인 전체 구현
 - 이메일 verification 전체 예외 케이스
-- 냉장고 내부 inventory
+- 냉장고 내부 inventory. 단, 냉장고별 available 나눔 식재료 조회 API는 구현됐으므로 지도/냉장고 상세 탐색과 구분한다.
 - 관리자 화면. 제품 범위에는 포함하지만 MVP 구현 범위에서는 제외
 
 ---

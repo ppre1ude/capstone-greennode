@@ -7,8 +7,8 @@
 
 | ID | 케이스 | 필요한 이미지 | 기대 결과 | 판정 기준 |
 | --- | --- | --- | --- | --- |
-| `fresh-single` | 신선 성공 | 외관이 잘 보이는 단일 과일/채소 사진 | `Fresh` 또는 `Normal`, `canShare=true`, 나눔 식재료 등록 진입 가능 | 분석 결과와 작성 화면에 식재료명/상태/신뢰도가 표시된다. |
-| `stale-or-rotten` | 나눔 기준 미충족 | 무름, 곰팡이, 변색이 보이는 과일/채소 사진 | `Stale/Bad/Rotten` 또는 generate 400 | 앱은 등록 화면으로 보내지 않고 `나눔 기준에 맞지 않아요` 계열 문구를 보여준다. |
+| `fresh-single` | 신선 성공 | 외관이 잘 보이는 단일 과일/채소 사진 | `Fresh` 또는 `Mid`, `canShare=true`, 나눔 식재료 등록 진입 가능 | 분석 결과와 작성 화면에 식재료명/상태/신뢰도가 표시된다. |
+| `stale-or-rotten` | 나눔 기준 미충족 | 무름, 곰팡이, 변색이 보이는 과일/채소 사진 | `Stale` 또는 generate 400 | 앱은 등록 화면으로 보내지 않고 `나눔 기준에 맞지 않아요` 계열 문구를 보여준다. |
 | `not-food` | 비식재료 | 책상, 방, 전자기기 등 식재료가 아닌 사진 | generate 400 또는 `확인 필요` | 식재료 나눔으로 바로 등록되지 않는다. |
 | `screenshot-or-ui` | 스크린샷/아이콘 | 앱 화면 캡처, 런처 아이콘, 지도 캡처 | generate 400 또는 `확인 필요` | 실제 식재료 사진이 아닌데 `Fresh`로 통과하면 false-positive 버그로 기록한다. |
 | `low-quality` | 흐림/어두움/가림 | 흔들림, 저조도, 부분 가림 사진 | 낮은 confidence 또는 실패 | `확인 필요` 또는 재촬영 안내가 표시된다. |
@@ -35,6 +35,9 @@ FOODLINK_API_BASE_URL=http://localhost:8080 FOODLINK_ACCESS_TOKEN=<token> npm ru
 
 - fixture 파일이 없으면 해당 항목은 `skipped`로 기록된다.
 - 실패/검토 케이스는 generate 400, 나눔 기준 미충족 category, 낮은 confidence, 또는 검토 사유 enum 중 하나를 기대한다.
+- 백엔드 Phase 1.5 기준 신선도 label은 `Fresh/Mid/Stale`이다. 기존 `Normal`은 `Mid` 그룹으로 번역하고, `Bad/Rotten`은 현재 서버 label이 아닌 방어 호환 label로만 본다.
+- 백엔드 AI는 `unknown`도 반환할 수 있다. `unknown`은 바로 등록 가능한 성공 상태로 보지 않고 `확인 필요` 또는 실패 UX로 기록한다.
+- confidence 테스트는 `0.4`, `0.7`, `1.0`을 포함한다. 현재 앱은 60% 미만을 확인 필요로 보지만, 백엔드 활용 가이드는 0.9 미만을 확인 필요 구간으로 보므로 0.7 케이스의 기대 UX는 threshold 결정 전까지 별도 확인 필요로 기록한다.
 - 8MB 초과 대용량 이미지는 앱의 업로드 전 차단 정책과 동일하게 클라이언트 검증 대상으로 본다.
 
 ## False-positive Policy
@@ -51,7 +54,7 @@ FOODLINK_API_BASE_URL=http://localhost:8080 FOODLINK_ACCESS_TOKEN=<token> npm ru
 
 - 비식재료, 스크린샷, 앱 아이콘, 실내 배경은 `Fresh` 식재료로 반환하지 않는다.
 - 식재료 여부가 불확실하면 `confidence`를 낮게 반환하거나 generate 400으로 거부한다.
-- 실패/검토 사유 enum은 `not_food`, `non_food`, `low_quality`, `screenshot`, `ui_screenshot`, `multi_object_review`, `review_required`를 우선 사용한다.
+- 실패/검토 사유 enum은 Post-MVP 백엔드 항목이다. 도입 시 `not_food`, `non_food`, `low_quality`, `screenshot`, `ui_screenshot`, `multi_object_review`, `review_required`를 우선 사용한다.
 - 200 응답으로 검토 상태를 돌려보낼 때는 `aiAnalysis.rejectionReason` 또는 `aiAnalysis.reviewReason`을 포함한다. 서버가 400을 반환하는 경우에는 `message` 또는 FastAPI `detail`에 같은 사유를 사람이 읽을 수 있는 문구로 담는다.
 
 ## Actual Android Device Camera Checklist

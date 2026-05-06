@@ -11,6 +11,23 @@
 > - 검증/백로그: [VALIDATION_AND_BACKLOG.md](./VALIDATION_AND_BACKLOG.md)
 > - 구현 상태: [IMPLEMENTATION_STATUS.md](./IMPLEMENTATION_STATUS.md)
 
+## 백엔드 답변 반영 상태
+
+2026-05-06 백엔드가 이 공지의 검토 항목을 Phase 1.5로 구현/VM 검증 완료했다. 이 문서의 아래 내용은 당시 프론트가 백엔드에 보낸 **원본 변경 공지**로 보존한다. 현재 상태는 다음 문서가 우선한다.
+
+- API 계약 확정/변경: [API_INTEGRATION_CONTRACT.md](./API_INTEGRATION_CONTRACT.md)
+- 프론트 구현 상태와 남은 작업: [IMPLEMENTATION_STATUS.md](./IMPLEMENTATION_STATUS.md)
+- 검증/백로그 재분류: [VALIDATION_AND_BACKLOG.md](./VALIDATION_AND_BACKLOG.md)
+
+현재 확정된 차이:
+
+- 나눔 신청 API는 `POST /api/v1/posts/{post_id}/requests`로 구현됐다.
+- 첫 신청 성공 시 `available -> requested`, 작성자 본인 신청은 403, 중복/경합 신청은 409다.
+- 백엔드 AI label은 `Fresh/Mid/Stale`이며 `Mid`는 기존 `Normal` 그룹이다.
+- `confidenceScore`는 Stage 2 신선도 분류 softmax max 확률이다.
+- 냉장고별 나눔 식재료 조회 API는 `GET /api/v1/fridges/{fridge_id}/posts?status=available`로 구현됐다.
+- Post 구조는 `title/description/category` 중심에서 `detectedFruitKo/freshnessLabel/confidenceScore` 중심으로 바뀌었고, 프론트 반영이 필요하다.
+
 ## 요약
 
 FoodLink MVP의 핵심 흐름을 **남는 식재료 등록 → 공유 냉장고 등록 → 근처 사용자 알림 → 나눔 신청**으로 다시 정리했다.
@@ -66,7 +83,7 @@ MVP에서는 QR 코드, 비밀번호 토큰, 관리자 승인으로 실제 보�
 
 `많이 찾는 식재료`는 실제 조회/신청/관심 데이터가 쌓인 뒤 도입한다.
 
-지도는 주변 공유 냉장고와 각 냉장고 안의 available 나눔 식재료를 탐색하는 화면이다. 현재 구현은 냉장고 목록/선택까지이며, 냉장고 내부 나눔 식재료 조회 API는 아직 계약이 없다.
+지도는 주변 공유 냉장고와 각 냉장고 안의 available 나눔 식재료를 탐색하는 화면이다. 공지 작성 당시 구현은 냉장고 목록/선택까지였고, 현재 백엔드는 냉장고별 나눔 식재료 조회 API를 구현했다.
 
 ## AI 판정과 사용자 문구 변경
 
@@ -74,13 +91,14 @@ MVP에서는 QR 코드, 비밀번호 토큰, 관리자 승인으로 실제 보�
 
 | 내부 결과 | 사용자-facing 상태 | 등록 |
 | --- | --- | --- |
-| `Fresh`, `Normal` | `상태가 좋아 보여요`, `나눔 가능` | 가능 |
-| `Stale`, `Bad`, `Rotten` | `나눔 기준에 맞지 않아요` | 차단 |
+| `Fresh`, `Mid` (`Normal` 그룹) | `상태가 좋아 보여요`, `나눔 가능` | 가능 |
+| `Stale` | `나눔 기준에 맞지 않아요` | 차단 |
+| `Bad`, `Rotten` | `나눔 기준에 맞지 않아요` | 현재 백엔드 label은 아니지만 방어적으로 차단 |
 | `not_food`, `non_food` | `식재료 사진으로 확인되지 않았어요` | 차단 |
 | `low_quality` | `사진으로 상태를 확인하기 어려워요` | 차단 |
 | low `confidenceScore` only | `상태를 한 번 더 확인해주세요` | 차단 아님 |
 
-`Fresh`와 `Normal`의 차이는 내부 QA/추천/데이터에서는 유지할 수 있지만, 사용자 흐름에서는 같은 나눔 가능 상태로 보여준다.
+`Fresh`와 `Mid`의 차이는 내부 QA/추천/데이터에서는 유지할 수 있지만, 사용자 흐름에서는 같은 나눔 가능 상태로 보여준다. 기존 `Normal`은 `Mid` 그룹으로 번역한다.
 
 ### 피해야 할 문구
 
@@ -108,7 +126,7 @@ MVP에서는 QR 코드, 비밀번호 토큰, 관리자 승인으로 실제 보�
 
 ### 2. 나눔 신청 API 계약이 필요함
 
-현재 상세 화면의 `나눔 신청하기` CTA는 준비중이며 검증된 신청 API가 없다.
+공지 작성 당시 상세 화면의 `나눔 신청하기` CTA는 준비중이며 검증된 신청 API가 없었다. 현재 백엔드는 아래 후보 그대로 구현했다.
 
 권장 endpoint 후보:
 
@@ -123,40 +141,40 @@ POST /api/v1/posts/{post_id}/requests
 | 대상 | `status=available`인 나눔 식재료 |
 | 요청자 | 작성자가 아닌 인증 사용자 |
 | 성공 효과 | 첫 신청을 접수하고 `status=requested`로 변경 |
-| 성공 응답 | 갱신된 나눔 식재료 또는 신청 접수 객체 |
-| 중복/경합 | 이미 `requested`이면 400 또는 409 |
+| 성공 응답 | 갱신된 나눔 식재료와 신청 접수 객체 |
+| 중복/경합 | 이미 `requested`이면 409 |
 | 알림 | 신청 성공 후 공급자에게 신청 알림 발송 |
 
 ### 3. `Stale` 의미 정의가 필요함
 
-현재 프론트 정책은 `Stale/Bad/Rotten`을 모두 나눔 기준 미충족으로 보고 등록을 막는다.
+공지 작성 당시 프론트 정책은 `Stale/Bad/Rotten`을 모두 나눔 기준 미충족으로 보고 등록을 막는 것이었다. 현재 백엔드 label은 `Fresh/Mid/Stale`이며 `Stale`만 나눔 기준 미충족 label이다. `Bad/Rotten`은 방어적 호환 label로만 남긴다.
 
-다만 `Stale`의 실제 의미가 아직 AI/백엔드와 충분히 합의되지 않았다. 후속 논의에서 `Stale`을 등록 가능으로 바꾸려면 AI 기준, API 응답, 사용자 문구, QA fixture, 테스트를 함께 갱신해야 한다.
+후속 논의에서 `Stale`을 등록 가능으로 바꾸려면 AI 기준, API 응답, 사용자 문구, QA fixture, 테스트를 함께 갱신해야 한다.
 
 ### 4. `confidenceScore` 의미 정의가 필요함
 
 현재 `confidenceScore`는 차단 기준이 아니라 보조 표시/검토 신호다.
 
-이 값이 아래 중 무엇의 confidence인지 백엔드/AI 계약에서 정의해야 한다.
+공지 작성 당시에는 이 값이 아래 중 무엇의 confidence인지 백엔드/AI 계약에서 정의해야 했다. 현재 정의는 **Stage 2 신선도 분류 모델의 softmax max 확률**이다.
 
 - 객체 탐지 confidence
-- 신선도 분류 confidence
+- 신선도 분류 confidence: 현재 확정
 - 식재료 여부 confidence
 - 전체 파이프라인 confidence
 
-정의 전까지 낮은 confidence만으로 등록을 막지 않는다.
+정의 이후에도 낮은 confidence만으로 등록을 막지 않는다. 다만 현재 앱의 60% 기준과 백엔드 활용 가이드의 0.9 미만 확인 필요 기준은 프론트 UX 기준으로 재결정해야 한다.
 
 ### 5. 냉장고 내부 나눔 식재료 조회 API가 필요함
 
 제품상 지도는 공유 냉장고와 그 안의 available 나눔 식재료를 탐색하는 화면이다.
 
-현재 구현/API는 냉장고 목록 조회와 등록 가능 냉장고 선택까지다. 냉장고별 available 나눔 식재료 목록을 보여주려면 API 계약이 추가로 필요하다.
+공지 작성 당시 구현/API는 냉장고 목록 조회와 등록 가능 냉장고 선택까지였다. 현재 백엔드는 `GET /api/v1/fridges/{fridge_id}/posts?status=available`를 구현했고, 프론트 연동이 남았다.
 
 ## 프론트/Codex 쪽 변경 사항
 
 - `postPolicy`의 사용자-facing label을 새 기획 기준으로 변경했다.
-- `Fresh/Normal`은 `상태가 좋아 보여요`로 통합했다.
-- `Stale/Bad/Rotten`은 `나눔 기준에 맞지 않아요`로 표시하고 등록을 차단한다.
+- `Fresh/Mid`는 `상태가 좋아 보여요`로 통합한다. 기존 `Normal`은 `Mid` 그룹으로 번역한다.
+- `Stale`은 `나눔 기준에 맞지 않아요`로 표시하고 등록을 차단한다. `Bad/Rotten`은 방어적 호환 label로만 차단한다.
 - 비식재료/스크린샷/저품질 사진의 문구를 분리했다.
 - 서버가 `부패`, `게시할 수 없는 식재료` 같은 문구를 반환해도 프론트 공통 에러 처리에서 사용자-facing 문구로 변환한다.
 - 코드 주석과 사용자 Alert에서 `게시글` 표현을 `나눔 식재료` 기준으로 정리했다.
@@ -177,9 +195,10 @@ Markdown 문서의 상대 링크도 확인했다.
 
 ## 후속 논의 필요
 
-1. `나눔 신청하기` API endpoint와 응답 형태 확정
-2. 첫 신청 이후 추가 신청 차단 정책 최종 확정
-3. `Stale`의 AI/백엔드 의미 정의
-4. `confidenceScore`의 의미 정의
-5. 냉장고별 available 나눔 식재료 조회 API 설계
-6. 관리자 화면의 후순위 범위와 수동 운영 기준 정리
+1. 완료: `나눔 신청하기` API endpoint와 응답 형태 확정
+2. 완료: 첫 신청 이후 추가 신청 차단 정책 확정 및 백엔드 구현
+3. 완료: `Stale`은 현재 나눔 기준 미충족 label로 유지
+4. 완료: `confidenceScore`는 Stage 2 신선도 분류 softmax max 확률
+5. 완료: 냉장고별 available 나눔 식재료 조회 API 구현
+6. 남음: 관리자 화면의 후순위 범위와 수동 운영 기준 정리
+7. 남음: Post-MVP rejection reason enum(`not_food`, `low_quality` 등) 설계
