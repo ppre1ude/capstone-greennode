@@ -22,6 +22,15 @@ const CAMEL_CASE_KEY_PATTERN = /^[a-z][A-Za-z0-9]*$/;
 
 const isCamelCaseKey = (key: string) => CAMEL_CASE_KEY_PATTERN.test(key);
 
+const getMessagingOrNull = () => {
+  try {
+    return messaging();
+  } catch (error) {
+    console.warn('Firebase messaging is unavailable:', error);
+    return null;
+  }
+};
+
 export const isFcmStringDataPayload = (
   data: RemoteMessage['data'],
 ): data is FcmStringDataPayload => {
@@ -188,8 +197,13 @@ export const registerBackgroundNotificationHandler = () => {
     return;
   }
 
+  const messagingInstance = getMessagingOrNull();
+  if (!messagingInstance) {
+    return;
+  }
+
   backgroundHandlerRegistered = true;
-  messaging().setBackgroundMessageHandler(async message => {
+  messagingInstance.setBackgroundMessageHandler(async message => {
     await handleRemoteNotification(message, 'background');
   });
 };
@@ -199,15 +213,20 @@ export const registerForegroundNotificationHandlers = () => {
     return () => undefined;
   }
 
-  foregroundUnsubscribe = messaging().onMessage(message =>
+  const messagingInstance = getMessagingOrNull();
+  if (!messagingInstance) {
+    return () => undefined;
+  }
+
+  foregroundUnsubscribe = messagingInstance.onMessage(message =>
     handleRemoteNotification(message, 'foreground'),
   );
 
-  openedUnsubscribe = messaging().onNotificationOpenedApp(message =>
+  openedUnsubscribe = messagingInstance.onNotificationOpenedApp(message =>
     handleRemoteNotification(message, 'opened', true),
   );
 
-  messaging()
+  messagingInstance
     .getInitialNotification()
     .then(message => {
       if (message) {

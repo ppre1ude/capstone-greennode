@@ -145,6 +145,38 @@
   - 영향: 프론트는 구형 `title/description/category` 없이 동작하지만, 저장된 Post가 AI 메타데이터를 잃으면 홈 카드/상세/냉장고 내부 목록에서 실제 식재료명과 상태/신뢰도 표시가 제품 기대보다 약해진다.
   - 후속: 백엔드가 `imageToken`에 묶인 AI 분석 결과를 Post 생성 시 저장하도록 수정하거나, Post 응답에서 해당 필드가 nullable인 것이 제품상 허용되는지 계약을 다시 정해야 한다.
 
+## 2026-05-06 실제 Android 기기 카메라/등록 QA 결과
+
+- 환경: 실제 Android 기기 `SM-S928N` Android 15(API 35, serial `R3CX203CV8X`), release APK, `adb reverse tcp:8080 tcp:8080`, SSH tunnel `localhost:8080 -> NHN-Cloud-Server:80`, QA 계정 `codex_api_requester_20260506211207@example.com`.
+- 준비: 실제 기기에서 release APK를 실행하기 위해 `src/config/api.ts`의 `ANDROID_DEVICE_HOST`를 QA 빌드 시점에만 `localhost`로 임시 변경했다. 소스는 QA 후 빈 값으로 되돌렸고, APK는 adb reverse 전제 빌드다.
+- 통과:
+  - USB 디버깅 연결 후 `adb devices -l`에서 물리 기기가 `device` 상태로 인식됐다.
+  - 최초 release 실행 시 Firebase 설정 부재로 앱 시작 크래시가 발생했고, `notifications.ts`에서 Firebase Messaging 인스턴스를 얻지 못하면 handler 등록을 건너뛰도록 수정했다.
+  - 수정 후 release APK가 정상 실행됐고, 카메라 권한 팝업에서 `앱 사용 중에만 허용` 선택 후 카메라 프리뷰가 표시됐다.
+  - 실기기 카메라 셔터로 촬영 파일이 생성되고 `/posts/generate`까지 도달했다.
+  - 분석 결과 화면이 `나눔 가능`, `상태가 좋아 보여요`, `AI 신뢰도 91%`를 표시했다.
+  - `이대로 나눔하기 -> 나눔 등록 -> 냉장고 선택 -> 나눔 완료하기`가 실제 API와 연결되어 등록 완료 화면까지 도달했다.
+  - 완료 화면에서 `홈으로 돌아가기`를 누르면 홈의 `/posts/nearby` 목록이 재조회되어 주변 나눔 `1건`과 신규 카드가 표시됐다.
+  - 홈 카드 탭 시 상세 화면으로 이동했다.
+- 충돌/버그:
+  - 충돌 문서/공지: 백엔드 Phase 1.5 요약과 프론트 표시 정책은 등록 후 Post가 `detectedFruitKo/freshnessLabel/confidenceScore`를 유지한다고 설명한다.
+  - 실제 기준: 2026-05-06 실제 Android 기기 release QA와 live VM API.
+  - 판단: 등록 직전 화면은 AI 결과 `바나나 / 상태가 좋아 보여요 / 91%`를 표시했지만, 등록 완료 후 홈/상세는 `나눔 식재료 / 분석 중 / 근처 공유 냉장고` fallback으로 표시됐다. VM/API QA에서 발견한 Post AI 메타데이터 저장 불일치가 실제 앱에서도 재현됐다.
+  - 추가 AI 품질 이슈: 화면상 촬영 대상은 토마토 이미지였으나 AI는 `바나나`로 판별했다. 이는 프론트 크래시/연동 문제는 아니지만 false-positive/분류 품질 증거로 남긴다.
+- 증거:
+  - `temp/real-device-camera-screen.png`
+  - `temp/real-device-after-laptop-capture.png`
+  - `temp/real-device-share-form.png`
+  - `temp/real-device-fridge-select.png`
+  - `temp/real-device-fridge-selected.png`
+  - `temp/real-device-after-share-create.png`
+  - `temp/real-device-home-after-share-create.png`
+  - `temp/real-device-detail-after-share-create.png`
+- 후속:
+  - P0 `Post AI 메타데이터 저장 계약 불일치 정리`를 백엔드 수정 대상으로 유지한다.
+  - 실제 FCM foreground/background/terminated 수신 QA는 아직 미완료다. 다만 Firebase 설정 파일이 없는 release QA 빌드에서 앱이 크래시하지 않도록 프론트 guard와 회귀 테스트를 추가했다.
+  - 실제 `Stale`, `not-food`, `low-quality` fixture는 아직 확보하지 못했다.
+
 ## 2026-05-05 P0/P1 코드 보강 현황
 
 - P0 `authorId/userId` 계약 불일치: `PostDetailScreen`이 `authorId` 기준으로 작성자 여부를 판단하도록 수정했다. 구형 fixture용 `userId` fallback은 `postPolicy`에만 남겼다.
@@ -741,7 +773,7 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
 
 - 분류: 서버 계약 변경 대응
 - 우선순위: P0
-- 상태: 프론트 구현 완료, VM/API 런타임 QA에서 서버 메타데이터 저장 불일치 발견
+- 상태: 프론트 구현 완료, VM/API와 실제 Android 기기 QA에서 서버 메타데이터 저장 불일치 발견
 - 배경: 백엔드가 Post 컬럼에서 `title`, `description`, `category`를 제거하고 `detectedFruitKo`, `freshnessLabel`, `confidenceScore`를 추가했다. 프론트 타입과 화면은 이 작업 전까지 구형 작성/표시 필드에 의존했다.
 - 현재 동작: `src/types/post.ts`의 `Post`, `GenerateResult`, `PostCreateData`가 백엔드 Phase 1.5 구조를 반영한다. `createPost()`는 `fridgeId`, `expirationDate`, `imageToken`만 전송하고, 홈 카드/상세/등록 화면은 `detectedFruitKo`, `freshnessLabel`, `confidenceScore`, `status`를 표시한다.
 - 기대 동작: 프론트는 백엔드 Phase 1.5 응답 구조를 기준으로 나눔 식재료명, 신선도 등급, confidence, 이미지, 냉장고, 상태를 표시한다. 사용자-facing 문구는 `나눔 식재료` 기준을 유지한다.
@@ -752,22 +784,22 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
   - [x] `Fresh/Mid/Stale/unknown` 매핑과 `Mid = Normal 그룹` 정책이 테스트로 고정된다.
 - 검증 방법: typecheck 통과, `postPolicy`/`posts.api` unit test 통과, 실제 `GET /posts/{id}`/`POST /posts` VM API 검증, 앱 카드/상세 QA
 - 관련 파일/화면/API: `src/types/post.ts`, `src/api/posts.ts`, `HomeScreen`, `PostDetailScreen`, `PostCreateScreen`, `POST /api/v1/posts`, `GET /api/v1/posts/{id}`
-- 비고: 2026-05-06 VM API에서 `POST /posts/generate`는 AI 분석 결과를 반환했지만, `POST /posts`로 저장한 id `2`의 상세 응답은 `detectedFruit/detectedFruitKo/freshnessLabel/confidenceScore=null`이었다. 프론트 fallback은 유지하되, 백엔드 저장 계약 확인이 필요하다.
+- 비고: 2026-05-06 VM API에서 `POST /posts/generate`는 AI 분석 결과를 반환했지만, `POST /posts`로 저장한 id `2`의 상세 응답은 `detectedFruit/detectedFruitKo/freshnessLabel/confidenceScore=null`이었다. 같은 현상이 실제 Android 기기 등록 후 홈/상세에서도 `나눔 식재료 / 분석 중` fallback으로 재현됐다. 프론트 fallback은 유지하되, 백엔드 저장 계약 확인이 필요하다.
 
 ## Post AI 메타데이터 저장 계약 불일치 정리
 
 - 분류: 서버 계약 불일치
 - 우선순위: P0
-- 상태: 신규 발견, 백엔드 확인 필요
+- 상태: VM/API와 실제 Android 기기에서 재현, 백엔드 확인 필요
 - 배경: 제품/프론트 계약은 나눔 식재료 카드와 상세가 `detectedFruitKo`, `freshnessLabel`, `confidenceScore`를 기준으로 표시된다고 정했다. 백엔드 Phase 1.5 답변도 Post 컬럼 추가를 완료했다고 설명했다.
-- 현재 동작: 2026-05-06 VM QA에서 `POST /posts/generate`는 `data.detectedFruitKo=바나나`, `data.aiAnalysis.category=Fresh`, `data.aiAnalysis.confidenceScore=1.0`을 반환했다. 하지만 같은 `imageToken`으로 `POST /posts`를 호출해 생성한 id `2`의 `GET /posts/2` 응답은 `detectedFruit`, `detectedFruitKo`, `freshnessLabel`, `confidenceScore`가 모두 `null`이었다.
+- 현재 동작: 2026-05-06 VM QA에서 `POST /posts/generate`는 `data.detectedFruitKo=바나나`, `data.aiAnalysis.category=Fresh`, `data.aiAnalysis.confidenceScore=1.0`을 반환했다. 하지만 같은 `imageToken`으로 `POST /posts`를 호출해 생성한 id `2`의 `GET /posts/2` 응답은 `detectedFruit`, `detectedFruitKo`, `freshnessLabel`, `confidenceScore`가 모두 `null`이었다. 실제 Android 기기에서도 등록 직전 화면은 `바나나 / 91%`를 표시했지만, 등록 후 홈/상세는 `나눔 식재료 / 분석 중` fallback으로 표시됐다.
 - 기대 동작: 서버는 `imageToken`에 연결된 AI 분석 결과를 최종 Post에 저장하거나, Post 응답에서 해당 값이 비어 있을 수 있음을 명시하고 프론트/제품 표시 정책을 다시 정한다. 현재 제품 의도상 저장하는 쪽이 우선이다.
 - Acceptance Criteria:
   - [ ] `POST /posts` 성공 후 `GET /posts/{id}`가 `detectedFruit`, `detectedFruitKo`, `freshnessLabel`, `confidenceScore`를 반환한다.
   - [ ] `/posts/nearby`와 `/fridges/{id}/posts?status=available`도 카드 표시에 필요한 나눔 식재료명과 상태 값을 제공한다.
   - [ ] `POST /posts/generate` 응답의 root 필드와 `aiAnalysis` 필드 중 어느 쪽이 canonical인지 OpenAPI와 문서가 일치한다.
   - [ ] 프론트는 백엔드 수정 전까지 null 메타데이터 fallback으로 화면이 깨지지 않음을 테스트로 유지한다.
-- 검증 방법: 공개 fresh fixture로 `generate -> create -> detail -> nearby -> fridge posts` VM API 재검증, `NearbyPostCard`/`PostDetailScreen` null metadata fixture 테스트
+- 검증 방법: 공개 fresh fixture로 `generate -> create -> detail -> nearby -> fridge posts` VM API 재검증, 실제 Android 기기 `generate -> create -> home -> detail` 재검증, `NearbyPostCard`/`PostDetailScreen` null metadata fixture 테스트
 - 관련 파일/화면/API: `POST /api/v1/posts/generate`, `POST /api/v1/posts`, `GET /api/v1/posts/{id}`, `GET /api/v1/posts/nearby`, `GET /api/v1/fridges/{fridge_id}/posts`, `NearbyPostCard`, `PostDetailScreen`, `MapScreen`
 - 비고: 충돌 판단 기준은 live VM API와 `GET /openapi.json`이다. 요약 문서보다 실제 검증 결과를 우선한다.
 
@@ -906,15 +938,16 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
 
 - 분류: 검증 필요
 - 우선순위: P1
-- 상태: 에뮬레이터 검증 완료, 실제 기기 미검증
+- 상태: 실제 Android 기기 촬영/분석/등록 완료, 실패 fixture QA 남음
 - 배경: 에뮬레이터에서 셔터 촬영 시 `Capture error TypeError: undefined is not a function`가 발생했다.
-- 현재 동작: `react-native-vision-camera@5` API에 맞춰 `usePhotoOutput().capturePhotoToFile()`로 수정했고, 에뮬레이터에서 촬영 파일 생성 및 API 호출까지 확인했다.
+- 현재 동작: `react-native-vision-camera@5` API에 맞춰 `usePhotoOutput().capturePhotoToFile()`로 수정했고, 에뮬레이터와 실제 Android 기기에서 촬영 파일 생성 및 API 호출까지 확인했다. 실제 기기에서는 카메라 권한 허용 후 촬영, AI 분석 결과 표시, 등록 화면 진입, 냉장고 선택, 최종 등록 완료, 홈 목록 재조회까지 이어졌다.
 - 기대 동작: 실제 기기에서는 촬영 파일이 생성되고, 실패 시 갤러리 선택/수동 입력 대안이 제공된다.
 - Acceptance Criteria:
-  - [ ] 실제 Android 기기에서 촬영 파일 URI가 생성된다.
+  - [x] 실제 Android 기기에서 촬영 파일 URI가 생성된다.
   - [ ] 에뮬레이터 실패 시 Alert가 대안 액션을 제공한다.
-  - [ ] 촬영/갤러리 모두 `generatePost()`까지 도달한다.
-- 검증 방법: 실제 기기 QA, 에뮬레이터 fallback QA, logcat 확인
+  - [x] 실제 기기 촬영이 `generatePost()`까지 도달한다.
+  - [ ] 갤러리 fallback이 `generatePost()`까지 도달한다.
+- 검증 방법: 실제 기기 QA, 에뮬레이터 fallback QA, logcat 확인. 2026-05-06 실제 기기 QA 증거는 `temp/real-device-*.png`에 저장했다.
 - 관련 파일/화면/API: `CameraScanScreen`, `react-native-vision-camera`, `POST /api/v1/posts/generate`
 - 체크리스트: [AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md](./AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md)
 
@@ -939,8 +972,8 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
 
 - 분류: 정책 결정/서버 계약
 - 우선순위: P1
-- 상태: 앱 방어 로직/fixture 반복 검증 스크립트 추가, rejection reason enum은 Post-MVP
-- 배경: 에뮬레이터 QA에서 비식재료/스크린샷성 이미지가 `바나나 / 신선 / 100%`로 통과했다.
+- 상태: 앱 방어 로직/fixture 반복 검증 스크립트 추가, 실제 기기 false-positive 증거 추가, rejection reason enum은 Post-MVP
+- 배경: 에뮬레이터 QA에서 비식재료/스크린샷성 이미지가 `바나나 / 신선 / 100%`로 통과했다. 2026-05-06 실제 Android 기기 QA에서도 화면상 토마토 이미지를 촬영했으나 AI가 `바나나 / 나눔 가능 / 91%`로 판별했다.
 - 현재 동작: 앱은 이미지 내용을 자체 판별하지 않는다. 서버가 `not_food/non_food/low_quality/screenshot/ui_screenshot` category 또는 `rejectionReason`을 주면 등록 차단으로 처리한다. 다만 백엔드 Phase 1.5 기준 해당 enum은 아직 구현되지 않았고 Post-MVP로 기록됐다.
 - 기대 동작: 서버/AI는 비식재료, 스크린샷, 앱 아이콘, 실내 배경을 `Fresh` 식재료로 반환하지 않는다.
 - Acceptance Criteria:
@@ -985,7 +1018,7 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
 - 분류: 기능 구현
 - 우선순위: P2
 - 배경: FCM 토큰 등록은 있지만 알림 수신/목록/읽음 처리는 없다.
-- 현재 동작: FCM token은 `/auth/me/location`으로 등록한다. `share_created`, `share_requested` handler는 foreground/background/opened/initial 메시지를 로컬 알림함에 기록한다. 알림 열기와 알림함 항목 탭은 `PostDetail`로 이동하며, `share_requested`는 내 나눔 관리 화면이 없으므로 상세 fallback을 쓴다.
+- 현재 동작: FCM token은 `/auth/me/location`으로 등록한다. `share_created`, `share_requested` handler는 foreground/background/opened/initial 메시지를 로컬 알림함에 기록한다. 알림 열기와 알림함 항목 탭은 `PostDetail`로 이동하며, `share_requested`는 내 나눔 관리 화면이 없으므로 상세 fallback을 쓴다. Firebase 앱이 설정되지 않은 QA/release 빌드에서는 Messaging 인스턴스 생성 실패를 잡고 handler 등록을 건너뛰어 앱 시작 크래시를 막는다.
 - 기대 동작: MVP에서는 WebSocket 채팅 대신 알림함과 단순 신청 흐름으로 축소한다. 읽음 상태 API는 후속으로 분리한다.
 - Acceptance Criteria:
   - [x] foreground/background 알림 수신 handler가 정의된다.
@@ -995,7 +1028,8 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
   - [x] 알림함은 수신 기록/빈 상태 중심으로 두고 읽음 상태 API는 후속으로 분리한다.
   - [x] 알림함으로 유지하고 WebSocket 채팅은 보류한다.
   - [x] mock 알림 데이터가 빈 알림함 상태로 대체된다.
-- 검증 방법: FCM 테스트 메시지 수신 QA, 앱 foreground/background 확인
+  - [x] Firebase 설정이 없는 빌드에서도 알림 handler 등록 때문에 앱 시작이 크래시하지 않는다.
+- 검증 방법: FCM 테스트 메시지 수신 QA, 앱 foreground/background 확인, `notificationService.firebaseFallback.test.ts`
 - 관련 파일/화면/API: `notifications.ts`, `notificationStore.ts`, `ChatListScreen`, `index.js`, `AppNavigator`, Firebase Messaging
 
 ## multi-object detection 연구/계약 초안
