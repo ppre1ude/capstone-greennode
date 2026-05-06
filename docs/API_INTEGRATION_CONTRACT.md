@@ -237,7 +237,8 @@ const result = await response.json();
 
 ### 4.3 위치 + FCM 토큰 등록
 
-> 앱 실행 시 + 로그인 직후 반드시 호출해야 한다. 이 정보가 없으면 근처 나눔 식재료 조회/알림이 동작하지 않는다.
+> 앱 실행 시 + 로그인 직후 위치가 있는 유저는 좌표 갱신을 호출한다. 알림 토큰은 사용자가 명시적으로 알림 권한을 허용했거나 서버에 저장된 기존 토큰이 있을 때만 함께 보낸다.
+> 알림 권한은 위치 설정 진입 시 자동으로 요청하지 않는다. 사용자가 알림 CTA를 누르면 앱이 `POST_NOTIFICATIONS`/Firebase permission을 요청하고, 허용된 경우에만 FCM 토큰을 함께 보낸다. 사용자가 알림을 건너뛰거나 거부해도 위치 등록은 `fcmToken` 없이 진행한다.
 
 ```
 PUT /api/v1/auth/me/location
@@ -544,11 +545,15 @@ const imageFullUrl = `${BASE_URL}${post.imageUrl}`;
 ### 토큰 등록
 
 ```javascript
-import messaging from '@react-native-firebase/messaging';
-
-const fcmToken = await messaging().getToken();
+const fcmToken = await getFcmToken();
 // → PUT /api/v1/auth/me/location 으로 서버에 등록
 ```
+
+앱 구현 기준:
+
+- 위치 설정 화면은 진입 즉시 알림 권한을 요청하지 않고 `나눔 알림 받기` CTA로 권한 요청을 시작한다.
+- Android 13 이상에서 `POST_NOTIFICATIONS`가 거부되면 Firebase permission/register/getToken을 호출하지 않고 `fcmToken` 없이 위치 등록을 계속한다.
+- Firebase 설정 파일이 없는 QA/release 빌드에서는 FCM 토큰 조회를 건너뛰고 앱 흐름을 유지한다.
 
 ### 알림 수신
 
@@ -662,7 +667,7 @@ GET /posts/nearby → 근처 available 나눔 식재료
 - [ ] generate API Form 필드는 `image`, 선택 `user_hint`
 - [ ] 이미지 URL은 상대경로 → Base URL 붙여서 사용
 - [ ] JWT 토큰 만료 60분 → 401 수신 시 재로그인
-- [ ] 앱 실행 시 위치+FCM 토큰 반드시 서버에 등록
+- [ ] 앱 실행 시 위치는 갱신하고, FCM 토큰은 명시적 알림 권한 허용 또는 기존 저장 토큰이 있을 때만 서버에 등록
 - [ ] 나눔 식재료 상세 작성자 판단은 실제 응답의 `authorId` 기준으로 처리
 - [x] 백엔드 Phase 1.5 Post 구조 반영: `title/description/category` 의존 제거, `detectedFruitKo/freshnessLabel/confidenceScore/status` 사용
 - [x] 나눔 신청 API 연동: `POST /posts/{id}/requests`, 201/403/409 처리, 신청 후 상세/홈 상태 갱신

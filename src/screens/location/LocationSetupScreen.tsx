@@ -32,18 +32,30 @@ interface LocationCoords {
   longitude: number;
 }
 
+type NotificationSetupStatus = 'idle' | 'requesting' | 'ready' | 'unavailable';
+
 const LocationSetupScreen = ({route, navigation}: Props) => {
   const [location, setLocation] = useState<LocationCoords | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
   const [locationName, setLocationName] = useState('위치를 탐색 중...');
   const [fcmToken, setFcmToken] = useState<string | undefined>();
+  const [notificationStatus, setNotificationStatus] =
+    useState<NotificationSetupStatus>('idle');
   const setUser = useAuthStore(state => state.setUser);
   const allowBack = route.params?.allowBack === true;
 
-  const preparePushToken = useCallback(async () => {
+  const handleEnableNotifications = useCallback(async () => {
+    setNotificationStatus('requesting');
     const token = await getFcmToken();
-    setFcmToken(token);
+    if (token) {
+      setFcmToken(token);
+      setNotificationStatus('ready');
+      return;
+    }
+
+    setFcmToken(undefined);
+    setNotificationStatus('unavailable');
   }, []);
 
   const getCurrentPosition = useCallback(() => {
@@ -118,8 +130,7 @@ const LocationSetupScreen = ({route, navigation}: Props) => {
 
   useEffect(() => {
     requestLocationPermission();
-    preparePushToken();
-  }, [preparePushToken, requestLocationPermission]);
+  }, [requestLocationPermission]);
 
   const handleSetLocation = async () => {
     if (!location) {
@@ -198,6 +209,39 @@ const LocationSetupScreen = ({route, navigation}: Props) => {
 
       {/* CTA */}
       <View style={styles.footer}>
+        <View style={styles.notificationPanel}>
+          <View style={styles.notificationTextGroup}>
+            <Text style={styles.notificationTitle}>나눔 알림</Text>
+            <Text style={styles.notificationHint}>
+              {notificationStatus === 'ready'
+                ? '알림 받을 준비가 됐어요'
+                : notificationStatus === 'unavailable'
+                  ? '알림 권한이 꺼져 있어요'
+                  : '근처 나눔과 신청 소식을 알려드릴게요'}
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={[
+              styles.notificationButton,
+              (notificationStatus === 'requesting' ||
+                notificationStatus === 'ready') &&
+                styles.notificationButtonDisabled,
+            ]}
+            onPress={handleEnableNotifications}
+            disabled={
+              notificationStatus === 'requesting' ||
+              notificationStatus === 'ready'
+            }>
+            {notificationStatus === 'requesting' ? (
+              <ActivityIndicator color="#FFFFFF" size="small" />
+            ) : (
+              <Text style={styles.notificationButtonText}>
+                {notificationStatus === 'ready' ? '설정 완료' : '나눔 알림 받기'}
+              </Text>
+            )}
+          </TouchableOpacity>
+        </View>
+
         <TouchableOpacity
           style={[
             styles.submitButton,

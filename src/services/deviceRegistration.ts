@@ -6,15 +6,31 @@ import type {User} from '@/types';
 
 const requestNotificationPermission = async (
   messagingInstance: NonNullable<ReturnType<typeof getMessagingOrNull>>,
-) => {
+): Promise<boolean> => {
   if (Platform.OS === 'android' && Number(Platform.Version) >= 33) {
-    await PermissionsAndroid.request(
+    const result = await PermissionsAndroid.request(
       PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
     );
+
+    if (result !== PermissionsAndroid.RESULTS.GRANTED) {
+      return false;
+    }
   }
 
-  await messagingInstance.requestPermission();
+  const authorizationStatus: unknown =
+    await messagingInstance.requestPermission();
+  const isAuthorized =
+    authorizationStatus === 1 ||
+    authorizationStatus === 2 ||
+    authorizationStatus === true ||
+    authorizationStatus === undefined;
+
+  if (!isAuthorized) {
+    return false;
+  }
+
   await messagingInstance.registerDeviceForRemoteMessages();
+  return true;
 };
 
 export const getFcmToken = async (): Promise<string | undefined> => {
@@ -24,7 +40,11 @@ export const getFcmToken = async (): Promise<string | undefined> => {
   }
 
   try {
-    await requestNotificationPermission(messagingInstance);
+    const granted = await requestNotificationPermission(messagingInstance);
+    if (!granted) {
+      return undefined;
+    }
+
     return await messagingInstance.getToken();
   } catch (error) {
     console.warn('FCM token error:', error);
@@ -60,7 +80,7 @@ export const refreshDeviceRegistration = async (user: User) => {
     return;
   }
 
-  const fcmToken = await getFcmToken();
+  const fcmToken = user.fcmToken ?? undefined;
   let latitude = user.latitude;
   let longitude = user.longitude;
 
