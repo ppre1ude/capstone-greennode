@@ -95,4 +95,9 @@ FOODLINK_API_BASE_URL=http://localhost:8080 FOODLINK_ACCESS_TOKEN=<token> npm ru
 - 증거 스크린샷은 `temp/real-device-camera-screen.png`, `temp/real-device-share-form.png`, `temp/real-device-after-share-create.png`, `temp/real-device-home-after-share-create.png`, `temp/real-device-detail-after-share-create.png`에 있다. `temp/` 파일은 커밋 대상이 아니다.
 - 발견한 충돌: 등록 직전 분석 결과는 `바나나 / 상태가 좋아 보여요 / 91%`였지만, 등록 후 홈/상세는 `나눔 식재료 / 분석 중` fallback을 표시했다. 이는 VM/API QA에서 발견한 Post AI 메타데이터 저장 불일치가 실제 앱에서도 재현된 결과다.
 - false-positive 증거: 실제 촬영 대상은 화면상 토마토 이미지였으나 AI가 `바나나`로 판별했다. 이 케이스는 `screenshot-or-ui` 또는 `fresh-single`이 아니라 AI 분류 품질/스크린 촬영 false-positive 증거로 기록한다.
+- 2026-05-07 실기기 없이 `localhost:8080` VM API에 직접 fixture를 업로드했다.
+  - `temp/qa-vm-banana.jpg`: 200, `바나나`, `Fresh`, confidence `1.0`, `imageToken` 발급.
+  - `temp/real-device-camera-screen.png`: 200, `바나나`, `Fresh`, confidence `0.5377`, `imageToken` 발급.
+  - 충돌 문서/기준: 이 문서와 `docs/qa-fixtures/manifest.json`은 `screenshot-or-ui`를 400 또는 `확인 필요`로 기대한다. 실제 VM API는 화면 캡처를 `Fresh`로 통과시켰으므로, 이 케이스는 백엔드/AI 파이프라인 false-positive로 유지한다.
+- 2026-05-07 무기기 fallback 자동 테스트를 추가했다. 카메라 장치 없음 -> 갤러리 선택 -> 분석 결과 이동, generate 400 -> 재촬영/갤러리 대안, 지원하지 않는 이미지 형식의 generate 전 차단, `Stale`/`imageToken` 누락 등록 차단, 낮은 confidence 확인 필요 표시를 테스트로 고정했다.
 - 아직 남은 실제 기기 QA: `Stale`, `not-food`, `low-quality`, 실제 FCM foreground/background/terminated 수신.

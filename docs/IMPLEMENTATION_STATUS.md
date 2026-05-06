@@ -52,6 +52,14 @@
 - 통과: 전체 Jest 16 suites / 76 tests, TypeScript `--noEmit`, ESLint `--quiet`, `scripts/validate-ai-fixtures.js`, Android `:app:assembleRelease`를 실제 기기 없이 통과했다.
 - 남은 검증: fixture 이미지가 없어 `Stale`, `not-food`, `screenshot-or-ui`, `low-quality`, `multi-object` AI 품질 검증은 아직 skipped 상태다. 실제 FCM 메시지 수신도 별도 기기/FCM 환경이 필요하다.
 
+### 2026-05-07 무기기 fixture/API/fallback QA 업데이트
+
+- VM API: `localhost:8080` 터널로 `/posts/generate`를 직접 검증했다. `temp/qa-vm-banana.jpg`는 `바나나/Fresh/confidence=1.0/imageToken`으로 통과했다.
+- 발견한 충돌: `AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md`와 `docs/qa-fixtures/manifest.json`은 `screenshot-or-ui`를 400 또는 `확인 필요`로 기대하지만, live VM API는 `temp/real-device-camera-screen.png`를 `바나나/Fresh/confidence=0.5377/imageToken`으로 통과시켰다. 판단 기준은 2026-05-07 live VM API이며, 이 케이스는 백엔드/AI false-positive로 유지한다.
+- 수정: `CameraScanScreen`의 무기기 fallback 경로와 `AnalysisResultScreen`의 등록 차단/확인 필요 정책을 회귀 테스트로 고정했다. 회귀 테스트는 `__tests__/cameraScan.fallback.test.tsx`, `__tests__/analysisResult.fallback.test.tsx`다.
+- 통과: 전체 Jest 20 suites / 85 tests, TypeScript `--noEmit`, ESLint `--quiet`, `scripts/validate-ai-fixtures.js`를 실제 기기 없이 통과했다.
+- 남은 검증: 커밋 가능한 실제 fixture 이미지가 없어 `Stale`, `not-food`, `low-quality`, `multi-object` AI 품질은 아직 닫지 못했다. 실제 카메라 센서와 실제 FCM 수신은 실기기 QA로 남긴다.
+
 ---
 
 ## 1. 현재 상태 요약

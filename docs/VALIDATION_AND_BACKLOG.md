@@ -194,6 +194,34 @@
   - 실제 fixture 이미지가 없으므로 `Stale`, `not-food`, `screenshot-or-ui`, `low-quality`, `multi-object`의 AI 판정 품질은 아직 검증하지 못했다.
   - 실제 FCM foreground/background/terminated 수신은 Firebase 설정과 실제 메시지 발송 환경이 필요하다.
 
+## 2026-05-07 무기기 fixture/API/fallback QA 결과
+
+- 환경: Windows 로컬 워크스페이스, 실제 Android 기기 연결 없음, SSH tunnel `localhost:8080 -> NHN-Cloud-Server:80`.
+- API fixture 검증:
+  - `GET /health` 정상 응답 확인.
+  - QA 계정 `codex_fixture_qa_*.example.com`을 생성하고 `35.1595, 126.9136` 위치를 등록한 뒤 `/posts/generate`를 직접 호출했다.
+  - `temp/qa-vm-banana.jpg`: 200, `detectedFruitKo=바나나`, `aiAnalysis.category=Fresh`, `aiAnalysis.confidenceScore=1.0`, `imageToken` 발급. Fresh happy path는 API 기준 통과.
+  - `temp/real-device-camera-screen.png`: 200, `detectedFruitKo=바나나`, `aiAnalysis.category=Fresh`, `aiAnalysis.confidenceScore=0.5377`, `imageToken` 발급.
+- 충돌:
+  - 충돌 문서/기준: `AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md`와 `docs/qa-fixtures/manifest.json`은 `screenshot-or-ui`를 generate 400 또는 `확인 필요`로 기대한다.
+  - 실제 기준: 2026-05-07 live VM API `/posts/generate`.
+  - 판단: 앱 화면 캡처가 `Fresh`로 통과하고 `imageToken`까지 발급되므로, 프론트 fallback만으로는 이 케이스를 차단할 수 없다. `screenshot-or-ui` false-positive는 백엔드/AI 파이프라인 품질 이슈로 유지한다.
+- fallback 자동 테스트 보강:
+  - `CameraScanScreen`: 카메라 장치가 없는 환경에서 `갤러리에서 선택하기 -> generate -> AnalysisResult`가 이어지는지 고정했다.
+  - `CameraScanScreen`: generate 400 실패 시 등록 화면으로 이동하지 않고 `다시 촬영`/`갤러리 선택` 대안을 제공하는지 고정했다.
+  - `CameraScanScreen`: 지원하지 않는 갤러리 파일은 generate 호출 전에 차단하는지 고정했다.
+  - `AnalysisResultScreen`: `Stale`/`isFresh=false`와 `imageToken` 누락은 `PostCreate`로 넘어가지 않는지 고정했다.
+  - `AnalysisResultScreen`: 낮은 confidence는 `확인 필요`로 표시하되 `imageToken`이 있으면 등록 진행을 막지 않는 정책을 고정했다.
+- 검증:
+  - `node scripts\validate-ai-fixtures.js`: manifest 파싱/실행 통과. `docs/qa-fixtures/`에 실제 fixture 이미지가 없어 모든 케이스는 `skipped`.
+  - `node .\node_modules\jest\bin\jest.js --runInBand`: 20 suites / 85 tests 통과.
+  - `node .\node_modules\typescript\bin\tsc --noEmit`: 통과.
+  - `node .\node_modules\eslint\bin\eslint.js . --quiet`: 통과.
+- 남은 QA:
+  - 커밋 가능한 실제 fixture 이미지가 아직 없어 `Stale`, `not-food`, `low-quality`, `multi-object`의 AI 판정 품질은 닫지 못했다.
+  - `screenshot-or-ui`는 실제 API false-positive로 재현됐으므로 백엔드/AI 수정 후 재검증한다.
+  - 실제 카메라 센서 촬영, 실제 FCM 수신은 실기기 QA로 남긴다.
+
 ## 2026-05-05 P0/P1 코드 보강 현황
 
 - P0 `authorId/userId` 계약 불일치: `PostDetailScreen`이 `authorId` 기준으로 작성자 여부를 판단하도록 수정했다. 구형 fixture용 `userId` fallback은 `postPolicy`에만 남겼다.
@@ -202,7 +230,7 @@
 - P1 위치 재설정: 홈 위치 헤더와 프로필 `동네 위치 재설정` 메뉴에서 `LocationSetup`으로 재진입한다.
 - P1 위치 미설정 공통 가드: 홈, 지도, AI 스캔 진입점, 냉장고 선택 화면이 `getRegisteredLocation()` 기준을 공유한다. 위치가 없으면 주변 API를 호출하지 않고 `LocationSetup` CTA를 표시한다.
 - P1 등록 완료 후 홈 재조회: `PostCompleteScreen`이 홈 탭에 `nearbyPostsRefreshToken`을 전달하고, `HomeScreen`은 포커스/토큰 변경 시 `/posts/nearby`를 다시 조회한다.
-- P1 카메라 촬영/fallback: `react-native-vision-camera@5`의 `usePhotoOutput().capturePhotoToFile()` 경로로 수정했다. 에뮬레이터와 실제 Android 기기에서 촬영 파일 생성 및 실제 `/posts/generate` 호출까지 확인했다. 실패 fixture와 fallback QA는 남아 있다.
+- P1 카메라 촬영/fallback: `react-native-vision-camera@5`의 `usePhotoOutput().capturePhotoToFile()` 경로로 수정했다. 에뮬레이터와 실제 Android 기기에서 촬영 파일 생성 및 실제 `/posts/generate` 호출까지 확인했다. 무기기 fallback 자동 테스트는 추가됐고, 실제 `Stale`/`not-food`/`low-quality` fixture QA는 남아 있다.
 - P1 confidence: `confidenceScore`를 분석 결과/작성 화면에 표시하고, 제품 기준을 `confidenceScore < 0.9`이면 `확인 필요`로 확정했다. 낮은 confidence만으로 등록을 차단하지 않는다.
 - P0 Post 구조 변경: `Post`/`PostCreateData`/`GenerateResult` 타입과 `createPost()` payload를 백엔드 Phase 1.5 계약으로 갱신했다. 홈 카드, 상세 화면, 등록 확인 화면은 `detectedFruitKo`, `freshnessLabel`, `confidenceScore`, `status`를 사용하고 구형 `title/description/category` 표시/전송 의존을 제거했다.
 - P1 나눔 신청 API: `requestShare(postId)` client와 `PostDetailScreen` CTA를 연결했다. 201 응답은 `post.status=requested`를 상세에 반영하고 홈 refresh 신호를 보낸다. 403은 `내가 등록한 나눔 식재료예요`, 409는 `다른 사용자가 먼저 신청했어요`로 처리하고 CTA를 `신청 접수` 상태로 비활성화한다.
