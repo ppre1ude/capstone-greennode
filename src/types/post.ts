@@ -53,6 +53,21 @@ export interface PostCreateData {
   imageToken: string;
 }
 
+export type ShareRequestStatus = 'requested';
+
+export interface ShareRequest {
+  id: number;
+  postId: number;
+  requesterId: number;
+  status: ShareRequestStatus | string;
+  createdAt: string;
+}
+
+export interface ShareRequestResult {
+  request: ShareRequest;
+  post: Post;
+}
+
 export interface Fridge {
   id: number;
   name: string;

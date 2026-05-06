@@ -141,9 +141,9 @@ Host NHN-Cloud-Server
 
 | Product flow | Backend state | Frontend state |
 | --- | --- | --- |
-| 나눔 신청하기 | `POST /posts/{id}/requests` 구현, 성공 시 201 | 상세 CTA, API client, 성공/실패 UI, 상태 갱신 구현 |
-| 신청 동시 경합 방지 | `SELECT ... FOR UPDATE` + 단일 트랜잭션. 첫 신청만 201, 이후 409 | 409를 정상 race 결과로 보고 사용자 문구와 CTA 비활성화 처리 |
-| 작성자 본인 신청 차단 | 403 | 작성자 CTA 숨김/비활성화와 403 fallback 처리 |
+| 나눔 신청하기 | `POST /posts/{id}/requests` 구현, 성공 시 201 | 반영 완료. `requestShare(postId)`, 상세 CTA, 성공/실패 UI, 상태 갱신 구현 |
+| 신청 동시 경합 방지 | `SELECT ... FOR UPDATE` + 단일 트랜잭션. 첫 신청만 201, 이후 409 | 반영 완료. 409를 정상 race 결과로 보고 `다른 사용자가 먼저 신청했어요` 문구와 CTA 비활성화 처리 |
+| 작성자 본인 신청 차단 | 403 | 반영 완료. 작성자 CTA 숨김, 403 fallback은 `내가 등록한 나눔 식재료예요` |
 | 신청 알림 | `share_requested` FCM payload 구현 | foreground/background 수신 handler와 알림함 연결 |
 | 냉장고별 나눔 식재료 | `GET /fridges/{id}/posts?status=available` 구현 | 지도/냉장고 상세에서 목록 노출 방식 구현 |
 | Post 응답 구조 | `title/description/category` 제거, `detectedFruitKo/freshnessLabel/confidenceScore` 추가 | 반영 완료. `src/types/post.ts`, `createPost()`, 홈 카드, 상세, 등록 확인 화면은 새 구조 사용 |
@@ -417,7 +417,7 @@ Authorization: Bearer {token}
 
 ### 4.8 나눔 신청하기
 
-현재 앱의 상세 화면 CTA는 `나눔 신청하기 (준비중)` 상태지만, 백엔드 API는 구현 및 VM 검증이 완료됐다. 프론트는 이 계약으로 API client, CTA, 성공/실패 상태, 목록 갱신을 구현해야 한다.
+상세 화면의 `나눔 신청하기` CTA는 이 API에 연결되어 있다. 백엔드는 구현 및 VM 검증이 완료됐고, 프론트는 API client, CTA, 성공/실패 상태, 홈 목록 갱신 신호를 코드에 반영했다. 실제 앱-VM 연결 QA는 별도로 수행한다.
 
 ```
 POST /api/v1/posts/{post_id}/requests
@@ -646,5 +646,5 @@ GET /posts/nearby → 근처 available 나눔 식재료
 - [ ] 앱 실행 시 위치+FCM 토큰 반드시 서버에 등록
 - [ ] 나눔 식재료 상세 작성자 판단은 실제 응답의 `authorId` 기준으로 처리
 - [x] 백엔드 Phase 1.5 Post 구조 반영: `title/description/category` 의존 제거, `detectedFruitKo/freshnessLabel/confidenceScore/status` 사용
-- [ ] 나눔 신청 API 연동: `POST /posts/{id}/requests`, 201/403/409 처리, 신청 후 상세/홈 상태 갱신
+- [x] 나눔 신청 API 연동: `POST /posts/{id}/requests`, 201/403/409 처리, 신청 후 상세/홈 상태 갱신
 - [ ] FCM payload는 camelCase `postId`, `requestId`, `fruitName`, `fridgeName`, `type` 사용

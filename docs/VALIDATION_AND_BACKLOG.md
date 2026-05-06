@@ -109,9 +109,9 @@
 
 | 항목 | 백엔드 상태 | 프론트 상태 | 다음 액션 |
 | --- | --- | --- | --- |
-| 나눔 신청 API | `POST /posts/{id}/requests` 구현, 201/403/409 VM 검증 완료 | 미연동. 상세 CTA는 `나눔 신청하기 (준비중)` | API client, 상세 CTA, 성공/실패 UI, 목록/상세 갱신 구현 |
-| 신청 동시 경합 | `SELECT ... FOR UPDATE` + 단일 트랜잭션으로 첫 신청만 성공. 이후 요청은 409 | 프론트는 아직 신청 API가 없어 race 결과 처리도 없음 | 409를 오류라기보다 정상 경합 결과로 처리하고 CTA 비활성화 |
-| 나눔 상태 | `available`, `requested`, `completed` 존재. `/posts/nearby`는 available만 반환 | `Post.status` 타입과 상세/홈 상태 표시 반영. 신청 API는 아직 미연동 | 신청 API 연동 시 201/403/409에 따라 상세/홈 상태 갱신 |
+| 나눔 신청 API | `POST /posts/{id}/requests` 구현, 201/403/409 VM 검증 완료 | `requestShare(postId)`, 상세 CTA, 201/403/409 UI, 홈 refresh 신호 구현 완료 | 실제 VM API로 201/403/409 런타임 QA |
+| 신청 동시 경합 | `SELECT ... FOR UPDATE` + 단일 트랜잭션으로 첫 신청만 성공. 이후 요청은 409 | 409를 정상 race 결과로 처리하고 CTA를 `신청 접수` 상태로 비활성화 | 실제 동시/중복 신청 QA |
+| 나눔 상태 | `available`, `requested`, `completed` 존재. `/posts/nearby`는 available만 반환 | `Post.status` 타입과 상세/홈 상태 표시 반영. 신청 성공/409 시 상세 상태와 홈 refresh 신호 반영 | 실제 VM API로 requested 항목이 홈에서 제외되는지 확인 |
 | Post 구조 | `title/description/category` 제거, `detectedFruitKo/freshnessLabel/confidenceScore` 추가 | `src/types/post.ts`, `createPost()` payload, 홈 카드, 상세, 등록 확인 화면 반영 완료 | 실제 VM API로 등록/상세/홈 카드 런타임 QA |
 | AI label | `Fresh/Mid/Stale/unknown`, `Mid`는 기존 `Normal` 그룹 | `postPolicy`가 `Fresh/Mid`를 나눔 가능, `Stale/unknown`을 등록 불가로 매핑 | fixture 기반 수동 QA와 threshold 결정 |
 | confidenceScore | Stage 2 신선도 분류 softmax max 확률로 확정. 백엔드 표시 가이드는 0.9 이상 높음, 0.5~0.9 확인 필요 | 현재 앱은 60% 미만만 `확인 필요`로 분기 | UX 기준 충돌을 기록하고 프론트 threshold를 90%로 바꿀지 별도 결정 |
@@ -131,6 +131,7 @@
 - P1 카메라 촬영/fallback: `react-native-vision-camera@5`의 `usePhotoOutput().capturePhotoToFile()` 경로로 수정했다. 에뮬레이터에서 촬영 파일 생성 및 실제 `/posts/generate` 호출까지 확인했고, 실제 기기 셔터 검증은 아직 남았다.
 - P1 confidence: `confidenceScore`를 분석 결과/작성 화면에 표시하고 현재 앱은 60% 미만을 즉시 차단 대신 `확인 필요`로 분기한다. 백엔드 답변은 0.9 미만을 확인 필요 구간으로 보는 활용 가이드를 제시했으므로, 프론트 UX 기준 재결정이 필요하다.
 - P0 Post 구조 변경: `Post`/`PostCreateData`/`GenerateResult` 타입과 `createPost()` payload를 백엔드 Phase 1.5 계약으로 갱신했다. 홈 카드, 상세 화면, 등록 확인 화면은 `detectedFruitKo`, `freshnessLabel`, `confidenceScore`, `status`를 사용하고 구형 `title/description/category` 표시/전송 의존을 제거했다.
+- P1 나눔 신청 API: `requestShare(postId)` client와 `PostDetailScreen` CTA를 연결했다. 201 응답은 `post.status=requested`를 상세에 반영하고 홈 refresh 신호를 보낸다. 403은 `내가 등록한 나눔 식재료예요`, 409는 `다른 사용자가 먼저 신청했어요`로 처리하고 CTA를 `신청 접수` 상태로 비활성화한다.
 - 회귀 테스트: `__tests__/postPolicy.test.ts`에서 품질 정책, confidence, 작성자 판단을 고정한다. `__tests__/postComplete.navigation.test.tsx`, `__tests__/home.nearbyRefresh.test.tsx`에서 등록 완료 홈 복귀와 `/posts/nearby` 재조회 신호를 고정한다.
 - AI QA fixture/실기기 체크리스트: [AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md](./AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md)에 성공/실패/false-positive/대용량/실제 기기 촬영 검증 기준을 정리했다.
 
@@ -728,19 +729,19 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
 
 ## 나눔 신청 API 프론트 연동
 
-- 분류: 미구현
+- 분류: 기능 구현
 - 우선순위: P1
-- 상태: 백엔드 구현 완료, 프론트 미연동
-- 배경: MVP 수요자 흐름인 `available -> requested`가 백엔드에 구현됐다. 현재 상세 화면 CTA는 `나눔 신청하기 (준비중)`이다.
-- 현재 동작: 상세 화면에서 신청 API를 호출하지 않는다.
+- 상태: 프론트 코드 연동 완료, VM/API 런타임 QA 필요
+- 배경: MVP 수요자 흐름인 `available -> requested`가 백엔드에 구현됐다. 이 작업에서 상세 화면 CTA를 실제 신청 API에 연결했다.
+- 현재 동작: 상세 화면의 `나눔 신청하기` CTA가 `POST /api/v1/posts/{post_id}/requests`를 호출한다. 성공 시 상세 `post.status`를 `requested`로 바꾸고 Home refresh store에 requested post id를 전달한다. 403/409는 사용자-facing 문구로 분기한다.
 - 기대 동작: 수요자가 available 나눔 식재료 상세에서 `나눔 신청하기`를 누르면 `POST /api/v1/posts/{post_id}/requests`를 호출하고, 성공 시 신청 접수 상태를 표시한다.
 - Acceptance Criteria:
-  - [ ] `requestShare(postId)` API client가 추가된다.
-  - [ ] 성공 201 응답에서 `request`와 갱신된 `post.status=requested`를 처리한다.
-  - [ ] 작성자 본인 신청 403은 CTA 숨김/비활성화 또는 fallback 문구로 처리한다.
-  - [ ] 중복/경합 409는 `이미 신청이 접수된 나눔이에요` 계열 문구와 CTA 비활성화로 처리한다.
-  - [ ] 신청 성공 후 상세 상태와 홈 `/posts/nearby` 재조회 또는 항목 제거가 보장된다.
-- 검증 방법: API client unit test, PostDetail interaction test, 실제 VM API 201/403/409 QA
+  - [x] `requestShare(postId)` API client가 추가된다.
+  - [x] 성공 201 응답에서 `request`와 갱신된 `post.status=requested`를 처리한다.
+  - [x] 작성자 본인 신청 403은 CTA 숨김/비활성화 또는 fallback 문구로 처리한다.
+  - [x] 중복/경합 409는 `다른 사용자가 먼저 신청했어요` 문구와 CTA 비활성화로 처리한다.
+  - [x] 신청 성공 후 상세 상태와 홈 `/posts/nearby` 재조회 또는 항목 제거가 보장된다.
+- 검증 방법: API client unit test 통과, PostDetail interaction test 통과, Home refresh test 통과, 실제 VM API 201/403/409 QA
 - 관련 파일/화면/API: `src/api/posts.ts`, `src/types/post.ts`, `PostDetailScreen`, `HomeScreen`, `POST /api/v1/posts/{post_id}/requests`
 
 ## 냉장고별 나눔 식재료 조회 프론트 연동

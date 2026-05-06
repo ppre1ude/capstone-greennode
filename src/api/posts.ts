@@ -8,6 +8,7 @@ import type {
   Post,
   GenerateResult,
   PostCreateData,
+  ShareRequestResult,
 } from '@/types';
 import { getToken } from '@/utils/storage';
 
@@ -73,6 +74,14 @@ export const getPostDetail = async (
   postId: number,
 ): Promise<ApiResponse<Post>> => {
   const response = await apiClient.get(`${POSTS_PREFIX}/${postId}`);
+  return response.data;
+};
+
+/** 나눔 신청하기 — POST /api/v1/posts/{id}/requests */
+export const requestShare = async (
+  postId: number,
+): Promise<ApiResponse<ShareRequestResult>> => {
+  const response = await apiClient.post(`${POSTS_PREFIX}/${postId}/requests`);
   return response.data;
 };
 

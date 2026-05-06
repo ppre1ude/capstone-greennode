@@ -20,9 +20,16 @@ import {
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@/navigation/types';
-import { getPostDetail, deletePost, getImageUrl } from '@/api/posts';
+import {
+  getPostDetail,
+  deletePost,
+  getImageUrl,
+  requestShare,
+} from '@/api/posts';
 import { useAuthStore } from '@/store/authStore';
+import { useFeedRefreshStore } from '@/store/feedRefreshStore';
 import type { Post } from '@/types';
+import { getApiErrorMessage } from '@/utils/apiError';
 import {
   getConfidencePercent,
   getPostDisplayName,
@@ -35,13 +42,26 @@ import { styles } from './PostDetailScreen.styles';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PostDetail'>;
 
+const getErrorStatus = (error: unknown): number | null => {
+  if (typeof error !== 'object' || error === null) {
+    return null;
+  }
+
+  const response = (error as { response?: { status?: unknown } }).response;
+  return typeof response?.status === 'number' ? response.status : null;
+};
+
 const PostDetailScreen = ({ route, navigation }: Props) => {
   const { postId } = route.params;
   const user = useAuthStore(state => state.user);
+  const requestNearbyPostsRefresh = useFeedRefreshStore(
+    state => state.requestNearbyPostsRefresh,
+  );
 
   const [post, setPost] = useState<Post | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isRequesting, setIsRequesting] = useState(false);
 
   const fetchPostDetail = useCallback(async () => {
     try {
@@ -94,6 +114,48 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
     ]);
   };
 
+  const handleRequestShare = async () => {
+    if (!post || post.status !== 'available' || isRequesting) {
+      return;
+    }
+
+    if (isPostAuthoredByUser(post, user?.id)) {
+      Alert.alert('신청 불가', '내가 등록한 나눔 식재료예요.');
+      return;
+    }
+
+    setIsRequesting(true);
+    try {
+      const response = await requestShare(post.id);
+      if (response.success && response.data) {
+        setPost(response.data.post);
+        requestNearbyPostsRefresh(response.data.post.id);
+        Alert.alert('신청 완료', '나눔 신청이 접수되었습니다.');
+        return;
+      }
+
+      Alert.alert('신청 실패', response.message || '나눔 신청에 실패했습니다.');
+    } catch (error) {
+      const status = getErrorStatus(error);
+      if (status === 403) {
+        Alert.alert('신청 불가', '내가 등록한 나눔 식재료예요.');
+      } else if (status === 409) {
+        setPost(currentPost =>
+          currentPost ? { ...currentPost, status: 'requested' } : currentPost,
+        );
+        requestNearbyPostsRefresh(post.id);
+        Alert.alert('신청 마감', '다른 사용자가 먼저 신청했어요.');
+      } else {
+        Alert.alert(
+          '신청 실패',
+          getApiErrorMessage(error, '나눔 신청에 실패했습니다.'),
+        );
+      }
+    } finally {
+      setIsRequesting(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <View style={[styles.container, styles.centerBox]}>
@@ -111,6 +173,12 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
   const quality = getQualityMeta(post.freshnessLabel);
   const confidencePercent = getConfidencePercent(post.confidenceScore);
   const statusLabel = getPostStatusLabel(post.status);
+  const canRequestShare = !isMyPost && post.status === 'available';
+  const requestButtonLabel = isRequesting
+    ? '신청 중...'
+    : canRequestShare
+    ? '나눔 신청하기'
+    : statusLabel;
   const daysLeft = Math.ceil(
     (new Date(post.expirationDate).getTime() - new Date().getTime()) /
       (1000 * 3600 * 24),
@@ -195,14 +263,11 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
           <TouchableOpacity
             style={[
               styles.chatButton,
-              post.status !== 'available' && styles.chatButtonDisabled,
+              (!canRequestShare || isRequesting) && styles.chatButtonDisabled,
             ]}
-            disabled={post.status !== 'available'}>
-            <Text style={styles.chatButtonText}>
-              {post.status === 'available'
-                ? '나눔 신청하기 (준비중)'
-                : statusLabel}
-            </Text>
+            onPress={handleRequestShare}
+            disabled={!canRequestShare || isRequesting}>
+            <Text style={styles.chatButtonText}>{requestButtonLabel}</Text>
           </TouchableOpacity>
         </View>
       )}

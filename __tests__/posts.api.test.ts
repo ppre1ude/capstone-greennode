@@ -1,12 +1,30 @@
-import { createPost, generatePost, getImageUrl } from '@/api/posts';
+import apiClient from '@/api/client';
+import {
+  createPost,
+  generatePost,
+  getImageUrl,
+  requestShare,
+} from '@/api/posts';
 import { API_BASE_URL } from '@/config/api';
 import { getToken } from '@/utils/storage';
+
+jest.mock('@/api/client', () => {
+  const { API_BASE_URL: actualBaseUrl } = jest.requireActual('@/config/api');
+  return {
+    __esModule: true,
+    default: {
+      post: jest.fn(),
+    },
+    BASE_URL: actualBaseUrl,
+  };
+});
 
 jest.mock('@/utils/storage', () => ({
   getToken: jest.fn(),
 }));
 
 const mockedGetToken = getToken as jest.MockedFunction<typeof getToken>;
+const mockedApiClient = apiClient as jest.Mocked<typeof apiClient>;
 const testGlobal = globalThis as typeof globalThis & {
   fetch: jest.Mock;
   FormData: typeof FormData;
@@ -102,6 +120,7 @@ describe('posts API contract', () => {
       MockXMLHttpRequest as unknown as typeof XMLHttpRequest;
     MockXMLHttpRequest.instances = [];
     MockXMLHttpRequest.nextResponse.status = 200;
+    mockedApiClient.post.mockReset();
   });
 
   afterAll(() => {
@@ -204,6 +223,46 @@ describe('posts API contract', () => {
     ).rejects.toMatchObject({
       response: { status: 400, data: errorBody },
     });
+  });
+
+  it('requests a share for a specific post and returns request plus updated post', async () => {
+    mockedApiClient.post.mockResolvedValue({
+      data: {
+        success: true,
+        message: '나눔 신청이 완료되었습니다.',
+        data: {
+          request: {
+            id: 1,
+            postId: 10,
+            requesterId: 2,
+            status: 'requested',
+            createdAt: '2026-05-06T00:00:00Z',
+          },
+          post: {
+            id: 10,
+            fridgeId: 1,
+            authorId: 1,
+            detectedFruit: 'apple',
+            detectedFruitKo: '사과',
+            freshnessLabel: 'Fresh',
+            confidenceScore: 1,
+            imageUrl: '/static/posts/10.jpg',
+            expirationDate: '2026-05-08',
+            status: 'requested',
+            createdAt: '2026-05-06T00:00:00Z',
+            updatedAt: '2026-05-06T00:00:00Z',
+          },
+        },
+      },
+    });
+
+    const response = await requestShare(10);
+
+    expect(mockedApiClient.post).toHaveBeenCalledWith(
+      '/api/v1/posts/10/requests',
+    );
+    expect(response.data?.request.id).toBe(1);
+    expect(response.data?.post.status).toBe('requested');
   });
 
   it('builds absolute image URLs from server relative paths', () => {

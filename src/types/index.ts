@@ -1,4 +1,4 @@
-export type {ApiResponse} from './api';
+export type { ApiResponse } from './api';
 export type {
   User,
   LoginResponse,
@@ -10,5 +10,7 @@ export type {
   AiAnalysis,
   GenerateResult,
   PostCreateData,
+  ShareRequest,
+  ShareRequestResult,
   Fridge,
 } from './post';
