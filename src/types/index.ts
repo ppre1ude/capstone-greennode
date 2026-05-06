@@ -7,6 +7,7 @@ export type {
 } from './auth';
 export type {
   Post,
+  PostStatus,
   AiAnalysis,
   GenerateResult,
   PostCreateData,

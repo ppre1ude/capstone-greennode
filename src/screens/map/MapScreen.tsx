@@ -16,12 +16,14 @@ import {
   FlatList,
   StatusBar,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import MapView, {Marker, Circle, PROVIDER_DEFAULT} from 'react-native-maps';
-import {getNearbyFridges} from '@/api/fridges';
+import {getFridgePosts, getNearbyFridges} from '@/api/fridges';
+import {getImageUrl} from '@/api/posts';
 import {useAuthStore} from '@/store/authStore';
-import type {Fridge} from '@/types';
+import type {Fridge, Post} from '@/types';
 import {filterFridges} from '@/utils/fridgeSearch';
 import {
   getRegisteredLocation,
@@ -29,6 +31,11 @@ import {
   LOCATION_REQUIRED_MESSAGE,
   LOCATION_REQUIRED_TITLE,
 } from '@/utils/locationGuard';
+import {
+  getConfidencePercent,
+  getPostDisplayName,
+  getQualityMeta,
+} from '@/utils/postPolicy';
 import {colors} from '@/theme';
 import {styles} from './MapScreen.styles';
 
@@ -42,12 +49,22 @@ const MapScreen = () => {
   const [fridgeError, setFridgeError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFridgeId, setSelectedFridgeId] = useState<number | null>(null);
+  const [fridgePosts, setFridgePosts] = useState<Post[]>([]);
+  const [fridgePostsState, setFridgePostsState] = useState<
+    'idle' | 'loading' | 'ready' | 'empty' | 'error'
+  >('idle');
+  const [fridgePostsError, setFridgePostsError] = useState<string | null>(null);
   const mapRef = useRef<MapView>(null);
   const flatListRef = useRef<FlatList>(null);
+  const fridgePostsRequestId = useRef(0);
   const location = getRegisteredLocation(user);
   const displayedFridges = useMemo(
     () => filterFridges(fridges, searchQuery),
     [fridges, searchQuery],
+  );
+  const selectedFridge = useMemo(
+    () => fridges.find(fridge => fridge.id === selectedFridgeId) ?? null,
+    [fridges, selectedFridgeId],
   );
 
   const initialRegion = location
@@ -63,10 +80,56 @@ const MapScreen = () => {
     navigation.getParent()?.navigate('LocationSetup', {allowBack: true});
   }, [navigation]);
 
+  const resetFridgePosts = useCallback(() => {
+    fridgePostsRequestId.current += 1;
+    setFridgePosts([]);
+    setFridgePostsState('idle');
+    setFridgePostsError(null);
+  }, []);
+
+  const fetchFridgePosts = useCallback(async (fridgeId: number) => {
+    const requestId = fridgePostsRequestId.current + 1;
+    fridgePostsRequestId.current = requestId;
+    setFridgePosts([]);
+    setFridgePostsState('loading');
+    setFridgePostsError(null);
+
+    try {
+      const response = await getFridgePosts(fridgeId, 'available');
+      if (fridgePostsRequestId.current !== requestId) {
+        return;
+      }
+
+      if (response.success && response.data) {
+        setFridgePosts(response.data);
+        setFridgePostsState(response.data.length > 0 ? 'ready' : 'empty');
+      } else {
+        setFridgePosts([]);
+        setFridgePostsState('error');
+        setFridgePostsError(
+          response.message || '냉장고 안 나눔을 불러오지 못했습니다.',
+        );
+      }
+    } catch (error) {
+      if (fridgePostsRequestId.current !== requestId) {
+        return;
+      }
+
+      console.warn('Map: Failed to fetch fridge posts', error);
+      setFridgePosts([]);
+      setFridgePostsState('error');
+      setFridgePostsError(
+        '서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.',
+      );
+    }
+  }, []);
+
   const fetchFridges = useCallback(async () => {
     const registeredLocation = getRegisteredLocation(user);
     if (!registeredLocation) {
       setFridges([]);
+      setSelectedFridgeId(null);
+      resetFridgePosts();
       setFridgeState('error');
       setFridgeError(LOCATION_REQUIRED_MESSAGE);
       return;
@@ -85,16 +148,20 @@ const MapScreen = () => {
         setFridgeState(response.data.length > 0 ? 'ready' : 'empty');
       } else {
         setFridges([]);
+        setSelectedFridgeId(null);
+        resetFridgePosts();
         setFridgeState('error');
         setFridgeError(response.message || '주변 냉장고를 불러오지 못했습니다.');
       }
     } catch (error) {
       console.warn('Map: Failed to fetch fridges', error);
       setFridges([]);
+      setSelectedFridgeId(null);
+      resetFridgePosts();
       setFridgeState('error');
       setFridgeError('서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.');
     }
-  }, [user]);
+  }, [resetFridgePosts, user]);
 
   useEffect(() => {
     fetchFridges();
@@ -109,10 +176,21 @@ const MapScreen = () => {
     }
   }, [displayedFridges, selectedFridgeId]);
 
-  const handleMarkerPress = (fridge: Fridge, index: number) => {
+  useEffect(() => {
+    if (selectedFridgeId == null) {
+      resetFridgePosts();
+      return;
+    }
+
+    void fetchFridgePosts(selectedFridgeId);
+  }, [fetchFridgePosts, resetFridgePosts, selectedFridgeId]);
+
+  const focusFridge = (fridge: Fridge, index?: number) => {
     setSelectedFridgeId(fridge.id);
-    flatListRef.current?.scrollToIndex({index, animated: true});
-    mapRef.current?.animateToRegion(
+    if (index != null) {
+      flatListRef.current?.scrollToIndex?.({index, animated: true});
+    }
+    mapRef.current?.animateToRegion?.(
       {
         latitude: fridge.latitude,
         longitude: fridge.longitude,
@@ -123,23 +201,16 @@ const MapScreen = () => {
     );
   };
 
+  const handleMarkerPress = (fridge: Fridge, index: number) => {
+    focusFridge(fridge, index);
+  };
+
   const renderFridgeCard = ({item}: {item: Fridge}) => {
     const isSelected = selectedFridgeId === item.id;
     return (
       <TouchableOpacity
         style={[styles.card, isSelected && styles.cardSelected]}
-        onPress={() => {
-          setSelectedFridgeId(item.id);
-          mapRef.current?.animateToRegion(
-            {
-              latitude: item.latitude,
-              longitude: item.longitude,
-              latitudeDelta: 0.01,
-              longitudeDelta: 0.01,
-            },
-            500,
-          );
-        }}>
+        onPress={() => focusFridge(item)}>
         <View style={styles.cardHeader}>
           <Text style={[styles.cardTitle, isSelected && styles.textSelected]}>
             {item.name}
@@ -153,11 +224,107 @@ const MapScreen = () => {
           <Text style={[styles.cardDistance, isSelected && styles.textSelected]}>
             {item.distance ? `${item.distance.toFixed(2)}km` : ''}
           </Text>
-          <TouchableOpacity style={styles.detailButton}>
-            <Text style={styles.detailButtonText}>상세보기</Text>
+          <TouchableOpacity
+            style={styles.detailButton}
+            onPress={() => focusFridge(item)}>
+            <Text style={styles.detailButtonText}>
+              {isSelected ? '목록 확인 중' : '내부 보기'}
+            </Text>
           </TouchableOpacity>
         </View>
       </TouchableOpacity>
+    );
+  };
+
+  const renderFridgePostItem = ({item}: {item: Post}) => {
+    const displayName = getPostDisplayName(item);
+    const quality = getQualityMeta(item.freshnessLabel);
+    const confidencePercent = getConfidencePercent(item.confidenceScore);
+
+    return (
+      <TouchableOpacity
+        style={styles.fridgePostItem}
+        activeOpacity={0.8}
+        onPress={() =>
+          navigation.getParent()?.navigate('PostDetail', {postId: item.id})
+        }>
+        <Image
+          source={{uri: getImageUrl(item.imageUrl)}}
+          style={styles.fridgePostImage}
+          resizeMode="cover"
+        />
+        <View style={styles.fridgePostInfo}>
+          <Text style={styles.fridgePostTitle} numberOfLines={1}>
+            {displayName}
+          </Text>
+          <Text style={styles.fridgePostMeta} numberOfLines={1}>
+            {confidencePercent != null
+              ? `${quality.label} · AI 신뢰도 ${confidencePercent}%`
+              : quality.label}
+          </Text>
+        </View>
+        <Text style={styles.fridgePostChevron}>›</Text>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderSelectedFridgePosts = () => {
+    if (!selectedFridge) {
+      return null;
+    }
+
+    return (
+      <View style={styles.fridgePostsPanel}>
+        <View style={styles.fridgePostsHeader}>
+          <View style={styles.fridgePostsHeaderText}>
+            <Text style={styles.fridgePostsTitle} numberOfLines={1}>
+              {selectedFridge.name}
+            </Text>
+            <Text style={styles.fridgePostsSubtitle}>
+              지금 가능한 나눔 식재료
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={styles.panelRetryButton}
+            onPress={() => fetchFridgePosts(selectedFridge.id)}>
+            <Text style={styles.panelRetryButtonText}>새로고침</Text>
+          </TouchableOpacity>
+        </View>
+
+        {fridgePostsState === 'idle' || fridgePostsState === 'loading' ? (
+          <View style={styles.fridgePostsStateBox}>
+            <ActivityIndicator color={colors.primary} />
+            <Text style={styles.fridgePostsStateText}>
+              냉장고 안 나눔을 불러오는 중입니다
+            </Text>
+          </View>
+        ) : fridgePostsState === 'error' ? (
+          <View style={styles.fridgePostsStateBox}>
+            <Text style={styles.fridgePostsStateTitle}>
+              내부 목록을 불러오지 못했습니다
+            </Text>
+            <Text style={styles.fridgePostsStateText}>{fridgePostsError}</Text>
+          </View>
+        ) : fridgePostsState === 'empty' ? (
+          <View style={styles.fridgePostsStateBox}>
+            <Text style={styles.fridgePostsStateTitle}>
+              지금 가능한 나눔 식재료가 없습니다
+            </Text>
+            <Text style={styles.fridgePostsStateText}>
+              다른 냉장고를 선택하거나 잠시 후 다시 확인해주세요.
+            </Text>
+          </View>
+        ) : (
+          <FlatList
+            data={fridgePosts}
+            keyExtractor={item => item.id.toString()}
+            renderItem={renderFridgePostItem}
+            style={styles.fridgePostsList}
+            scrollEnabled={fridgePosts.length > 3}
+            nestedScrollEnabled
+          />
+        )}
+      </View>
     );
   };
 
@@ -295,6 +462,7 @@ const MapScreen = () => {
             ) : null}
           </View>
         )}
+        {renderSelectedFridgePosts()}
       </View>
     </View>
   );

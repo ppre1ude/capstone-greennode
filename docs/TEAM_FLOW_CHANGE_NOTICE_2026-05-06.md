@@ -25,8 +25,8 @@
 - 첫 신청 성공 시 `available -> requested`, 작성자 본인 신청은 403, 중복/경합 신청은 409다.
 - 백엔드 AI label은 `Fresh/Mid/Stale`이며 `Mid`는 기존 `Normal` 그룹이다.
 - `confidenceScore`는 Stage 2 신선도 분류 softmax max 확률이다.
-- 냉장고별 나눔 식재료 조회 API는 `GET /api/v1/fridges/{fridge_id}/posts?status=available`로 구현됐다.
-- Post 구조는 `title/description/category` 중심에서 `detectedFruitKo/freshnessLabel/confidenceScore` 중심으로 바뀌었고, 프론트 반영이 필요하다.
+- 냉장고별 나눔 식재료 조회 API는 `GET /api/v1/fridges/{fridge_id}/posts?status=available`로 구현됐고, 프론트 지도 화면에 연동됐다.
+- Post 구조는 `title/description/category` 중심에서 `detectedFruitKo/freshnessLabel/confidenceScore` 중심으로 바뀌었고, 프론트 반영이 완료됐다.
 
 ## 요약
 
@@ -168,7 +168,7 @@ POST /api/v1/posts/{post_id}/requests
 
 제품상 지도는 공유 냉장고와 그 안의 available 나눔 식재료를 탐색하는 화면이다.
 
-공지 작성 당시 구현/API는 냉장고 목록 조회와 등록 가능 냉장고 선택까지였다. 현재 백엔드는 `GET /api/v1/fridges/{fridge_id}/posts?status=available`를 구현했고, 프론트 연동이 남았다.
+공지 작성 당시 구현/API는 냉장고 목록 조회와 등록 가능 냉장고 선택까지였다. 현재 백엔드는 `GET /api/v1/fridges/{fridge_id}/posts?status=available`를 구현했고, 프론트는 지도에서 선택 냉장고의 내부 available 나눔 식재료 목록을 보여준다.
 
 ## 프론트/Codex 쪽 변경 사항
 

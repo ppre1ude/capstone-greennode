@@ -148,7 +148,7 @@ Host NHN-Cloud-Server
 | 신청 동시 경합 방지        | `SELECT ... FOR UPDATE` + 단일 트랜잭션. 첫 신청만 201, 이후 409                          | 반영 완료. 409를 정상 race 결과로 보고 `다른 사용자가 먼저 신청했어요` 문구와 CTA 비활성화 처리 |
 | 작성자 본인 신청 차단      | 403                                                                                       | 반영 완료. 작성자 CTA 숨김, 403 fallback은 `내가 등록한 나눔 식재료예요`                        |
 | 신청 알림                  | `share_requested` FCM payload 구현                                                        | foreground/background 수신 handler와 알림함 연결                                                |
-| 냉장고별 나눔 식재료       | `GET /fridges/{id}/posts?status=available` 구현                                           | 지도/냉장고 상세에서 목록 노출 방식 구현                                                        |
+| 냉장고별 나눔 식재료       | `GET /fridges/{id}/posts?status=available` 구현                                           | 반영 완료. 지도에서 선택 냉장고의 내부 available 목록, loading/error/empty/list 상태, 상세 이동 구현 |
 | Post 응답 구조             | `title/description/category` 제거, `detectedFruitKo/freshnessLabel/confidenceScore` 추가  | 반영 완료. `src/types/post.ts`, `createPost()`, 홈 카드, 상세, 등록 확인 화면은 새 구조 사용    |
 | 나눔 기준 미충족 서버 방어 | `Stale`이면 generate 400이고 `imageToken` 미발급. create는 유효한 `imageToken` 없으면 400 | 프론트 `canShare`는 UX 가드로 유지하되 서버가 최종 방어선임을 전제로 오류 처리                  |
 
@@ -510,7 +510,7 @@ GET /api/v1/fridges/{fridge_id}/posts?status=available
 Authorization: Bearer {token}
 ```
 
-지도/냉장고 상세에서 특정 공유 냉장고 안의 available 나눔 식재료를 보여주기 위한 API다. 백엔드는 구현/VM 검증을 완료했지만, 프론트 화면 연동은 아직 없다.
+지도/냉장고 상세에서 특정 공유 냉장고 안의 available 나눔 식재료를 보여주기 위한 API다. 프론트는 `getFridgePosts(fridgeId, 'available')` client를 통해 지도 냉장고 선택 시 이 목록을 조회한다. 목록 항목은 `PostDetail`로 이동하며, loading/error/empty 상태는 냉장고 목록 상태와 별도로 관리한다.
 
 ---
 
