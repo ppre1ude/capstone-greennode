@@ -299,6 +299,8 @@ Content-Type: multipart/form-data
 }
 ```
 
+> 2026-05-06 live VM note: 현재 `GET /openapi.json`과 VM 응답 기준 `PostGenerateResult`의 root 필드는 `detectedFruit`, `detectedFruitKo`, `aiAnalysis`, `imageToken`이다. `freshnessLabel`, `confidenceScore`, `isFresh`는 root가 아니라 `data.aiAnalysis.category`, `data.aiAnalysis.confidenceScore`, `data.aiAnalysis.isFresh`에서 확인된다. 프론트는 이미 `aiAnalysis` fallback을 읽는다. root 예시는 제품 의도/프론트 호환 예시로 남아 있으나, 백엔드와 canonical 위치를 다시 맞춰야 한다.
+
 **에러 시 → 400 및 프론트 표시 정책**:
 
 | 상황                      | 서버 응답 기준                                           | 사용자-facing 표시                                                           |
@@ -370,6 +372,8 @@ const response = await fetch(`${BASE_URL}/api/v1/posts`, {
 5. 2km 내 사용자에게 FCM 알림 (비동기)
 
 `Stale` 판정 이미지는 generate 단계에서 임시 저장까지 도달하지 않으므로 `imageToken`이 없다. generate를 우회해 `POST /posts`를 직접 호출해도 유효한 토큰이 없으면 등록되지 않는다.
+
+> 2026-05-06 live VM conflict: 공개 fresh fixture로 `generate -> create -> detail`을 실행했을 때 generate는 `detectedFruitKo=바나나`, `aiAnalysis.category=Fresh`, `aiAnalysis.confidenceScore=1.0`을 반환했지만, 생성된 Post id `2`의 상세 응답은 `detectedFruit`, `detectedFruitKo`, `freshnessLabel`, `confidenceScore`가 모두 `null`이었다. 이는 "Post가 AI 메타데이터를 저장한다"는 Phase 1.5 요약과 충돌한다. 판단 기준은 live VM API와 `GET /openapi.json`이며, 상세 증거와 P0 후속은 [VALIDATION_AND_BACKLOG.md](./VALIDATION_AND_BACKLOG.md)에 기록한다.
 
 **에러**:
 

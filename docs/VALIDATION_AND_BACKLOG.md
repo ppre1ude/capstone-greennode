@@ -99,8 +99,8 @@
 ### 후속 결정 필요
 
 - `not_food`, `low_quality`, `review_required` 등 rejection reason enum은 Post-MVP에서 백엔드와 확정한다.
-- 백엔드 Phase 1.5의 Post 구조 변경(`title/description/category` 제거, `detectedFruitKo/freshnessLabel/confidenceScore` 추가)은 코드 반영 완료 상태이며, 실제 VM/API 런타임 QA만 남았다.
-- 프론트는 백엔드가 구현한 `POST /posts/{id}/requests`와 `GET /fridges/{id}/posts?status=available`를 연동했다. 둘 다 실제 VM/API 런타임 QA는 남아 있다.
+- 백엔드 Phase 1.5의 Post 구조 변경(`title/description/category` 제거, `detectedFruitKo/freshnessLabel/confidenceScore` 추가)은 프론트 코드 반영과 VM/API 런타임 QA를 진행했다. 단, 실제 VM `POST /posts`/`GET /posts/{id}` 응답에서 AI 메타데이터가 `null`로 저장되는 계약 불일치를 발견했다.
+- 프론트는 백엔드가 구현한 `POST /posts/{id}/requests`와 `GET /fridges/{id}/posts?status=available`를 연동했다. 둘 다 2026-05-06 VM/API 런타임 QA에서 상태 전환과 available 제외 동작을 확인했다.
 - `requested` 이후 `reserved`, `completed`, `cancelled`, `expired` 흐름은 후속 버전에서 설계한다.
 
 ## 2026-05-06 백엔드 Phase 1.5 반영 상태
@@ -109,16 +109,41 @@
 
 | 항목                  | 백엔드 상태                                                                                         | 프론트 상태                                                                                    | 다음 액션                                              |
 | --------------------- | --------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
-| 나눔 신청 API         | `POST /posts/{id}/requests` 구현, 201/403/409 VM 검증 완료                                          | `requestShare(postId)`, 상세 CTA, 201/403/409 UI, 홈 refresh 신호 구현 완료                    | 실제 VM API로 201/403/409 런타임 QA                    |
-| 신청 동시 경합        | `SELECT ... FOR UPDATE` + 단일 트랜잭션으로 첫 신청만 성공. 이후 요청은 409                         | 409를 정상 race 결과로 처리하고 CTA를 `신청 접수` 상태로 비활성화                              | 실제 동시/중복 신청 QA                                 |
-| 나눔 상태             | `available`, `requested`, `completed` 존재. `/posts/nearby`는 available만 반환                      | `Post.status` 타입과 상세/홈 상태 표시 반영. 신청 성공/409 시 상세 상태와 홈 refresh 신호 반영 | 실제 VM API로 requested 항목이 홈에서 제외되는지 확인  |
-| Post 구조             | `title/description/category` 제거, `detectedFruitKo/freshnessLabel/confidenceScore` 추가            | `src/types/post.ts`, `createPost()` payload, 홈 카드, 상세, 등록 확인 화면 반영 완료           | 실제 VM API로 등록/상세/홈 카드 런타임 QA              |
+| 나눔 신청 API         | `POST /posts/{id}/requests` 구현, 201/403/409 VM 검증 완료                                          | `requestShare(postId)`, 상세 CTA, 201/403/409 UI, 홈 refresh 신호 구현 완료                    | 2026-05-06 VM API 201/403/409 통과                     |
+| 신청 동시 경합        | `SELECT ... FOR UPDATE` + 단일 트랜잭션으로 첫 신청만 성공. 이후 요청은 409                         | 409를 정상 race 결과로 처리하고 CTA를 `신청 접수` 상태로 비활성화                              | 중복 신청 409 확인. 병렬 경합 부하 테스트는 후속       |
+| 나눔 상태             | `available`, `requested`, `completed` 존재. `/posts/nearby`는 available만 반환                      | `Post.status` 타입과 상세/홈 상태 표시 반영. 신청 성공/409 시 상세 상태와 홈 refresh 신호 반영 | requested 전환 후 `/posts/nearby` 제외 확인            |
+| Post 구조             | `title/description/category` 제거, `detectedFruitKo/freshnessLabel/confidenceScore` 추가            | `src/types/post.ts`, `createPost()` payload, 홈 카드, 상세, 등록 확인 화면 반영 완료           | VM API에서 AI 메타데이터 저장 불일치 발견. P0 후속     |
 | AI label              | `Fresh/Mid/Stale/unknown`, `Mid`는 기존 `Normal` 그룹                                               | `postPolicy`가 `Fresh/Mid`를 나눔 가능, `Stale/unknown`을 등록 불가로 매핑                     | fixture 기반 수동 QA                                   |
 | confidenceScore       | Stage 2 신선도 분류 softmax max 확률로 확정. 백엔드 표시 가이드는 0.9 이상 높음, 0.9 미만 확인 필요 | 앱 기준을 `confidenceScore < 0.9`로 갱신. 단독 등록 차단은 하지 않음                           | 0.4/0.7/1.0 fixture로 확인 필요 표시 QA                |
 | rejection reason enum | `not_food`, `low_quality` 등은 Post-MVP                                                             | 앱은 enum을 받으면 방어적으로 처리 가능                                                        | false-positive fixture는 후속 계약 검증으로 유지       |
 | Stale 최종 등록 방어  | `Stale`이면 generate 400, `imageToken` 미발급. create는 무효/만료 토큰 400                          | 프론트도 `canShare=false` UX 가드를 갖고 있음                                                  | 서버가 최종 방어선임을 전제로 stale/token 실패 UX 검증 |
 | 알림                  | `share_created`, `share_requested` payload 구현                                                     | FCM 수신 handler와 로컬 알림함 구현. 읽음 상태 API 없음                                        | 실제 기기 foreground/background/terminated 수신 QA     |
-| 냉장고별 나눔 식재료  | `GET /fridges/{id}/posts?status=available` 구현/검증                                                | 지도에서 선택 냉장고 내부 available 목록 노출 구현. VM/API 런타임 QA 필요                     | 실제 앱에서 냉장고 선택 -> 내부 목록 -> 상세 이동 검증 |
+| 냉장고별 나눔 식재료  | `GET /fridges/{id}/posts?status=available` 구현/검증                                                | 지도에서 선택 냉장고 내부 available 목록 노출 구현                                             | VM API available 목록/제외 확인. 실제 앱 UI QA 후속    |
+
+## 2026-05-06 VM/API 런타임 QA 결과
+
+- 환경: NHN Cloud VM API, SSH tunnel `localhost:8080 -> NHN-Cloud-Server:80`, 기준 시간 2026-05-06.
+- 범위: 실기기 카메라, 실제 FCM 수신, Android permission QA는 제외했다. API 런타임 검증을 위해 공개 바나나 이미지 fixture를 `temp/qa-vm-banana.jpg`로 내려받아 `POST /posts/generate`에 업로드했다. 이 파일은 커밋 대상이 아니다.
+- 준비: 기존 문서의 `mvp_demo_20260505@example.com` 계정은 VM에서 로그인 실패(`이메일 또는 비밀번호가 올바르지 않습니다`)하여 사용하지 않았다. QA 전용 계정 `codex_api_author_20260506211207@example.com`(id 3), `codex_api_requester_20260506211207@example.com`(id 4)을 생성하고 둘 다 `35.1595, 126.9136`으로 위치를 저장했다.
+- 통과:
+  - `GET /health`가 `FoodLink API is running`을 반환했다.
+  - `POST /auth/signup`, `POST /auth/login`, `PUT /auth/me/location`, `GET /auth/me`가 QA 계정에서 정상 동작했다.
+  - `GET /fridges/nearby?latitude=35.1595&longitude=126.9136&radius_km=5`가 공유 냉장고 3개를 반환했다.
+  - 초기 `GET /posts/nearby`와 `GET /fridges/1/posts?status=available`은 0건이었다.
+  - `POST /posts/generate`는 `detectedFruitKo=바나나`, `aiAnalysis.category=Fresh`, `aiAnalysis.confidenceScore=1.0`, `imageToken`을 반환했다.
+  - `POST /posts`로 QA 나눔 식재료 id `2`를 생성했고, 생성 직후 `/posts/nearby`와 `/fridges/1/posts?status=available`에 포함됐다.
+  - 작성자가 자기 나눔 식재료 id `2`를 신청하면 403을 반환했다.
+  - 다른 사용자가 id `2`를 신청하면 201을 반환하고 `request.status=requested`, `post.status=requested`가 됐다.
+  - 신청 후 `GET /posts/2`는 `status=requested`를 반환했다.
+  - 신청 후 `/posts/nearby`와 `/fridges/1/posts?status=available`에서 id `2`가 제외됐다.
+  - 같은 사용자의 중복 신청은 409를 반환했다.
+  - 무효 `imageToken`으로 `POST /posts`를 호출하면 400을 반환했다.
+- 충돌:
+  - 충돌 문서/공지: `API_INTEGRATION_CONTRACT.md`, `VALIDATION_AND_BACKLOG.md`의 백엔드 Phase 1.5 요약, 백엔드 답변 문서의 "Post 컬럼에 `detected_fruit_ko/freshness_label/confidence_score` 추가 및 사용" 설명.
+  - 실제 기준: 2026-05-06 live VM API와 `GET /openapi.json`.
+  - 판단: 실제 VM `POST /posts/generate` 응답은 `freshnessLabel`, `confidenceScore`, `isFresh`를 root가 아니라 `data.aiAnalysis` 아래에만 둔다. 또한 `POST /posts`로 생성한 id `2`의 `GET /posts/2` 응답은 `detectedFruit`, `detectedFruitKo`, `freshnessLabel`, `confidenceScore`가 모두 `null`이었다.
+  - 영향: 프론트는 구형 `title/description/category` 없이 동작하지만, 저장된 Post가 AI 메타데이터를 잃으면 홈 카드/상세/냉장고 내부 목록에서 실제 식재료명과 상태/신뢰도 표시가 제품 기대보다 약해진다.
+  - 후속: 백엔드가 `imageToken`에 묶인 AI 분석 결과를 Post 생성 시 저장하도록 수정하거나, Post 응답에서 해당 필드가 nullable인 것이 제품상 허용되는지 계약을 다시 정해야 한다.
 
 ## 2026-05-05 P0/P1 코드 보강 현황
 
@@ -716,7 +741,7 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
 
 - 분류: 서버 계약 변경 대응
 - 우선순위: P0
-- 상태: 구현 완료, VM/API 런타임 QA 필요
+- 상태: 프론트 구현 완료, VM/API 런타임 QA에서 서버 메타데이터 저장 불일치 발견
 - 배경: 백엔드가 Post 컬럼에서 `title`, `description`, `category`를 제거하고 `detectedFruitKo`, `freshnessLabel`, `confidenceScore`를 추가했다. 프론트 타입과 화면은 이 작업 전까지 구형 작성/표시 필드에 의존했다.
 - 현재 동작: `src/types/post.ts`의 `Post`, `GenerateResult`, `PostCreateData`가 백엔드 Phase 1.5 구조를 반영한다. `createPost()`는 `fridgeId`, `expirationDate`, `imageToken`만 전송하고, 홈 카드/상세/등록 화면은 `detectedFruitKo`, `freshnessLabel`, `confidenceScore`, `status`를 표시한다.
 - 기대 동작: 프론트는 백엔드 Phase 1.5 응답 구조를 기준으로 나눔 식재료명, 신선도 등급, confidence, 이미지, 냉장고, 상태를 표시한다. 사용자-facing 문구는 `나눔 식재료` 기준을 유지한다.
@@ -727,12 +752,30 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
   - [x] `Fresh/Mid/Stale/unknown` 매핑과 `Mid = Normal 그룹` 정책이 테스트로 고정된다.
 - 검증 방법: typecheck 통과, `postPolicy`/`posts.api` unit test 통과, 실제 `GET /posts/{id}`/`POST /posts` VM API 검증, 앱 카드/상세 QA
 - 관련 파일/화면/API: `src/types/post.ts`, `src/api/posts.ts`, `HomeScreen`, `PostDetailScreen`, `PostCreateScreen`, `POST /api/v1/posts`, `GET /api/v1/posts/{id}`
+- 비고: 2026-05-06 VM API에서 `POST /posts/generate`는 AI 분석 결과를 반환했지만, `POST /posts`로 저장한 id `2`의 상세 응답은 `detectedFruit/detectedFruitKo/freshnessLabel/confidenceScore=null`이었다. 프론트 fallback은 유지하되, 백엔드 저장 계약 확인이 필요하다.
+
+## Post AI 메타데이터 저장 계약 불일치 정리
+
+- 분류: 서버 계약 불일치
+- 우선순위: P0
+- 상태: 신규 발견, 백엔드 확인 필요
+- 배경: 제품/프론트 계약은 나눔 식재료 카드와 상세가 `detectedFruitKo`, `freshnessLabel`, `confidenceScore`를 기준으로 표시된다고 정했다. 백엔드 Phase 1.5 답변도 Post 컬럼 추가를 완료했다고 설명했다.
+- 현재 동작: 2026-05-06 VM QA에서 `POST /posts/generate`는 `data.detectedFruitKo=바나나`, `data.aiAnalysis.category=Fresh`, `data.aiAnalysis.confidenceScore=1.0`을 반환했다. 하지만 같은 `imageToken`으로 `POST /posts`를 호출해 생성한 id `2`의 `GET /posts/2` 응답은 `detectedFruit`, `detectedFruitKo`, `freshnessLabel`, `confidenceScore`가 모두 `null`이었다.
+- 기대 동작: 서버는 `imageToken`에 연결된 AI 분석 결과를 최종 Post에 저장하거나, Post 응답에서 해당 값이 비어 있을 수 있음을 명시하고 프론트/제품 표시 정책을 다시 정한다. 현재 제품 의도상 저장하는 쪽이 우선이다.
+- Acceptance Criteria:
+  - [ ] `POST /posts` 성공 후 `GET /posts/{id}`가 `detectedFruit`, `detectedFruitKo`, `freshnessLabel`, `confidenceScore`를 반환한다.
+  - [ ] `/posts/nearby`와 `/fridges/{id}/posts?status=available`도 카드 표시에 필요한 나눔 식재료명과 상태 값을 제공한다.
+  - [ ] `POST /posts/generate` 응답의 root 필드와 `aiAnalysis` 필드 중 어느 쪽이 canonical인지 OpenAPI와 문서가 일치한다.
+  - [ ] 프론트는 백엔드 수정 전까지 null 메타데이터 fallback으로 화면이 깨지지 않음을 테스트로 유지한다.
+- 검증 방법: 공개 fresh fixture로 `generate -> create -> detail -> nearby -> fridge posts` VM API 재검증, `NearbyPostCard`/`PostDetailScreen` null metadata fixture 테스트
+- 관련 파일/화면/API: `POST /api/v1/posts/generate`, `POST /api/v1/posts`, `GET /api/v1/posts/{id}`, `GET /api/v1/posts/nearby`, `GET /api/v1/fridges/{fridge_id}/posts`, `NearbyPostCard`, `PostDetailScreen`, `MapScreen`
+- 비고: 충돌 판단 기준은 live VM API와 `GET /openapi.json`이다. 요약 문서보다 실제 검증 결과를 우선한다.
 
 ## 나눔 신청 API 프론트 연동
 
 - 분류: 기능 구현
 - 우선순위: P1
-- 상태: 프론트 코드 연동 완료, VM/API 런타임 QA 필요
+- 상태: 프론트 코드 연동 완료, VM/API 런타임 QA 통과
 - 배경: MVP 수요자 흐름인 `available -> requested`가 백엔드에 구현됐다. 이 작업에서 상세 화면 CTA를 실제 신청 API에 연결했다.
 - 현재 동작: 상세 화면의 `나눔 신청하기` CTA가 `POST /api/v1/posts/{post_id}/requests`를 호출한다. 성공 시 상세 `post.status`를 `requested`로 바꾸고 Home refresh store에 requested post id를 전달한다. 403/409는 사용자-facing 문구로 분기한다.
 - 기대 동작: 수요자가 available 나눔 식재료 상세에서 `나눔 신청하기`를 누르면 `POST /api/v1/posts/{post_id}/requests`를 호출하고, 성공 시 신청 접수 상태를 표시한다.
@@ -742,14 +785,15 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
   - [x] 작성자 본인 신청 403은 CTA 숨김/비활성화 또는 fallback 문구로 처리한다.
   - [x] 중복/경합 409는 `다른 사용자가 먼저 신청했어요` 문구와 CTA 비활성화로 처리한다.
   - [x] 신청 성공 후 상세 상태와 홈 `/posts/nearby` 재조회 또는 항목 제거가 보장된다.
-- 검증 방법: API client unit test 통과, PostDetail interaction test 통과, Home refresh test 통과, 실제 VM API 201/403/409 QA
+- 검증 방법: API client unit test 통과, PostDetail interaction test 통과, Home refresh test 통과, 실제 VM API 201/403/409 QA 통과
 - 관련 파일/화면/API: `src/api/posts.ts`, `src/types/post.ts`, `PostDetailScreen`, `HomeScreen`, `POST /api/v1/posts/{post_id}/requests`
+- 비고: 2026-05-06 VM QA에서 작성자 본인 신청 403, 첫 신청 201, 중복 신청 409, 신청 후 상세 `status=requested`를 확인했다.
 
 ## 냉장고별 나눔 식재료 조회 프론트 연동
 
 - 분류: 기능 구현
 - 우선순위: P1
-- 상태: 프론트 코드 연동 완료, VM/API 런타임 QA 필요
+- 상태: 프론트 코드 연동 완료, VM/API 런타임 QA 통과, 실제 앱 UI QA 남음
 - 배경: 지도는 주변 공유 냉장고와 그 안의 available 나눔 식재료를 탐색하는 화면이다. 백엔드는 `GET /fridges/{id}/posts?status=available`를 구현했다.
 - 현재 동작: 지도는 냉장고 목록/마커/캐러셀을 보여주고, 특정 냉장고 선택 시 내부 available 나눔 식재료 목록을 조회한다. 항목 탭 시 상세/신청 흐름으로 이동한다.
 - 기대 동작: 사용자가 지도에서 냉장고를 선택하면 해당 냉장고의 available 나눔 식재료를 확인하고 상세/신청 흐름으로 이동할 수 있다.
@@ -758,8 +802,9 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
   - [x] 냉장고 선택 시 loading/error/empty/list 상태가 분리된다.
   - [x] 목록 항목은 나눔 식재료 상세로 이동한다.
   - [x] 위치 미설정 상태에서는 기존 위치 설정 CTA 가드를 유지한다.
-- 검증 방법: API client unit test, 지도 냉장고 선택 QA, empty/error 상태 QA
+- 검증 방법: API client unit test, 지도 냉장고 선택 QA, empty/error 상태 QA, 실제 VM API available 포함/제외 확인
 - 관련 파일/화면/API: `src/api/fridges.ts`, `MapScreen`, `PostDetailScreen`, `GET /api/v1/fridges/{fridge_id}/posts`, `__tests__/fridges.api.test.ts`, `__tests__/map.fridgePosts.test.tsx`
+- 비고: 2026-05-06 VM QA에서 생성 직후 냉장고 id `1` 내부 목록에 포함되고, 신청 후 `requested` 상태가 되면 `status=available` 목록에서 제외됨을 확인했다.
 
 ## 나눔 기준 미충족/등록 차단 상태에서 실제 등록 차단
 
