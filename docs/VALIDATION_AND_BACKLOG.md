@@ -108,9 +108,11 @@
 - P0 `canShare=false` 등록 차단: `AnalysisResultScreen` 버튼 disabled, `PostCreateScreen` 진입 후 guard, `FridgeSelectScreen` 최종 등록 guard를 추가했다.
 - P1 목록 실패/빈 상태 분리: 홈 주변 나눔 식재료, 지도 냉장고, 등록 가능 냉장고 목록에 loading/error/empty 상태와 retry UI를 분리했다.
 - P1 위치 재설정: 홈 위치 헤더와 프로필 `동네 위치 재설정` 메뉴에서 `LocationSetup`으로 재진입한다.
+- P1 위치 미설정 공통 가드: 홈, 지도, AI 스캔 진입점, 냉장고 선택 화면이 `getRegisteredLocation()` 기준을 공유한다. 위치가 없으면 주변 API를 호출하지 않고 `LocationSetup` CTA를 표시한다.
+- P1 등록 완료 후 홈 재조회: `PostCompleteScreen`이 홈 탭에 `nearbyPostsRefreshToken`을 전달하고, `HomeScreen`은 포커스/토큰 변경 시 `/posts/nearby`를 다시 조회한다.
 - P1 카메라 촬영/fallback: `react-native-vision-camera@5`의 `usePhotoOutput().capturePhotoToFile()` 경로로 수정했다. 에뮬레이터에서 촬영 파일 생성 및 실제 `/posts/generate` 호출까지 확인했고, 실제 기기 셔터 검증은 아직 남았다.
 - P1 confidence: `confidenceScore`를 분석 결과/작성 화면에 표시하고 60% 미만은 즉시 차단 대신 `확인 필요`로 분기한다.
-- 회귀 테스트: `__tests__/postPolicy.test.ts`에서 품질 정책, confidence, 작성자 판단을 고정한다.
+- 회귀 테스트: `__tests__/postPolicy.test.ts`에서 품질 정책, confidence, 작성자 판단을 고정한다. `__tests__/postComplete.navigation.test.tsx`, `__tests__/home.nearbyRefresh.test.tsx`에서 등록 완료 홈 복귀와 `/posts/nearby` 재조회 신호를 고정한다.
 - AI QA fixture/실기기 체크리스트: [AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md](./AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md)에 성공/실패/false-positive/대용량/실제 기기 촬영 검증 기준을 정리했다.
 
 ## 권장 작업 순서
@@ -173,33 +175,32 @@
 | 로그인 시 유저 생성 | 정상 동작 | 신규 이메일 계정을 API로 생성하면 `latitude`, `longitude`가 `null`인 유저가 생성된다. 앱 이메일 로그인도 성공한다. | `POST /api/v1/auth/signup`, `POST /api/v1/auth/login`, `src/screens/auth/SignupScreen.tsx`, `src/screens/auth/LoginEmailScreen.tsx` | 소셜 로그인에서 "로그인 시 유저 생성" 정책은 별도 검증 필요 |
 | 기존 유저 재로그인 시 유저 정보 업데이트 | 정상 동작 | 로그인 후 `getMe()`로 최신 유저 정보를 받아 `authStore`에 반영한다. 위치가 있는 유저는 `refreshDeviceRegistration()`으로 위치/FCM 갱신을 시도한다. | `src/screens/auth/LoginEmailScreen.tsx`, `src/store/authStore.ts`, `src/services/deviceRegistration.ts` | FCM 토큰 실패 시 사용자 영향은 2번 실패 케이스에서 추가 검증 |
 | 최초 로그인 직후 동네 위치 미설정 | 정상 동작 | 검증 계정 생성 직후 서버 응답과 `/auth/me`에서 `latitude = null`, `longitude = null` 확인. | `GET /api/v1/auth/me` | 유지 |
-| 동네 위치 미설정 상태의 홈 화면 | 검증 필요 | 정상 UI 흐름에서는 위치 없는 유저가 `Main`으로 들어가지 않고 `LocationSetup`으로 이동한다. 코드상 홈은 위치가 없으면 API 호출을 스킵하고 빈 상태를 보여준다. | `src/screens/home/HomeScreen.tsx` | 강제 진입 테스트 또는 컴포넌트 테스트 추가 |
-| 동네 위치 미설정 상태의 지도 화면 | 버그 | 정상 UI 흐름에서는 접근 불가지만, 코드상 지도는 위치가 없으면 광주 전남대 기본 좌표로 냉장고 API를 호출한다. 위치 미설정 사용자에게 실제 주변 데이터처럼 보일 수 있다. | `src/screens/map/MapScreen.tsx` | 위치 미설정 시 지도 API 호출 차단 또는 위치 등록 CTA 표시 |
+| 동네 위치 미설정 상태의 홈 화면 | 수정됨 | 정상 UI 흐름에서는 위치 없는 유저가 `LocationSetup`으로 이동한다. 강제 진입 시에도 홈은 `/posts/nearby`를 호출하지 않고 위치 설정 CTA를 보여준다. | `src/screens/home/HomeScreen.tsx`, `src/utils/locationGuard.ts`, `__tests__/locationGuard.test.ts` | 에뮬레이터 강제 진입 QA |
+| 동네 위치 미설정 상태의 지도 화면 | 수정됨 | 지도 탭 강제 진입 시 `MapView`를 렌더링하지 않는다. 광주 전남대 기본 좌표 fallback과 반경 원 표시를 제거하고 위치 설정 CTA만 보여준다. | `src/screens/map/MapScreen.tsx`, `src/screens/map/MapScreen.styles.ts`, `src/utils/locationGuard.ts` | 에뮬레이터 강제 진입 QA |
 | 동네 위치 미설정 상태의 검색 화면 | 미구현 | 독립 검색 화면이 없다. 홈 검색 아이콘과 지도 검색 입력 UI만 있고 검색 플로우는 연결되어 있지 않다. | `src/screens/home/HomeScreen.tsx`, `src/screens/map/MapScreen.tsx` | 검색 기능은 5번 미구현 기능 점검에서 백로그화 |
-| 동네 위치 미설정 상태의 나눔 식재료 등록 | 검증 필요 | 정상 UI 흐름에서는 위치 등록 전 메인/카메라 진입이 막힌다. 코드상 `FridgeSelect`는 위치 없을 때 Alert 후 `goBack()` 처리한다. | `src/screens/post/FridgeSelectScreen.tsx` | 강제 진입 테스트 추가 및 위치 등록 CTA로 개선 |
+| 동네 위치 미설정 상태의 나눔 식재료 등록 | 수정됨 | 홈/중앙 AI 스캔 진입점은 위치가 없으면 `CameraScan` 대신 `LocationSetup`으로 보낸다. `FridgeSelect`에 직접 진입해도 냉장고 API를 호출하지 않고 위치 설정 CTA를 표시한다. | `src/navigation/MainTab.tsx`, `src/screens/home/HomeScreen.tsx`, `src/screens/post/FridgeSelectScreen.tsx`, `src/utils/locationGuard.ts` | 에뮬레이터 강제 진입 QA |
 | 최초 위치 등록 화면 분기 | 정상 동작 | 위치 없는 계정으로 로그인 후 앱이 `동네 설정` 화면으로 자연스럽게 이동했다. | UI 검증, `src/screens/auth/LoginEmailScreen.tsx`, `src/navigation/AppNavigator.tsx` | 유지 |
 | 위치 등록 후 홈/지도/나눔 식재료 등록 반영 | 정상 동작 | `이 위치로 설정하기` 후 `/auth/me`에 좌표가 저장됐다. 홈은 `내 동네`로 표시되고, 지도와 냉장고 선택 화면은 실제 냉장고 목록을 조회했다. | `PUT /api/v1/auth/me/location`, `HomeScreen`, `MapScreen`, `FridgeSelectScreen` | 유지 |
-| 위치 재설정 기능 | 미구현 | 위치 재설정으로 연결되는 UI/액션이 없다. 프로필의 설정 메뉴도 동작하지 않는다. | `src/screens/profile/ProfileScreen.tsx` | 다음 스프린트 버그/미구현 후보 |
+| 위치 재설정 기능 | 정상 동작 | 홈 위치 헤더와 프로필 `동네 위치 재설정` 메뉴에서 `LocationSetup`으로 재진입한다. | `src/screens/home/HomeScreen.tsx`, `src/screens/profile/ProfileScreen.tsx`, `src/screens/location/LocationSetupScreen.tsx` | 권한 거부 상태 전용 CTA 보강 |
 | 사진 촬영 후 이미지 파일 생성 | 정상 동작 | `takePhoto()` 호출을 `usePhotoOutput().capturePhotoToFile()`로 수정한 뒤 에뮬레이터 셔터에서 `file:///data/user/0/com.greennode/cache/VisionCamera_*.jpg` 파일 URI가 생성됐다. | UI 검증, `src/screens/camera/CameraScanScreen.tsx`, logcat | 실제 기기 촬영 검증 |
 | 촬영/선택 이미지 API 전달 | 정상 동작 | mock 제거 후 release 앱에서 갤러리 선택 이미지와 셔터 촬영 이미지가 실제 `POST /api/v1/posts/generate`로 전달됐다. 셔터 촬영 재검증에서는 서버가 나눔 기준 미충족 상태 400으로 거부해 API 도달이 확인됐다. | `src/api/posts.ts`, `src/screens/camera/CameraScanScreen.tsx`, logcat | 부패/실패 응답 전용 UX 보강 |
 | AI 분석 결과 표시 | 정상 동작 | 실제 AI 응답이 `분석 결과` 화면에 표시됐다. 재검증 결과는 `바나나`, `신선`, confidence 100%, 분석 메모 `식재료가 신선합니다. 나눔이 가능합니다.`였다. mock 고정값인 `사과`가 아니었다. | `src/screens/camera/AnalysisResultScreen.tsx` | stale/bad fixture로 나눔 기준 미충족 결과 추가 검증 |
 | AI 결과의 나눔 식재료 생성 기본값 반영 | 정상 동작 | 실제 AI 응답 기반으로 `나눔 등록` 화면에 `바나나`, `신선`, 제목 `신선한 바나나 나눔합니다`, 설명 기본값이 채워졌다. | `src/screens/post/PostCreateScreen.tsx` | 유지 |
-| 나눔 식재료 등록 후 홈 목록 반영 | 부분 검증 | 냉장고 선택 후 실제 `POST /api/v1/posts`가 성공했고 완료 화면이 표시됐다. 서버에는 테스트 나눔 식재료 id `6`이 생성됐고 검증 후 삭제했다. 홈 목록 재진입 반영은 테스트 나눔 식재료 정리 전에 별도 확인하지 못했다. | `src/api/posts.ts`, `src/screens/post/PostCompleteScreen.tsx`, `src/screens/home/HomeScreen.tsx` | 등록 완료 후 홈 목록 refresh/재진입 반영을 회귀 테스트로 추가 |
+| 나눔 식재료 등록 후 홈 목록 반영 | 구현됨, 런타임 재검증 필요 | 냉장고 선택 후 실제 `POST /api/v1/posts` 성공과 완료 화면 표시까지 확인했다. 코드상 완료 화면의 홈 복귀는 홈 탭에 `nearbyPostsRefreshToken`을 전달하고, 홈은 포커스/토큰 변경 시 `/posts/nearby`를 재조회한다. | `src/screens/post/PostCompleteScreen.tsx`, `src/screens/home/HomeScreen.tsx`, `__tests__/postComplete.navigation.test.tsx`, `__tests__/home.nearbyRefresh.test.tsx` | 실제 앱에서 등록 직후 홈 목록 반영을 한 번 더 재검증 |
 | 나눔 식재료 등록 후 지도/냉장고 관련 반영 | 부분 검증 | 냉장고 선택 화면에서 실제 냉장고 목록 `광주역 공유냉장고`, `충장로 공유냉장고`, `전남대학교 공유냉장고`가 표시됐고, 선택한 냉장고로 실제 나눔 식재료 생성까지 성공했다. 현재 지도는 냉장고 목록 중심이라 나눔 식재료 지도 반영 정책은 별도 정리가 필요하다. | `src/api/posts.ts`, `src/screens/map/MapScreen.tsx`, `src/screens/post/FridgeSelectScreen.tsx` | 지도/냉장고 상세에서 나눔 식재료를 어떻게 노출할지 정책 결정 |
 
 #### 해결/잔여 버그 목록
 
 1. 해결됨: `USE_MOCK_AI_PIPELINE`을 제거했고, `generatePost()`와 `createPost()`가 실제 서버를 호출하도록 수정했다. 실제 앱에서 AI 분석, 나눔 식재료 생성, 완료 화면까지 검증했고 테스트 나눔 식재료은 삭제했다.
 2. 해결됨: 에뮬레이터 셔터 촬영 TypeError는 `react-native-vision-camera@5` API 변경에 맞춰 수정했고, 촬영 파일 생성 및 실제 API 호출까지 확인했다.
-3. 위치 없는 유저가 지도에 강제 진입하면 기본 좌표로 냉장고 API를 호출해 위치 설정이 된 것처럼 보일 수 있다.
-4. 위치 재설정 기능이 UI에 없다.
+3. 해결됨: 위치 없는 유저가 홈/지도/냉장고 선택에 강제 진입해도 기본 좌표로 주변 API를 호출하지 않는다. 지도는 `MapView` 자체를 렌더링하지 않고, 홈/지도/냉장고 선택은 위치 설정 CTA를 표시한다.
 
 #### 다음 스프린트에서 반드시 고칠 항목
 
 1. 나눔 기준 미충족 상태(`canShare=false`)에서 실제 등록 화면 진입과 최종 등록을 차단하는 가드를 추가한다.
 2. 실제 기기에서 카메라 촬영 파일 생성과 `react-native-vision-camera` 설정을 검증한다. 에뮬레이터에서는 갤러리 선택 fallback을 검증 경로로 명시한다.
-3. 위치 미설정 상태에서 홈/지도/나눔 식재료 등록에 강제 진입했을 때 위치 등록 CTA로 되돌리는 공통 가드를 추가한다.
-4. 위치 재설정 진입점을 프로필 또는 홈 위치 헤더에 연결한다.
+3. 완료: 위치 미설정 상태에서 홈/지도/나눔 식재료 등록에 강제 진입했을 때 위치 등록 CTA로 되돌리는 공통 가드를 추가한다.
+4. 완료: 위치 재설정 진입점을 프로필과 홈 위치 헤더에 연결한다.
 5. 독립 검색 화면/검색 결과 상태는 현재 미구현으로 분리해 다음 스프린트 백로그에 넣는다.
 
 ### Codex 작업 지시 예시
@@ -736,6 +737,21 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
 - 검증 방법: API base URL 오류 주입, 네트워크 차단 QA, 컴포넌트 테스트
 - 관련 파일/화면/API: `HomeScreen`, `MapScreen`, `FridgeSelectScreen`, `/posts/nearby`, `/fridges/nearby`, `/fridges/available`
 
+## 나눔 식재료 등록 완료 후 홈 주변 목록 재조회
+
+- 분류: 버그
+- 우선순위: P1
+- 상태: 완료, 실제 앱 런타임 재검증 필요
+- 배경: `POST /api/v1/posts` 성공 후 완료 화면에서 홈으로 돌아갈 때 홈 목록이 이전 `/posts/nearby` 결과를 그대로 보여줄 수 있다.
+- 현재 동작: `PostCompleteScreen`의 `홈으로 돌아가기`는 RootStack을 `Main > Home`으로 reset하면서 `nearbyPostsRefreshToken`과 `completedPostId`를 전달한다. `HomeScreen`은 포커스되거나 refresh token이 바뀔 때 `getNearbyPosts()`를 호출한다.
+- 기대 동작: `등록 완료 -> 홈 복귀 -> 주변 나눔 식재료 재조회`가 navigation state에 명시적으로 표현되고, 홈 도착 시 `/posts/nearby` 호출이 보장된다.
+- Acceptance Criteria:
+  - [x] 등록 완료 화면의 홈 복귀 route가 `Main > Home`과 refresh token을 포함한다.
+  - [x] 홈 화면은 refresh token 변경 시 현재 동네 위치로 `/posts/nearby`를 재호출한다.
+  - [x] 위치 미설정 상태에서는 기존 위치 등록 CTA 흐름을 유지하고 주변 API를 호출하지 않는다.
+- 검증 방법: `__tests__/postComplete.navigation.test.tsx`, `__tests__/home.nearbyRefresh.test.tsx`, 실제 앱에서 등록 직후 홈 목록 갱신 확인
+- 관련 파일/화면/API: `PostCompleteScreen`, `HomeScreen`, `MainTabParamList.Home`, `/posts/nearby`
+
 ## 위치 재설정 진입점 연결
 
 - 분류: 미구현
@@ -750,6 +766,23 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
   - [ ] 위치 권한 거부 시 설정/재시도 안내가 표시된다.
 - 검증 방법: 위치 있는 계정으로 재설정 QA, `/auth/me` 좌표 변경 확인
 - 관련 파일/화면/API: `HomeScreen`, `ProfileScreen`, `LocationSetupScreen`, `PUT /api/v1/auth/me/location`
+
+## 위치 미설정 강제 진입 공통 가드
+
+- 분류: 버그
+- 우선순위: P1
+- 상태: 완료, 에뮬레이터 강제 진입 QA 필요
+- 배경: 정상 네비게이션은 위치 없는 사용자를 `LocationSetup`으로 보내지만, 지도나 냉장고 선택에 강제 진입하면 기본 좌표 또는 Alert/goBack 흐름이 보일 수 있었다.
+- 현재 동작: `getRegisteredLocation()`을 공통 위치 판정 기준으로 사용한다. 홈, 지도, AI 스캔 진입점, 냉장고 선택 화면은 위치가 없으면 주변 API를 호출하지 않고 `LocationSetup` CTA를 보여준다.
+- 기대 동작: 위치 미설정 사용자는 기본 좌표 주변 데이터처럼 보이는 화면을 보지 않는다.
+- Acceptance Criteria:
+  - [x] 위치가 없으면 홈은 `/posts/nearby`를 호출하지 않고 위치 설정 CTA를 표시한다.
+  - [x] 위치가 없으면 지도는 `MapView`와 전남대 기본 좌표 fallback을 렌더링하지 않는다.
+  - [x] 위치가 없으면 중앙 AI 스캔 버튼과 홈 히어로 CTA는 `CameraScan` 대신 `LocationSetup`으로 이동한다.
+  - [x] 위치가 없으면 `FridgeSelect`는 `/fridges/available`을 호출하지 않고 위치 설정 CTA를 표시한다.
+  - [x] 위치 판정은 `latitude=0`, `longitude=0` 같은 유효한 좌표를 누락으로 오인하지 않는다.
+- 검증 방법: `__tests__/locationGuard.test.ts`, eslint, typecheck, 에뮬레이터에서 위치 없는 계정 강제 진입 QA
+- 관련 파일/화면/API: `src/utils/locationGuard.ts`, `HomeScreen`, `MapScreen`, `MainTab`, `FridgeSelectScreen`, `/posts/nearby`, `/fridges/nearby`, `/fridges/available`
 
 ## 실제 기기 카메라 촬영 경로 재검증 및 fallback 개선
 

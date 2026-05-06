@@ -21,6 +21,12 @@ import {createPost} from '@/api/posts';
 import {useAuthStore} from '@/store/authStore';
 import type {Fridge} from '@/types';
 import {getApiErrorMessage} from '@/utils/apiError';
+import {
+  getRegisteredLocation,
+  LOCATION_REQUIRED_CTA,
+  LOCATION_REQUIRED_MESSAGE,
+  LOCATION_REQUIRED_TITLE,
+} from '@/utils/locationGuard';
 import {isShareableCategory} from '@/utils/postPolicy';
 import {colors} from '@/theme';
 import {styles} from './FridgeSelectScreen.styles';
@@ -30,6 +36,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'FridgeSelect'>;
 const FridgeSelectScreen = ({route, navigation}: Props) => {
   const {postData, qualityCategory, qualityCanShare} = route.params;
   const user = useAuthStore(state => state.user);
+  const location = getRegisteredLocation(user);
 
   const [fridges, setFridges] = useState<Fridge[]>([]);
   const [selectedFridgeId, setSelectedFridgeId] = useState<number | null>(null);
@@ -58,14 +65,21 @@ const FridgeSelectScreen = ({route, navigation}: Props) => {
     }
   }, []);
 
+  const openLocationSetup = useCallback(() => {
+    navigation.navigate('LocationSetup', {allowBack: true});
+  }, [navigation]);
+
   useEffect(() => {
-    if (user?.latitude != null && user?.longitude != null) {
-      fetchFridges(user.latitude, user.longitude);
-    } else {
-      Alert.alert('위치 정보 없음', '위치 정보를 확인할 수 없습니다.');
-      navigation.goBack();
+    const registeredLocation = getRegisteredLocation(user);
+    if (!registeredLocation) {
+      setIsLoading(false);
+      setFridges([]);
+      setFridgeError(LOCATION_REQUIRED_MESSAGE);
+      return;
     }
-  }, [fetchFridges, navigation, user]);
+
+    fetchFridges(registeredLocation.latitude, registeredLocation.longitude);
+  }, [fetchFridges, user]);
 
   const handleComplete = async () => {
     if (!selectedFridgeId || !postData) {return;}
@@ -152,16 +166,26 @@ const FridgeSelectScreen = ({route, navigation}: Props) => {
           </View>
         ) : fridgeError ? (
           <View style={styles.centerBox}>
-            <Text style={styles.errorTitle}>냉장고를 불러오지 못했습니다</Text>
+            <Text style={styles.errorTitle}>
+              {location ? '냉장고를 불러오지 못했습니다' : LOCATION_REQUIRED_TITLE}
+            </Text>
             <Text style={styles.errorSubtitle}>{fridgeError}</Text>
             <TouchableOpacity
               style={styles.retryButton}
               onPress={() => {
-                if (user?.latitude != null && user?.longitude != null) {
-                  fetchFridges(user.latitude, user.longitude);
+                const registeredLocation = getRegisteredLocation(user);
+                if (!registeredLocation) {
+                  openLocationSetup();
+                  return;
                 }
+                fetchFridges(
+                  registeredLocation.latitude,
+                  registeredLocation.longitude,
+                );
               }}>
-              <Text style={styles.retryButtonText}>다시 시도</Text>
+              <Text style={styles.retryButtonText}>
+                {location ? '다시 시도' : LOCATION_REQUIRED_CTA}
+              </Text>
             </TouchableOpacity>
           </View>
         ) : fridges.length === 0 ? (
@@ -180,18 +204,23 @@ const FridgeSelectScreen = ({route, navigation}: Props) => {
         )}
       </View>
 
-      <View style={styles.footer}>
-        <TouchableOpacity
-          style={[styles.submitButton, (!selectedFridgeId || isSubmitting) && styles.submitDisabled]}
-          onPress={handleComplete}
-          disabled={!selectedFridgeId || isSubmitting}>
-          {isSubmitting ? (
-            <ActivityIndicator color="#FFFFFF" />
-          ) : (
-            <Text style={styles.submitButtonText}>나눔 완료하기</Text>
-          )}
-        </TouchableOpacity>
-      </View>
+      {location ? (
+        <View style={styles.footer}>
+          <TouchableOpacity
+            style={[
+              styles.submitButton,
+              (!selectedFridgeId || isSubmitting) && styles.submitDisabled,
+            ]}
+            onPress={handleComplete}
+            disabled={!selectedFridgeId || isSubmitting}>
+            {isSubmitting ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={styles.submitButtonText}>나눔 완료하기</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      ) : null}
     </View>
   );
 };

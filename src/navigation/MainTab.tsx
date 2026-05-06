@@ -9,6 +9,8 @@ import {View, Text, StyleSheet, TouchableOpacity} from 'react-native';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import type {MainTabParamList} from './types';
 import {colors} from '@/theme';
+import {useAuthStore} from '@/store/authStore';
+import {hasRegisteredLocation} from '@/utils/locationGuard';
 
 import HomeScreen from '@/screens/home/HomeScreen';
 import MapScreen from '@/screens/map/MapScreen';
@@ -89,6 +91,9 @@ const cameraTabButton = ({
 );
 
 const MainTab = () => {
+  const user = useAuthStore(state => state.user);
+  const hasLocation = hasRegisteredLocation(user);
+
   return (
     <Tab.Navigator
       screenOptions={{
@@ -122,6 +127,10 @@ const MainTab = () => {
         listeners={({navigation}) => ({
           tabPress: e => {
             e.preventDefault();
+            if (!hasLocation) {
+              navigation.getParent()?.navigate('LocationSetup', {allowBack: true});
+              return;
+            }
             // RootStack의 CameraScan으로 이동
             navigation.getParent()?.navigate('CameraScan');
           },

@@ -23,6 +23,12 @@ import {getNearbyFridges} from '@/api/fridges';
 import {useAuthStore} from '@/store/authStore';
 import type {Fridge} from '@/types';
 import {filterFridges} from '@/utils/fridgeSearch';
+import {
+  getRegisteredLocation,
+  LOCATION_REQUIRED_CTA,
+  LOCATION_REQUIRED_MESSAGE,
+  LOCATION_REQUIRED_TITLE,
+} from '@/utils/locationGuard';
 import {colors} from '@/theme';
 import {styles} from './MapScreen.styles';
 
@@ -38,31 +44,42 @@ const MapScreen = () => {
   const [selectedFridgeId, setSelectedFridgeId] = useState<number | null>(null);
   const mapRef = useRef<MapView>(null);
   const flatListRef = useRef<FlatList>(null);
+  const location = getRegisteredLocation(user);
   const displayedFridges = useMemo(
     () => filterFridges(fridges, searchQuery),
     [fridges, searchQuery],
   );
 
-  // 기본 좌표 (유저 위치 없으면 광주 전남대)
-  const initialRegion = {
-    latitude: user?.latitude || 35.1595,
-    longitude: user?.longitude || 126.9136,
-    latitudeDelta: 0.04,
-    longitudeDelta: 0.04,
-  };
+  const initialRegion = location
+    ? {
+        latitude: location.latitude,
+        longitude: location.longitude,
+        latitudeDelta: 0.04,
+        longitudeDelta: 0.04,
+      }
+    : null;
+
+  const openLocationSetup = useCallback(() => {
+    navigation.getParent()?.navigate('LocationSetup', {allowBack: true});
+  }, [navigation]);
 
   const fetchFridges = useCallback(async () => {
-    if (user?.latitude == null || user?.longitude == null) {
+    const registeredLocation = getRegisteredLocation(user);
+    if (!registeredLocation) {
       setFridges([]);
       setFridgeState('error');
-      setFridgeError('동네 위치를 설정하면 주변 냉장고를 확인할 수 있습니다.');
+      setFridgeError(LOCATION_REQUIRED_MESSAGE);
       return;
     }
 
     setFridgeState('loading');
     setFridgeError(null);
     try {
-      const response = await getNearbyFridges(user.latitude, user.longitude, 2.0);
+      const response = await getNearbyFridges(
+        registeredLocation.latitude,
+        registeredLocation.longitude,
+        2.0,
+      );
       if (response.success && response.data) {
         setFridges(response.data);
         setFridgeState(response.data.length > 0 ? 'ready' : 'empty');
@@ -77,7 +94,7 @@ const MapScreen = () => {
       setFridgeState('error');
       setFridgeError('서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.');
     }
-  }, [user?.latitude, user?.longitude]);
+  }, [user]);
 
   useEffect(() => {
     fetchFridges();
@@ -144,6 +161,27 @@ const MapScreen = () => {
     );
   };
 
+  if (!location || !initialRegion) {
+    return (
+      <View style={styles.container}>
+        <StatusBar
+          barStyle="dark-content"
+          backgroundColor="#FFFFFF"
+          translucent={false}
+        />
+        <View style={styles.locationRequiredContainer}>
+          <Text style={styles.locationRequiredTitle}>{LOCATION_REQUIRED_TITLE}</Text>
+          <Text style={styles.locationRequiredText}>{LOCATION_REQUIRED_MESSAGE}</Text>
+          <TouchableOpacity
+            style={styles.retryButton}
+            onPress={openLocationSetup}>
+            <Text style={styles.retryButtonText}>{LOCATION_REQUIRED_CTA}</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
@@ -171,10 +209,7 @@ const MapScreen = () => {
         showsMyLocationButton={false}>
         {/* 반경 표시 원 */}
         <Circle
-          center={{
-            latitude: user?.latitude || 35.1595,
-            longitude: user?.longitude || 126.9136,
-          }}
+          center={location}
           radius={2000} // 2km
           fillColor="rgba(30, 98, 59, 0.1)"
           strokeColor={colors.primary}
@@ -205,10 +240,6 @@ const MapScreen = () => {
       <TouchableOpacity
         style={styles.myLocationButton}
         onPress={() => {
-          if (user?.latitude == null || user?.longitude == null) {
-            navigation.getParent()?.navigate('LocationSetup', {allowBack: true});
-            return;
-          }
           mapRef.current?.animateToRegion(initialRegion, 500);
         }}>
         <Text style={styles.myLocationIcon}>📍</Text>
@@ -228,17 +259,9 @@ const MapScreen = () => {
             <TouchableOpacity
               style={styles.retryButton}
               onPress={() => {
-                if (user?.latitude == null || user?.longitude == null) {
-                  navigation.getParent()?.navigate('LocationSetup', {
-                    allowBack: true,
-                  });
-                  return;
-                }
                 fetchFridges();
               }}>
-              <Text style={styles.retryButtonText}>
-                {user?.latitude == null ? '위치 설정' : '다시 시도'}
-              </Text>
+              <Text style={styles.retryButtonText}>다시 시도</Text>
             </TouchableOpacity>
           </View>
         ) : displayedFridges.length > 0 ? (

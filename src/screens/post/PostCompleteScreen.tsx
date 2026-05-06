@@ -23,7 +23,8 @@ import {colors} from '@/theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PostComplete'>;
 
-const PostCompleteScreen = ({navigation}: Props) => {
+const PostCompleteScreen = ({route, navigation}: Props) => {
+  const {postId} = route.params;
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
 
@@ -44,10 +45,21 @@ const PostCompleteScreen = ({navigation}: Props) => {
   }, [opacityAnim, scaleAnim]);
 
   const handleGoHome = () => {
-    // RootStack을 처음부터 리셋하여 Main으로 이동
+    // RootStack을 처음부터 리셋하고 홈 탭에 재조회 신호를 전달한다.
     navigation.reset({
       index: 0,
-      routes: [{name: 'Main'}],
+      routes: [
+        {
+          name: 'Main',
+          params: {
+            screen: 'Home',
+            params: {
+              completedPostId: postId,
+              nearbyPostsRefreshToken: Date.now(),
+            },
+          },
+        },
+      ],
     });
   };
 
