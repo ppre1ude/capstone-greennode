@@ -30,6 +30,7 @@ import {launchImageLibrary} from 'react-native-image-picker';
 import {styles} from './CameraScanScreen.styles';
 import {generatePost} from '@/api/posts';
 import {getApiErrorMessage} from '@/utils/apiError';
+import {validateImageForUpload} from '@/utils/imageUploadPolicy';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CameraScan'>;
 
@@ -72,13 +73,26 @@ const CameraScanScreen = ({navigation}: Props) => {
     try {
       const result = await launchImageLibrary({
         mediaType: 'photo',
+        maxWidth: 2048,
+        maxHeight: 2048,
         quality: 0.8,
       });
 
       if (result.assets && result.assets.length > 0) {
         const asset = result.assets[0];
+        const validation = validateImageForUpload({
+          uri: asset.uri,
+          type: asset.type,
+          fileSize: asset.fileSize,
+        });
+
+        if (!validation.ok) {
+          Alert.alert('업로드 불가', validation.reason);
+          return;
+        }
+
         if (asset.uri) {
-          processImage(asset.uri, asset.type, asset.fileName);
+          await processImage(asset.uri, asset.type, asset.fileName);
         }
       }
     } catch (error) {

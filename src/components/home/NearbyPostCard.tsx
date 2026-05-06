@@ -1,8 +1,8 @@
 /**
- * NearbyPostCard — 근처 게시글 카드 컴포넌트
+ * NearbyPostCard — 근처 나눔 식재료 카드 컴포넌트
  *
  * 홈 화면 피드에서 사용하는 재사용 카드
- * 이미지 + 신선도 뱃지 + 제목 + 위치 + 시간
+ * 이미지 + 상태 뱃지 + 제목 + 위치 + 시간
  */
 import React from 'react';
 import {View, Text, StyleSheet, Image, TouchableOpacity} from 'react-native';
@@ -25,10 +25,10 @@ const NearbyPostCard = ({post, onPress}: Props) => {
           style={styles.image}
           resizeMode="cover"
         />
-        {/* 신선도 뱃지 */}
+        {/* 상태 뱃지 */}
         <View style={styles.freshBadge}>
           <View style={styles.freshDot} />
-          <Text style={styles.freshText}>신선</Text>
+          <Text style={styles.freshText}>나눔 가능</Text>
         </View>
       </View>
 

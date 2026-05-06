@@ -1,7 +1,7 @@
 /**
  * ProfileScreen — 내 정보 탭 (Phase 6)
  *
- * 유저의 신뢰도 온도(Trust Score), 적립 포인트, 그리고 설정 메뉴 표시.
+ * 유저 정보, 준비 중인 활동 지표, 설정 메뉴 표시.
  * 로그아웃 기능을 포함.
  *
  * @wireframe wireframe-foodlink/profile.html
@@ -48,9 +48,6 @@ const ProfileScreen = () => {
     ]);
   };
 
-  const trustScore = 85; // MVP Mock
-  const points = 1250; // MVP Mock
-
   const handleMenuPress = (id: string) => {
     if (id === 'location') {
       navigation.getParent()?.navigate('LocationSetup', {allowBack: true});
@@ -91,18 +88,13 @@ const ProfileScreen = () => {
           <View style={styles.trustBox}>
             <View style={styles.trustHeader}>
               <Text style={styles.trustTitle}>신선도 온도 🌡️</Text>
-              <Text style={styles.trustScore}>{trustScore}°C</Text>
+              <Text style={styles.trustScore}>준비 중</Text>
             </View>
             <View style={styles.progressBarBg}>
-              <View
-                style={[
-                  styles.progressBarFill,
-                  {width: `${Math.min(trustScore, 100)}%`},
-                ]}
-              />
+              <View style={[styles.progressBarFill, {width: '0%'}]} />
             </View>
             <Text style={styles.trustDesc}>
-              나눔을 성실히 완료할수록 온도가 올라갑니다.
+              나눔 기록이 쌓이면 활동 지표가 표시됩니다.
             </Text>
           </View>
 
@@ -110,16 +102,12 @@ const ProfileScreen = () => {
           <View style={styles.statsRow}>
             <View style={styles.statBox}>
               <Text style={styles.statTitle}>보유 포인트</Text>
-              <Text style={styles.statValue}>
-                {points.toLocaleString()} <Text style={styles.statUnit}>P</Text>
-              </Text>
+              <Text style={styles.statValue}>준비 중</Text>
             </View>
             <View style={styles.divider} />
             <View style={styles.statBox}>
               <Text style={styles.statTitle}>탄소 절감량</Text>
-              <Text style={styles.statValue}>
-                3.2 <Text style={styles.statUnit}>kg</Text>
-              </Text>
+              <Text style={styles.statValue}>준비 중</Text>
             </View>
           </View>
         </View>
@@ -272,11 +260,6 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     color: colors.textPrimary,
-  },
-  statUnit: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.primary,
   },
   divider: {
     width: 1,

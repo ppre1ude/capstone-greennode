@@ -1,6 +1,6 @@
 /**
  * 메인 하단 탭 네비게이터
- * 홈 | 지도 | AI 스캔 (중앙 FAB) | 채팅 | 내 정보
+ * 홈 | 지도 | AI 스캔 (중앙 FAB) | 알림 | 내 정보
  *
  * @wireframe wireframe-foodlink/homescreen.html (하단바)
  */
@@ -9,6 +9,8 @@ import {View, Text, StyleSheet, TouchableOpacity} from 'react-native';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import type {MainTabParamList} from './types';
 import {colors} from '@/theme';
+import {useAuthStore} from '@/store/authStore';
+import {hasRegisteredLocation} from '@/utils/locationGuard';
 
 import HomeScreen from '@/screens/home/HomeScreen';
 import MapScreen from '@/screens/map/MapScreen';
@@ -43,7 +45,7 @@ const TAB_ICONS: Record<string, {active: string; inactive: string}> = {
   Home: {active: '🏠', inactive: '🏡'},
   Map: {active: '🗺️', inactive: '🗺️'},
   CameraScan: {active: '📷', inactive: '📷'},
-  Chat: {active: '💬', inactive: '💬'},
+  Chat: {active: '🔔', inactive: '🔔'},
   Profile: {active: '👤', inactive: '👤'},
 };
 
@@ -89,6 +91,9 @@ const cameraTabButton = ({
 );
 
 const MainTab = () => {
+  const user = useAuthStore(state => state.user);
+  const hasLocation = hasRegisteredLocation(user);
+
   return (
     <Tab.Navigator
       screenOptions={{
@@ -122,6 +127,10 @@ const MainTab = () => {
         listeners={({navigation}) => ({
           tabPress: e => {
             e.preventDefault();
+            if (!hasLocation) {
+              navigation.getParent()?.navigate('LocationSetup', {allowBack: true});
+              return;
+            }
             // RootStack의 CameraScan으로 이동
             navigation.getParent()?.navigate('CameraScan');
           },
@@ -130,7 +139,7 @@ const MainTab = () => {
       <Tab.Screen
         name="Chat"
         component={ChatListScreen}
-        options={{tabBarLabel: '채팅', tabBarIcon: chatIcon}}
+        options={{tabBarLabel: '알림', tabBarIcon: chatIcon}}
       />
       <Tab.Screen
         name="Profile"

@@ -1,4 +1,4 @@
-import type {GenerateResult} from '@/types';
+import type {AiAnalysis, GenerateResult} from '@/types';
 
 type PostOwnershipFields = {
   authorId?: number | null;
@@ -10,21 +10,53 @@ export type QualityMeta = {
   canShare: boolean;
 };
 
-const SHAREABLE_CATEGORIES = new Set(['fresh', 'good', 'normal', 'mid', 'medium']);
+const SHAREABLE_CATEGORIES = new Set([
+  'fresh',
+  'good',
+  'normal',
+  'mid',
+  'medium',
+]);
 const UNSAFE_CATEGORIES = new Set(['rotten', 'stale', 'bad']);
+const REJECTED_CATEGORIES = new Set([
+  'not_food',
+  'non_food',
+  'not-food',
+  'non-food',
+  'low_quality',
+  'low-quality',
+  'screenshot',
+  'ui_screenshot',
+  'ui-screenshot',
+]);
+const REVIEW_CATEGORIES = new Set([
+  'uncertain',
+  'review_required',
+  'review-required',
+  'multi_object_review',
+  'multi-object-review',
+]);
 
 export const getQualityMeta = (category?: string | null): QualityMeta => {
   const normalized = (category || '').toLowerCase();
 
   if (SHAREABLE_CATEGORIES.has(normalized)) {
-    if (['normal', 'mid', 'medium'].includes(normalized)) {
-      return {label: '보통', canShare: true};
-    }
-    return {label: '신선', canShare: true};
+    return {label: '상태가 좋아 보여요', canShare: true};
   }
 
   if (UNSAFE_CATEGORIES.has(normalized)) {
-    return {label: '부패 의심', canShare: false};
+    return {label: '나눔 기준에 맞지 않아요', canShare: false};
+  }
+
+  if (REJECTED_CATEGORIES.has(normalized)) {
+    if (['low_quality', 'low-quality'].includes(normalized)) {
+      return {label: '사진으로 상태를 확인하기 어려워요', canShare: false};
+    }
+    return {label: '식재료 사진으로 확인되지 않았어요', canShare: false};
+  }
+
+  if (REVIEW_CATEGORIES.has(normalized)) {
+    return {label: '확인 필요', canShare: true};
   }
 
   return {label: category || '분석 중', canShare: true};
@@ -33,9 +65,27 @@ export const getQualityMeta = (category?: string | null): QualityMeta => {
 export const isShareableCategory = (category?: string | null): boolean =>
   getQualityMeta(category).canShare;
 
+export const getAnalysisQualityMeta = (
+  analysis?: Partial<AiAnalysis> | null,
+): QualityMeta => {
+  const rejectionMeta = getQualityMeta(analysis?.rejectionReason);
+
+  if (!rejectionMeta.canShare || rejectionMeta.label === '확인 필요') {
+    return rejectionMeta;
+  }
+
+  const reviewMeta = getQualityMeta(analysis?.reviewReason);
+
+  if (reviewMeta.label === '확인 필요') {
+    return reviewMeta;
+  }
+
+  return getQualityMeta(analysis?.category);
+};
+
 export const canShareAnalysisResult = (
   result?: Pick<GenerateResult, 'aiAnalysis'> | null,
-): boolean => isShareableCategory(result?.aiAnalysis?.category);
+): boolean => getAnalysisQualityMeta(result?.aiAnalysis).canShare;
 
 export const getConfidencePercent = (
   confidenceScore?: number | null,

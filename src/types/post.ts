@@ -24,6 +24,8 @@ export interface AiAnalysis {
   detectedFruit?: string;
   detectedFruitKo?: string;
   analysisSkipped?: boolean;
+  rejectionReason?: string | null;
+  reviewReason?: string | null;
 }
 
 export interface GenerateResult {

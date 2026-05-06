@@ -1,5 +1,5 @@
 /**
- * PostCompleteScreen — 게시글 등록 완료 화면
+ * PostCompleteScreen — 나눔 식재료 등록 완료 화면
  *
  * 나눔 등록 성공 시 띄워주는 피드백 화면.
  * Lottie 또는 애니메이션 처리 가능, MVP에서는 단순 아이콘과 텍스트 제공.
@@ -23,7 +23,8 @@ import {colors} from '@/theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PostComplete'>;
 
-const PostCompleteScreen = ({navigation}: Props) => {
+const PostCompleteScreen = ({route, navigation}: Props) => {
+  const {postId} = route.params;
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
 
@@ -44,10 +45,21 @@ const PostCompleteScreen = ({navigation}: Props) => {
   }, [opacityAnim, scaleAnim]);
 
   const handleGoHome = () => {
-    // RootStack을 처음부터 리셋하여 Main으로 이동
+    // RootStack을 처음부터 리셋하고 홈 탭에 재조회 신호를 전달한다.
     navigation.reset({
       index: 0,
-      routes: [{name: 'Main'}],
+      routes: [
+        {
+          name: 'Main',
+          params: {
+            screen: 'Home',
+            params: {
+              completedPostId: postId,
+              nearbyPostsRefreshToken: Date.now(),
+            },
+          },
+        },
+      ],
     });
   };
 
@@ -79,7 +91,7 @@ const PostCompleteScreen = ({navigation}: Props) => {
               <Text style={styles.pushTime}>방금 전</Text>
             </View>
             <Text style={styles.pushTitle}>새로운 나눔이 등록되었어요!</Text>
-            <Text style={styles.pushBody}>근처 공유 냉장고에 신선한 식재료가 등록되었습니다.</Text>
+            <Text style={styles.pushBody}>근처 공유 냉장고에 나눔 식재료가 등록되었습니다.</Text>
           </View>
         </Animated.View>
       </View>

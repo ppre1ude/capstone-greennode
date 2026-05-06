@@ -7,6 +7,7 @@
     "ios": "react-native run-ios",
     "lint": "eslint .",
     "mock:api": "node scripts/mock-api.js",
+    "qa:ai-fixtures": "node scripts/validate-ai-fixtures.js",
     "start": "react-native start",
     "test": "jest"
   },

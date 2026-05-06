@@ -1,9 +1,9 @@
 /**
- * PostDetailScreen — 게시글 상세 조회 화면
+ * PostDetailScreen — 나눔 식재료 상세 조회 화면
  *
- * 홈 화면의 피드(NearbyPostCard)에서 특정 게시글을 터치했을 때 진입.
- * 게시글의 이미지, 제목, 카테고리, 상태(신선도 등), 상세 설명 등을 보여줌.
- * 본인이 작성한 게시글일 경우 삭제(나눔 취소) 버튼 표시.
+ * 홈 화면의 피드(NearbyPostCard)에서 특정 나눔 식재료를 터치했을 때 진입.
+ * 나눔 식재료의 이미지, 제목, 카테고리, 상태, 상세 설명 등을 보여줌.
+ * 본인이 작성한 나눔 식재료일 경우 삭제(나눔 취소) 버튼 표시.
  *
  * @wireframe (별도 와이어프레임은 없으나, 피드 상세 기능을 위해 필요)
  */
@@ -43,12 +43,12 @@ const PostDetailScreen = ({route, navigation}: Props) => {
       if (response.success && response.data) {
         setPost(response.data);
       } else {
-        Alert.alert('오류', response.message || '게시글을 불러올 수 없습니다.');
+        Alert.alert('오류', response.message || '나눔 식재료를 불러올 수 없습니다.');
         navigation.goBack();
       }
     } catch (error) {
       console.warn('Failed to fetch post detail', error);
-      Alert.alert('오류', '게시글을 불러오는 중 문제가 발생했습니다.');
+      Alert.alert('오류', '나눔 식재료를 불러오는 중 문제가 발생했습니다.');
       navigation.goBack();
     } finally {
       setIsLoading(false);

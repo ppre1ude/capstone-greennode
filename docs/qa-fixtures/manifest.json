@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "fixtures": [
+    {
+      "id": "fresh-single",
+      "case": "신선 성공",
+      "localPath": "docs/qa-fixtures/fresh-single-fresh-20260505.jpg",
+      "expectedOutcome": "shareable",
+      "expectedCategories": ["Fresh", "Normal"],
+      "notes": "식재료 하나가 선명하게 보이는 과일/채소 사진"
+    },
+    {
+      "id": "stale-or-rotten",
+      "case": "나눔 기준 미충족",
+      "localPath": "docs/qa-fixtures/stale-or-rotten-rejected-20260505.jpg",
+      "expectedOutcome": "rejected",
+      "expectedCategories": ["Stale", "Bad", "Rotten"],
+      "notes": "무름, 곰팡이, 변색이 보이는 과일/채소 사진"
+    },
+    {
+      "id": "not-food",
+      "case": "비식재료",
+      "localPath": "docs/qa-fixtures/not-food-rejected-20260505.jpg",
+      "expectedOutcome": "rejected_or_review",
+      "expectedRejectionReasons": ["not_food", "non_food"],
+      "notes": "책상, 컵, 전자기기 등 식재료가 아닌 사진"
+    },
+    {
+      "id": "screenshot-or-ui",
+      "case": "스크린샷/아이콘",
+      "localPath": "docs/qa-fixtures/screenshot-or-ui-rejected-20260505.jpg",
+      "expectedOutcome": "rejected_or_review",
+      "expectedRejectionReasons": ["screenshot", "ui_screenshot"],
+      "notes": "앱 화면 캡처, 지도 캡처, 런처 아이콘"
+    },
+    {
+      "id": "low-quality",
+      "case": "흐림/어두움/가림",
+      "localPath": "docs/qa-fixtures/low-quality-review-20260505.jpg",
+      "expectedOutcome": "rejected_or_review",
+      "expectedRejectionReasons": ["low_quality"],
+      "notes": "흔들림, 저조도, 부분 가림 사진"
+    },
+    {
+      "id": "large-image",
+      "case": "대용량 이미지",
+      "localPath": "docs/qa-fixtures/large-image-local-only-20260505.jpg",
+      "expectedOutcome": "client_rejected_if_over_8mb",
+      "notes": "8MB 이상 원본은 git에 넣지 말고 로컬 경로와 결과만 기록"
+    },
+    {
+      "id": "multi-object",
+      "case": "여러 식재료",
+      "localPath": "docs/qa-fixtures/multi-object-review-20260505.jpg",
+      "expectedOutcome": "single_representative_or_review",
+      "expectedRejectionReasons": ["multi_object_review"],
+      "notes": "한 장에 서로 다른 식재료가 2개 이상 있는 사진"
+    }
+  ]
+}

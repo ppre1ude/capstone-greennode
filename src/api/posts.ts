@@ -1,6 +1,6 @@
 /**
  * Posts API 함수
- * @see FRONTEND_INTEGRATION_GUIDE.md § 4.4~4.8
+ * @see docs/API_INTEGRATION_CONTRACT.md § 4.4~4.9
  */
 import apiClient, {BASE_URL} from './client';
 import type {ApiResponse, Post, GenerateResult, PostCreateData} from '@/types';
@@ -26,7 +26,7 @@ export const generatePost = async (
 };
 
 /**
- * 게시글 등록 — POST /api/v1/posts
+ * 나눔 식재료 등록 — POST /api/v1/posts
  * ⚠️ 이미지 파일 전송 없음! imageToken만 JSON에 포함
  */
 export const createPost = async (
@@ -49,7 +49,7 @@ export const createPost = async (
   return responseData;
 };
 
-/** 근처 게시글 조회 — GET /api/v1/posts/nearby */
+/** 근처 나눔 식재료 조회 — GET /api/v1/posts/nearby */
 export const getNearbyPosts = async (
   latitude: number,
   longitude: number,
@@ -63,7 +63,7 @@ export const getNearbyPosts = async (
   return response.data;
 };
 
-/** 게시글 상세 조회 — GET /api/v1/posts/{id} */
+/** 나눔 식재료 상세 조회 — GET /api/v1/posts/{id} */
 export const getPostDetail = async (
   postId: number,
 ): Promise<ApiResponse<Post>> => {
@@ -71,7 +71,7 @@ export const getPostDetail = async (
   return response.data;
 };
 
-/** 게시글 삭제 — DELETE /api/v1/posts/{id} */
+/** 나눔 식재료 삭제 — DELETE /api/v1/posts/{id} */
 export const deletePost = async (
   postId: number,
 ): Promise<ApiResponse<null>> => {

@@ -2,6 +2,7 @@
  * Navigation 타입 정의
  * 모든 화면의 route params를 여기서 중앙 관리
  */
+import type {NavigatorScreenParams} from '@react-navigation/native';
 import type {GenerateResult, PostCreateData} from '@/types';
 
 /** Auth 스택 (비로그인 상태) */
@@ -15,7 +16,12 @@ export type AuthStackParamList = {
 
 /** 메인 탭 (로그인 완료 후) */
 export type MainTabParamList = {
-  Home: undefined;
+  Home:
+    | {
+        nearbyPostsRefreshToken?: number;
+        completedPostId?: number;
+      }
+    | undefined;
   Map: undefined;
   CameraDummy: undefined;
   Chat: undefined;
@@ -26,7 +32,7 @@ export type MainTabParamList = {
 export type RootStackParamList = {
   Auth: undefined;
   LocationSetup: {allowBack?: boolean} | undefined;
-  Main: undefined;
+  Main: NavigatorScreenParams<MainTabParamList> | undefined;
   CameraScan: undefined;
   AnalysisResult: {result: GenerateResult; imageUri: string};
   PostCreate: {result: GenerateResult; imageUri: string};
@@ -35,6 +41,7 @@ export type RootStackParamList = {
   FridgeSelect: {
     postData?: Omit<PostCreateData, 'fridgeId'>;
     qualityCategory?: string;
+    qualityCanShare?: boolean;
     latitude?: number;
     longitude?: number;
   };

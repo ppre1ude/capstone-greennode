@@ -14,7 +14,7 @@ describe('getApiErrorMessage', () => {
     ).toBe('이미지가 만료되었습니다.');
   });
 
-  it('uses FastAPI detail when message is absent', () => {
+  it('translates unsafe FastAPI detail into user-facing copy', () => {
     expect(
       getApiErrorMessage({
         message: 'Request failed with status code 400',
@@ -25,9 +25,7 @@ describe('getApiErrorMessage', () => {
           },
         },
       }),
-    ).toBe(
-      '게시할 수 없는 식재료입니다. 사유: 식재료가 부패한 상태입니다. 게시할 수 없습니다.',
-    );
+    ).toBe('나눔 기준에 맞지 않아요. 다시 촬영해주세요.');
   });
 
   it('combines validation detail messages', () => {

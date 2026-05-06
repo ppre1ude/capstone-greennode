@@ -82,6 +82,27 @@ export const styles = StyleSheet.create({
     right: 0,
     zIndex: 10,
   },
+  locationRequiredContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+    backgroundColor: colors.surface,
+  },
+  locationRequiredTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  locationRequiredText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 8,
+  },
   listContent: {
     paddingHorizontal: 16,
     gap: 16,

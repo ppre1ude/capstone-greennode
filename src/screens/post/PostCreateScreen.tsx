@@ -1,5 +1,5 @@
 /**
- * PostCreateScreen — 게시글 정보 입력 폼
+ * PostCreateScreen — 나눔 식재료 정보 입력 폼
  *
  * AnalysisResultScreen에서 "이대로 나눔하기" 선택 시 진입.
  * AI가 추천한 제목, 카테고리, 설명을 기본값으로 채워주고 유저가 수정 가능.
@@ -25,7 +25,7 @@ import type {RootStackParamList} from '@/navigation/types';
 import {colors} from '@/theme';
 import {
   getConfidencePercent,
-  getQualityMeta,
+  getAnalysisQualityMeta,
   needsAnalysisReview,
 } from '@/utils/postPolicy';
 import {styles} from './PostCreateScreen.styles';
@@ -44,12 +44,14 @@ const PostCreateScreen = ({route, navigation}: Props) => {
     result.detectedFruit ||
     result.aiAnalysis?.detectedFruit ||
     '알 수 없음';
-  const quality = getQualityMeta(result.aiAnalysis?.category);
+  const quality = getAnalysisQualityMeta(result.aiAnalysis);
   const confidencePercent = getConfidencePercent(
     result.aiAnalysis?.confidenceScore,
   );
   const needsReview =
-    quality.canShare && needsAnalysisReview(result.aiAnalysis?.confidenceScore);
+    quality.canShare &&
+    (quality.label === '확인 필요' ||
+      needsAnalysisReview(result.aiAnalysis?.confidenceScore));
 
   const [title, setTitle] = useState(result.suggestedTitle || '');
   const [category, setCategory] = useState(result.suggestedCategory || '과일');
@@ -60,8 +62,8 @@ const PostCreateScreen = ({route, navigation}: Props) => {
   const handleNext = () => {
     if (!quality.canShare) {
       Alert.alert(
-        '나눔 등록 불가',
-        '부패가 의심되는 식재료는 나눔으로 등록할 수 없습니다. 다시 촬영해주세요.',
+        '나눔 기준에 맞지 않아요',
+        '이 식재료는 나눔 기준에 맞는 상태로 확인되지 않았어요. 다시 촬영해주세요.',
       );
       return;
     }
@@ -83,6 +85,7 @@ const PostCreateScreen = ({route, navigation}: Props) => {
         expirationDate: formatDateOnly(expDate),
       },
       qualityCategory: result.aiAnalysis?.category,
+      qualityCanShare: quality.canShare,
     });
   };
 
@@ -121,7 +124,7 @@ const PostCreateScreen = ({route, navigation}: Props) => {
             </View>
             <View style={styles.analysisDivider} />
             <View style={styles.analysisItem}>
-              <Text style={styles.analysisLabel}>품질 분류</Text>
+              <Text style={styles.analysisLabel}>상태 안내</Text>
               <Text style={styles.analysisValue}>{quality.label}</Text>
             </View>
             <View style={styles.analysisDivider} />
@@ -138,7 +141,7 @@ const PostCreateScreen = ({route, navigation}: Props) => {
           </View>
           {needsReview && (
             <Text style={styles.reviewNotice}>
-              AI 신뢰도가 낮습니다. 실제 상태를 직접 확인한 뒤 등록해주세요.
+              사진으로 상태를 한 번 더 확인해주세요.
             </Text>
           )}
 
@@ -205,7 +208,7 @@ const PostCreateScreen = ({route, navigation}: Props) => {
           onPress={handleNext}
           disabled={!title.trim() || !description.trim() || !quality.canShare}>
           <Text style={styles.submitButtonText}>
-            {quality.canShare ? '다음 단계로' : '나눔 등록 불가'}
+            {quality.canShare ? '다음 단계로' : '나눔 기준 미충족'}
           </Text>
         </TouchableOpacity>
       </View>

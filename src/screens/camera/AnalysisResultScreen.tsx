@@ -2,8 +2,8 @@
  * AnalysisResultScreen — AI 분석 결과 화면 (Phase 3)
  *
  * CameraScanScreen에서 촬영/업로드한 이미지의 AI 분석 결과를 보여줌
- * - 신선도 점수, 품질 평가
- * - 나눔 권장/불가 여부
+ * - 신선도 등급, 상태 안내
+ * - 나눔 가능/나눔 기준 미충족 여부
  * - 다시 촬영하기 or 이대로 나눔하기
  *
  * @wireframe wireframe-foodlink/scanpage2.html
@@ -24,7 +24,7 @@ import type {RootStackParamList} from '@/navigation/types';
 import {colors} from '@/theme';
 import {
   getConfidencePercent,
-  getQualityMeta,
+  getAnalysisQualityMeta,
   needsAnalysisReview,
 } from '@/utils/postPolicy';
 
@@ -33,14 +33,16 @@ type Props = NativeStackScreenProps<RootStackParamList, 'AnalysisResult'>;
 const AnalysisResultScreen = ({route, navigation}: Props) => {
   const {result, imageUri} = route.params;
 
-  const quality = getQualityMeta(result.aiAnalysis?.category);
+  const quality = getAnalysisQualityMeta(result.aiAnalysis);
   const confidencePercent = getConfidencePercent(
     result.aiAnalysis?.confidenceScore,
   );
   const needsReview =
-    quality.canShare && needsAnalysisReview(result.aiAnalysis?.confidenceScore);
+    quality.canShare &&
+    (quality.label === '확인 필요' ||
+      needsAnalysisReview(result.aiAnalysis?.confidenceScore));
   const statusLabel = !quality.canShare
-    ? '나눔 주의'
+    ? quality.label
     : needsReview
       ? '확인 필요'
       : '나눔 가능';
@@ -111,7 +113,7 @@ const AnalysisResultScreen = ({route, navigation}: Props) => {
           </View>
 
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>품질 분류</Text>
+            <Text style={styles.infoLabel}>상태 안내</Text>
             <Text style={styles.infoValue}>{quality.label}</Text>
           </View>
 
@@ -126,7 +128,7 @@ const AnalysisResultScreen = ({route, navigation}: Props) => {
             <View style={[styles.summaryBox, styles.reviewBox]}>
               <Text style={styles.reviewTitle}>확인 필요</Text>
               <Text style={styles.summaryText}>
-                AI 신뢰도가 낮습니다. 실제 상태를 직접 확인한 뒤 등록해주세요.
+                사진으로 상태를 한 번 더 확인해주세요.
               </Text>
             </View>
           )}
@@ -156,7 +158,7 @@ const AnalysisResultScreen = ({route, navigation}: Props) => {
             });
           }}>
           <Text style={styles.nextText}>
-            {quality.canShare ? '이대로 나눔하기' : '나눔 등록 불가'}
+            {quality.canShare ? '이대로 나눔하기' : '나눔 기준 미충족'}
           </Text>
         </TouchableOpacity>
       </View>

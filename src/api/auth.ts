@@ -1,6 +1,6 @@
 /**
  * Auth API 함수
- * @see FRONTEND_INTEGRATION_GUIDE.md § 4.1~4.3
+ * @see docs/API_INTEGRATION_CONTRACT.md § 4.1~4.3
  */
 import apiClient from './client';
 import type {ApiResponse, User, LoginResponse, SignupRequest, LocationUpdateRequest} from '@/types';

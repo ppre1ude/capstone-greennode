@@ -9,7 +9,7 @@
  *
  * @wireframe wireframe-foodlink/homescreen.html + temp/screen-home.html
  */
-import React, {useEffect, useState, useCallback} from 'react';
+import React, {useState, useCallback} from 'react';
 import {
   View,
   Text,
@@ -21,11 +21,20 @@ import {
   ActivityIndicator,
   Platform,
 } from 'react-native';
-import {useNavigation} from '@react-navigation/native';
+import {useFocusEffect, useNavigation, useRoute} from '@react-navigation/native';
+import type {RouteProp} from '@react-navigation/native';
 import type {Post} from '@/types';
 import {getNearbyPosts} from '@/api/posts';
 import {useAuthStore} from '@/store/authStore';
+import type {MainTabParamList} from '@/navigation/types';
 import NearbyPostCard from '@/components/home/NearbyPostCard';
+import {
+  getRegisteredLocation,
+  hasRegisteredLocation,
+  LOCATION_REQUIRED_CTA,
+  LOCATION_REQUIRED_MESSAGE,
+  LOCATION_REQUIRED_TITLE,
+} from '@/utils/locationGuard';
 import {colors} from '@/theme';
 
 const HomeScreen = () => {
@@ -37,19 +46,36 @@ const HomeScreen = () => {
   const [refreshing, setRefreshing] = useState(false);
   const user = useAuthStore(state => state.user);
   const navigation = useNavigation<any>();
+  const route = useRoute<RouteProp<MainTabParamList, 'Home'>>();
+  const nearbyPostsRefreshToken = route.params?.nearbyPostsRefreshToken;
+  const hasLocation = hasRegisteredLocation(user);
+
+  const openLocationSetup = useCallback(() => {
+    navigation.getParent()?.navigate('LocationSetup', {allowBack: true});
+  }, [navigation]);
+
+  const openCameraScan = useCallback(() => {
+    if (!hasLocation) {
+      openLocationSetup();
+      return;
+    }
+
+    navigation.getParent()?.navigate('CameraScan');
+  }, [hasLocation, navigation, openLocationSetup]);
 
   const fetchPosts = useCallback(async () => {
-    if (user?.latitude == null || user?.longitude == null) {
+    const location = getRegisteredLocation(user);
+    if (!location) {
       setPosts([]);
       setFeedState('error');
-      setFeedError('동네 위치를 설정한 뒤 주변 나눔을 확인할 수 있습니다.');
+      setFeedError(LOCATION_REQUIRED_MESSAGE);
       return;
     }
 
     setFeedState('loading');
     setFeedError(null);
     try {
-      const response = await getNearbyPosts(user.latitude, user.longitude);
+      const response = await getNearbyPosts(location.latitude, location.longitude);
       if (response.success && response.data) {
         setPosts(response.data);
         setFeedState(response.data.length > 0 ? 'ready' : 'empty');
@@ -64,11 +90,15 @@ const HomeScreen = () => {
       setFeedState('error');
       setFeedError('서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.');
     }
-  }, [user?.latitude, user?.longitude]);
+  }, [user]);
 
-  useEffect(() => {
-    fetchPosts();
-  }, [fetchPosts]);
+  useFocusEffect(
+    useCallback(() => {
+      // Keep the token in this closure so post completion can force a focus refetch.
+      void nearbyPostsRefreshToken;
+      void fetchPosts();
+    }, [fetchPosts, nearbyPostsRefreshToken]),
+  );
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -84,21 +114,20 @@ const HomeScreen = () => {
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.locationHeader}
-          onPress={() =>
-            navigation.getParent()?.navigate('LocationSetup', {allowBack: true})
-          }>
+          onPress={openLocationSetup}>
           <Text style={styles.locationName}>
-            {user?.latitude ? '내 동네' : '위치 미설정'}
+            {hasLocation ? '내 동네' : '위치 미설정'}
           </Text>
           <Text style={styles.chevron}>▾</Text>
         </TouchableOpacity>
         <View style={styles.headerIcons}>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate('Map')}>
             <Text style={styles.iconEmoji}>🔍</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.bellWrapper}>
+          <TouchableOpacity
+            style={styles.bellWrapper}
+            onPress={() => navigation.navigate('Chat')}>
             <Text style={styles.iconEmoji}>🔔</Text>
-            <View style={styles.notifDot} />
           </TouchableOpacity>
         </View>
       </View>
@@ -125,7 +154,7 @@ const HomeScreen = () => {
             </Text>
             <TouchableOpacity
               style={styles.heroButton}
-              onPress={() => navigation.getParent()?.navigate('CameraScan')}>
+              onPress={openCameraScan}>
               <Text style={styles.heroButtonText}>지금 시작하기</Text>
             </TouchableOpacity>
           </View>
@@ -135,15 +164,15 @@ const HomeScreen = () => {
         {/* 통계 카드 */}
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
-            <Text style={styles.statLabel}>오늘의 나눔</Text>
+            <Text style={styles.statLabel}>주변 나눔</Text>
             <Text style={styles.statValue}>
               {posts.length > 0 ? `${posts.length}건` : '—'}
             </Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={styles.statLabel}>탄소 절감액</Text>
+            <Text style={styles.statLabel}>탄소 절감</Text>
             <Text style={[styles.statValue, {color: colors.primary}]}>
-              {posts.length > 0 ? '0.8kg' : '—'}
+              준비 중
             </Text>
           </View>
         </View>
@@ -164,10 +193,16 @@ const HomeScreen = () => {
             </View>
           ) : feedState === 'error' ? (
             <View style={styles.emptyFeed}>
-              <Text style={styles.emptyTitle}>목록을 불러오지 못했습니다</Text>
+              <Text style={styles.emptyTitle}>
+                {hasLocation ? '목록을 불러오지 못했습니다' : LOCATION_REQUIRED_TITLE}
+              </Text>
               <Text style={styles.emptySubtitle}>{feedError}</Text>
-              <TouchableOpacity style={styles.retryButton} onPress={fetchPosts}>
-                <Text style={styles.retryButtonText}>다시 시도</Text>
+              <TouchableOpacity
+                style={styles.retryButton}
+                onPress={hasLocation ? fetchPosts : openLocationSetup}>
+                <Text style={styles.retryButtonText}>
+                  {hasLocation ? '다시 시도' : LOCATION_REQUIRED_CTA}
+                </Text>
               </TouchableOpacity>
             </View>
           ) : posts.length > 0 ? (
