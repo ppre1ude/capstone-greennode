@@ -1,7 +1,6 @@
-import messaging, {
-  FirebaseMessagingTypes,
-} from '@react-native-firebase/messaging';
+import type {FirebaseMessagingTypes} from '@react-native-firebase/messaging';
 import {rootNavigationRef} from '@/navigation/rootNavigation';
+import {getMessagingOrNull} from '@/services/firebaseMessaging';
 import {useNotificationStore} from '@/store/notificationStore';
 import type {
   FcmStringDataPayload,
@@ -21,15 +20,6 @@ const KNOWN_TYPES = new Set(['share_created', 'share_requested']);
 const CAMEL_CASE_KEY_PATTERN = /^[a-z][A-Za-z0-9]*$/;
 
 const isCamelCaseKey = (key: string) => CAMEL_CASE_KEY_PATTERN.test(key);
-
-const getMessagingOrNull = () => {
-  try {
-    return messaging();
-  } catch (error) {
-    console.warn('Firebase messaging is unavailable:', error);
-    return null;
-  }
-};
 
 export const isFcmStringDataPayload = (
   data: RemoteMessage['data'],

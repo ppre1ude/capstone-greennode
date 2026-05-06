@@ -88,7 +88,7 @@ FOODLINK_API_BASE_URL=http://localhost:8080 FOODLINK_ACCESS_TOKEN=<token> npm ru
 현재 상태:
 
 - 2026-05-05 확인 시 연결 장치는 `emulator-5554`뿐이었다.
-- `docs/qa-fixtures/manifest.json`과 `npm run qa:ai-fixtures` 반복 검증 스크립트를 추가했다.
+- `docs/qa-fixtures/manifest.json`과 `npm run qa:ai-fixtures` 반복 검증 스크립트를 추가했다. 2026-05-06 manifest JSON 파싱과 스크립트 실행을 재검증했고, 이미지가 없어 모든 케이스는 `skipped`로 종료됐다.
 - 실제 fixture 이미지는 아직 추가하지 않았다.
 - 2026-05-06 실제 Android 기기 `SM-S928N` Android 15(API 35, serial `R3CX203CV8X`)에서 카메라 권한 허용, 프리뷰, 셔터 촬영, `/posts/generate` 분석 결과 표시, 등록 화면 진입, 냉장고 선택, 최종 등록 완료, 홈 목록 재조회, 상세 진입을 확인했다.
 - QA 빌드는 release APK + `adb reverse tcp:8080 tcp:8080` + SSH tunnel `localhost:8080 -> NHN-Cloud-Server:80` 조건으로 실행했다. `src/config/api.ts`의 `ANDROID_DEVICE_HOST`는 빌드 시점에만 `localhost`로 임시 변경했고 소스는 되돌렸다.

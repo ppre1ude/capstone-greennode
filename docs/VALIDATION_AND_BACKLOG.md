@@ -174,8 +174,25 @@
   - `temp/real-device-detail-after-share-create.png`
 - 후속:
   - P0 `Post AI 메타데이터 저장 계약 불일치 정리`를 백엔드 수정 대상으로 유지한다.
-  - 실제 FCM foreground/background/terminated 수신 QA는 아직 미완료다. 다만 Firebase 설정 파일이 없는 release QA 빌드에서 앱이 크래시하지 않도록 프론트 guard와 회귀 테스트를 추가했다.
+  - 실제 FCM foreground/background/terminated 수신 QA는 아직 미완료다. 다만 Firebase 설정 파일이 없는 release QA 빌드에서 앱이 크래시하지 않도록 알림 handler와 FCM 토큰 등록 경로에 프론트 guard와 회귀 테스트를 추가했다.
   - 실제 `Stale`, `not-food`, `low-quality` fixture는 아직 확보하지 못했다.
+
+## 2026-05-06 무기기 자동 QA 결과
+
+- 환경: Windows 로컬 워크스페이스, 실제 Android 기기 연결 없이 진행.
+- 수정:
+  - Firebase Messaging 인스턴스 획득을 `firebaseMessaging.ts` 공통 helper로 분리했다.
+  - `notifications.ts`뿐 아니라 `deviceRegistration.ts`의 FCM 토큰 조회도 Firebase 설정 부재를 안전하게 건너뛰도록 보강했다.
+  - `docs/qa-fixtures/manifest.json`의 깨진 JSON을 복구하고 `docs/qa-fixtures/README.md`를 현재 fixture 파일 규칙에 맞게 정리했다.
+- 통과:
+  - `node.exe .\node_modules\jest\bin\jest.js --runInBand`: 16 suites / 76 tests 통과.
+  - `node.exe .\node_modules\typescript\bin\tsc --noEmit`: 통과.
+  - `node.exe .\node_modules\eslint\bin\eslint.js . --quiet`: 통과.
+  - `node.exe scripts\validate-ai-fixtures.js`: manifest 파싱과 반복 실행 통과. fixture 이미지가 없어 모든 케이스는 `skipped`.
+  - `android\gradlew.bat :app:assembleRelease --console=plain --no-daemon`: release APK 빌드 통과.
+- 남은 QA:
+  - 실제 fixture 이미지가 없으므로 `Stale`, `not-food`, `screenshot-or-ui`, `low-quality`, `multi-object`의 AI 판정 품질은 아직 검증하지 못했다.
+  - 실제 FCM foreground/background/terminated 수신은 Firebase 설정과 실제 메시지 발송 환경이 필요하다.
 
 ## 2026-05-05 P0/P1 코드 보강 현황
 
@@ -185,7 +202,7 @@
 - P1 위치 재설정: 홈 위치 헤더와 프로필 `동네 위치 재설정` 메뉴에서 `LocationSetup`으로 재진입한다.
 - P1 위치 미설정 공통 가드: 홈, 지도, AI 스캔 진입점, 냉장고 선택 화면이 `getRegisteredLocation()` 기준을 공유한다. 위치가 없으면 주변 API를 호출하지 않고 `LocationSetup` CTA를 표시한다.
 - P1 등록 완료 후 홈 재조회: `PostCompleteScreen`이 홈 탭에 `nearbyPostsRefreshToken`을 전달하고, `HomeScreen`은 포커스/토큰 변경 시 `/posts/nearby`를 다시 조회한다.
-- P1 카메라 촬영/fallback: `react-native-vision-camera@5`의 `usePhotoOutput().capturePhotoToFile()` 경로로 수정했다. 에뮬레이터에서 촬영 파일 생성 및 실제 `/posts/generate` 호출까지 확인했고, 실제 기기 셔터 검증은 아직 남았다.
+- P1 카메라 촬영/fallback: `react-native-vision-camera@5`의 `usePhotoOutput().capturePhotoToFile()` 경로로 수정했다. 에뮬레이터와 실제 Android 기기에서 촬영 파일 생성 및 실제 `/posts/generate` 호출까지 확인했다. 실패 fixture와 fallback QA는 남아 있다.
 - P1 confidence: `confidenceScore`를 분석 결과/작성 화면에 표시하고, 제품 기준을 `confidenceScore < 0.9`이면 `확인 필요`로 확정했다. 낮은 confidence만으로 등록을 차단하지 않는다.
 - P0 Post 구조 변경: `Post`/`PostCreateData`/`GenerateResult` 타입과 `createPost()` payload를 백엔드 Phase 1.5 계약으로 갱신했다. 홈 카드, 상세 화면, 등록 확인 화면은 `detectedFruitKo`, `freshnessLabel`, `confidenceScore`, `status`를 사용하고 구형 `title/description/category` 표시/전송 의존을 제거했다.
 - P1 나눔 신청 API: `requestShare(postId)` client와 `PostDetailScreen` CTA를 연결했다. 201 응답은 `post.status=requested`를 상세에 반영하고 홈 refresh 신호를 보낸다. 403은 `내가 등록한 나눔 식재료예요`, 409는 `다른 사용자가 먼저 신청했어요`로 처리하고 CTA를 `신청 접수` 상태로 비활성화한다.
@@ -691,7 +708,7 @@ docs/VALIDATION_AND_BACKLOG.md의 "4. 한 장 촬영 UX와 multi-object 정책 �
 | 홈 데이터 없음 상태       | 구현됨                         | 나눔 식재료가 없으면 `아직 근처에 나눔이 없어요` 빈 상태를 표시한다.                                                                                                                                                                                                 | API 실패와 진짜 빈 상태를 구분하는 에러 UI 추가.                                                          |
 | 검색 기능                 | 부분 구현                      | 홈 검색 아이콘은 지도 탭으로 이동하고, 지도 검색 입력은 공유 냉장고 이름/주소 로컬 필터로 동작한다. 서버 OpenAPI에는 검색 엔드포인트가 없다.                                                                                                                         | 나눔 식재료/동네 서버 검색은 후속 범위로 분리.                                                            |
 | 검색 결과 없음            | 구현됨                         | MVP 검색은 지도 공유 냉장고 이름/주소 로컬 필터로 제한했다. 결과 없음 상태와 검색 초기화가 있다.                                                                                                                                                                     | 나눔 식재료/동네 서버 검색은 후속 범위로 분리.                                                            |
-| 푸쉬 알림                 | 프론트 코드 연동 완료, 실제 기기 QA 필요 | Firebase Messaging 의존성, Android 알림 권한, FCM 토큰 등록이 있다. `share_created`, `share_requested` foreground/background/opened/initial handler를 구현했고, payload는 문자열 + camelCase(`type`, `postId`, `requestId`, `fruitName`, `fridgeName`)로 검증한다. 알림함은 로컬 수신 기록/빈 상태 중심이며 읽음 상태 API는 없다. | 실제 기기에서 foreground/background/terminated 수신과 알림 탭 라우팅을 검증한다. |
+| 푸쉬 알림                 | 프론트 코드 연동 완료, 실제 수신 QA 필요 | Firebase Messaging 의존성, Android 알림 권한, FCM 토큰 등록이 있다. `share_created`, `share_requested` foreground/background/opened/initial handler를 구현했고, payload는 문자열 + camelCase(`type`, `postId`, `requestId`, `fruitName`, `fridgeName`)로 검증한다. Firebase 설정이 없는 QA/release 빌드에서는 알림 handler와 FCM 토큰 등록을 안전하게 건너뛴다. 알림함은 로컬 수신 기록/빈 상태 중심이며 읽음 상태 API는 없다. | 실제 기기에서 foreground/background/terminated 수신과 알림 탭 라우팅을 검증한다. |
 | 유저 프로필               | 부분 구현                      | 닉네임/이메일은 실제 유저 정보를 표시한다. 프로필 수정, 메뉴 이동, 내 나눔/관심/받은 나눔은 연결되어 있지 않다.                                                                                                                                                      | 프로필 수정 또는 내 나눔 내역 중 하나만 우선 연결.                                                        |
 | 유저 통계                 | 정리됨                         | 신선도 온도, 포인트, 탄소 절감량의 하드코딩 숫자를 제거하고 `준비 중` 상태로 표시한다.                                                                                                                                                                               | 실제 지표를 넣으려면 계산식과 API 계약을 먼저 정의.                                                       |
 | 냉장고별 나눔 식재료 조회 | 프론트 코드 연동 완료, VM QA 필요 | 지도에서 특정 냉장고를 선택하면 `GET /fridges/{id}/posts?status=available`로 내부 available 목록을 조회한다. loading/error/empty/list 상태를 분리하고 항목 탭 시 상세로 이동한다.                                                                                                                                                 | 실제 VM/API에서 냉장고 선택, 빈 목록, 오류 상태, 상세 이동을 재검증한다. 별도 inventory 개념은 후속으로 분리. |
@@ -703,7 +720,7 @@ docs/VALIDATION_AND_BACKLOG.md의 "4. 한 장 촬영 UX와 multi-object 정책 �
 
 1. 나눔 신청 API 연동: 코드 연동은 완료됐다. 실제 VM/API에서 201/403/409와 홈 목록 제외 동작을 재검증한다.
 2. 냉장고별 나눔 식재료 조회: 코드 연동은 완료됐다. 실제 VM/API에서 선택 냉장고 내부 목록과 상세 이동을 재검증한다.
-3. FCM 수신 handler와 알림함: 코드 연동은 완료됐다. 실제 기기에서 foreground/background/terminated 수신과 알림함 기록을 재검증한다.
+3. FCM 수신 handler와 알림함: 코드 연동은 완료됐다. Firebase 미설정 QA/release 빌드에서는 알림 handler와 FCM 토큰 등록을 안전하게 건너뛴다. 실제 기기에서 foreground/background/terminated 수신과 알림함 기록을 재검증한다.
 4. confidence fixture QA: `confidenceScore` 0.4/0.7/1.0에서 확인 필요 표시가 기대대로 동작하는지 검증한다.
 5. 실제 기기/fixture QA: `Stale`, `unknown`, 무효 `imageToken`, 실제 카메라 촬영 케이스를 증거로 남긴다.
 
@@ -1018,7 +1035,7 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
 - 분류: 기능 구현
 - 우선순위: P2
 - 배경: FCM 토큰 등록은 있지만 알림 수신/목록/읽음 처리는 없다.
-- 현재 동작: FCM token은 `/auth/me/location`으로 등록한다. `share_created`, `share_requested` handler는 foreground/background/opened/initial 메시지를 로컬 알림함에 기록한다. 알림 열기와 알림함 항목 탭은 `PostDetail`로 이동하며, `share_requested`는 내 나눔 관리 화면이 없으므로 상세 fallback을 쓴다. Firebase 앱이 설정되지 않은 QA/release 빌드에서는 Messaging 인스턴스 생성 실패를 잡고 handler 등록을 건너뛰어 앱 시작 크래시를 막는다.
+- 현재 동작: FCM token은 `/auth/me/location`으로 등록한다. `share_created`, `share_requested` handler는 foreground/background/opened/initial 메시지를 로컬 알림함에 기록한다. 알림 열기와 알림함 항목 탭은 `PostDetail`로 이동하며, `share_requested`는 내 나눔 관리 화면이 없으므로 상세 fallback을 쓴다. Firebase 앱이 설정되지 않은 QA/release 빌드에서는 Messaging 인스턴스 생성 실패를 잡고 handler 등록과 FCM 토큰 조회를 건너뛰어 앱 시작/위치 갱신 크래시를 막는다.
 - 기대 동작: MVP에서는 WebSocket 채팅 대신 알림함과 단순 신청 흐름으로 축소한다. 읽음 상태 API는 후속으로 분리한다.
 - Acceptance Criteria:
   - [x] foreground/background 알림 수신 handler가 정의된다.
@@ -1029,8 +1046,9 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
   - [x] 알림함으로 유지하고 WebSocket 채팅은 보류한다.
   - [x] mock 알림 데이터가 빈 알림함 상태로 대체된다.
   - [x] Firebase 설정이 없는 빌드에서도 알림 handler 등록 때문에 앱 시작이 크래시하지 않는다.
-- 검증 방법: FCM 테스트 메시지 수신 QA, 앱 foreground/background 확인, `notificationService.firebaseFallback.test.ts`
-- 관련 파일/화면/API: `notifications.ts`, `notificationStore.ts`, `ChatListScreen`, `index.js`, `AppNavigator`, Firebase Messaging
+  - [x] Firebase 설정이 없는 빌드에서도 FCM 토큰 조회 때문에 위치 등록/갱신이 크래시하지 않는다.
+- 검증 방법: FCM 테스트 메시지 수신 QA, 앱 foreground/background 확인, `notificationService.firebaseFallback.test.ts`, `deviceRegistration.firebaseFallback.test.ts`
+- 관련 파일/화면/API: `notifications.ts`, `deviceRegistration.ts`, `firebaseMessaging.ts`, `notificationStore.ts`, `ChatListScreen`, `index.js`, `AppNavigator`, Firebase Messaging
 
 ## multi-object detection 연구/계약 초안
 

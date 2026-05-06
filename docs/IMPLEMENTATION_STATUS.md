@@ -45,6 +45,13 @@
 - 발견한 충돌: 등록 전 분석 결과는 `바나나 / 상태가 좋아 보여요 / 91%`였지만 등록 후 홈/상세는 `나눔 식재료 / 분석 중` fallback으로 표시됐다. VM/API QA에서 발견한 Post AI 메타데이터 저장 불일치가 실제 앱에서도 재현됐다.
 - AI 품질 증거: 카메라는 화면상 토마토 이미지를 촬영했지만 백엔드 AI는 `바나나`로 판별했다. 이는 프론트 연동 오류가 아니라 false-positive/분류 품질 후속 검증 항목이다.
 
+### 2026-05-06 무기기 QA 업데이트
+
+- 수정: Firebase Messaging 인스턴스 획득을 `firebaseMessaging.ts` 공통 helper로 분리하고, 알림 handler뿐 아니라 FCM 토큰 조회 경로도 Firebase 설정 부재를 안전하게 건너뛰도록 보강했다. 회귀 테스트는 `__tests__/notificationService.firebaseFallback.test.ts`, `__tests__/deviceRegistration.firebaseFallback.test.ts`다.
+- 수정: `docs/qa-fixtures/manifest.json`이 깨진 JSON이라 `qa:ai-fixtures`가 시작 전 실패할 수 있었다. manifest와 fixture README를 복구했다.
+- 통과: 전체 Jest 16 suites / 76 tests, TypeScript `--noEmit`, ESLint `--quiet`, `scripts/validate-ai-fixtures.js`, Android `:app:assembleRelease`를 실제 기기 없이 통과했다.
+- 남은 검증: fixture 이미지가 없어 `Stale`, `not-food`, `screenshot-or-ui`, `low-quality`, `multi-object` AI 품질 검증은 아직 skipped 상태다. 실제 FCM 메시지 수신도 별도 기기/FCM 환경이 필요하다.
+
 ---
 
 ## 1. 현재 상태 요약
@@ -60,7 +67,7 @@
 | 홈 주변 나눔 식재료        | 부분 구현, 실제 기기 홈 재조회 통과 | `/posts/nearby` 데이터를 카드로 표시한다. 홈 카드는 `detectedFruitKo`, `freshnessLabel`, `confidenceScore`, `status`를 사용한다. API 실패와 빈 상태는 UI에서 분리됐다. 위치가 없으면 API를 호출하지 않고 위치 설정 CTA를 표시한다. 홈은 냉장고보다 available 나눔 식재료를 먼저 보여주는 화면이다. 홈 포커스와 등록 완료 refresh token 변경 시 재조회한다. 실제 기기 등록 완료 후 주변 나눔 `1건`이 표시됐다.                                                                 |
 | 지도/냉장고                | 프론트 코드 연동 완료, VM/API QA 통과 | `/fridges/nearby`, `/fridges/available` 조회와 지도 마커/냉장고 선택은 동작한다. 지도에서 냉장고를 선택하면 `GET /fridges/{id}/posts?status=available`로 내부 available 나눔 식재료를 조회하고, loading/error/empty/list 상태를 분리한다. VM API에서 생성 직후 냉장고 내부 목록 포함과 신청 후 `requested` 제외를 확인했다. 실제 Android UI 조작 QA는 후속이다.                    |
 | 나눔 신청                  | 프론트 코드 연동 완료, VM/API QA 통과 | 백엔드는 `POST /posts/{id}/requests`, `available -> requested`, `SELECT ... FOR UPDATE` 경합 처리, 작성자 403, 중복/경합 409, 신청 알림을 구현/검증했다. 프론트는 `requestShare(postId)`, 상세 CTA, 201/403/409 UX, 홈 refresh store를 구현했다. 2026-05-06 VM API에서 작성자 본인 403, 첫 신청 201, 중복 신청 409, 신청 후 `requested` 전환과 주변 목록 제외를 확인했다.                                                                                                                               |
-| FCM                        | 프론트 코드 연동 완료, 수신 QA 필요 | FCM 토큰 등록과 `share_created`, `share_requested` 수신 handler가 있다. payload는 문자열 + camelCase(`postId`, `requestId`, `fruitName`, `fridgeName`, `type`)로 검증한다. foreground/background/opened/initial 알림은 로컬 알림함에 기록하고, 알림 열기와 알림함 항목 탭은 `PostDetail`로 이동한다. `share_requested`는 내 나눔 관리 화면이 없으므로 MVP에서 상세 fallback을 쓴다. Firebase 설정이 없는 QA/release 빌드에서는 Messaging 인스턴스 생성 실패를 guard한다. 실제 FCM 메시지 수신 QA와 읽음 상태 API는 없다. |
+| FCM                        | 프론트 코드 연동 완료, 수신 QA 필요 | FCM 토큰 등록과 `share_created`, `share_requested` 수신 handler가 있다. payload는 문자열 + camelCase(`postId`, `requestId`, `fruitName`, `fridgeName`, `type`)로 검증한다. foreground/background/opened/initial 알림은 로컬 알림함에 기록하고, 알림 열기와 알림함 항목 탭은 `PostDetail`로 이동한다. `share_requested`는 내 나눔 관리 화면이 없으므로 MVP에서 상세 fallback을 쓴다. Firebase 설정이 없는 QA/release 빌드에서는 Messaging 인스턴스 생성 실패를 알림 handler와 FCM 토큰 조회 양쪽에서 guard한다. 실제 FCM 메시지 수신 QA와 읽음 상태 API는 없다. |
 | 채팅                       | 보류                              | 정적 채팅 mock 데이터는 제거했다. WebSocket/API 계약은 없다.                                                                                                                                                                                                                                                                                                                                                               |
 | 통계/탄소 절감             | 정리됨                            | 실제 지표 API가 없는 홈/프로필 mock 숫자는 제거하고 준비 중 상태로 표시한다.                                                                                                                                                                                                                                                                                                                                               |
 | 검색                       | 부분 구현                         | MVP 검색은 지도 공유 냉장고 이름/주소 로컬 필터로 제한했다. 서버 검색 API는 없다.                                                                                                                                                                                                                                                                                                                                          |

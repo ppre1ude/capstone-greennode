@@ -1,22 +1,24 @@
 # QA Fixture Index
 
-이 디렉터리는 커밋 가능한 AI QA 샘플 이미지와 결과 기록을 두는 위치다.
+This directory stores small, commit-safe AI QA fixture images and the expected
+outcomes used by `scripts/validate-ai-fixtures.js`.
 
-현재 실제 이미지는 아직 추가하지 않았다. 먼저 아래 파일 세트를 확보한다.
+No real fixture images are committed yet. Add small, non-private samples with
+the filenames listed in `manifest.json`. Large originals or images containing
+private information must stay outside git; record only the filename and QA
+result in `docs/AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md`.
 
 | Fixture ID | Required file | Status |
 | --- | --- | --- |
-| `fresh-single` | `fresh-single-fresh-YYYYMMDD.jpg` | 필요 |
-| `stale-or-rotten` | `stale-or-rotten-rejected-YYYYMMDD.jpg` | 필요 |
-| `not-food` | `not-food-rejected-YYYYMMDD.jpg` | 필요 |
-| `screenshot-or-ui` | `screenshot-or-ui-rejected-YYYYMMDD.png` | 필요 |
-| `low-quality` | `low-quality-review-YYYYMMDD.jpg` | 필요 |
-| `large-image` | 로컬/공유 드라이브에만 보관 | 필요 |
-| `multi-object` | `multi-object-review-YYYYMMDD.jpg` | 필요 |
+| `fresh-single` | `fresh-single-fresh-20260505.jpg` | needed |
+| `stale-or-rotten` | `stale-or-rotten-rejected-20260505.jpg` | needed |
+| `not-food` | `not-food-rejected-20260505.jpg` | needed |
+| `screenshot-or-ui` | `screenshot-or-ui-rejected-20260505.jpg` | needed |
+| `low-quality` | `low-quality-review-20260505.jpg` | needed |
+| `large-image` | `large-image-local-only-20260505.jpg` | local only |
+| `multi-object` | `multi-object-review-20260505.jpg` | needed |
 
-대용량 원본이나 개인정보가 포함될 수 있는 사진은 이 디렉터리에 커밋하지 않는다. 결과만 `docs/AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md`에 기록한다.
-
-반복 검증 기준은 `manifest.json`에 기록한다. 실제 이미지가 준비되면 아래 명령을 실행한다.
+Run the repeated validation once fixture files and a token are available:
 
 ```bash
 FOODLINK_API_BASE_URL=http://localhost:8080 FOODLINK_ACCESS_TOKEN=<token> npm run qa:ai-fixtures

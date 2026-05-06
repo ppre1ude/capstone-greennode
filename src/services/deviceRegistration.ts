@@ -1,24 +1,31 @@
 import {PermissionsAndroid, Platform} from 'react-native';
 import Geolocation from 'react-native-geolocation-service';
-import messaging from '@react-native-firebase/messaging';
 import {updateLocation} from '@/api/auth';
+import {getMessagingOrNull} from '@/services/firebaseMessaging';
 import type {User} from '@/types';
 
-const requestNotificationPermission = async () => {
+const requestNotificationPermission = async (
+  messagingInstance: NonNullable<ReturnType<typeof getMessagingOrNull>>,
+) => {
   if (Platform.OS === 'android' && Number(Platform.Version) >= 33) {
     await PermissionsAndroid.request(
       PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
     );
   }
 
-  await messaging().requestPermission();
-  await messaging().registerDeviceForRemoteMessages();
+  await messagingInstance.requestPermission();
+  await messagingInstance.registerDeviceForRemoteMessages();
 };
 
 export const getFcmToken = async (): Promise<string | undefined> => {
+  const messagingInstance = getMessagingOrNull();
+  if (!messagingInstance) {
+    return undefined;
+  }
+
   try {
-    await requestNotificationPermission();
-    return await messaging().getToken();
+    await requestNotificationPermission(messagingInstance);
+    return await messagingInstance.getToken();
   } catch (error) {
     console.warn('FCM token error:', error);
     return undefined;
