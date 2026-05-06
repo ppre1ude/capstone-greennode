@@ -18,6 +18,7 @@ import {
   TouchableOpacity,
   RefreshControl,
   StatusBar,
+  ActivityIndicator,
   Platform,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
@@ -29,19 +30,39 @@ import {colors} from '@/theme';
 
 const HomeScreen = () => {
   const [posts, setPosts] = useState<Post[]>([]);
+  const [feedState, setFeedState] = useState<
+    'loading' | 'ready' | 'empty' | 'error'
+  >('loading');
+  const [feedError, setFeedError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const user = useAuthStore(state => state.user);
   const navigation = useNavigation<any>();
 
   const fetchPosts = useCallback(async () => {
-    if (!user?.latitude || !user?.longitude) {return;}
+    if (user?.latitude == null || user?.longitude == null) {
+      setPosts([]);
+      setFeedState('error');
+      setFeedError('동네 위치를 설정한 뒤 주변 나눔을 확인할 수 있습니다.');
+      return;
+    }
+
+    setFeedState('loading');
+    setFeedError(null);
     try {
       const response = await getNearbyPosts(user.latitude, user.longitude);
       if (response.success && response.data) {
         setPosts(response.data);
+        setFeedState(response.data.length > 0 ? 'ready' : 'empty');
+      } else {
+        setPosts([]);
+        setFeedState('error');
+        setFeedError(response.message || '주변 나눔을 불러오지 못했습니다.');
       }
     } catch (error) {
       console.warn('Failed to fetch posts:', error);
+      setPosts([]);
+      setFeedState('error');
+      setFeedError('서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.');
     }
   }, [user?.latitude, user?.longitude]);
 
@@ -61,7 +82,11 @@ const HomeScreen = () => {
 
       {/* ── 헤더 ────────────────────────────────── */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.locationHeader}>
+        <TouchableOpacity
+          style={styles.locationHeader}
+          onPress={() =>
+            navigation.getParent()?.navigate('LocationSetup', {allowBack: true})
+          }>
           <Text style={styles.locationName}>
             {user?.latitude ? '내 동네' : '위치 미설정'}
           </Text>
@@ -132,7 +157,20 @@ const HomeScreen = () => {
             </TouchableOpacity>
           </View>
 
-          {posts.length > 0 ? (
+          {feedState === 'loading' ? (
+            <View style={styles.emptyFeed}>
+              <ActivityIndicator color={colors.primary} />
+              <Text style={styles.emptyTitle}>주변 나눔을 불러오는 중입니다</Text>
+            </View>
+          ) : feedState === 'error' ? (
+            <View style={styles.emptyFeed}>
+              <Text style={styles.emptyTitle}>목록을 불러오지 못했습니다</Text>
+              <Text style={styles.emptySubtitle}>{feedError}</Text>
+              <TouchableOpacity style={styles.retryButton} onPress={fetchPosts}>
+                <Text style={styles.retryButtonText}>다시 시도</Text>
+              </TouchableOpacity>
+            </View>
+          ) : posts.length > 0 ? (
             <View style={styles.feedList}>
               {posts.map(post => (
                 <NearbyPostCard
@@ -341,6 +379,18 @@ const styles = StyleSheet.create({
     color: colors.textTertiary,
     textAlign: 'center',
     lineHeight: 20,
+  },
+  retryButton: {
+    marginTop: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: colors.primary,
+  },
+  retryButtonText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
 });
 

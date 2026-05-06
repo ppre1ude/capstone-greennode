@@ -67,6 +67,31 @@ export const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 22,
   },
+  errorTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    marginBottom: 8,
+  },
+  errorSubtitle: {
+    textAlign: 'center',
+    color: colors.textSecondary,
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 16,
+    paddingHorizontal: 24,
+  },
+  retryButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: colors.primary,
+  },
+  retryButtonText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
   listContainer: {
     paddingHorizontal: 24,
     gap: 12,

@@ -22,28 +22,28 @@ import {
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {RootStackParamList} from '@/navigation/types';
 import {colors} from '@/theme';
+import {
+  getConfidencePercent,
+  getQualityMeta,
+  needsAnalysisReview,
+} from '@/utils/postPolicy';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AnalysisResult'>;
-
-const getQualityMeta = (category?: string) => {
-  const normalized = (category || '').toLowerCase();
-
-  if (['fresh', 'good'].includes(normalized)) {
-    return {label: '신선', canShare: true};
-  }
-  if (['normal', 'mid', 'medium'].includes(normalized)) {
-    return {label: '보통', canShare: true};
-  }
-  if (['rotten', 'stale', 'bad'].includes(normalized)) {
-    return {label: '부패 의심', canShare: false};
-  }
-  return {label: category || '분석 중', canShare: true};
-};
 
 const AnalysisResultScreen = ({route, navigation}: Props) => {
   const {result, imageUri} = route.params;
 
   const quality = getQualityMeta(result.aiAnalysis?.category);
+  const confidencePercent = getConfidencePercent(
+    result.aiAnalysis?.confidenceScore,
+  );
+  const needsReview =
+    quality.canShare && needsAnalysisReview(result.aiAnalysis?.confidenceScore);
+  const statusLabel = !quality.canShare
+    ? '나눔 주의'
+    : needsReview
+      ? '확인 필요'
+      : '나눔 가능';
   const detectedCrop =
     result.detectedFruitKo ||
     result.aiAnalysis?.detectedFruitKo ||
@@ -77,14 +77,13 @@ const AnalysisResultScreen = ({route, navigation}: Props) => {
             <View
               style={[
                 styles.resultBadge,
+                needsReview && styles.resultBadgeWarning,
                 !quality.canShare && styles.resultBadgeError,
               ]}>
               <Text style={styles.resultBadgeIcon}>
-                {quality.canShare ? 'OK' : '!'}
+                {quality.canShare && !needsReview ? 'OK' : '!'}
               </Text>
-              <Text style={styles.resultBadgeText}>
-                {quality.canShare ? '나눔 가능' : '나눔 주의'}
-              </Text>
+              <Text style={styles.resultBadgeText}>{statusLabel}</Text>
             </View>
           </View>
         </View>
@@ -93,8 +92,14 @@ const AnalysisResultScreen = ({route, navigation}: Props) => {
         <View style={styles.analysisCard}>
           <View style={styles.cardHeader}>
             <Text style={styles.cardTitle}>AI 분석 결과</Text>
-            <View style={styles.qualityPill}>
-              <Text style={styles.qualityPillText}>{quality.label}</Text>
+            <View style={[styles.qualityPill, needsReview && styles.qualityPillWarning]}>
+              <Text
+                style={[
+                  styles.qualityPillText,
+                  needsReview && styles.qualityPillWarningText,
+                ]}>
+                {needsReview ? '확인 필요' : quality.label}
+              </Text>
             </View>
           </View>
 
@@ -109,6 +114,22 @@ const AnalysisResultScreen = ({route, navigation}: Props) => {
             <Text style={styles.infoLabel}>품질 분류</Text>
             <Text style={styles.infoValue}>{quality.label}</Text>
           </View>
+
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>AI 신뢰도</Text>
+            <Text style={styles.infoValue}>
+              {confidencePercent != null ? `${confidencePercent}%` : '미제공'}
+            </Text>
+          </View>
+
+          {needsReview && (
+            <View style={[styles.summaryBox, styles.reviewBox]}>
+              <Text style={styles.reviewTitle}>확인 필요</Text>
+              <Text style={styles.summaryText}>
+                AI 신뢰도가 낮습니다. 실제 상태를 직접 확인한 뒤 등록해주세요.
+              </Text>
+            </View>
+          )}
 
           <View style={styles.summaryBox}>
             <Text style={styles.summaryTitle}>분석 메모</Text>
@@ -127,13 +148,16 @@ const AnalysisResultScreen = ({route, navigation}: Props) => {
 
         <TouchableOpacity
           style={[styles.nextButton, !quality.canShare && styles.nextButtonDisabled]}
+          disabled={!quality.canShare}
           onPress={() => {
             navigation.replace('PostCreate', {
               result,
               imageUri,
             });
           }}>
-          <Text style={styles.nextText}>이대로 나눔하기</Text>
+          <Text style={styles.nextText}>
+            {quality.canShare ? '이대로 나눔하기' : '나눔 등록 불가'}
+          </Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -208,6 +232,9 @@ const styles = StyleSheet.create({
   resultBadgeError: {
     backgroundColor: colors.error,
   },
+  resultBadgeWarning: {
+    backgroundColor: colors.warning,
+  },
   resultBadgeIcon: {
     fontSize: 18,
   },
@@ -255,6 +282,13 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: colors.primary,
   },
+  qualityPillWarning: {
+    backgroundColor: '#FEF3C7',
+    borderColor: colors.warning,
+  },
+  qualityPillWarningText: {
+    color: colors.warning,
+  },
   divider: {
     height: 1,
     backgroundColor: colors.borderLight,
@@ -280,6 +314,16 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     padding: 16,
     borderRadius: 12,
+  },
+  reviewBox: {
+    backgroundColor: '#FEF3C7',
+    marginBottom: 16,
+  },
+  reviewTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.warning,
+    marginBottom: 8,
   },
   summaryTitle: {
     fontSize: 13,

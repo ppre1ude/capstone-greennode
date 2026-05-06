@@ -19,7 +19,13 @@ import {
 } from 'react-native';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {RootStackParamList} from '@/navigation/types';
-import {Camera, useCameraDevice, useCameraPermission} from 'react-native-vision-camera';
+import {
+  Camera,
+  type CameraRef,
+  useCameraDevice,
+  useCameraPermission,
+  usePhotoOutput,
+} from 'react-native-vision-camera';
 import {launchImageLibrary} from 'react-native-image-picker';
 import {styles} from './CameraScanScreen.styles';
 import {generatePost} from '@/api/posts';
@@ -30,7 +36,8 @@ const CameraScanScreen = ({navigation}: Props) => {
   const {hasPermission, requestPermission} = useCameraPermission();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const device = useCameraDevice('back');
-  const camera = useRef<any>(null);
+  const photoOutput = usePhotoOutput({containerFormat: 'jpeg'});
+  const camera = useRef<CameraRef>(null);
 
   // 스캔 라인 애니메이션
   const scanLineAnim = useRef(new Animated.Value(0)).current;
@@ -60,20 +67,6 @@ const CameraScanScreen = ({navigation}: Props) => {
     }
   }, [hasPermission, device, scanLineAnim]);
 
-  const handleCapture = async () => {
-    if (!camera.current) {return;}
-    
-    try {
-      const photo = await camera.current.takePhoto({
-        flash: 'off',
-      });
-      processImage(`file://${photo.path}`);
-    } catch (error) {
-      console.warn('Capture error', error);
-      Alert.alert('촬영 오류', '사진을 촬영할 수 없습니다.');
-    }
-  };
-
   const handleGallery = async () => {
     try {
       const result = await launchImageLibrary({
@@ -89,6 +82,40 @@ const CameraScanScreen = ({navigation}: Props) => {
       }
     } catch (error) {
       console.warn('Gallery error', error);
+    }
+  };
+
+  const handleCapture = async () => {
+    if (!camera.current) {
+      Alert.alert(
+        '카메라 준비 실패',
+        '카메라를 사용할 수 없습니다. 갤러리에서 사진을 선택할 수 있습니다.',
+        [
+          {text: '취소', style: 'cancel'},
+          {text: '갤러리 선택', onPress: handleGallery},
+        ],
+      );
+      return;
+    }
+
+    try {
+      const photo = await photoOutput.capturePhotoToFile(
+        {
+          flashMode: 'off',
+        },
+        {},
+      );
+      processImage(`file://${photo.filePath}`);
+    } catch (error) {
+      console.warn('Capture error', error);
+      Alert.alert(
+        '촬영 오류',
+        '사진 촬영에 실패했습니다. 갤러리에서 기존 사진을 선택할 수 있습니다.',
+        [
+          {text: '취소', style: 'cancel'},
+          {text: '갤러리 선택', onPress: handleGallery},
+        ],
+      );
     }
   };
 
@@ -127,6 +154,9 @@ const CameraScanScreen = ({navigation}: Props) => {
     return (
       <View style={styles.centerContainer}>
         <Text style={styles.permissionText}>카메라 권한이 필요합니다.</Text>
+        <TouchableOpacity style={styles.galleryFallbackButton} onPress={handleGallery}>
+          <Text style={styles.galleryFallbackText}>갤러리에서 선택하기</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -180,8 +210,7 @@ const CameraScanScreen = ({navigation}: Props) => {
           style={StyleSheet.absoluteFill}
           device={device}
           isActive={!isAnalyzing}
-          // @ts-ignore
-          photo={true}
+          outputs={[photoOutput]}
         />
 
         {/* 스캔 프레임 UI */}

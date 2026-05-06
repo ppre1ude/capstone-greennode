@@ -15,7 +15,9 @@ import {
   TextInput,
   FlatList,
   StatusBar,
+  ActivityIndicator,
 } from 'react-native';
+import {useNavigation} from '@react-navigation/native';
 import MapView, {Marker, Circle, PROVIDER_DEFAULT} from 'react-native-maps';
 import {getNearbyFridges} from '@/api/fridges';
 import {useAuthStore} from '@/store/authStore';
@@ -25,7 +27,12 @@ import {styles} from './MapScreen.styles';
 
 const MapScreen = () => {
   const user = useAuthStore(state => state.user);
+  const navigation = useNavigation<any>();
   const [fridges, setFridges] = useState<Fridge[]>([]);
+  const [fridgeState, setFridgeState] = useState<
+    'loading' | 'ready' | 'empty' | 'error'
+  >('loading');
+  const [fridgeError, setFridgeError] = useState<string | null>(null);
   const [selectedFridgeId, setSelectedFridgeId] = useState<number | null>(null);
   const mapRef = useRef<MapView>(null);
   const flatListRef = useRef<FlatList>(null);
@@ -39,15 +46,30 @@ const MapScreen = () => {
   };
 
   const fetchFridges = useCallback(async () => {
+    if (user?.latitude == null || user?.longitude == null) {
+      setFridges([]);
+      setFridgeState('error');
+      setFridgeError('동네 위치를 설정하면 주변 냉장고를 확인할 수 있습니다.');
+      return;
+    }
+
+    setFridgeState('loading');
+    setFridgeError(null);
     try {
-      const lat = user?.latitude || 35.1595;
-      const lng = user?.longitude || 126.9136;
-      const response = await getNearbyFridges(lat, lng, 2.0);
+      const response = await getNearbyFridges(user.latitude, user.longitude, 2.0);
       if (response.success && response.data) {
         setFridges(response.data);
+        setFridgeState(response.data.length > 0 ? 'ready' : 'empty');
+      } else {
+        setFridges([]);
+        setFridgeState('error');
+        setFridgeError(response.message || '주변 냉장고를 불러오지 못했습니다.');
       }
     } catch (error) {
       console.warn('Map: Failed to fetch fridges', error);
+      setFridges([]);
+      setFridgeState('error');
+      setFridgeError('서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.');
     }
   }, [user?.latitude, user?.longitude]);
 
@@ -166,6 +188,10 @@ const MapScreen = () => {
       <TouchableOpacity
         style={styles.myLocationButton}
         onPress={() => {
+          if (user?.latitude == null || user?.longitude == null) {
+            navigation.getParent()?.navigate('LocationSetup', {allowBack: true});
+            return;
+          }
           mapRef.current?.animateToRegion(initialRegion, 500);
         }}>
         <Text style={styles.myLocationIcon}>📍</Text>
@@ -173,7 +199,32 @@ const MapScreen = () => {
 
       {/* 하단 냉장고 리스트 캐러셀 */}
       <View style={styles.bottomCarousel}>
-        {fridges.length > 0 ? (
+        {fridgeState === 'loading' ? (
+          <View style={styles.emptyCard}>
+            <ActivityIndicator color={colors.primary} />
+            <Text style={styles.emptyTitle}>주변 냉장고를 불러오는 중입니다</Text>
+          </View>
+        ) : fridgeState === 'error' ? (
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyTitle}>냉장고를 불러오지 못했습니다</Text>
+            <Text style={styles.emptyText}>{fridgeError}</Text>
+            <TouchableOpacity
+              style={styles.retryButton}
+              onPress={() => {
+                if (user?.latitude == null || user?.longitude == null) {
+                  navigation.getParent()?.navigate('LocationSetup', {
+                    allowBack: true,
+                  });
+                  return;
+                }
+                fetchFridges();
+              }}>
+              <Text style={styles.retryButtonText}>
+                {user?.latitude == null ? '위치 설정' : '다시 시도'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        ) : fridges.length > 0 ? (
           <FlatList
             ref={flatListRef}
             data={fridges}

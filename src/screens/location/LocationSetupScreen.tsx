@@ -32,13 +32,14 @@ interface LocationCoords {
   longitude: number;
 }
 
-const LocationSetupScreen = ({navigation}: Props) => {
+const LocationSetupScreen = ({route, navigation}: Props) => {
   const [location, setLocation] = useState<LocationCoords | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
   const [locationName, setLocationName] = useState('위치를 탐색 중...');
   const [fcmToken, setFcmToken] = useState<string | undefined>();
   const setUser = useAuthStore(state => state.setUser);
+  const allowBack = route.params?.allowBack === true;
 
   const preparePushToken = useCallback(async () => {
     const token = await getFcmToken();
@@ -154,6 +155,13 @@ const LocationSetupScreen = ({navigation}: Props) => {
 
       {/* 헤더 */}
       <View style={styles.header}>
+        {allowBack && (
+          <TouchableOpacity
+            style={styles.headerBackButton}
+            onPress={() => navigation.goBack()}>
+            <Text style={styles.headerBackText}>←</Text>
+          </TouchableOpacity>
+        )}
         <Text style={styles.headerTitle}>동네 설정</Text>
       </View>
 

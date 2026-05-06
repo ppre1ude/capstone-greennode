@@ -14,6 +14,7 @@ import {
   TextInput,
   TouchableOpacity,
   StatusBar,
+  Alert,
   ScrollView,
   Image,
   Platform,
@@ -22,27 +23,16 @@ import {
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {RootStackParamList} from '@/navigation/types';
 import {colors} from '@/theme';
+import {
+  getConfidencePercent,
+  getQualityMeta,
+  needsAnalysisReview,
+} from '@/utils/postPolicy';
 import {styles} from './PostCreateScreen.styles';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PostCreate'>;
 
 const CATEGORIES = ['과일', '채소', '가공식품', '유제품', '기타'];
-
-const QUALITY_LABELS: Record<string, string> = {
-  fresh: '신선',
-  normal: '보통',
-  mid: '보통',
-  stale: '부패 의심',
-  rotten: '부패 의심',
-};
-
-const getQualityLabel = (category?: string) => {
-  if (!category) {
-    return '분석 완료';
-  }
-
-  return QUALITY_LABELS[category.toLowerCase()] ?? category;
-};
 
 const formatDateOnly = (date: Date) => date.toISOString().slice(0, 10);
 
@@ -54,7 +44,12 @@ const PostCreateScreen = ({route, navigation}: Props) => {
     result.detectedFruit ||
     result.aiAnalysis?.detectedFruit ||
     '알 수 없음';
-  const qualityLabel = getQualityLabel(result.aiAnalysis?.category);
+  const quality = getQualityMeta(result.aiAnalysis?.category);
+  const confidencePercent = getConfidencePercent(
+    result.aiAnalysis?.confidenceScore,
+  );
+  const needsReview =
+    quality.canShare && needsAnalysisReview(result.aiAnalysis?.confidenceScore);
 
   const [title, setTitle] = useState(result.suggestedTitle || '');
   const [category, setCategory] = useState(result.suggestedCategory || '과일');
@@ -63,6 +58,14 @@ const PostCreateScreen = ({route, navigation}: Props) => {
   );
 
   const handleNext = () => {
+    if (!quality.canShare) {
+      Alert.alert(
+        '나눔 등록 불가',
+        '부패가 의심되는 식재료는 나눔으로 등록할 수 없습니다. 다시 촬영해주세요.',
+      );
+      return;
+    }
+
     if (!title.trim() || !description.trim()) {
       return;
     }
@@ -79,6 +82,7 @@ const PostCreateScreen = ({route, navigation}: Props) => {
         imageToken: result.imageToken,
         expirationDate: formatDateOnly(expDate),
       },
+      qualityCategory: result.aiAnalysis?.category,
     });
   };
 
@@ -118,9 +122,25 @@ const PostCreateScreen = ({route, navigation}: Props) => {
             <View style={styles.analysisDivider} />
             <View style={styles.analysisItem}>
               <Text style={styles.analysisLabel}>품질 분류</Text>
-              <Text style={styles.analysisValue}>{qualityLabel}</Text>
+              <Text style={styles.analysisValue}>{quality.label}</Text>
+            </View>
+            <View style={styles.analysisDivider} />
+            <View style={styles.analysisItem}>
+              <Text style={styles.analysisLabel}>AI 신뢰도</Text>
+              <Text
+                style={[
+                  styles.analysisValue,
+                  needsReview && styles.analysisValueWarning,
+                ]}>
+                {confidencePercent != null ? `${confidencePercent}%` : '미제공'}
+              </Text>
             </View>
           </View>
+          {needsReview && (
+            <Text style={styles.reviewNotice}>
+              AI 신뢰도가 낮습니다. 실제 상태를 직접 확인한 뒤 등록해주세요.
+            </Text>
+          )}
 
           {/* 제목 */}
           <View style={styles.field}>
@@ -179,11 +199,14 @@ const PostCreateScreen = ({route, navigation}: Props) => {
         <TouchableOpacity
           style={[
             styles.submitButton,
-            (!title.trim() || !description.trim()) && styles.submitButtonDisabled,
+            (!title.trim() || !description.trim() || !quality.canShare) &&
+              styles.submitButtonDisabled,
           ]}
           onPress={handleNext}
-          disabled={!title.trim() || !description.trim()}>
-          <Text style={styles.submitButtonText}>다음 단계로</Text>
+          disabled={!title.trim() || !description.trim() || !quality.canShare}>
+          <Text style={styles.submitButtonText}>
+            {quality.canShare ? '다음 단계로' : '나눔 등록 불가'}
+          </Text>
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>

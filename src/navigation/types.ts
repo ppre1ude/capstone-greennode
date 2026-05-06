@@ -25,12 +25,17 @@ export type MainTabParamList = {
 /** 루트 스택 (앱 전체) */
 export type RootStackParamList = {
   Auth: undefined;
-  LocationSetup: undefined;
+  LocationSetup: {allowBack?: boolean} | undefined;
   Main: undefined;
   CameraScan: undefined;
   AnalysisResult: {result: GenerateResult; imageUri: string};
   PostCreate: {result: GenerateResult; imageUri: string};
   PostComplete: {postId: number};
   PostDetail: {postId: number};
-  FridgeSelect: {postData?: Omit<PostCreateData, 'fridgeId'>; latitude?: number; longitude?: number};
+  FridgeSelect: {
+    postData?: Omit<PostCreateData, 'fridgeId'>;
+    qualityCategory?: string;
+    latitude?: number;
+    longitude?: number;
+  };
 };

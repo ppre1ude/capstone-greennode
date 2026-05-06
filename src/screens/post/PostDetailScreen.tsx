@@ -23,6 +23,7 @@ import type {RootStackParamList} from '@/navigation/types';
 import {getPostDetail, deletePost, getImageUrl} from '@/api/posts';
 import {useAuthStore} from '@/store/authStore';
 import type {Post} from '@/types';
+import {isPostAuthoredByUser} from '@/utils/postPolicy';
 import {colors} from '@/theme';
 import {styles} from './PostDetailScreen.styles';
 
@@ -100,7 +101,7 @@ const PostDetailScreen = ({route, navigation}: Props) => {
     return null;
   }
 
-  const isMyPost = user?.id === post.userId;
+  const isMyPost = isPostAuthoredByUser(post, user?.id);
   const daysLeft = Math.ceil(
     (new Date(post.expirationDate).getTime() - new Date().getTime()) /
       (1000 * 3600 * 24),

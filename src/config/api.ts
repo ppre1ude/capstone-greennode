@@ -12,7 +12,3 @@ export const API_BASE_URL =
   Platform.OS === 'android'
     ? `http://${androidHost}:${PORT}`
     : `http://localhost:${PORT}`;
-
-// Presentation/dev fallback: skip the live Vision AI upload pipeline.
-// Set to false when the backend image pipeline is ready to test again.
-export const USE_MOCK_AI_PIPELINE = true;
