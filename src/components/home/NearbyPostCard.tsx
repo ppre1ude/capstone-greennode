@@ -5,44 +5,58 @@
  * 이미지 + 상태 뱃지 + 제목 + 위치 + 시간
  */
 import React from 'react';
-import {View, Text, StyleSheet, Image, TouchableOpacity} from 'react-native';
-import type {Post} from '@/types';
-import {getImageUrl} from '@/api/posts';
-import {colors} from '@/theme';
+import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
+import type { Post } from '@/types';
+import { getImageUrl } from '@/api/posts';
+import { colors } from '@/theme';
+import {
+  getConfidencePercent,
+  getPostDisplayName,
+  getPostStatusLabel,
+  getQualityMeta,
+} from '@/utils/postPolicy';
 
 interface Props {
   post: Post;
   onPress: () => void;
 }
 
-const NearbyPostCard = ({post, onPress}: Props) => {
+const NearbyPostCard = ({ post, onPress }: Props) => {
+  const displayName = getPostDisplayName(post);
+  const quality = getQualityMeta(post.freshnessLabel);
+  const confidencePercent = getConfidencePercent(post.confidenceScore);
+
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>
       {/* 이미지 */}
       <View style={styles.imageContainer}>
         <Image
-          source={{uri: getImageUrl(post.imageUrl)}}
+          source={{ uri: getImageUrl(post.imageUrl) }}
           style={styles.image}
           resizeMode="cover"
         />
         {/* 상태 뱃지 */}
         <View style={styles.freshBadge}>
           <View style={styles.freshDot} />
-          <Text style={styles.freshText}>나눔 가능</Text>
+          <Text style={styles.freshText}>
+            {getPostStatusLabel(post.status)}
+          </Text>
         </View>
       </View>
 
       {/* 텍스트 정보 */}
       <View style={styles.info}>
         <View style={styles.infoTop}>
-          <Text style={styles.category}>{post.category || '식재료'}</Text>
+          <Text style={styles.category}>{quality.label}</Text>
           <Text style={styles.time}>방금 전</Text>
         </View>
         <Text style={styles.title} numberOfLines={1}>
-          {post.title}
+          {displayName}
         </Text>
         <Text style={styles.location} numberOfLines={1}>
-          근처 공유 냉장고
+          {confidencePercent != null
+            ? `AI 신뢰도 ${confidencePercent}%`
+            : '근처 공유 냉장고'}
         </Text>
       </View>
     </TouchableOpacity>

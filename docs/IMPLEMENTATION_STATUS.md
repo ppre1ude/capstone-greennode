@@ -28,7 +28,7 @@
 - 백엔드 계약 변경: Post의 `title`, `description`, `category` 컬럼이 제거되고 `detectedFruitKo`, `freshnessLabel`, `confidenceScore` 중심 구조로 바뀌었다.
 - AI 계약 확정: 백엔드 label은 `Fresh`, `Mid`, `Stale`, `unknown`이며, `Mid`는 기존 프론트의 `Normal` 그룹이다. `confidenceScore`는 Stage 2 신선도 분류 softmax max 확률이다. 백엔드 활용 가이드는 0.9 미만을 확인 필요 구간으로 보지만, 현재 앱은 60% 미만 기준을 사용한다.
 - 서버 최종 방어선: `Stale`이면 generate 400으로 `imageToken`이 발급되지 않고, create는 무효/만료 토큰을 400으로 거부한다. 프론트 `canShare`는 UX 가드다.
-- 프론트 현재 상태: 위 백엔드 계약은 아직 React Native 코드에 반영되지 않았다. 현재 `src/types/post.ts`, 카드/상세/등록 화면, 상세 CTA는 구형 Post 구조와 `나눔 신청하기 (준비중)` 상태를 사용한다.
+- 프론트 현재 상태: Post 구조 변경은 React Native 코드에 반영됐다. `src/types/post.ts`, `createPost()` payload, 홈 카드/상세/등록 화면은 `detectedFruitKo`, `freshnessLabel`, `confidenceScore`, `status`, `imageToken` 중심으로 동작한다. 나눔 신청 API와 냉장고별 나눔 식재료 조회, FCM 수신 handler는 아직 미연동이다.
 
 ---
 
@@ -40,9 +40,9 @@
 | 최초 위치 등록 | 구현됨 | 위치 없는 유저는 `LocationSetup`으로 이동하고 `/auth/me/location`에 좌표와 FCM 토큰을 저장한다. 홈/지도/나눔 등록 강제 진입도 위치 설정 CTA로 되돌린다. |
 | 위치 재설정 | 구현됨 | 홈 위치 헤더와 프로필 `동네 위치 재설정` 메뉴에서 `LocationSetup`으로 재진입한다. |
 | AI 분석 | 부분 구현 | mock 파이프라인은 제거됐고 실제 `/posts/generate` 호출이 동작한다. 백엔드 기준 label은 `Fresh/Mid/Stale/unknown`이며 `Mid`는 기존 `Normal` 그룹이다. `confidenceScore`는 Stage 2 신선도 분류 softmax max 확률이고 차단 기준이 아니다. 현재 앱은 60% 미만을 확인 필요로 보지만 백엔드는 0.9 미만 확인 필요 활용 가이드를 제시했다. 에뮬레이터 셔터 촬영은 파일 생성 및 API 호출까지 재검증됐고, 실제 기기 검증은 남았다. |
-| 나눔 식재료 등록 | 부분 구현, 백엔드 계약 갱신 반영 필요 | 실제 `generate -> imageToken -> createPost` 흐름으로 서버 등록이 확인됐다. 다만 백엔드 Phase 1.5에서 Post의 `title/description/category`가 제거되어 현재 프론트 작성 화면과 타입을 `detectedFruitKo/freshnessLabel/confidenceScore` 중심으로 재정렬해야 한다. `canShare=false`는 분석 결과, 작성, 최종 등록 단계에서 차단한다. 등록 완료 후 홈 복귀는 주변 목록 재조회 신호를 전달한다. |
-| 나눔 식재료 상세/삭제 | 부분 구현, 백엔드 계약 갱신 반영 필요 | 실제 상세 응답의 `authorId` 기준으로 작성자 여부를 판단한다. 백엔드 응답 구조가 `detectedFruitKo/freshnessLabel/confidenceScore` 중심으로 바뀌었으므로 상세 화면의 구형 `title/description/category` 의존을 제거해야 한다. |
-| 홈 주변 나눔 식재료 | 부분 구현 | `/posts/nearby` 데이터를 카드로 표시한다. API 실패와 빈 상태는 UI에서 분리됐다. 위치가 없으면 API를 호출하지 않고 위치 설정 CTA를 표시한다. 홈은 냉장고보다 available 나눔 식재료를 먼저 보여주는 화면이다. 홈 포커스와 등록 완료 refresh token 변경 시 재조회한다. |
+| 나눔 식재료 등록 | 부분 구현 | 실제 `generate -> imageToken -> createPost` 흐름으로 서버 등록이 확인됐다. 백엔드 Phase 1.5 구조에 맞춰 작성 화면은 제목/설명/카테고리 입력 대신 AI 판별 식재료명, 신선도, confidence를 확인하고 `fridgeId`, `expirationDate`, `imageToken`만 최종 등록 payload로 보낸다. `canShare=false` 또는 `imageToken` 누락은 분석 결과, 작성, 최종 등록 단계에서 차단한다. 등록 완료 후 홈 복귀는 주변 목록 재조회 신호를 전달한다. |
+| 나눔 식재료 상세/삭제 | 부분 구현 | 실제 상세 응답의 `authorId` 기준으로 작성자 여부를 판단한다. 상세 화면은 구형 `title/description/category` 대신 `detectedFruitKo`, `freshnessLabel`, `confidenceScore`, `status`를 표시한다. 나눔 신청 API는 아직 연결되지 않았다. |
+| 홈 주변 나눔 식재료 | 부분 구현 | `/posts/nearby` 데이터를 카드로 표시한다. 홈 카드는 `detectedFruitKo`, `freshnessLabel`, `confidenceScore`, `status`를 사용한다. API 실패와 빈 상태는 UI에서 분리됐다. 위치가 없으면 API를 호출하지 않고 위치 설정 CTA를 표시한다. 홈은 냉장고보다 available 나눔 식재료를 먼저 보여주는 화면이다. 홈 포커스와 등록 완료 refresh token 변경 시 재조회한다. |
 | 지도/냉장고 | 부분 구현, 백엔드 API 추가됨 | `/fridges/nearby`, `/fridges/available` 조회와 지도 마커/냉장고 선택은 동작한다. 백엔드는 `GET /fridges/{id}/posts?status=available`도 구현했지만 프론트는 아직 냉장고별 나눔 식재료 목록을 노출하지 않는다. 위치가 없으면 지도 기본 좌표 fallback 없이 위치 설정 CTA를 표시한다. API 실패와 빈 상태는 분리됐고, 주변 냉장고 없음 상태는 서버 필터 확인이 필요하다. |
 | 나눔 신청 | 백엔드 구현 완료, 프론트 미연동 | 백엔드는 `POST /posts/{id}/requests`, `available -> requested`, `SELECT ... FOR UPDATE` 경합 처리, 작성자 403, 중복/경합 409, 신청 알림을 구현/검증했다. 프론트 상세 CTA는 아직 `나눔 신청하기 (준비중)`이며 API client, 상태 갱신, 403/409 UX가 필요하다. |
 | FCM | 부분 구현, 백엔드 payload 확정 | FCM 토큰 등록은 있다. 백엔드는 `share_created`, `share_requested` 타입과 camelCase payload(`postId`, `requestId`, `fruitName`, `fridgeName`)를 확정했다. 실제 수신 handler, 알림 목록, 읽음 상태는 없다. 탭은 빈 알림함으로 축소했다. |
@@ -93,14 +93,14 @@
 
 - 상태: 부분 완료
 - 완료:
-  - AI 추천 제목/설명/카테고리 기반 작성 화면
+  - AI 판별 식재료명/신선도/confidence 기반 등록 확인 화면
   - 냉장고 선택
   - 실제 `POST /api/v1/posts` 생성. API/code의 `post`는 도메인상 나눔 식재료
+  - 백엔드 Phase 1.5 Post 구조 반영: `title/description/category` 의존 제거, `detectedFruitKo/freshnessLabel/confidenceScore` 사용
   - 완료 화면
   - 위치 미설정 상태의 냉장고 선택 강제 진입 시 `/fridges/available` 호출 차단과 위치 설정 CTA 표시
   - 등록 완료 후 홈 복귀 시 `/posts/nearby` 재조회 신호 전달과 홈 포커스 재조회
 - 남은 작업:
-  - 백엔드 Phase 1.5 Post 구조 반영: `title/description/category` 의존 제거, `detectedFruitKo/freshnessLabel/confidenceScore` 사용
   - `Stale` generate 400과 `imageToken` 미발급/무효 토큰 create 400 UX 검증
   - 유통기한 기본 3일 자동값 정책 정리
 
@@ -137,7 +137,7 @@
 
 1. 완료: `authorId/userId` 계약 불일치 수정
 2. 완료: 나눔 기준 미충족/등록 차단 상태에서 실제 등록 차단
-3. 신규: 백엔드 Phase 1.5 Post 구조 변경 반영. `src/types/post.ts`, `PostCreateData`, 카드/상세/등록 화면의 `title/description/category` 의존을 제거하고 `detectedFruitKo/freshnessLabel/confidenceScore` 중심으로 갱신
+3. 완료: 백엔드 Phase 1.5 Post 구조 변경 반영. `src/types/post.ts`, `PostCreateData`, 카드/상세/등록 화면의 `title/description/category` 의존을 제거하고 `detectedFruitKo/freshnessLabel/confidenceScore/status` 중심으로 갱신
 
 ### P1
 

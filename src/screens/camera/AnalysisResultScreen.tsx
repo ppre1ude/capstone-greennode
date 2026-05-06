@@ -19,33 +19,37 @@ import {
   ScrollView,
   Platform,
 } from 'react-native';
-import type {NativeStackScreenProps} from '@react-navigation/native-stack';
-import type {RootStackParamList} from '@/navigation/types';
-import {colors} from '@/theme';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '@/navigation/types';
+import { colors } from '@/theme';
 import {
   getConfidencePercent,
-  getAnalysisQualityMeta,
+  getGenerateResultQualityMeta,
   needsAnalysisReview,
 } from '@/utils/postPolicy';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AnalysisResult'>;
 
-const AnalysisResultScreen = ({route, navigation}: Props) => {
-  const {result, imageUri} = route.params;
+const AnalysisResultScreen = ({ route, navigation }: Props) => {
+  const { result, imageUri } = route.params;
 
-  const quality = getAnalysisQualityMeta(result.aiAnalysis);
+  const quality = getGenerateResultQualityMeta(result);
   const confidencePercent = getConfidencePercent(
-    result.aiAnalysis?.confidenceScore,
+    result.confidenceScore ?? result.aiAnalysis?.confidenceScore,
   );
   const needsReview =
     quality.canShare &&
     (quality.label === '확인 필요' ||
-      needsAnalysisReview(result.aiAnalysis?.confidenceScore));
+      needsAnalysisReview(
+        result.confidenceScore ?? result.aiAnalysis?.confidenceScore,
+      ));
+  const hasImageToken = Boolean(result.imageToken);
+  const canProceed = quality.canShare && hasImageToken;
   const statusLabel = !quality.canShare
     ? quality.label
     : needsReview
-      ? '확인 필요'
-      : '나눔 가능';
+    ? '확인 필요'
+    : '나눔 가능';
   const detectedCrop =
     result.detectedFruitKo ||
     result.aiAnalysis?.detectedFruitKo ||
@@ -73,7 +77,7 @@ const AnalysisResultScreen = ({route, navigation}: Props) => {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* 이미지 섹션 */}
         <View style={styles.imageSection}>
-          <Image source={{uri: imageUri}} style={styles.scannedImage} />
+          <Image source={{ uri: imageUri }} style={styles.scannedImage} />
           {/* AI result badge */}
           <View style={styles.resultBadgeContainer}>
             <View
@@ -94,7 +98,11 @@ const AnalysisResultScreen = ({route, navigation}: Props) => {
         <View style={styles.analysisCard}>
           <View style={styles.cardHeader}>
             <Text style={styles.cardTitle}>AI 분석 결과</Text>
-            <View style={[styles.qualityPill, needsReview && styles.qualityPillWarning]}>
+            <View
+              style={[
+                styles.qualityPill,
+                needsReview && styles.qualityPillWarning,
+              ]}>
               <Text
                 style={[
                   styles.qualityPillText,
@@ -149,8 +157,8 @@ const AnalysisResultScreen = ({route, navigation}: Props) => {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.nextButton, !quality.canShare && styles.nextButtonDisabled]}
-          disabled={!quality.canShare}
+          style={[styles.nextButton, !canProceed && styles.nextButtonDisabled]}
+          disabled={!canProceed}
           onPress={() => {
             navigation.replace('PostCreate', {
               result,
@@ -158,7 +166,7 @@ const AnalysisResultScreen = ({route, navigation}: Props) => {
             });
           }}>
           <Text style={styles.nextText}>
-            {quality.canShare ? '이대로 나눔하기' : '나눔 기준 미충족'}
+            {canProceed ? '이대로 나눔하기' : '나눔 기준 미충족'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -217,7 +225,7 @@ const styles = StyleSheet.create({
     bottom: -20,
     alignSelf: 'center',
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 8,
@@ -253,7 +261,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 24,
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 10,
     elevation: 2,
@@ -371,7 +379,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.primary,
     shadowColor: colors.primary,
-    shadowOffset: {width: 0, height: 4},
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 4,

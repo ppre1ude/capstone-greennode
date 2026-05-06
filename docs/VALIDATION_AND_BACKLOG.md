@@ -99,7 +99,7 @@
 ### 후속 결정 필요
 
 - `not_food`, `low_quality`, `review_required` 등 rejection reason enum은 Post-MVP에서 백엔드와 확정한다.
-- 프론트는 백엔드 Phase 1.5의 Post 구조 변경(`title/description/category` 제거, `detectedFruitKo/freshnessLabel/confidenceScore` 추가)을 코드에 반영한다.
+- 백엔드 Phase 1.5의 Post 구조 변경(`title/description/category` 제거, `detectedFruitKo/freshnessLabel/confidenceScore` 추가)은 코드 반영 완료 상태이며, 실제 VM/API 런타임 QA만 남았다.
 - 프론트는 백엔드가 구현한 `POST /posts/{id}/requests`와 `GET /fridges/{id}/posts?status=available`를 연동한다.
 - `requested` 이후 `reserved`, `completed`, `cancelled`, `expired` 흐름은 후속 버전에서 설계한다.
 
@@ -111,9 +111,9 @@
 | --- | --- | --- | --- |
 | 나눔 신청 API | `POST /posts/{id}/requests` 구현, 201/403/409 VM 검증 완료 | 미연동. 상세 CTA는 `나눔 신청하기 (준비중)` | API client, 상세 CTA, 성공/실패 UI, 목록/상세 갱신 구현 |
 | 신청 동시 경합 | `SELECT ... FOR UPDATE` + 단일 트랜잭션으로 첫 신청만 성공. 이후 요청은 409 | 프론트는 아직 신청 API가 없어 race 결과 처리도 없음 | 409를 오류라기보다 정상 경합 결과로 처리하고 CTA 비활성화 |
-| 나눔 상태 | `available`, `requested`, `completed` 존재. `/posts/nearby`는 available만 반환 | 타입/상세 CTA가 requested 흐름을 아직 반영하지 않음 | `Post.status` 타입과 상세/홈 상태 처리 갱신 |
-| Post 구조 | `title/description/category` 제거, `detectedFruitKo/freshnessLabel/confidenceScore` 추가 | `src/types/post.ts`, 카드/상세/등록 화면이 구형 필드에 의존 | P0로 타입/API/화면 재정렬 |
-| AI label | `Fresh/Mid/Stale/unknown`, `Mid`는 기존 `Normal` 그룹 | 앱 정책은 `normal/mid/medium` 매핑을 일부 허용. `unknown` 전용 UX는 명시적이지 않음 | 문서와 테스트 fixture를 `Fresh/Mid/Stale` 기준으로 정리하고 `unknown`은 확인/실패 상태로 처리 |
+| 나눔 상태 | `available`, `requested`, `completed` 존재. `/posts/nearby`는 available만 반환 | `Post.status` 타입과 상세/홈 상태 표시 반영. 신청 API는 아직 미연동 | 신청 API 연동 시 201/403/409에 따라 상세/홈 상태 갱신 |
+| Post 구조 | `title/description/category` 제거, `detectedFruitKo/freshnessLabel/confidenceScore` 추가 | `src/types/post.ts`, `createPost()` payload, 홈 카드, 상세, 등록 확인 화면 반영 완료 | 실제 VM API로 등록/상세/홈 카드 런타임 QA |
+| AI label | `Fresh/Mid/Stale/unknown`, `Mid`는 기존 `Normal` 그룹 | `postPolicy`가 `Fresh/Mid`를 나눔 가능, `Stale/unknown`을 등록 불가로 매핑 | fixture 기반 수동 QA와 threshold 결정 |
 | confidenceScore | Stage 2 신선도 분류 softmax max 확률로 확정. 백엔드 표시 가이드는 0.9 이상 높음, 0.5~0.9 확인 필요 | 현재 앱은 60% 미만만 `확인 필요`로 분기 | UX 기준 충돌을 기록하고 프론트 threshold를 90%로 바꿀지 별도 결정 |
 | rejection reason enum | `not_food`, `low_quality` 등은 Post-MVP | 앱은 enum을 받으면 방어적으로 처리 가능 | false-positive fixture는 후속 계약 검증으로 유지 |
 | Stale 최종 등록 방어 | `Stale`이면 generate 400, `imageToken` 미발급. create는 무효/만료 토큰 400 | 프론트도 `canShare=false` UX 가드를 갖고 있음 | 서버가 최종 방어선임을 전제로 stale/token 실패 UX 검증 |
@@ -130,6 +130,7 @@
 - P1 등록 완료 후 홈 재조회: `PostCompleteScreen`이 홈 탭에 `nearbyPostsRefreshToken`을 전달하고, `HomeScreen`은 포커스/토큰 변경 시 `/posts/nearby`를 다시 조회한다.
 - P1 카메라 촬영/fallback: `react-native-vision-camera@5`의 `usePhotoOutput().capturePhotoToFile()` 경로로 수정했다. 에뮬레이터에서 촬영 파일 생성 및 실제 `/posts/generate` 호출까지 확인했고, 실제 기기 셔터 검증은 아직 남았다.
 - P1 confidence: `confidenceScore`를 분석 결과/작성 화면에 표시하고 현재 앱은 60% 미만을 즉시 차단 대신 `확인 필요`로 분기한다. 백엔드 답변은 0.9 미만을 확인 필요 구간으로 보는 활용 가이드를 제시했으므로, 프론트 UX 기준 재결정이 필요하다.
+- P0 Post 구조 변경: `Post`/`PostCreateData`/`GenerateResult` 타입과 `createPost()` payload를 백엔드 Phase 1.5 계약으로 갱신했다. 홈 카드, 상세 화면, 등록 확인 화면은 `detectedFruitKo`, `freshnessLabel`, `confidenceScore`, `status`를 사용하고 구형 `title/description/category` 표시/전송 의존을 제거했다.
 - 회귀 테스트: `__tests__/postPolicy.test.ts`에서 품질 정책, confidence, 작성자 판단을 고정한다. `__tests__/postComplete.navigation.test.tsx`, `__tests__/home.nearbyRefresh.test.tsx`에서 등록 완료 홈 복귀와 `/posts/nearby` 재조회 신호를 고정한다.
 - AI QA fixture/실기기 체크리스트: [AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md](./AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md)에 성공/실패/false-positive/대용량/실제 기기 촬영 검증 기준을 정리했다.
 
@@ -641,13 +642,11 @@ docs/VALIDATION_AND_BACKLOG.md의 "4. 한 장 촬영 UX와 multi-object 정책 �
 
 #### 다음 스프린트 우선순위 제안
 
-1. 위치 재설정 연결: 이미 있는 `/auth/me/location`과 `LocationSetup`을 재사용할 수 있어 비용 대비 효과가 크다.
-2. 홈/지도 목록 실패 UI: 현재 API 실패가 빈 상태처럼 보일 수 있으므로, retry와 에러 상태를 분리한다.
-3. 검색 MVP 범위 결정: 서버 검색 없이 지도 냉장고명 로컬 필터부터 시작할지 결정한다.
-4. 나눔 신청 API 연동: 백엔드 계약이 확정됐으므로 상세 CTA, 201/403/409 처리, 홈/상세 상태 갱신을 우선 구현한다.
-5. Post 구조 재정렬: 백엔드가 `title/description/category`를 제거했으므로 프론트 타입과 화면을 `detectedFruitKo/freshnessLabel/confidenceScore` 기준으로 갱신한다.
-6. 푸쉬 범위 명확화: FCM 토큰 등록은 있으므로, 실제 수신 핸들러와 알림함을 별도 이슈로 분리한다.
-7. 목업 통계 정리: 탄소 절감액, 포인트, 신선도 온도는 실제 지표가 아니므로 숨김/준비 중/실제 API 중 하나로 결정한다.
+1. 나눔 신청 API 연동: 백엔드 계약이 확정됐으므로 상세 CTA, 201/403/409 처리, 홈/상세 상태 갱신을 우선 구현한다.
+2. 냉장고별 나눔 식재료 조회: 지도/냉장고 상세에서 `GET /fridges/{id}/posts?status=available`를 연결한다.
+3. FCM 수신 handler와 알림함: `share_created`, `share_requested` payload를 foreground/background 수신 흐름에 연결한다.
+4. confidence UX 기준 결정: 현재 60%와 백엔드 활용 가이드 90% 중 어떤 threshold를 제품 기준으로 삼을지 확정한다.
+5. 실제 기기/fixture QA: `Stale`, `unknown`, 무효 `imageToken`, 실제 카메라 촬영 케이스를 증거로 남긴다.
 
 #### 채팅 탭 결정
 
@@ -715,16 +714,16 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
 
 - 분류: 서버 계약 변경 대응
 - 우선순위: P0
-- 상태: 미구현
-- 배경: 백엔드가 Post 컬럼에서 `title`, `description`, `category`를 제거하고 `detectedFruitKo`, `freshnessLabel`, `confidenceScore`를 추가했다. 현재 프론트 타입과 화면은 여전히 구형 작성/표시 필드에 의존한다.
-- 현재 동작: `src/types/post.ts`의 `Post`와 `PostCreateData`는 `title`, `description`, `category`를 필수로 보고, 홈 카드/상세/등록 화면도 이 필드들을 사용한다.
+- 상태: 구현 완료, VM/API 런타임 QA 필요
+- 배경: 백엔드가 Post 컬럼에서 `title`, `description`, `category`를 제거하고 `detectedFruitKo`, `freshnessLabel`, `confidenceScore`를 추가했다. 프론트 타입과 화면은 이 작업 전까지 구형 작성/표시 필드에 의존했다.
+- 현재 동작: `src/types/post.ts`의 `Post`, `GenerateResult`, `PostCreateData`가 백엔드 Phase 1.5 구조를 반영한다. `createPost()`는 `fridgeId`, `expirationDate`, `imageToken`만 전송하고, 홈 카드/상세/등록 화면은 `detectedFruitKo`, `freshnessLabel`, `confidenceScore`, `status`를 표시한다.
 - 기대 동작: 프론트는 백엔드 Phase 1.5 응답 구조를 기준으로 나눔 식재료명, 신선도 등급, confidence, 이미지, 냉장고, 상태를 표시한다. 사용자-facing 문구는 `나눔 식재료` 기준을 유지한다.
 - Acceptance Criteria:
-  - [ ] `Post` 타입이 `detectedFruitKo`, `freshnessLabel`, `confidenceScore`, `status`를 반영한다.
-  - [ ] `PostCreateData`와 `createPost()` payload가 백엔드 새 계약에 맞게 갱신된다.
-  - [ ] 홈 카드와 상세 화면이 `title/description/category` 없이도 깨지지 않는다.
-  - [ ] `Fresh/Mid/Stale` 매핑과 `Mid = Normal 그룹` 정책이 테스트로 고정된다.
-- 검증 방법: typecheck, unit test, 실제 `GET /posts/{id}`/`POST /posts` VM API 검증, 앱 카드/상세 QA
+  - [x] `Post` 타입이 `detectedFruitKo`, `freshnessLabel`, `confidenceScore`, `status`를 반영한다.
+  - [x] `PostCreateData`와 `createPost()` payload가 백엔드 새 계약에 맞게 갱신된다.
+  - [x] 홈 카드와 상세 화면이 `title/description/category` 없이도 깨지지 않는다.
+  - [x] `Fresh/Mid/Stale/unknown` 매핑과 `Mid = Normal 그룹` 정책이 테스트로 고정된다.
+- 검증 방법: typecheck 통과, `postPolicy`/`posts.api` unit test 통과, 실제 `GET /posts/{id}`/`POST /posts` VM API 검증, 앱 카드/상세 QA
 - 관련 파일/화면/API: `src/types/post.ts`, `src/api/posts.ts`, `HomeScreen`, `PostDetailScreen`, `PostCreateScreen`, `POST /api/v1/posts`, `GET /api/v1/posts/{id}`
 
 ## 나눔 신청 API 프론트 연동

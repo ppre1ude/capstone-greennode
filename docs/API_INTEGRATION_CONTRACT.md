@@ -137,16 +137,16 @@ Host NHN-Cloud-Server
 
 ### 백엔드 구현 완료, 프론트 연동 필요
 
-아래 흐름은 백엔드 Phase 1.5에서 구현/VM 검증이 완료됐지만, 현재 React Native 앱에는 아직 연동되지 않았다.
+아래 흐름은 백엔드 Phase 1.5에서 구현/VM 검증이 완료된 항목이다. 프론트 반영 상태는 항목별로 다르므로, 구현 전 이 표와 [VALIDATION_AND_BACKLOG.md](./VALIDATION_AND_BACKLOG.md)를 함께 확인한다.
 
-| Product flow | Backend state | Frontend gap |
+| Product flow | Backend state | Frontend state |
 | --- | --- | --- |
 | 나눔 신청하기 | `POST /posts/{id}/requests` 구현, 성공 시 201 | 상세 CTA, API client, 성공/실패 UI, 상태 갱신 구현 |
 | 신청 동시 경합 방지 | `SELECT ... FOR UPDATE` + 단일 트랜잭션. 첫 신청만 201, 이후 409 | 409를 정상 race 결과로 보고 사용자 문구와 CTA 비활성화 처리 |
 | 작성자 본인 신청 차단 | 403 | 작성자 CTA 숨김/비활성화와 403 fallback 처리 |
 | 신청 알림 | `share_requested` FCM payload 구현 | foreground/background 수신 handler와 알림함 연결 |
 | 냉장고별 나눔 식재료 | `GET /fridges/{id}/posts?status=available` 구현 | 지도/냉장고 상세에서 목록 노출 방식 구현 |
-| Post 응답 구조 | `title/description/category` 제거, `detectedFruitKo/freshnessLabel/confidenceScore` 추가 | `src/types/post.ts`, 카드/상세/등록 화면의 구형 필드 의존 제거 |
+| Post 응답 구조 | `title/description/category` 제거, `detectedFruitKo/freshnessLabel/confidenceScore` 추가 | 반영 완료. `src/types/post.ts`, `createPost()`, 홈 카드, 상세, 등록 확인 화면은 새 구조 사용 |
 | 나눔 기준 미충족 서버 방어 | `Stale`이면 generate 400이고 `imageToken` 미발급. create는 유효한 `imageToken` 없으면 400 | 프론트 `canShare`는 UX 가드로 유지하되 서버가 최종 방어선임을 전제로 오류 처리 |
 
 ---
@@ -645,6 +645,6 @@ GET /posts/nearby → 근처 available 나눔 식재료
 - [ ] JWT 토큰 만료 60분 → 401 수신 시 재로그인
 - [ ] 앱 실행 시 위치+FCM 토큰 반드시 서버에 등록
 - [ ] 나눔 식재료 상세 작성자 판단은 실제 응답의 `authorId` 기준으로 처리
-- [ ] 백엔드 Phase 1.5 Post 구조 반영: `title/description/category` 의존 제거, `detectedFruitKo/freshnessLabel/confidenceScore` 사용
+- [x] 백엔드 Phase 1.5 Post 구조 반영: `title/description/category` 의존 제거, `detectedFruitKo/freshnessLabel/confidenceScore/status` 사용
 - [ ] 나눔 신청 API 연동: `POST /posts/{id}/requests`, 201/403/409 처리, 신청 후 상세/홈 상태 갱신
 - [ ] FCM payload는 camelCase `postId`, `requestId`, `fruitName`, `fridgeName`, `type` 사용

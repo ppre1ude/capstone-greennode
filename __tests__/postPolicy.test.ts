@@ -2,7 +2,10 @@ import {
   canShareAnalysisResult,
   getAnalysisQualityMeta,
   getConfidencePercent,
+  getGenerateResultQualityMeta,
   getPostAuthorId,
+  getPostDisplayName,
+  getPostStatusLabel,
   getQualityMeta,
   isPostAuthoredByUser,
   isShareableCategory,
@@ -21,19 +24,27 @@ describe('post policy', () => {
     },
   );
 
-  it.each([
-    'not_food',
-    'non_food',
-    'not-food',
-    'screenshot',
-    'ui_screenshot',
-  ])('blocks non-food AI rejection category %s', category => {
-    expect(getQualityMeta(category)).toEqual({
-      label: '식재료 사진으로 확인되지 않았어요',
-      canShare: false,
-    });
-    expect(isShareableCategory(category)).toBe(false);
-  });
+  it.each(['unknown', '알 수 없음'])(
+    'blocks unknown freshness category %s',
+    category => {
+      expect(getQualityMeta(category)).toEqual({
+        label: '사진으로 상태를 확인하기 어려워요',
+        canShare: false,
+      });
+      expect(isShareableCategory(category)).toBe(false);
+    },
+  );
+
+  it.each(['not_food', 'non_food', 'not-food', 'screenshot', 'ui_screenshot'])(
+    'blocks non-food AI rejection category %s',
+    category => {
+      expect(getQualityMeta(category)).toEqual({
+        label: '식재료 사진으로 확인되지 않았어요',
+        canShare: false,
+      });
+      expect(isShareableCategory(category)).toBe(false);
+    },
+  );
 
   it.each(['low_quality', 'low-quality'])(
     'blocks low-quality AI rejection category %s',
@@ -46,7 +57,16 @@ describe('post policy', () => {
     },
   );
 
-  it.each(['fresh', 'good', 'normal', 'mid', 'medium', 'Fresh', 'Normal'])(
+  it.each([
+    'fresh',
+    'good',
+    'normal',
+    'mid',
+    'medium',
+    'Fresh',
+    'Mid',
+    'Normal',
+  ])(
     'uses one user-facing label for shareable quality category %s',
     category => {
       expect(getQualityMeta(category)).toEqual({
@@ -80,6 +100,28 @@ describe('post policy', () => {
     ).toBe(false);
   });
 
+  it('does not allow sharing when no generate analysis is available', () => {
+    expect(canShareAnalysisResult(null)).toBe(false);
+    expect(getGenerateResultQualityMeta(null)).toEqual({
+      label: '분석 중',
+      canShare: false,
+    });
+  });
+
+  it('blocks generated analysis results when isFresh is false even with a shareable label', () => {
+    expect(
+      getGenerateResultQualityMeta({
+        isFresh: false,
+        freshnessLabel: 'Fresh',
+        aiAnalysis: {
+          isFresh: false,
+          confidenceScore: 0.91,
+          category: 'Fresh',
+        },
+      }),
+    ).toEqual({ label: '나눔 기준에 맞지 않아요', canShare: false });
+  });
+
   it('blocks generated analysis results when the server returns a rejection reason', () => {
     expect(
       getAnalysisQualityMeta({
@@ -89,13 +131,22 @@ describe('post policy', () => {
         rejectionReason: 'not_food',
         analysisMessage: '식재료가 아닌 이미지입니다.',
       }),
-    ).toEqual({label: '식재료 사진으로 확인되지 않았어요', canShare: false});
+    ).toEqual({ label: '식재료 사진으로 확인되지 않았어요', canShare: false });
   });
 
   it('uses authorId as the post ownership contract', () => {
-    expect(getPostAuthorId({authorId: 10})).toBe(10);
-    expect(isPostAuthoredByUser({authorId: 10}, 10)).toBe(true);
-    expect(isPostAuthoredByUser({authorId: 10}, 11)).toBe(false);
+    expect(getPostAuthorId({ authorId: 10 })).toBe(10);
+    expect(isPostAuthoredByUser({ authorId: 10 }, 10)).toBe(true);
+    expect(isPostAuthoredByUser({ authorId: 10 }, 11)).toBe(false);
+  });
+
+  it('derives post display fields from the backend Phase 1.5 post contract', () => {
+    expect(getPostDisplayName({ detectedFruitKo: '사과' })).toBe('사과');
+    expect(getPostDisplayName({ detectedFruit: 'apple' })).toBe('apple');
+    expect(getPostDisplayName({})).toBe('나눔 식재료');
+    expect(getPostStatusLabel('available')).toBe('나눔 가능');
+    expect(getPostStatusLabel('requested')).toBe('신청 접수');
+    expect(getPostStatusLabel('completed')).toBe('나눔 완료');
   });
 
   it('normalizes confidence scores and flags low confidence for review', () => {
@@ -107,7 +158,7 @@ describe('post policy', () => {
   });
 
   it('keeps a legacy userId fallback for older local fixtures only', () => {
-    expect(getPostAuthorId({userId: 7})).toBe(7);
-    expect(isPostAuthoredByUser({userId: 7}, 7)).toBe(true);
+    expect(getPostAuthorId({ userId: 7 })).toBe(7);
+    expect(isPostAuthoredByUser({ userId: 7 }, 7)).toBe(true);
   });
 });
