@@ -44,6 +44,7 @@ const REVIEW_CATEGORIES = new Set([
 ]);
 
 const REVIEW_LABEL = '확인 필요';
+export const CONFIDENCE_REVIEW_THRESHOLD_PERCENT = 90;
 
 export const getQualityMeta = (category?: string | null): QualityMeta => {
   const normalized = (category || '').toLowerCase();
@@ -148,7 +149,7 @@ export const getConfidencePercent = (
 
 export const needsAnalysisReview = (
   confidenceScore?: number | null,
-  thresholdPercent: number = 60,
+  thresholdPercent: number = CONFIDENCE_REVIEW_THRESHOLD_PERCENT,
 ): boolean => {
   const confidencePercent = getConfidencePercent(confidenceScore);
   return confidencePercent != null && confidencePercent < thresholdPercent;

@@ -107,18 +107,18 @@
 
 백엔드가 프론트 변경 공지 문서 기준으로 VM 배포와 검증을 완료했다. 이 섹션은 프론트 검증/백로그 관점에서 백엔드 답변을 재분류한다.
 
-| 항목 | 백엔드 상태 | 프론트 상태 | 다음 액션 |
-| --- | --- | --- | --- |
-| 나눔 신청 API | `POST /posts/{id}/requests` 구현, 201/403/409 VM 검증 완료 | `requestShare(postId)`, 상세 CTA, 201/403/409 UI, 홈 refresh 신호 구현 완료 | 실제 VM API로 201/403/409 런타임 QA |
-| 신청 동시 경합 | `SELECT ... FOR UPDATE` + 단일 트랜잭션으로 첫 신청만 성공. 이후 요청은 409 | 409를 정상 race 결과로 처리하고 CTA를 `신청 접수` 상태로 비활성화 | 실제 동시/중복 신청 QA |
-| 나눔 상태 | `available`, `requested`, `completed` 존재. `/posts/nearby`는 available만 반환 | `Post.status` 타입과 상세/홈 상태 표시 반영. 신청 성공/409 시 상세 상태와 홈 refresh 신호 반영 | 실제 VM API로 requested 항목이 홈에서 제외되는지 확인 |
-| Post 구조 | `title/description/category` 제거, `detectedFruitKo/freshnessLabel/confidenceScore` 추가 | `src/types/post.ts`, `createPost()` payload, 홈 카드, 상세, 등록 확인 화면 반영 완료 | 실제 VM API로 등록/상세/홈 카드 런타임 QA |
-| AI label | `Fresh/Mid/Stale/unknown`, `Mid`는 기존 `Normal` 그룹 | `postPolicy`가 `Fresh/Mid`를 나눔 가능, `Stale/unknown`을 등록 불가로 매핑 | fixture 기반 수동 QA와 threshold 결정 |
-| confidenceScore | Stage 2 신선도 분류 softmax max 확률로 확정. 백엔드 표시 가이드는 0.9 이상 높음, 0.5~0.9 확인 필요 | 현재 앱은 60% 미만만 `확인 필요`로 분기 | UX 기준 충돌을 기록하고 프론트 threshold를 90%로 바꿀지 별도 결정 |
-| rejection reason enum | `not_food`, `low_quality` 등은 Post-MVP | 앱은 enum을 받으면 방어적으로 처리 가능 | false-positive fixture는 후속 계약 검증으로 유지 |
-| Stale 최종 등록 방어 | `Stale`이면 generate 400, `imageToken` 미발급. create는 무효/만료 토큰 400 | 프론트도 `canShare=false` UX 가드를 갖고 있음 | 서버가 최종 방어선임을 전제로 stale/token 실패 UX 검증 |
-| 알림 | `share_created`, `share_requested` payload 구현 | 토큰 등록만 있고 수신 handler/알림함 없음 | FCM 수신/탭 연동 작업화 |
-| 냉장고별 나눔 식재료 | `GET /fridges/{id}/posts?status=available` 구현/검증 | 지도/냉장고 상세 미연동 | 지도에서 냉장고 내부 available 목록 노출 구현 |
+| 항목                  | 백엔드 상태                                                                                         | 프론트 상태                                                                                    | 다음 액션                                              |
+| --------------------- | --------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| 나눔 신청 API         | `POST /posts/{id}/requests` 구현, 201/403/409 VM 검증 완료                                          | `requestShare(postId)`, 상세 CTA, 201/403/409 UI, 홈 refresh 신호 구현 완료                    | 실제 VM API로 201/403/409 런타임 QA                    |
+| 신청 동시 경합        | `SELECT ... FOR UPDATE` + 단일 트랜잭션으로 첫 신청만 성공. 이후 요청은 409                         | 409를 정상 race 결과로 처리하고 CTA를 `신청 접수` 상태로 비활성화                              | 실제 동시/중복 신청 QA                                 |
+| 나눔 상태             | `available`, `requested`, `completed` 존재. `/posts/nearby`는 available만 반환                      | `Post.status` 타입과 상세/홈 상태 표시 반영. 신청 성공/409 시 상세 상태와 홈 refresh 신호 반영 | 실제 VM API로 requested 항목이 홈에서 제외되는지 확인  |
+| Post 구조             | `title/description/category` 제거, `detectedFruitKo/freshnessLabel/confidenceScore` 추가            | `src/types/post.ts`, `createPost()` payload, 홈 카드, 상세, 등록 확인 화면 반영 완료           | 실제 VM API로 등록/상세/홈 카드 런타임 QA              |
+| AI label              | `Fresh/Mid/Stale/unknown`, `Mid`는 기존 `Normal` 그룹                                               | `postPolicy`가 `Fresh/Mid`를 나눔 가능, `Stale/unknown`을 등록 불가로 매핑                     | fixture 기반 수동 QA                                   |
+| confidenceScore       | Stage 2 신선도 분류 softmax max 확률로 확정. 백엔드 표시 가이드는 0.9 이상 높음, 0.9 미만 확인 필요 | 앱 기준을 `confidenceScore < 0.9`로 갱신. 단독 등록 차단은 하지 않음                           | 0.4/0.7/1.0 fixture로 확인 필요 표시 QA                |
+| rejection reason enum | `not_food`, `low_quality` 등은 Post-MVP                                                             | 앱은 enum을 받으면 방어적으로 처리 가능                                                        | false-positive fixture는 후속 계약 검증으로 유지       |
+| Stale 최종 등록 방어  | `Stale`이면 generate 400, `imageToken` 미발급. create는 무효/만료 토큰 400                          | 프론트도 `canShare=false` UX 가드를 갖고 있음                                                  | 서버가 최종 방어선임을 전제로 stale/token 실패 UX 검증 |
+| 알림                  | `share_created`, `share_requested` payload 구현                                                     | 토큰 등록만 있고 수신 handler/알림함 없음                                                      | FCM 수신/탭 연동 작업화                                |
+| 냉장고별 나눔 식재료  | `GET /fridges/{id}/posts?status=available` 구현/검증                                                | 지도/냉장고 상세 미연동                                                                        | 지도에서 냉장고 내부 available 목록 노출 구현          |
 
 ## 2026-05-05 P0/P1 코드 보강 현황
 
@@ -129,7 +129,7 @@
 - P1 위치 미설정 공통 가드: 홈, 지도, AI 스캔 진입점, 냉장고 선택 화면이 `getRegisteredLocation()` 기준을 공유한다. 위치가 없으면 주변 API를 호출하지 않고 `LocationSetup` CTA를 표시한다.
 - P1 등록 완료 후 홈 재조회: `PostCompleteScreen`이 홈 탭에 `nearbyPostsRefreshToken`을 전달하고, `HomeScreen`은 포커스/토큰 변경 시 `/posts/nearby`를 다시 조회한다.
 - P1 카메라 촬영/fallback: `react-native-vision-camera@5`의 `usePhotoOutput().capturePhotoToFile()` 경로로 수정했다. 에뮬레이터에서 촬영 파일 생성 및 실제 `/posts/generate` 호출까지 확인했고, 실제 기기 셔터 검증은 아직 남았다.
-- P1 confidence: `confidenceScore`를 분석 결과/작성 화면에 표시하고 현재 앱은 60% 미만을 즉시 차단 대신 `확인 필요`로 분기한다. 백엔드 답변은 0.9 미만을 확인 필요 구간으로 보는 활용 가이드를 제시했으므로, 프론트 UX 기준 재결정이 필요하다.
+- P1 confidence: `confidenceScore`를 분석 결과/작성 화면에 표시하고, 제품 기준을 `confidenceScore < 0.9`이면 `확인 필요`로 확정했다. 낮은 confidence만으로 등록을 차단하지 않는다.
 - P0 Post 구조 변경: `Post`/`PostCreateData`/`GenerateResult` 타입과 `createPost()` payload를 백엔드 Phase 1.5 계약으로 갱신했다. 홈 카드, 상세 화면, 등록 확인 화면은 `detectedFruitKo`, `freshnessLabel`, `confidenceScore`, `status`를 사용하고 구형 `title/description/category` 표시/전송 의존을 제거했다.
 - P1 나눔 신청 API: `requestShare(postId)` client와 `PostDetailScreen` CTA를 연결했다. 201 응답은 `post.status=requested`를 상세에 반영하고 홈 refresh 신호를 보낸다. 403은 `내가 등록한 나눔 식재료예요`, 409는 `다른 사용자가 먼저 신청했어요`로 처리하고 CTA를 `신청 접수` 상태로 비활성화한다.
 - 회귀 테스트: `__tests__/postPolicy.test.ts`에서 품질 정책, confidence, 작성자 판단을 고정한다. `__tests__/postComplete.navigation.test.tsx`, `__tests__/home.nearbyRefresh.test.tsx`에서 등록 완료 홈 복귀와 `/posts/nearby` 재조회 신호를 고정한다.
@@ -190,24 +190,24 @@
 
 #### 핵심 플로우 검증 결과 표
 
-| 항목 | 분류 | 검증 결과 | 근거/관련 위치 | 다음 액션 |
-|---|---|---|---|---|
-| 로그인 시 유저 생성 | 정상 동작 | 신규 이메일 계정을 API로 생성하면 `latitude`, `longitude`가 `null`인 유저가 생성된다. 앱 이메일 로그인도 성공한다. | `POST /api/v1/auth/signup`, `POST /api/v1/auth/login`, `src/screens/auth/SignupScreen.tsx`, `src/screens/auth/LoginEmailScreen.tsx` | 소셜 로그인에서 "로그인 시 유저 생성" 정책은 별도 검증 필요 |
-| 기존 유저 재로그인 시 유저 정보 업데이트 | 정상 동작 | 로그인 후 `getMe()`로 최신 유저 정보를 받아 `authStore`에 반영한다. 위치가 있는 유저는 `refreshDeviceRegistration()`으로 위치/FCM 갱신을 시도한다. | `src/screens/auth/LoginEmailScreen.tsx`, `src/store/authStore.ts`, `src/services/deviceRegistration.ts` | FCM 토큰 실패 시 사용자 영향은 2번 실패 케이스에서 추가 검증 |
-| 최초 로그인 직후 동네 위치 미설정 | 정상 동작 | 검증 계정 생성 직후 서버 응답과 `/auth/me`에서 `latitude = null`, `longitude = null` 확인. | `GET /api/v1/auth/me` | 유지 |
-| 동네 위치 미설정 상태의 홈 화면 | 수정됨 | 정상 UI 흐름에서는 위치 없는 유저가 `LocationSetup`으로 이동한다. 강제 진입 시에도 홈은 `/posts/nearby`를 호출하지 않고 위치 설정 CTA를 보여준다. | `src/screens/home/HomeScreen.tsx`, `src/utils/locationGuard.ts`, `__tests__/locationGuard.test.ts` | 에뮬레이터 강제 진입 QA |
-| 동네 위치 미설정 상태의 지도 화면 | 수정됨 | 지도 탭 강제 진입 시 `MapView`를 렌더링하지 않는다. 광주 전남대 기본 좌표 fallback과 반경 원 표시를 제거하고 위치 설정 CTA만 보여준다. | `src/screens/map/MapScreen.tsx`, `src/screens/map/MapScreen.styles.ts`, `src/utils/locationGuard.ts` | 에뮬레이터 강제 진입 QA |
-| 동네 위치 미설정 상태의 검색 화면 | 미구현 | 독립 검색 화면이 없다. 홈 검색 아이콘과 지도 검색 입력 UI만 있고 검색 플로우는 연결되어 있지 않다. | `src/screens/home/HomeScreen.tsx`, `src/screens/map/MapScreen.tsx` | 검색 기능은 5번 미구현 기능 점검에서 백로그화 |
-| 동네 위치 미설정 상태의 나눔 식재료 등록 | 수정됨 | 홈/중앙 AI 스캔 진입점은 위치가 없으면 `CameraScan` 대신 `LocationSetup`으로 보낸다. `FridgeSelect`에 직접 진입해도 냉장고 API를 호출하지 않고 위치 설정 CTA를 표시한다. | `src/navigation/MainTab.tsx`, `src/screens/home/HomeScreen.tsx`, `src/screens/post/FridgeSelectScreen.tsx`, `src/utils/locationGuard.ts` | 에뮬레이터 강제 진입 QA |
-| 최초 위치 등록 화면 분기 | 정상 동작 | 위치 없는 계정으로 로그인 후 앱이 `동네 설정` 화면으로 자연스럽게 이동했다. | UI 검증, `src/screens/auth/LoginEmailScreen.tsx`, `src/navigation/AppNavigator.tsx` | 유지 |
-| 위치 등록 후 홈/지도/나눔 식재료 등록 반영 | 정상 동작 | `이 위치로 설정하기` 후 `/auth/me`에 좌표가 저장됐다. 홈은 `내 동네`로 표시되고, 지도와 냉장고 선택 화면은 실제 냉장고 목록을 조회했다. | `PUT /api/v1/auth/me/location`, `HomeScreen`, `MapScreen`, `FridgeSelectScreen` | 유지 |
-| 위치 재설정 기능 | 정상 동작 | 홈 위치 헤더와 프로필 `동네 위치 재설정` 메뉴에서 `LocationSetup`으로 재진입한다. | `src/screens/home/HomeScreen.tsx`, `src/screens/profile/ProfileScreen.tsx`, `src/screens/location/LocationSetupScreen.tsx` | 권한 거부 상태 전용 CTA 보강 |
-| 사진 촬영 후 이미지 파일 생성 | 정상 동작 | `takePhoto()` 호출을 `usePhotoOutput().capturePhotoToFile()`로 수정한 뒤 에뮬레이터 셔터에서 `file:///data/user/0/com.greennode/cache/VisionCamera_*.jpg` 파일 URI가 생성됐다. | UI 검증, `src/screens/camera/CameraScanScreen.tsx`, logcat | 실제 기기 촬영 검증 |
-| 촬영/선택 이미지 API 전달 | 정상 동작 | mock 제거 후 release 앱에서 갤러리 선택 이미지와 셔터 촬영 이미지가 실제 `POST /api/v1/posts/generate`로 전달됐다. 셔터 촬영 재검증에서는 서버가 나눔 기준 미충족 상태 400으로 거부해 API 도달이 확인됐다. | `src/api/posts.ts`, `src/screens/camera/CameraScanScreen.tsx`, logcat | 나눔 기준 미충족/실패 응답 전용 UX 보강 |
-| AI 분석 결과 표시 | 정상 동작 | 실제 AI 응답이 `분석 결과` 화면에 표시됐다. 재검증 결과는 `바나나`, `신선`, confidence 100%, 분석 메모 `식재료가 신선합니다. 나눔이 가능합니다.`였다. mock 고정값인 `사과`가 아니었다. | `src/screens/camera/AnalysisResultScreen.tsx` | `Stale` fixture로 나눔 기준 미충족 결과 추가 검증 |
-| AI 결과의 나눔 식재료 생성 기본값 반영 | 정상 동작 | 실제 AI 응답 기반으로 `나눔 등록` 화면에 `바나나`, `신선`, 제목 `신선한 바나나 나눔합니다`, 설명 기본값이 채워졌다. | `src/screens/post/PostCreateScreen.tsx` | 유지 |
-| 나눔 식재료 등록 후 홈 목록 반영 | 구현됨, 런타임 재검증 필요 | 냉장고 선택 후 실제 `POST /api/v1/posts` 성공과 완료 화면 표시까지 확인했다. 코드상 완료 화면의 홈 복귀는 홈 탭에 `nearbyPostsRefreshToken`을 전달하고, 홈은 포커스/토큰 변경 시 `/posts/nearby`를 재조회한다. | `src/screens/post/PostCompleteScreen.tsx`, `src/screens/home/HomeScreen.tsx`, `__tests__/postComplete.navigation.test.tsx`, `__tests__/home.nearbyRefresh.test.tsx` | 실제 앱에서 등록 직후 홈 목록 반영을 한 번 더 재검증 |
-| 나눔 식재료 등록 후 지도/냉장고 관련 반영 | 부분 검증 | 냉장고 선택 화면에서 실제 냉장고 목록 `광주역 공유냉장고`, `충장로 공유냉장고`, `전남대학교 공유냉장고`가 표시됐고, 선택한 냉장고로 실제 나눔 식재료 생성까지 성공했다. 현재 지도는 냉장고 목록 중심이라 나눔 식재료 지도 반영 정책은 별도 정리가 필요하다. | `src/api/posts.ts`, `src/screens/map/MapScreen.tsx`, `src/screens/post/FridgeSelectScreen.tsx` | 지도/냉장고 상세에서 나눔 식재료를 어떻게 노출할지 정책 결정 |
+| 항목                                       | 분류                       | 검증 결과                                                                                                                                                                                                                                                   | 근거/관련 위치                                                                                                                                                      | 다음 액션                                                    |
+| ------------------------------------------ | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| 로그인 시 유저 생성                        | 정상 동작                  | 신규 이메일 계정을 API로 생성하면 `latitude`, `longitude`가 `null`인 유저가 생성된다. 앱 이메일 로그인도 성공한다.                                                                                                                                          | `POST /api/v1/auth/signup`, `POST /api/v1/auth/login`, `src/screens/auth/SignupScreen.tsx`, `src/screens/auth/LoginEmailScreen.tsx`                                 | 소셜 로그인에서 "로그인 시 유저 생성" 정책은 별도 검증 필요  |
+| 기존 유저 재로그인 시 유저 정보 업데이트   | 정상 동작                  | 로그인 후 `getMe()`로 최신 유저 정보를 받아 `authStore`에 반영한다. 위치가 있는 유저는 `refreshDeviceRegistration()`으로 위치/FCM 갱신을 시도한다.                                                                                                          | `src/screens/auth/LoginEmailScreen.tsx`, `src/store/authStore.ts`, `src/services/deviceRegistration.ts`                                                             | FCM 토큰 실패 시 사용자 영향은 2번 실패 케이스에서 추가 검증 |
+| 최초 로그인 직후 동네 위치 미설정          | 정상 동작                  | 검증 계정 생성 직후 서버 응답과 `/auth/me`에서 `latitude = null`, `longitude = null` 확인.                                                                                                                                                                  | `GET /api/v1/auth/me`                                                                                                                                               | 유지                                                         |
+| 동네 위치 미설정 상태의 홈 화면            | 수정됨                     | 정상 UI 흐름에서는 위치 없는 유저가 `LocationSetup`으로 이동한다. 강제 진입 시에도 홈은 `/posts/nearby`를 호출하지 않고 위치 설정 CTA를 보여준다.                                                                                                           | `src/screens/home/HomeScreen.tsx`, `src/utils/locationGuard.ts`, `__tests__/locationGuard.test.ts`                                                                  | 에뮬레이터 강제 진입 QA                                      |
+| 동네 위치 미설정 상태의 지도 화면          | 수정됨                     | 지도 탭 강제 진입 시 `MapView`를 렌더링하지 않는다. 광주 전남대 기본 좌표 fallback과 반경 원 표시를 제거하고 위치 설정 CTA만 보여준다.                                                                                                                      | `src/screens/map/MapScreen.tsx`, `src/screens/map/MapScreen.styles.ts`, `src/utils/locationGuard.ts`                                                                | 에뮬레이터 강제 진입 QA                                      |
+| 동네 위치 미설정 상태의 검색 화면          | 미구현                     | 독립 검색 화면이 없다. 홈 검색 아이콘과 지도 검색 입력 UI만 있고 검색 플로우는 연결되어 있지 않다.                                                                                                                                                          | `src/screens/home/HomeScreen.tsx`, `src/screens/map/MapScreen.tsx`                                                                                                  | 검색 기능은 5번 미구현 기능 점검에서 백로그화                |
+| 동네 위치 미설정 상태의 나눔 식재료 등록   | 수정됨                     | 홈/중앙 AI 스캔 진입점은 위치가 없으면 `CameraScan` 대신 `LocationSetup`으로 보낸다. `FridgeSelect`에 직접 진입해도 냉장고 API를 호출하지 않고 위치 설정 CTA를 표시한다.                                                                                    | `src/navigation/MainTab.tsx`, `src/screens/home/HomeScreen.tsx`, `src/screens/post/FridgeSelectScreen.tsx`, `src/utils/locationGuard.ts`                            | 에뮬레이터 강제 진입 QA                                      |
+| 최초 위치 등록 화면 분기                   | 정상 동작                  | 위치 없는 계정으로 로그인 후 앱이 `동네 설정` 화면으로 자연스럽게 이동했다.                                                                                                                                                                                 | UI 검증, `src/screens/auth/LoginEmailScreen.tsx`, `src/navigation/AppNavigator.tsx`                                                                                 | 유지                                                         |
+| 위치 등록 후 홈/지도/나눔 식재료 등록 반영 | 정상 동작                  | `이 위치로 설정하기` 후 `/auth/me`에 좌표가 저장됐다. 홈은 `내 동네`로 표시되고, 지도와 냉장고 선택 화면은 실제 냉장고 목록을 조회했다.                                                                                                                     | `PUT /api/v1/auth/me/location`, `HomeScreen`, `MapScreen`, `FridgeSelectScreen`                                                                                     | 유지                                                         |
+| 위치 재설정 기능                           | 정상 동작                  | 홈 위치 헤더와 프로필 `동네 위치 재설정` 메뉴에서 `LocationSetup`으로 재진입한다.                                                                                                                                                                           | `src/screens/home/HomeScreen.tsx`, `src/screens/profile/ProfileScreen.tsx`, `src/screens/location/LocationSetupScreen.tsx`                                          | 권한 거부 상태 전용 CTA 보강                                 |
+| 사진 촬영 후 이미지 파일 생성              | 정상 동작                  | `takePhoto()` 호출을 `usePhotoOutput().capturePhotoToFile()`로 수정한 뒤 에뮬레이터 셔터에서 `file:///data/user/0/com.greennode/cache/VisionCamera_*.jpg` 파일 URI가 생성됐다.                                                                              | UI 검증, `src/screens/camera/CameraScanScreen.tsx`, logcat                                                                                                          | 실제 기기 촬영 검증                                          |
+| 촬영/선택 이미지 API 전달                  | 정상 동작                  | mock 제거 후 release 앱에서 갤러리 선택 이미지와 셔터 촬영 이미지가 실제 `POST /api/v1/posts/generate`로 전달됐다. 셔터 촬영 재검증에서는 서버가 나눔 기준 미충족 상태 400으로 거부해 API 도달이 확인됐다.                                                  | `src/api/posts.ts`, `src/screens/camera/CameraScanScreen.tsx`, logcat                                                                                               | 나눔 기준 미충족/실패 응답 전용 UX 보강                      |
+| AI 분석 결과 표시                          | 정상 동작                  | 실제 AI 응답이 `분석 결과` 화면에 표시됐다. 재검증 결과는 `바나나`, `신선`, confidence 100%, 분석 메모 `식재료가 신선합니다. 나눔이 가능합니다.`였다. mock 고정값인 `사과`가 아니었다.                                                                      | `src/screens/camera/AnalysisResultScreen.tsx`                                                                                                                       | `Stale` fixture로 나눔 기준 미충족 결과 추가 검증            |
+| AI 결과의 나눔 식재료 생성 기본값 반영     | 정상 동작                  | 실제 AI 응답 기반으로 `나눔 등록` 화면에 `바나나`, `신선`, 제목 `신선한 바나나 나눔합니다`, 설명 기본값이 채워졌다.                                                                                                                                         | `src/screens/post/PostCreateScreen.tsx`                                                                                                                             | 유지                                                         |
+| 나눔 식재료 등록 후 홈 목록 반영           | 구현됨, 런타임 재검증 필요 | 냉장고 선택 후 실제 `POST /api/v1/posts` 성공과 완료 화면 표시까지 확인했다. 코드상 완료 화면의 홈 복귀는 홈 탭에 `nearbyPostsRefreshToken`을 전달하고, 홈은 포커스/토큰 변경 시 `/posts/nearby`를 재조회한다.                                              | `src/screens/post/PostCompleteScreen.tsx`, `src/screens/home/HomeScreen.tsx`, `__tests__/postComplete.navigation.test.tsx`, `__tests__/home.nearbyRefresh.test.tsx` | 실제 앱에서 등록 직후 홈 목록 반영을 한 번 더 재검증         |
+| 나눔 식재료 등록 후 지도/냉장고 관련 반영  | 부분 검증                  | 냉장고 선택 화면에서 실제 냉장고 목록 `광주역 공유냉장고`, `충장로 공유냉장고`, `전남대학교 공유냉장고`가 표시됐고, 선택한 냉장고로 실제 나눔 식재료 생성까지 성공했다. 현재 지도는 냉장고 목록 중심이라 나눔 식재료 지도 반영 정책은 별도 정리가 필요하다. | `src/api/posts.ts`, `src/screens/map/MapScreen.tsx`, `src/screens/post/FridgeSelectScreen.tsx`                                                                      | 지도/냉장고 상세에서 나눔 식재료를 어떻게 노출할지 정책 결정 |
 
 #### 해결/잔여 버그 목록
 
@@ -276,22 +276,22 @@ MVP가 성공 케이스만 동작하는 상태인지, 실패 상황에서도 앱
 
 #### 항목별 현재 동작
 
-| 항목 | 판정 | 현재 동작/근거 | 후속 작업 |
-| --- | --- | --- | --- |
-| 나눔 기준 미충족 등록 차단 | 구현됨 | `AnalysisResultScreen`은 `canShare=false`일 때 CTA를 disabled 처리하고, `PostCreateScreen`/`FridgeSelectScreen`에도 최종 품질 가드가 있다. | `Stale` fixture로 회귀 검증 |
-| 나눔 기준 미충족 실패 이유 표시 | 구현됨, fixture 검증 필요 | `generatePost` 실패나 서버 에러는 `message`뿐 아니라 `detail`도 Alert에 표시한다. 실제 `Stale` fixture는 아직 확보하지 못했다. | `Stale` fixture 또는 테스트 이미지를 확보하고, 나눔 기준 미충족 사유 문구를 실제 앱에서 검증한다. |
-| 실패 후 대안 흐름 | 부분 구현 | 분석 결과 화면에는 재촬영과 작성 화면 진입이 있다. generate 실패 Alert는 `다시 촬영`/`갤러리 선택` 대안을 제공한다. 수동 입력 CTA는 아직 없다. | 실패 Alert에 수동 입력 선택지를 추가할지 결정한다. |
-| API 서버 연결 실패 | 부분 구현 | 홈/지도/냉장고 목록은 error/empty 상태와 retry UI를 분리했다. 위치 등록, 나눔 식재료 상세, 나눔 식재료 생성은 여전히 화면별 Alert 중심이다. | API 오류 문구 추출과 retry 패턴을 공통화한다. |
-| AI 서버 연결 실패 | 추가 검증 필요 | `postMultipart`는 네트워크 오류와 30초 타임아웃을 reject하고 `CameraScanScreen`이 Alert를 띄운다. mock 제거 후 실제 성공 경로는 검증했지만, AI 서버 중단/타임아웃 fault injection은 아직 하지 않았다. | AI 서버 중단/타임아웃 케이스를 실제 환경에서 재검증한다. |
-| 네트워크 끊김 | 미흡 | 공통 offline 상태가 없고, 화면별로 Alert 또는 로그만 남긴다. 홈/지도는 실패가 빈 상태처럼 보일 수 있다. | 공통 네트워크 에러 문구와 retry 패턴을 정한다. |
-| 중복 등록 방지 | 부분 구현 | `FridgeSelectScreen`은 `isSubmitting`과 ref 기반 re-entry guard로 같은 화면의 빠른 중복 제출을 막는다. 서버 idempotency는 아직 없다. | 서버에도 idempotency key 또는 중복 방지 기준을 검토한다. |
-| 큰 이미지 업로드 | 부분 구현 | 갤러리 선택은 2048px 리사이즈, `quality: 0.8`, 8MB 초과 업로드 전 차단을 적용한다. 업로드 진행률은 아직 없다. | 실제 대용량 fixture로 차단 문구와 앱 멈춤 여부를 검증한다. |
-| 카메라 권한 거부 | 미흡 | 권한이 없으면 `카메라 권한이 필요합니다.` 문구만 보인다. 권한 재요청, 설정 이동, 갤러리 대체 버튼이 없다. 카메라 장치가 없을 때만 갤러리 fallback이 있다. | 권한 거부 화면에 다시 요청/설정 열기/갤러리 선택을 제공한다. |
-| 위치 권한 거부 | 부분 구현 | 권한 요청 문구와 Alert는 있다. 거부 후 `이 위치로 설정하기` 버튼은 다시 활성화되고 누르면 `위치 정보를 가져올 수 없습니다.` Alert만 나온다. | 권한 거부 상태 전용 CTA와 설정 이동/재시도 흐름을 추가한다. |
-| 주변 냉장고 없음 | 구현됨, 실제 좌표 추가 검증 필요 | `FridgeSelectScreen`과 `MapScreen`에 빈 상태 문구가 있다. 실제 냉장고가 없는 좌표를 넣은 에뮬레이터 검증은 아직 하지 않았다. | 테스트용 no-fridge 좌표 또는 fixture로 빈 상태를 재현한다. |
-| 나눔 식재료 없음 | 구현됨 | 1번 검증에서 홈 화면이 `아직 근처에 나눔이 없어요` 빈 상태를 표시했다. | 없음. |
-| 검색 결과 없음 | 구현됨 | 홈 검색 아이콘은 지도 탭으로 이동하고, 지도 검색 입력은 공유 냉장고 이름/주소를 로컬 필터링한다. 결과가 없으면 빈 상태와 검색 초기화를 제공한다. | 서버 검색/나눔 식재료 검색은 후속 범위로 분리한다. |
-| 타 유저 수정/삭제 차단 | 부분 구현 | 상세 화면은 작성자일 때만 삭제 버튼을 보여준다. 직접 API 검증에서도 타 사용자 삭제는 HTTP 403으로 막혔다. 수정 기능은 아직 화면/API 흐름이 없어 검증 대상에서 제외된다. | 수정 기능을 만들 때 동일한 소유자 가드를 적용하고, 403 UX를 통일한다. |
+| 항목                            | 판정                             | 현재 동작/근거                                                                                                                                                                                        | 후속 작업                                                                                         |
+| ------------------------------- | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| 나눔 기준 미충족 등록 차단      | 구현됨                           | `AnalysisResultScreen`은 `canShare=false`일 때 CTA를 disabled 처리하고, `PostCreateScreen`/`FridgeSelectScreen`에도 최종 품질 가드가 있다.                                                            | `Stale` fixture로 회귀 검증                                                                       |
+| 나눔 기준 미충족 실패 이유 표시 | 구현됨, fixture 검증 필요        | `generatePost` 실패나 서버 에러는 `message`뿐 아니라 `detail`도 Alert에 표시한다. 실제 `Stale` fixture는 아직 확보하지 못했다.                                                                        | `Stale` fixture 또는 테스트 이미지를 확보하고, 나눔 기준 미충족 사유 문구를 실제 앱에서 검증한다. |
+| 실패 후 대안 흐름               | 부분 구현                        | 분석 결과 화면에는 재촬영과 작성 화면 진입이 있다. generate 실패 Alert는 `다시 촬영`/`갤러리 선택` 대안을 제공한다. 수동 입력 CTA는 아직 없다.                                                        | 실패 Alert에 수동 입력 선택지를 추가할지 결정한다.                                                |
+| API 서버 연결 실패              | 부분 구현                        | 홈/지도/냉장고 목록은 error/empty 상태와 retry UI를 분리했다. 위치 등록, 나눔 식재료 상세, 나눔 식재료 생성은 여전히 화면별 Alert 중심이다.                                                           | API 오류 문구 추출과 retry 패턴을 공통화한다.                                                     |
+| AI 서버 연결 실패               | 추가 검증 필요                   | `postMultipart`는 네트워크 오류와 30초 타임아웃을 reject하고 `CameraScanScreen`이 Alert를 띄운다. mock 제거 후 실제 성공 경로는 검증했지만, AI 서버 중단/타임아웃 fault injection은 아직 하지 않았다. | AI 서버 중단/타임아웃 케이스를 실제 환경에서 재검증한다.                                          |
+| 네트워크 끊김                   | 미흡                             | 공통 offline 상태가 없고, 화면별로 Alert 또는 로그만 남긴다. 홈/지도는 실패가 빈 상태처럼 보일 수 있다.                                                                                               | 공통 네트워크 에러 문구와 retry 패턴을 정한다.                                                    |
+| 중복 등록 방지                  | 부분 구현                        | `FridgeSelectScreen`은 `isSubmitting`과 ref 기반 re-entry guard로 같은 화면의 빠른 중복 제출을 막는다. 서버 idempotency는 아직 없다.                                                                  | 서버에도 idempotency key 또는 중복 방지 기준을 검토한다.                                          |
+| 큰 이미지 업로드                | 부분 구현                        | 갤러리 선택은 2048px 리사이즈, `quality: 0.8`, 8MB 초과 업로드 전 차단을 적용한다. 업로드 진행률은 아직 없다.                                                                                         | 실제 대용량 fixture로 차단 문구와 앱 멈춤 여부를 검증한다.                                        |
+| 카메라 권한 거부                | 미흡                             | 권한이 없으면 `카메라 권한이 필요합니다.` 문구만 보인다. 권한 재요청, 설정 이동, 갤러리 대체 버튼이 없다. 카메라 장치가 없을 때만 갤러리 fallback이 있다.                                             | 권한 거부 화면에 다시 요청/설정 열기/갤러리 선택을 제공한다.                                      |
+| 위치 권한 거부                  | 부분 구현                        | 권한 요청 문구와 Alert는 있다. 거부 후 `이 위치로 설정하기` 버튼은 다시 활성화되고 누르면 `위치 정보를 가져올 수 없습니다.` Alert만 나온다.                                                           | 권한 거부 상태 전용 CTA와 설정 이동/재시도 흐름을 추가한다.                                       |
+| 주변 냉장고 없음                | 구현됨, 실제 좌표 추가 검증 필요 | `FridgeSelectScreen`과 `MapScreen`에 빈 상태 문구가 있다. 실제 냉장고가 없는 좌표를 넣은 에뮬레이터 검증은 아직 하지 않았다.                                                                          | 테스트용 no-fridge 좌표 또는 fixture로 빈 상태를 재현한다.                                        |
+| 나눔 식재료 없음                | 구현됨                           | 1번 검증에서 홈 화면이 `아직 근처에 나눔이 없어요` 빈 상태를 표시했다.                                                                                                                                | 없음.                                                                                             |
+| 검색 결과 없음                  | 구현됨                           | 홈 검색 아이콘은 지도 탭으로 이동하고, 지도 검색 입력은 공유 냉장고 이름/주소를 로컬 필터링한다. 결과가 없으면 빈 상태와 검색 초기화를 제공한다.                                                      | 서버 검색/나눔 식재료 검색은 후속 범위로 분리한다.                                                |
+| 타 유저 수정/삭제 차단          | 부분 구현                        | 상세 화면은 작성자일 때만 삭제 버튼을 보여준다. 직접 API 검증에서도 타 사용자 삭제는 HTTP 403으로 막혔다. 수정 기능은 아직 화면/API 흐름이 없어 검증 대상에서 제외된다.                               | 수정 기능을 만들 때 동일한 소유자 가드를 적용하고, 403 UX를 통일한다.                             |
 
 #### 버그/미구현 후보
 
@@ -439,23 +439,23 @@ image=@android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png; type=image/png
 
 #### 확인된 판단
 
-| 항목 | 결론 | 근거 | 후속 작업 |
-| --- | --- | --- | --- |
-| 앱 이미지 데이터 | 확인됨 | 카메라/갤러리 모두 `{uri, type, name}` 형태로 `generatePost()`에 전달된다. | 파일 크기/해상도/압축 정책 추가 |
-| generate request | 확인됨 | OpenAPI는 `multipart/form-data`, `image` 필수, `user_hint` 선택으로 정의한다. | `API_INTEGRATION_CONTRACT.md` 갱신 완료. 앱/서버 category enum 정합성은 별도 구현 필요 |
-| API -> AI 내부 payload | 미확인 | 현재 repo에는 백엔드/AI 서버 코드가 없다. OpenAPI도 앱과 API 서버 사이 계약만 보여준다. | 백엔드 코드 또는 서버 로그로 별도 검증 |
-| raw AI 서버 응답 | 미확인 | 앱이 받는 것은 API 서버가 정리한 `PostGenerateResult`이다. | AI 서버 원 응답 schema 확보 |
-| 대표 객체 처리 | 현재 계약은 단일 객체 | 응답 schema가 `detectedFruit`/`detectedFruitKo` 단일 문자열만 제공한다. 배열, bounding box, object id 필드가 없다. | multi-object를 하려면 `detections[]` 같은 새 계약 필요 |
-| multi-object 실제 성능 | 미확인 | 여러 음식이 있는 테스트 이미지를 아직 호출하지 않았다. | 테스트 이미지 세트 준비 후 generate 반복 검증 |
-| confidence | 정의 확정, 화면 표시/확인 필요 분기 구현 | `confidenceScore`는 Stage 2 신선도 분류 softmax max 확률이다. 분석 결과/작성 화면에 표시되고, 낮은 confidence는 `확인 필요`로 분기한다. 단, confidence만으로 즉시 등록 차단하지는 않는다. 현재 앱 기준은 60% 미만, 백엔드 활용 가이드는 0.9 미만 확인 필요 구간이라 UX 기준 재결정이 필요하다. | threshold와 사용자 확인 UX를 실제 fixture로 검증 |
-| 신선도 등급 | 백엔드 enum 확정 | 백엔드 값은 `Fresh/Mid/Stale`이다. `Fresh/Mid`는 나눔 가능, `Stale`은 나눔 기준 미충족이다. 앱의 `normal/mid/medium`, `bad/rotten` 매핑은 방어적 호환으로 유지할 수 있다. | `Fresh/Mid/Stale` fixture로 서버와 앱 매핑을 고정 |
-| 나눔 기준 미충족 등록 가드 | 구현됨 | `AnalysisResultScreen`, `PostCreateScreen`, `FridgeSelectScreen`에서 `canShare=false`일 때 등록 진행과 최종 등록을 차단한다. | `Stale` fixture로 회귀 검증 |
+| 항목                       | 결론                                     | 근거                                                                                                                                                                                 | 후속 작업                                                                              |
+| -------------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------- |
+| 앱 이미지 데이터           | 확인됨                                   | 카메라/갤러리 모두 `{uri, type, name}` 형태로 `generatePost()`에 전달된다.                                                                                                           | 파일 크기/해상도/압축 정책 추가                                                        |
+| generate request           | 확인됨                                   | OpenAPI는 `multipart/form-data`, `image` 필수, `user_hint` 선택으로 정의한다.                                                                                                        | `API_INTEGRATION_CONTRACT.md` 갱신 완료. 앱/서버 category enum 정합성은 별도 구현 필요 |
+| API -> AI 내부 payload     | 미확인                                   | 현재 repo에는 백엔드/AI 서버 코드가 없다. OpenAPI도 앱과 API 서버 사이 계약만 보여준다.                                                                                              | 백엔드 코드 또는 서버 로그로 별도 검증                                                 |
+| raw AI 서버 응답           | 미확인                                   | 앱이 받는 것은 API 서버가 정리한 `PostGenerateResult`이다.                                                                                                                           | AI 서버 원 응답 schema 확보                                                            |
+| 대표 객체 처리             | 현재 계약은 단일 객체                    | 응답 schema가 `detectedFruit`/`detectedFruitKo` 단일 문자열만 제공한다. 배열, bounding box, object id 필드가 없다.                                                                   | multi-object를 하려면 `detections[]` 같은 새 계약 필요                                 |
+| multi-object 실제 성능     | 미확인                                   | 여러 음식이 있는 테스트 이미지를 아직 호출하지 않았다.                                                                                                                               | 테스트 이미지 세트 준비 후 generate 반복 검증                                          |
+| confidence                 | 정의 확정, 화면 표시/확인 필요 분기 구현 | `confidenceScore`는 Stage 2 신선도 분류 softmax max 확률이다. 분석 결과/작성 화면에 표시되고, `0.9` 미만은 `확인 필요`로 분기한다. 단, confidence만으로 즉시 등록 차단하지는 않는다. | 0.4/0.7/1.0 fixture로 사용자 확인 UX 검증                                              |
+| 신선도 등급                | 백엔드 enum 확정                         | 백엔드 값은 `Fresh/Mid/Stale`이다. `Fresh/Mid`는 나눔 가능, `Stale`은 나눔 기준 미충족이다. 앱의 `normal/mid/medium`, `bad/rotten` 매핑은 방어적 호환으로 유지할 수 있다.            | `Fresh/Mid/Stale` fixture로 서버와 앱 매핑을 고정                                      |
+| 나눔 기준 미충족 등록 가드 | 구현됨                                   | `AnalysisResultScreen`, `PostCreateScreen`, `FridgeSelectScreen`에서 `canShare=false`일 때 등록 진행과 최종 등록을 차단한다.                                                         | `Stale` fixture로 회귀 검증                                                            |
 
 #### 다음 스프린트 AI 보강 작업 후보
 
 1. category enum 정합성 고정: 백엔드 기준 `Fresh/Mid/Stale`과 앱 품질 라벨 매핑을 테스트로 고정한다.
 2. `Stale` 테스트 fixture 확보: `Fresh/Mid` 외에 `Stale` 응답을 실제 이미지 또는 서버 fixture로 재현한다.
-3. confidence UX 보강: 낮은 confidence일 때 재촬영 강조, 수동 입력, 단순 확인 중 어떤 CTA를 둘지 결정한다. 이때 현재 앱의 60% 기준과 백엔드 활용 가이드의 90% 기준 중 어느 것을 제품 기준으로 삼을지 명시한다.
+3. confidence UX 보강: 제품 기준은 90%로 확정했다. 낮은 confidence일 때 재촬영 강조, 수동 입력, 단순 확인 중 어떤 CTA를 둘지 추가로 정한다.
 4. 나눔 기준 미충족 등록 차단 회귀 검증: `canShare=false`일 때 화면 이동과 최종 등록이 계속 막히는지 `Stale` fixture로 확인한다.
 5. multi-object 연구 항목 분리: 현재 계약은 단일 객체이므로 다음 스프린트에서는 `detections[]` 응답 구조와 UI 표시 방식을 먼저 설계한다.
 
@@ -506,22 +506,22 @@ docs/VALIDATION_AND_BACKLOG.md의 "3. AI 파이프라인 데이터 흐름 검증
 
 #### 구현 상태 요약
 
-| 항목 | 분류 | 검증 결과 | 근거/관련 위치 | 다음 액션 |
-|---|---|---|---|---|
-| 한 장 촬영 기본 흐름 | 정상 동작 | 현재 앱은 사진 1장을 `POST /api/v1/posts/generate`에 보내고, 결과 1개를 분석 결과/나눔 식재료 작성 화면으로 넘긴다. 홈 화면 문구도 `사진 한 장으로 나눔 가능 여부 확인`이다. | `CameraScanScreen.processImage()`, `generatePost()`, `HomeScreen` UI | MVP 기본 흐름은 한 장 촬영으로 유지 |
-| 한 장으로 충분한 케이스 | 정책 결정 필요 | 외관이 잘 보이는 단일 과일/채소, 포장 밖에서 상태를 충분히 볼 수 있는 식재료는 한 장 촬영으로 처리 가능하다. 현재 실제 검증도 단일 대표 객체 응답을 전제로 통과했다. | `GenerateResult.detectedFruit`, `aiAnalysis.category` | 데모/검증 이미지는 단일 객체 중심으로 준비 |
-| 한 장으로 어려운 케이스 | 정책 결정 필요 | 유통기한 라벨, 포장 내부 상태, 절단면, 냄새/촉감, 캔/불투명 포장, 어두움/흔들림/가림, 여러 음식이 섞인 사진은 한 장만으로 신뢰하기 어렵다. | 현재 UI에는 보조 질문/추가 촬영 단계 없음 | 낮은 confidence 또는 불확실 상태에서 재촬영/수동 수정으로 보낸다 |
-| 라벨/유통기한/내부 상태 | 미구현 | 앱은 유통기한을 이미지에서 읽지 않고 나눔 식재료 생성 시 기본 3일 후로 설정한다. 라벨 OCR, 포장 내부 상태 확인, 유통기한 수동 입력 필드는 없다. | `PostCreateScreen`의 `expDate + 3일` | 유통기한 수동 입력 또는 라벨 사진/OCR은 다음 스프린트 후보 |
-| 잘못 찍은 사진 재촬영 UI | 부분 구현 | 분석 결과 화면에는 `다시 촬영` 버튼이 있다. 촬영 실패 Alert는 갤러리 선택 대안을 제공한다. 분석 실패 Alert는 아직 서버 오류 문구 중심이다. | `AnalysisResultScreen` footer, `CameraScanScreen` catch Alert | 분석 실패 Alert를 재촬영/갤러리/수동 입력 액션형 대안으로 변경 |
-| AI confidence 표시/활용 | 부분 구현 | `confidenceScore`는 분석 결과/작성 화면에 표시되고 낮은 confidence는 `확인 필요`로 분기한다. 다만 재촬영 강제나 수동 입력 전용 CTA는 없다. | `AiAnalysis.confidenceScore`, `AnalysisResultScreen`, `PostCreateScreen` | 낮은 confidence fixture로 실제 UX 검증 |
-| confidence 낮을 때 등록 차단 | 정책 결정 완료 | 낮은 confidence는 단독 등록 차단 사유로 보지 않고 `확인 필요`로 표시한다. 나눔 기준 미충족 신선도 등급만 `canShare=false`로 등록을 차단한다. | `AnalysisResultScreen`, `postPolicy.needsAnalysisReview()` | 확인 필요 상태에서 사용자 확인/수동 수정 UX 보강 |
-| confidence 낮을 때 재촬영 | 부분 구현 | 낮은 confidence 전용 안내는 표시되지만 재촬영을 강제하지는 않는다. | `AnalysisResultScreen`, `CameraScanScreen` | `confidenceScore < threshold`면 재촬영 CTA를 강조 |
-| confidence 낮을 때 수동 입력 | 부분 구현 | 분석 성공 뒤 나눔 식재료 작성 화면에서 제목/카테고리/설명은 수정 가능하다. 하지만 낮은 confidence 또는 분석 실패에서 바로 수동 입력으로 넘기는 흐름은 없다. | `PostCreateScreen` TextInput, category chip | `수동으로 입력` CTA 추가 |
-| 여러 음식 하나의 나눔 식재료 처리 | 현재 구조상 단일 대표 객체만 가능 | 현재 응답 계약은 `detectedFruit`, `detectedFruitKo` 단일 문자열이다. `detections[]`, bounding box, object id가 없다. | OpenAPI `PostGenerateResult`, `PostAIResult`, `src/types/post.ts` | MVP에서는 대표 객체 1개 나눔 식재료로만 처리 |
-| 여러 음식 객체별 분리 등록 | 미구현 | 앱 내 route param, 타입, 나눔 식재료 작성 화면이 모두 단일 결과를 전제로 한다. 객체별 분리 등록 UX가 없다. | `RootStackParamList`, `GenerateResult`, `PostCreateScreen` | 다음 스프린트에서 계약/UX 먼저 설계 |
-| 여러 객체 중 하나라도 `Stale`일 때 차단 | 미구현 | multi-object 결과가 없어서 객체별 `Stale` 판단 자체가 불가능하다. 서버 설명상 `Stale`/AI 장애는 generate 단계에서 400으로 거부되는 흐름이므로 앱은 실패 Alert만 받는다. | OpenAPI `generate` 설명, `CameraScanScreen` error handling | multi-object 도입 시 보수적으로 전체 확인 필요 상태 처리 |
-| 객체별 나눔 기준 미충족 상태 표시 | 미구현 | 단일 `category`만 표시한다. 객체별 상태, confidence, 박스 표시 UI가 없다. | `AnalysisResultScreen` 품질 분류, `PostCreateScreen` 분석 카드 | `detections[]` 계약 이후 표시 방식 설계 |
-| multi-object 적용 시점 | 정책 결정 | 지금 MVP에는 붙이지 않는다. 현재 파이프라인은 단일 이미지/단일 대표 객체 계약이라 multi-object를 붙이면 API 계약, 결과 화면, 나눔 식재료 작성/분리 등록 UX가 동시에 바뀐다. | `PostGenerateResult` 필드 목록, 앱 route 구조 | 다음 스프린트 연구/검증 항목으로 분리 |
+| 항목                                    | 분류                              | 검증 결과                                                                                                                                                                    | 근거/관련 위치                                                           | 다음 액션                                                        |
+| --------------------------------------- | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ | ---------------------------------------------------------------- |
+| 한 장 촬영 기본 흐름                    | 정상 동작                         | 현재 앱은 사진 1장을 `POST /api/v1/posts/generate`에 보내고, 결과 1개를 분석 결과/나눔 식재료 작성 화면으로 넘긴다. 홈 화면 문구도 `사진 한 장으로 나눔 가능 여부 확인`이다. | `CameraScanScreen.processImage()`, `generatePost()`, `HomeScreen` UI     | MVP 기본 흐름은 한 장 촬영으로 유지                              |
+| 한 장으로 충분한 케이스                 | 정책 결정 필요                    | 외관이 잘 보이는 단일 과일/채소, 포장 밖에서 상태를 충분히 볼 수 있는 식재료는 한 장 촬영으로 처리 가능하다. 현재 실제 검증도 단일 대표 객체 응답을 전제로 통과했다.         | `GenerateResult.detectedFruit`, `aiAnalysis.category`                    | 데모/검증 이미지는 단일 객체 중심으로 준비                       |
+| 한 장으로 어려운 케이스                 | 정책 결정 필요                    | 유통기한 라벨, 포장 내부 상태, 절단면, 냄새/촉감, 캔/불투명 포장, 어두움/흔들림/가림, 여러 음식이 섞인 사진은 한 장만으로 신뢰하기 어렵다.                                   | 현재 UI에는 보조 질문/추가 촬영 단계 없음                                | 낮은 confidence 또는 불확실 상태에서 재촬영/수동 수정으로 보낸다 |
+| 라벨/유통기한/내부 상태                 | 미구현                            | 앱은 유통기한을 이미지에서 읽지 않고 나눔 식재료 생성 시 기본 3일 후로 설정한다. 라벨 OCR, 포장 내부 상태 확인, 유통기한 수동 입력 필드는 없다.                              | `PostCreateScreen`의 `expDate + 3일`                                     | 유통기한 수동 입력 또는 라벨 사진/OCR은 다음 스프린트 후보       |
+| 잘못 찍은 사진 재촬영 UI                | 부분 구현                         | 분석 결과 화면에는 `다시 촬영` 버튼이 있다. 촬영 실패 Alert는 갤러리 선택 대안을 제공한다. 분석 실패 Alert는 아직 서버 오류 문구 중심이다.                                   | `AnalysisResultScreen` footer, `CameraScanScreen` catch Alert            | 분석 실패 Alert를 재촬영/갤러리/수동 입력 액션형 대안으로 변경   |
+| AI confidence 표시/활용                 | 부분 구현                         | `confidenceScore`는 분석 결과/작성 화면에 표시되고 낮은 confidence는 `확인 필요`로 분기한다. 다만 재촬영 강제나 수동 입력 전용 CTA는 없다.                                   | `AiAnalysis.confidenceScore`, `AnalysisResultScreen`, `PostCreateScreen` | 낮은 confidence fixture로 실제 UX 검증                           |
+| confidence 낮을 때 등록 차단            | 정책 결정 완료                    | 낮은 confidence는 단독 등록 차단 사유로 보지 않고 `확인 필요`로 표시한다. 나눔 기준 미충족 신선도 등급만 `canShare=false`로 등록을 차단한다.                                 | `AnalysisResultScreen`, `postPolicy.needsAnalysisReview()`               | 확인 필요 상태에서 사용자 확인/수동 수정 UX 보강                 |
+| confidence 낮을 때 재촬영               | 부분 구현                         | 낮은 confidence 전용 안내는 표시되지만 재촬영을 강제하지는 않는다.                                                                                                           | `AnalysisResultScreen`, `CameraScanScreen`                               | `confidenceScore < threshold`면 재촬영 CTA를 강조                |
+| confidence 낮을 때 수동 입력            | 부분 구현                         | 분석 성공 뒤 나눔 식재료 작성 화면에서 제목/카테고리/설명은 수정 가능하다. 하지만 낮은 confidence 또는 분석 실패에서 바로 수동 입력으로 넘기는 흐름은 없다.                  | `PostCreateScreen` TextInput, category chip                              | `수동으로 입력` CTA 추가                                         |
+| 여러 음식 하나의 나눔 식재료 처리       | 현재 구조상 단일 대표 객체만 가능 | 현재 응답 계약은 `detectedFruit`, `detectedFruitKo` 단일 문자열이다. `detections[]`, bounding box, object id가 없다.                                                         | OpenAPI `PostGenerateResult`, `PostAIResult`, `src/types/post.ts`        | MVP에서는 대표 객체 1개 나눔 식재료로만 처리                     |
+| 여러 음식 객체별 분리 등록              | 미구현                            | 앱 내 route param, 타입, 나눔 식재료 작성 화면이 모두 단일 결과를 전제로 한다. 객체별 분리 등록 UX가 없다.                                                                   | `RootStackParamList`, `GenerateResult`, `PostCreateScreen`               | 다음 스프린트에서 계약/UX 먼저 설계                              |
+| 여러 객체 중 하나라도 `Stale`일 때 차단 | 미구현                            | multi-object 결과가 없어서 객체별 `Stale` 판단 자체가 불가능하다. 서버 설명상 `Stale`/AI 장애는 generate 단계에서 400으로 거부되는 흐름이므로 앱은 실패 Alert만 받는다.      | OpenAPI `generate` 설명, `CameraScanScreen` error handling               | multi-object 도입 시 보수적으로 전체 확인 필요 상태 처리         |
+| 객체별 나눔 기준 미충족 상태 표시       | 미구현                            | 단일 `category`만 표시한다. 객체별 상태, confidence, 박스 표시 UI가 없다.                                                                                                    | `AnalysisResultScreen` 품질 분류, `PostCreateScreen` 분석 카드           | `detections[]` 계약 이후 표시 방식 설계                          |
+| multi-object 적용 시점                  | 정책 결정                         | 지금 MVP에는 붙이지 않는다. 현재 파이프라인은 단일 이미지/단일 대표 객체 계약이라 multi-object를 붙이면 API 계약, 결과 화면, 나눔 식재료 작성/분리 등록 UX가 동시에 바뀐다.  | `PostGenerateResult` 필드 목록, 앱 route 구조                            | 다음 스프린트 연구/검증 항목으로 분리                            |
 
 #### 정책 결정안
 
@@ -621,32 +621,32 @@ docs/VALIDATION_AND_BACKLOG.md의 "4. 한 장 촬영 UX와 multi-object 정책 �
 
 #### 기능별 구현 상태
 
-| 항목 | 상태 | 현재 구현 | 다음 액션 |
-| --- | --- | --- | --- |
-| 소셜 로그인 | 목업 | `LoginScreen`에 카카오/Apple/Google 버튼은 있지만 `준비 중` Alert만 표시한다. 서버 OpenAPI에도 소셜 로그인 엔드포인트가 없다. | MVP에서는 이메일 로그인만 공식 경로로 표시하거나, 소셜 버튼을 숨긴다. |
-| 이메일 인증 | 미구현 | 이메일 형식 검증과 회원가입 API만 있다. 이메일 인증 메일, OTP, verification 상태 필드는 없다. | 다음 스프린트 범위 밖이면 “이메일 형식 검증만 제공”으로 명시한다. |
-| 최초 위치 등록 | 구현됨 | 로그인 후 `latitude === null`이면 `LocationSetup`으로 분기하고, GPS 좌표와 FCM 토큰을 `/auth/me/location`에 저장한다. | 권한 거부/수동 위치 입력 UX 보강. |
-| 위치 재설정 | 구현됨 | 홈 위치 헤더와 프로필 `동네 위치 재설정` 메뉴에서 `LocationSetup`으로 재진입한다. API는 `/auth/me/location`을 재사용한다. | 권한 거부/수동 위치 입력 UX 보강. |
-| 주변 나눔 수 | 부분 구현/임시 | 홈 통계는 `posts.length`를 `주변 나눔`으로 표시한다. pagination 전 현재 조회 결과 수 기준이다. | 실제 통계로 유지하려면 기준과 API를 정의한다. |
-| 탄소 절감액 | 정리됨 | 홈과 프로필의 고정 kg 값을 제거하고 `준비 중`으로 표시한다. 계산식/API는 없다. | 실제 지표를 넣으려면 계산식과 API 계약을 먼저 정의한다. |
-| 내 주변 실시간 나눔 | 부분 구현 | `getNearbyPosts()`로 실제 주변 available 나눔 식재료를 가져와 카드로 표시한다. 백엔드 기준 `/posts/nearby`는 requested를 자동 제외한다. 실시간 구독, pagination, `전체보기` 동작은 없다. | 신청 성공 후 requested 항목이 홈에서 사라지는지 프론트 연동/QA. |
-| 홈 데이터 없음 상태 | 구현됨 | 나눔 식재료가 없으면 `아직 근처에 나눔이 없어요` 빈 상태를 표시한다. | API 실패와 진짜 빈 상태를 구분하는 에러 UI 추가. |
-| 검색 기능 | 부분 구현 | 홈 검색 아이콘은 지도 탭으로 이동하고, 지도 검색 입력은 공유 냉장고 이름/주소 로컬 필터로 동작한다. 서버 OpenAPI에는 검색 엔드포인트가 없다. | 나눔 식재료/동네 서버 검색은 후속 범위로 분리. |
-| 검색 결과 없음 | 구현됨 | MVP 검색은 지도 공유 냉장고 이름/주소 로컬 필터로 제한했다. 결과 없음 상태와 검색 초기화가 있다. | 나눔 식재료/동네 서버 검색은 후속 범위로 분리. |
-| 푸쉬 알림 | 부분 구현, 백엔드 payload 확정 | Firebase Messaging 의존성, Android 알림 권한, FCM 토큰 등록은 있다. 백엔드는 `share_created`, `share_requested`와 camelCase payload를 구현했다. foreground/background 수신 처리, 알림 목록, 읽음 상태는 없다. 채팅 탭 mock 데이터는 제거하고 빈 알림함으로 축소했다. | 수신 handler와 알림함을 `type`, `postId`, `requestId`, `fruitName`, `fridgeName` 기준으로 구현. |
-| 유저 프로필 | 부분 구현 | 닉네임/이메일은 실제 유저 정보를 표시한다. 프로필 수정, 메뉴 이동, 내 나눔/관심/받은 나눔은 연결되어 있지 않다. | 프로필 수정 또는 내 나눔 내역 중 하나만 우선 연결. |
-| 유저 통계 | 정리됨 | 신선도 온도, 포인트, 탄소 절감량의 하드코딩 숫자를 제거하고 `준비 중` 상태로 표시한다. | 실제 지표를 넣으려면 계산식과 API 계약을 먼저 정의. |
-| 냉장고별 나눔 식재료 조회 | 백엔드 구현, 프론트 미연동 | 지도/선택 화면은 냉장고 목록만 조회한다. 백엔드는 `GET /fridges/{id}/posts?status=available`를 구현/검증했다. | 지도/냉장고 상세에서 냉장고별 available 나눔 식재료 목록을 노출한다. 별도 inventory 개념은 후속으로 분리. |
-| 지도 근처 냉장고 조회 | 구현됨 | `MapScreen`이 `/fridges/nearby`, `FridgeSelectScreen`이 `/fridges/available`을 호출한다. 1번 검증에서 실제 냉장고 목록 표시를 확인했다. | 위치 미설정 기본 좌표 fallback과 API 실패 UI 보강. |
-| 채팅 탭 | 축소됨 | `ChatListScreen`의 `MOCK_CHATS`를 제거하고 탭 라벨을 `알림`으로 바꿨다. WebSocket, 채팅방 상세, 메시지 송수신 API는 없다. | MVP에서는 알림함으로 유지하고 WebSocket 채팅은 보류. |
-| WebSocket 채팅 | 미구현/보류 권장 | 코드와 OpenAPI 모두 실시간 채팅 계약이 없다. 구현/검증 비용이 크다. | 다음 스프린트에서는 단순 문의/예약 CTA 또는 알림함으로 축소한다. |
+| 항목                      | 상태                           | 현재 구현                                                                                                                                                                                                                                                            | 다음 액션                                                                                                 |
+| ------------------------- | ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| 소셜 로그인               | 목업                           | `LoginScreen`에 카카오/Apple/Google 버튼은 있지만 `준비 중` Alert만 표시한다. 서버 OpenAPI에도 소셜 로그인 엔드포인트가 없다.                                                                                                                                        | MVP에서는 이메일 로그인만 공식 경로로 표시하거나, 소셜 버튼을 숨긴다.                                     |
+| 이메일 인증               | 미구현                         | 이메일 형식 검증과 회원가입 API만 있다. 이메일 인증 메일, OTP, verification 상태 필드는 없다.                                                                                                                                                                        | 다음 스프린트 범위 밖이면 “이메일 형식 검증만 제공”으로 명시한다.                                         |
+| 최초 위치 등록            | 구현됨                         | 로그인 후 `latitude === null`이면 `LocationSetup`으로 분기하고, GPS 좌표와 FCM 토큰을 `/auth/me/location`에 저장한다.                                                                                                                                                | 권한 거부/수동 위치 입력 UX 보강.                                                                         |
+| 위치 재설정               | 구현됨                         | 홈 위치 헤더와 프로필 `동네 위치 재설정` 메뉴에서 `LocationSetup`으로 재진입한다. API는 `/auth/me/location`을 재사용한다.                                                                                                                                            | 권한 거부/수동 위치 입력 UX 보강.                                                                         |
+| 주변 나눔 수              | 부분 구현/임시                 | 홈 통계는 `posts.length`를 `주변 나눔`으로 표시한다. pagination 전 현재 조회 결과 수 기준이다.                                                                                                                                                                       | 실제 통계로 유지하려면 기준과 API를 정의한다.                                                             |
+| 탄소 절감액               | 정리됨                         | 홈과 프로필의 고정 kg 값을 제거하고 `준비 중`으로 표시한다. 계산식/API는 없다.                                                                                                                                                                                       | 실제 지표를 넣으려면 계산식과 API 계약을 먼저 정의한다.                                                   |
+| 내 주변 실시간 나눔       | 부분 구현                      | `getNearbyPosts()`로 실제 주변 available 나눔 식재료를 가져와 카드로 표시한다. 백엔드 기준 `/posts/nearby`는 requested를 자동 제외한다. 실시간 구독, pagination, `전체보기` 동작은 없다.                                                                             | 신청 성공 후 requested 항목이 홈에서 사라지는지 프론트 연동/QA.                                           |
+| 홈 데이터 없음 상태       | 구현됨                         | 나눔 식재료가 없으면 `아직 근처에 나눔이 없어요` 빈 상태를 표시한다.                                                                                                                                                                                                 | API 실패와 진짜 빈 상태를 구분하는 에러 UI 추가.                                                          |
+| 검색 기능                 | 부분 구현                      | 홈 검색 아이콘은 지도 탭으로 이동하고, 지도 검색 입력은 공유 냉장고 이름/주소 로컬 필터로 동작한다. 서버 OpenAPI에는 검색 엔드포인트가 없다.                                                                                                                         | 나눔 식재료/동네 서버 검색은 후속 범위로 분리.                                                            |
+| 검색 결과 없음            | 구현됨                         | MVP 검색은 지도 공유 냉장고 이름/주소 로컬 필터로 제한했다. 결과 없음 상태와 검색 초기화가 있다.                                                                                                                                                                     | 나눔 식재료/동네 서버 검색은 후속 범위로 분리.                                                            |
+| 푸쉬 알림                 | 부분 구현, 백엔드 payload 확정 | Firebase Messaging 의존성, Android 알림 권한, FCM 토큰 등록은 있다. 백엔드는 `share_created`, `share_requested`와 camelCase payload를 구현했다. foreground/background 수신 처리, 알림 목록, 읽음 상태는 없다. 채팅 탭 mock 데이터는 제거하고 빈 알림함으로 축소했다. | 수신 handler와 알림함을 `type`, `postId`, `requestId`, `fruitName`, `fridgeName` 기준으로 구현.           |
+| 유저 프로필               | 부분 구현                      | 닉네임/이메일은 실제 유저 정보를 표시한다. 프로필 수정, 메뉴 이동, 내 나눔/관심/받은 나눔은 연결되어 있지 않다.                                                                                                                                                      | 프로필 수정 또는 내 나눔 내역 중 하나만 우선 연결.                                                        |
+| 유저 통계                 | 정리됨                         | 신선도 온도, 포인트, 탄소 절감량의 하드코딩 숫자를 제거하고 `준비 중` 상태로 표시한다.                                                                                                                                                                               | 실제 지표를 넣으려면 계산식과 API 계약을 먼저 정의.                                                       |
+| 냉장고별 나눔 식재료 조회 | 백엔드 구현, 프론트 미연동     | 지도/선택 화면은 냉장고 목록만 조회한다. 백엔드는 `GET /fridges/{id}/posts?status=available`를 구현/검증했다.                                                                                                                                                        | 지도/냉장고 상세에서 냉장고별 available 나눔 식재료 목록을 노출한다. 별도 inventory 개념은 후속으로 분리. |
+| 지도 근처 냉장고 조회     | 구현됨                         | `MapScreen`이 `/fridges/nearby`, `FridgeSelectScreen`이 `/fridges/available`을 호출한다. 1번 검증에서 실제 냉장고 목록 표시를 확인했다.                                                                                                                              | 위치 미설정 기본 좌표 fallback과 API 실패 UI 보강.                                                        |
+| 채팅 탭                   | 축소됨                         | `ChatListScreen`의 `MOCK_CHATS`를 제거하고 탭 라벨을 `알림`으로 바꿨다. WebSocket, 채팅방 상세, 메시지 송수신 API는 없다.                                                                                                                                            | MVP에서는 알림함으로 유지하고 WebSocket 채팅은 보류.                                                      |
+| WebSocket 채팅            | 미구현/보류 권장               | 코드와 OpenAPI 모두 실시간 채팅 계약이 없다. 구현/검증 비용이 크다.                                                                                                                                                                                                  | 다음 스프린트에서는 단순 문의/예약 CTA 또는 알림함으로 축소한다.                                          |
 
 #### 다음 스프린트 우선순위 제안
 
 1. 나눔 신청 API 연동: 백엔드 계약이 확정됐으므로 상세 CTA, 201/403/409 처리, 홈/상세 상태 갱신을 우선 구현한다.
 2. 냉장고별 나눔 식재료 조회: 지도/냉장고 상세에서 `GET /fridges/{id}/posts?status=available`를 연결한다.
 3. FCM 수신 handler와 알림함: `share_created`, `share_requested` payload를 foreground/background 수신 흐름에 연결한다.
-4. confidence UX 기준 결정: 현재 60%와 백엔드 활용 가이드 90% 중 어떤 threshold를 제품 기준으로 삼을지 확정한다.
+4. confidence fixture QA: `confidenceScore` 0.4/0.7/1.0에서 확인 필요 표시가 기대대로 동작하는지 검증한다.
 5. 실제 기기/fixture QA: `Stale`, `unknown`, 무효 `imageToken`, 실제 카메라 촬영 케이스를 증거로 남긴다.
 
 #### 채팅 탭 결정
@@ -700,8 +700,8 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
 - 현재 동작:
 - 기대 동작:
 - Acceptance Criteria:
-  - [ ] 
-  - [ ] 
+  - [ ]
+  - [ ]
 - 검증 방법:
 - 관련 파일/화면/API:
 - 비고:
@@ -876,15 +876,16 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
 
 - 분류: 정책 결정 완료, UX 보강 필요
 - 우선순위: P1
-- 상태: 부분 완료, threshold 재결정 및 fixture 검증 필요
+- 상태: 기준 결정 완료, fixture 검증 필요
 - 배경: 백엔드가 `confidenceScore`를 Stage 2 신선도 분류 모델의 softmax max 확률로 확정했다.
-- 현재 동작: `confidenceScore`를 분석 결과/작성 화면에 표시하고, 현재 앱 기준으로 60% 미만이면 `확인 필요`로 분기한다.
+- 현재 동작: `confidenceScore`를 분석 결과/작성 화면에 표시하고, `confidenceScore < 0.9`이면 `확인 필요`로 분기한다.
 - 기대 동작: 낮은 confidence는 즉시 차단이 아니라 `확인 필요` 상태로 분기하고 재촬영/수동 입력을 유도한다.
 - Acceptance Criteria:
   - [x] confidence가 분석 결과 화면에 표시된다.
   - [x] threshold 미만일 때 `확인 필요` 상태가 표시된다.
   - [x] 현재 threshold 값과 정책이 문서화된다.
-  - [ ] 백엔드 활용 가이드인 0.9 미만 확인 필요 기준을 프론트 UX에 반영할지 결정한다.
+  - [x] 백엔드 활용 가이드인 0.9 미만 확인 필요 기준을 프론트 UX에 반영한다.
+  - [x] confidence 0.4/0.7/1.0 기대값을 테스트로 고정한다.
 - 검증 방법: mock/fixture 응답으로 confidence 0.4/0.7/1.0 테스트, 수동 QA
 - 관련 파일/화면/API: `AiAnalysis.confidenceScore`, `AnalysisResultScreen`, `PostCreateScreen`
 
@@ -1000,16 +1001,16 @@ docs/VALIDATION_AND_BACKLOG.md의 검증 결과를 바탕으로 다음 스프린
 
 #### 실제 서버 데이터
 
-| 용도 | 값 | 상태 | 비고 |
-| --- | --- | --- | --- |
-| 시연용 계정 | `mvp_demo_20260505@example.com` / `Password123` | 준비됨 | 위치 등록, 나눔 식재료 생성 완료. 테스트 전용 계정으로만 사용 |
-| 빈 상태 확인 계정 | `mvp_empty_20260505@example.com` / `Password123` | 준비됨 | 제주 좌표 기준 주변 나눔 식재료 0건 확인 |
-| 시연용 위치 | `35.1595, 126.9136` | 준비됨 | 광주 전남대 인근. 홈/지도/냉장고 목록 검증용 |
-| 나눔 식재료 없음 위치 | `33.4996, 126.5312` | 준비됨 | `/posts/nearby` 0건 확인. 단, 냉장고 목록은 서버가 3건을 반환함 |
-| 냉장고 데이터 | id `1` 광주역 공유냉장고, id `3` 충장로 공유냉장고, id `4` 전남대학교 공유냉장고 | 준비됨 | `/fridges/available?latitude=35.1595&longitude=126.9136` 기준 |
-| 시연용 나눔 식재료 | id `7`, `[MVP 검증] 신선한 사과 나눔합니다` | 준비됨 | 실제 `generate -> imageToken -> createPost` 흐름으로 생성 |
-| AI 성공 이미지 | `android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png` | 임시 준비됨 | 실제 AI가 `사과`/`Fresh`로 판정. 실제 식재료 사진은 별도 확보 필요 |
-| 검색 결과 없음 키워드 | `zz-no-result-foodlink`, `없는냉장고테스트` | 준비됨 | 검색 기능 구현 후 no-result fixture로 사용 |
+| 용도                  | 값                                                                               | 상태        | 비고                                                               |
+| --------------------- | -------------------------------------------------------------------------------- | ----------- | ------------------------------------------------------------------ |
+| 시연용 계정           | `mvp_demo_20260505@example.com` / `Password123`                                  | 준비됨      | 위치 등록, 나눔 식재료 생성 완료. 테스트 전용 계정으로만 사용      |
+| 빈 상태 확인 계정     | `mvp_empty_20260505@example.com` / `Password123`                                 | 준비됨      | 제주 좌표 기준 주변 나눔 식재료 0건 확인                           |
+| 시연용 위치           | `35.1595, 126.9136`                                                              | 준비됨      | 광주 전남대 인근. 홈/지도/냉장고 목록 검증용                       |
+| 나눔 식재료 없음 위치 | `33.4996, 126.5312`                                                              | 준비됨      | `/posts/nearby` 0건 확인. 단, 냉장고 목록은 서버가 3건을 반환함    |
+| 냉장고 데이터         | id `1` 광주역 공유냉장고, id `3` 충장로 공유냉장고, id `4` 전남대학교 공유냉장고 | 준비됨      | `/fridges/available?latitude=35.1595&longitude=126.9136` 기준      |
+| 시연용 나눔 식재료    | id `7`, `[MVP 검증] 신선한 사과 나눔합니다`                                      | 준비됨      | 실제 `generate -> imageToken -> createPost` 흐름으로 생성          |
+| AI 성공 이미지        | `android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png`                        | 임시 준비됨 | 실제 AI가 `사과`/`Fresh`로 판정. 실제 식재료 사진은 별도 확보 필요 |
+| 검색 결과 없음 키워드 | `zz-no-result-foodlink`, `없는냉장고테스트`                                      | 준비됨      | 검색 기능 구현 후 no-result fixture로 사용                         |
 
 #### 실제 생성된 나눔 식재료 상세
 
@@ -1032,12 +1033,12 @@ docs/VALIDATION_AND_BACKLOG.md의 검증 결과를 바탕으로 다음 스프린
 
 #### 아직 준비하지 못한 fixture
 
-| 항목 | 상태 | 이유 | 다음 액션 |
-| --- | --- | --- | --- |
-| AI 실패 케이스 이미지 | 미준비 | 현재 확보한 실제 이미지는 성공 케이스뿐이다. 서버 generate 400을 안정적으로 재현하는 이미지가 필요하다. | [AI QA fixture 문서](./AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md)의 `not-food`, `screenshot-or-ui`, `low-quality` 세트 확보 |
-| 나눔 기준 미충족 상태 `Stale` 이미지 | 미준비 | 실제 `Stale` 응답을 만드는 테스트 이미지가 없다. | [AI QA fixture 문서](./AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md)의 `stale-or-rotten` fixture 또는 서버 fixture 모드 준비 |
-| multi-object 예시 이미지 | 미준비 | 여러 식재료가 동시에 담긴 실제 사진이 없다. 현재 API 계약도 단일 대표 객체만 반환한다. | [AI QA fixture 문서](./AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md)의 `multi-object` fixture 확보 |
-| 주변 냉장고 없음 위치 | 준비 실패 | `0,0`, 제주, 부산, 뉴욕 좌표에서도 `/fridges/nearby`가 3건을 반환했다. 반경 필터가 기대와 다를 가능성이 있다. | 서버 냉장고 거리 필터를 확인하거나 no-fridge fixture를 백엔드에 추가 |
+| 항목                                 | 상태      | 이유                                                                                                          | 다음 액션                                                                                                                |
+| ------------------------------------ | --------- | ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| AI 실패 케이스 이미지                | 미준비    | 현재 확보한 실제 이미지는 성공 케이스뿐이다. 서버 generate 400을 안정적으로 재현하는 이미지가 필요하다.       | [AI QA fixture 문서](./AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md)의 `not-food`, `screenshot-or-ui`, `low-quality` 세트 확보 |
+| 나눔 기준 미충족 상태 `Stale` 이미지 | 미준비    | 실제 `Stale` 응답을 만드는 테스트 이미지가 없다.                                                              | [AI QA fixture 문서](./AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md)의 `stale-or-rotten` fixture 또는 서버 fixture 모드 준비   |
+| multi-object 예시 이미지             | 미준비    | 여러 식재료가 동시에 담긴 실제 사진이 없다. 현재 API 계약도 단일 대표 객체만 반환한다.                        | [AI QA fixture 문서](./AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md)의 `multi-object` fixture 확보                             |
+| 주변 냉장고 없음 위치                | 준비 실패 | `0,0`, 제주, 부산, 뉴욕 좌표에서도 `/fridges/nearby`가 3건을 반환했다. 반경 필터가 기대와 다를 가능성이 있다. | 서버 냉장고 거리 필터를 확인하거나 no-fridge fixture를 백엔드에 추가                                                     |
 
 #### 재현 명령 요약
 

@@ -1,5 +1,6 @@
 import {
   canShareAnalysisResult,
+  CONFIDENCE_REVIEW_THRESHOLD_PERCENT,
   getAnalysisQualityMeta,
   getConfidencePercent,
   getGenerateResultQualityMeta,
@@ -149,12 +150,15 @@ describe('post policy', () => {
     expect(getPostStatusLabel('completed')).toBe('나눔 완료');
   });
 
-  it('normalizes confidence scores and flags low confidence for review', () => {
+  it('normalizes confidence scores and flags confidence below 90% for review', () => {
+    expect(CONFIDENCE_REVIEW_THRESHOLD_PERCENT).toBe(90);
     expect(getConfidencePercent(0.57)).toBe(57);
     expect(getConfidencePercent(87)).toBe(87);
     expect(getConfidencePercent(undefined)).toBeNull();
-    expect(needsAnalysisReview(0.57)).toBe(true);
-    expect(needsAnalysisReview(0.72)).toBe(false);
+    expect(needsAnalysisReview(0.4)).toBe(true);
+    expect(needsAnalysisReview(0.7)).toBe(true);
+    expect(needsAnalysisReview(1.0)).toBe(false);
+    expect(needsAnalysisReview(0.72, 60)).toBe(false);
   });
 
   it('keeps a legacy userId fallback for older local fixtures only', () => {

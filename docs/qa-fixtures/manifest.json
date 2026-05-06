@@ -38,8 +38,14 @@
       "case": "흐림/어두움/가림",
       "localPath": "docs/qa-fixtures/low-quality-review-20260505.jpg",
       "expectedOutcome": "rejected_or_review",
+      "confidenceReviewThreshold": 0.9,
+      "expectedConfidenceChecks": [
+        { "confidenceScore": 0.4, "needsReview": true },
+        { "confidenceScore": 0.7, "needsReview": true },
+        { "confidenceScore": 1.0, "needsReview": false }
+      ],
       "expectedRejectionReasons": ["low_quality"],
-      "notes": "흔들림, 저조도, 부분 가림 사진"
+      "notes": "흔들림, 저조도, 부분 가림 사진. confidenceScore 0.9 미만은 확인 필요 UX로 표시하되 등록을 단독 차단하지 않는다."
     },
     {
       "id": "large-image",

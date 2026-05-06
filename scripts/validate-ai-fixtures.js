@@ -8,6 +8,7 @@ const manifestPath = path.join(repoRoot, 'docs', 'qa-fixtures', 'manifest.json')
 const baseUrl = process.env.FOODLINK_API_BASE_URL || 'http://localhost:8080';
 const token = process.env.FOODLINK_ACCESS_TOKEN;
 const maxUploadImageBytes = 8 * 1024 * 1024;
+const confidenceReviewThreshold = 0.9;
 
 const readManifest = () =>
   JSON.parse(fs.readFileSync(manifestPath, {encoding: 'utf8'}));
@@ -70,7 +71,9 @@ const evaluateGenerateResponse = (fixture, status, body) => {
   const confidenceScore = body?.data?.aiAnalysis?.confidenceScore;
   const lowConfidence =
     typeof confidenceScore === 'number' &&
-    (confidenceScore <= 1 ? confidenceScore < 0.6 : confidenceScore < 60);
+    (confidenceScore <= 1
+      ? confidenceScore < confidenceReviewThreshold
+      : confidenceScore < confidenceReviewThreshold * 100);
 
   if (fixture.expectedOutcome === 'shareable') {
     return {
