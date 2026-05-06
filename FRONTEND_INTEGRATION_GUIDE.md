@@ -4,6 +4,7 @@
 >
 > **기준일**: 2026-05-05
 > **검증 기준**: `GET /openapi.json`, 실제 앱/API 검증, `docs/MVP_VALIDATION_AND_NEXT_SPRINT_TODO.md`
+> **도메인 용어 기준**: [`CONTEXT.md`](./CONTEXT.md)
 
 ---
 
@@ -249,9 +250,9 @@ Content-Type: multipart/form-data
 | AI 서버 장애 | "AI 분석 서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요." |
 | 비이미지 파일 | "지원하지 않는 파일 형식입니다. JPEG, PNG, WebP 이미지만 업로드 가능합니다." |
 
-> 프론트에서는 `success === false`일 때 `message`를 Toast/Alert로 표시하면 됨.
+> 프론트에서는 실패 응답의 `message` 또는 FastAPI 형식의 `detail`을 Toast/Alert로 표시한다.
 
-> 현재 앱 이슈: `Stale/Bad/Rotten` 계열 분석 결과가 화면에 들어와도 `AnalysisResultScreen`의 CTA가 실제 disabled 처리되지 않는다. `canShare=false`일 때 화면 이동과 최종 등록을 모두 막아야 한다.
+> 용어 기준: `Fresh/Normal/Stale/Bad/Rotten`은 **신선도 등급**이다. `Stale/Bad/Rotten`은 **부패 의심**으로 보고 `canShare=false`일 때 분석 결과, 작성, 최종 등록 단계에서 모두 막는다.
 
 ### 4.5 게시글 등록
 
@@ -287,7 +288,7 @@ const response = await fetch(`${BASE_URL}/api/v1/posts`, {
 
 **등록 후 백엔드 자동 처리**:
 1. imageToken 검증 (존재 + 1시간 이내)
-2. 냉장고 검증 (존재 + 활성)
+2. 공유 냉장고 검증 (존재 + 활성)
 3. 검증된 이미지 → 최종 경로로 이동
 4. DB 저장
 5. 2km 내 사용자에게 FCM 알림 (비동기)
@@ -335,7 +336,9 @@ Authorization: Bearer {token}
 }
 ```
 
-> 현재 앱 타입은 `userId`를 기대하므로 수정 필요. 작성자 여부 판단은 `authorId` 기준으로 맞춰야 한다.
+> `status: "available"`은 현재 검증된 **나눔 상태**다. 예약/완료/취소/만료 상태는 아직 앱 플로우로 구현되지 않았다.
+>
+> 작성자 여부 판단은 `authorId` 기준으로 처리한다. 구형 fixture의 `userId`는 호환용 fallback으로만 본다.
 
 ### 4.8 게시글 삭제
 
@@ -458,7 +461,7 @@ GET /posts/nearby → 근처 게시글 카드
 - [ ] 로그인 필드명은 `username` (email 아님)
 - [ ] **게시글 등록 전 반드시 generate 호출** → imageToken 획득
 - [ ] **게시글 등록 시 이미지 파일 보내지 않음** → `application/x-www-form-urlencoded`의 `data=<JSON>`에 imageToken 포함
-- [ ] generate에서 400 수신 시 `message`를 Toast/Alert로 표시
+- [ ] generate에서 400 수신 시 `message` 또는 `detail`을 Toast/Alert로 표시
 - [ ] imageToken은 1시간 내 사용 (만료 시 다시 촬영)
 - [ ] generate API Form 필드는 `image`, 선택 `user_hint`
 - [ ] 이미지 URL은 상대경로 → Base URL 붙여서 사용

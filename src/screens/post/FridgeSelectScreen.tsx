@@ -20,6 +20,7 @@ import {getAvailableFridges} from '@/api/fridges';
 import {createPost} from '@/api/posts';
 import {useAuthStore} from '@/store/authStore';
 import type {Fridge} from '@/types';
+import {getApiErrorMessage} from '@/utils/apiError';
 import {isShareableCategory} from '@/utils/postPolicy';
 import {colors} from '@/theme';
 import {styles} from './FridgeSelectScreen.styles';
@@ -88,9 +89,8 @@ const FridgeSelectScreen = ({route, navigation}: Props) => {
       } else {
         Alert.alert('등록 실패', response.message || '나눔 등록에 실패했습니다.');
       }
-    } catch (error: any) {
-      const message = error?.response?.data?.message || '서버 오류가 발생했습니다.';
-      Alert.alert('오류', message);
+    } catch (error) {
+      Alert.alert('오류', getApiErrorMessage(error));
     } finally {
       setIsSubmitting(false);
     }

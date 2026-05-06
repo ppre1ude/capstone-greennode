@@ -20,6 +20,7 @@
 - P1 카메라 촬영/fallback: `react-native-vision-camera@5`의 `usePhotoOutput().capturePhotoToFile()` 경로로 수정했다. 에뮬레이터에서 촬영 파일 생성 및 실제 `/posts/generate` 호출까지 확인했고, 실제 기기 셔터 검증은 아직 남았다.
 - P1 confidence: `confidenceScore`를 분석 결과/작성 화면에 표시하고 60% 미만은 즉시 차단 대신 `확인 필요`로 분기한다.
 - 회귀 테스트: `__tests__/postPolicy.test.ts`에서 품질 정책, confidence, 작성자 판단을 고정한다.
+- AI QA fixture/실기기 체크리스트: [AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md](./AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md)에 성공/실패/false-positive/대용량/실제 기기 촬영 검증 기준을 정리했다.
 
 ## 권장 작업 순서
 
@@ -40,11 +41,11 @@
 
 - [x] 로그인 시 유저 테이블에 유저가 정상 생성되는지 확인
 - [x] 기존 유저가 다시 로그인할 때 유저 정보가 정상 업데이트되는지 확인
-- [x] 최초 로그인 직후 `default_location = NULL` 상태가 실제로 발생하는지 확인
-- [x] `default_location = NULL` 상태에서 홈 화면이 깨지지 않는지 확인
-- [x] `default_location = NULL` 상태에서 지도 화면이 깨지지 않는지 확인
-- [x] `default_location = NULL` 상태에서 검색 화면이 깨지지 않는지 확인
-- [x] `default_location = NULL` 상태에서 게시글 등록 플로우가 깨지지 않는지 확인
+- [x] 최초 로그인 직후 동네 위치 미설정(`latitude = NULL`, `longitude = NULL`) 상태가 실제로 발생하는지 확인
+- [x] 동네 위치 미설정 상태에서 홈 화면이 깨지지 않는지 확인
+- [x] 동네 위치 미설정 상태에서 지도 화면이 깨지지 않는지 확인
+- [x] 동네 위치 미설정 상태에서 검색 화면이 깨지지 않는지 확인
+- [x] 동네 위치 미설정 상태에서 게시글 등록 플로우가 깨지지 않는지 확인
 - [x] 최초 위치 등록 화면으로 자연스럽게 이어지는지 확인
 - [x] 최초 위치 등록 후 홈/지도/게시글 등록에서 위치 데이터가 반영되는지 확인
 - [x] 위치 재설정 기능이 실제 위치 데이터와 UI에 반영되는지 확인
@@ -72,7 +73,7 @@
 - APK: release APK 재빌드 후 설치, `android/app/build/outputs/apk/release/app-release.apk`
 - 기준 코드: `USE_MOCK_AI_PIPELINE` 제거 후 `src/api/posts.ts`의 `generatePost()`와 `createPost()`가 실제 API를 호출
 - Android 네트워크: MVP HTTP 터널 검증을 위해 `AndroidManifest.xml`의 `usesCleartextTraffic`을 `true`로 설정. 운영 배포 전에는 HTTPS 또는 범위 제한된 network security config로 되돌릴 필요가 있다.
-- 주의: 앱 타입에는 `default_location` 필드가 없고 `User.latitude`, `User.longitude`가 `null`인지로 위치 등록 여부를 판단한다.
+- 용어 기준: `default_location`이라는 도메인 필드는 쓰지 않는다. 사용자의 **동네 위치**는 `User.latitude`, `User.longitude`가 `null`인지로 등록 여부를 판단한다.
 
 #### 핵심 플로우 검증 결과 표
 
@@ -80,11 +81,11 @@
 |---|---|---|---|---|
 | 로그인 시 유저 생성 | 정상 동작 | 신규 이메일 계정을 API로 생성하면 `latitude`, `longitude`가 `null`인 유저가 생성된다. 앱 이메일 로그인도 성공한다. | `POST /api/v1/auth/signup`, `POST /api/v1/auth/login`, `src/screens/auth/SignupScreen.tsx`, `src/screens/auth/LoginEmailScreen.tsx` | 소셜 로그인에서 "로그인 시 유저 생성" 정책은 별도 검증 필요 |
 | 기존 유저 재로그인 시 유저 정보 업데이트 | 정상 동작 | 로그인 후 `getMe()`로 최신 유저 정보를 받아 `authStore`에 반영한다. 위치가 있는 유저는 `refreshDeviceRegistration()`으로 위치/FCM 갱신을 시도한다. | `src/screens/auth/LoginEmailScreen.tsx`, `src/store/authStore.ts`, `src/services/deviceRegistration.ts` | FCM 토큰 실패 시 사용자 영향은 2번 실패 케이스에서 추가 검증 |
-| 최초 로그인 직후 위치 `NULL` 상태 | 정상 동작 | 검증 계정 생성 직후 서버 응답과 `/auth/me`에서 `latitude = null`, `longitude = null` 확인. | `GET /api/v1/auth/me` | 문서 용어를 `default_location`에서 `latitude/longitude` 기준으로 맞추기 |
-| 위치 `NULL` 상태의 홈 화면 | 검증 필요 | 정상 UI 흐름에서는 위치 없는 유저가 `Main`으로 들어가지 않고 `LocationSetup`으로 이동한다. 코드상 홈은 위치가 없으면 API 호출을 스킵하고 빈 상태를 보여준다. | `src/screens/home/HomeScreen.tsx` | 강제 진입 테스트 또는 컴포넌트 테스트 추가 |
-| 위치 `NULL` 상태의 지도 화면 | 버그 | 정상 UI 흐름에서는 접근 불가지만, 코드상 지도는 위치가 없으면 광주 전남대 기본 좌표로 냉장고 API를 호출한다. 위치 미설정 사용자에게 실제 주변 데이터처럼 보일 수 있다. | `src/screens/map/MapScreen.tsx` | 위치 미설정 시 지도 API 호출 차단 또는 위치 등록 CTA 표시 |
-| 위치 `NULL` 상태의 검색 화면 | 미구현 | 독립 검색 화면이 없다. 홈 검색 아이콘과 지도 검색 입력 UI만 있고 검색 플로우는 연결되어 있지 않다. | `src/screens/home/HomeScreen.tsx`, `src/screens/map/MapScreen.tsx` | 검색 기능은 5번 미구현 기능 점검에서 백로그화 |
-| 위치 `NULL` 상태의 게시글 등록 | 검증 필요 | 정상 UI 흐름에서는 위치 등록 전 메인/카메라 진입이 막힌다. 코드상 `FridgeSelect`는 위치 없을 때 Alert 후 `goBack()` 처리한다. | `src/screens/post/FridgeSelectScreen.tsx` | 강제 진입 테스트 추가 및 위치 등록 CTA로 개선 |
+| 최초 로그인 직후 동네 위치 미설정 | 정상 동작 | 검증 계정 생성 직후 서버 응답과 `/auth/me`에서 `latitude = null`, `longitude = null` 확인. | `GET /api/v1/auth/me` | 유지 |
+| 동네 위치 미설정 상태의 홈 화면 | 검증 필요 | 정상 UI 흐름에서는 위치 없는 유저가 `Main`으로 들어가지 않고 `LocationSetup`으로 이동한다. 코드상 홈은 위치가 없으면 API 호출을 스킵하고 빈 상태를 보여준다. | `src/screens/home/HomeScreen.tsx` | 강제 진입 테스트 또는 컴포넌트 테스트 추가 |
+| 동네 위치 미설정 상태의 지도 화면 | 버그 | 정상 UI 흐름에서는 접근 불가지만, 코드상 지도는 위치가 없으면 광주 전남대 기본 좌표로 냉장고 API를 호출한다. 위치 미설정 사용자에게 실제 주변 데이터처럼 보일 수 있다. | `src/screens/map/MapScreen.tsx` | 위치 미설정 시 지도 API 호출 차단 또는 위치 등록 CTA 표시 |
+| 동네 위치 미설정 상태의 검색 화면 | 미구현 | 독립 검색 화면이 없다. 홈 검색 아이콘과 지도 검색 입력 UI만 있고 검색 플로우는 연결되어 있지 않다. | `src/screens/home/HomeScreen.tsx`, `src/screens/map/MapScreen.tsx` | 검색 기능은 5번 미구현 기능 점검에서 백로그화 |
+| 동네 위치 미설정 상태의 게시글 등록 | 검증 필요 | 정상 UI 흐름에서는 위치 등록 전 메인/카메라 진입이 막힌다. 코드상 `FridgeSelect`는 위치 없을 때 Alert 후 `goBack()` 처리한다. | `src/screens/post/FridgeSelectScreen.tsx` | 강제 진입 테스트 추가 및 위치 등록 CTA로 개선 |
 | 최초 위치 등록 화면 분기 | 정상 동작 | 위치 없는 계정으로 로그인 후 앱이 `동네 설정` 화면으로 자연스럽게 이동했다. | UI 검증, `src/screens/auth/LoginEmailScreen.tsx`, `src/navigation/AppNavigator.tsx` | 유지 |
 | 위치 등록 후 홈/지도/게시글 등록 반영 | 정상 동작 | `이 위치로 설정하기` 후 `/auth/me`에 좌표가 저장됐다. 홈은 `내 동네`로 표시되고, 지도와 냉장고 선택 화면은 실제 냉장고 목록을 조회했다. | `PUT /api/v1/auth/me/location`, `HomeScreen`, `MapScreen`, `FridgeSelectScreen` | 유지 |
 | 위치 재설정 기능 | 미구현 | 위치 재설정으로 연결되는 UI/액션이 없다. 프로필의 설정 메뉴도 동작하지 않는다. | `src/screens/profile/ProfileScreen.tsx` | 다음 스프린트 버그/미구현 후보 |
@@ -165,10 +166,10 @@ MVP가 성공 케이스만 동작하는 상태인지, 실패 상황에서도 앱
 
 | 항목 | 판정 | 현재 동작/근거 | 후속 작업 |
 | --- | --- | --- | --- |
-| `나쁨` 상태 등록 차단 | 버그 | `AnalysisResultScreen`은 `canShare=false`일 때 버튼 스타일만 흐리게 만들고 실제 `disabled` 처리는 없다. `PostCreateScreen`/`FridgeSelectScreen`에도 품질 차단 가드가 없다. | `canShare=false`면 CTA를 실제 비활성화하고, 화면 진입/최종 등록 직전에도 품질 가드를 추가한다. |
-| `나쁨` 실패 이유 표시 | 부분 구현 | `generatePost` 실패나 서버 에러는 Alert로 표시된다. mock 제거 후 실제 Fresh 경로는 확인했지만, `나쁨` 판정 fixture나 서버 응답을 아직 재현하지 못했다. | stale/bad fixture 또는 테스트 이미지를 확보하고, 부패 사유 문구를 별도 UX로 고정한다. |
-| 실패 후 대안 흐름 | 부분 구현 | 분석 결과 화면에는 재촬영과 수동 수정 진입이 있다. 하지만 분석 실패 Alert는 확인 버튼뿐이고, 부패 의심 상태에서도 등록 화면 진입이 가능하다. | 실패 Alert 이후 재촬영/갤러리/수동 입력 선택지를 제공한다. |
-| API 서버 연결 실패 | 부분 구현 | 위치 등록, 게시글 상세, 게시글 생성은 Alert를 보여준다. 홈/지도/냉장고 목록 조회 실패는 `console.warn`만 남기고 사용자에게 실패 상태를 보여주지 않는다. | 목록 화면에 에러 상태와 다시 시도 버튼을 추가한다. |
+| 부패 의심 등록 차단 | 구현됨 | `AnalysisResultScreen`은 `canShare=false`일 때 CTA를 disabled 처리하고, `PostCreateScreen`/`FridgeSelectScreen`에도 최종 품질 가드가 있다. | stale/bad fixture로 회귀 검증 |
+| 부패 의심 실패 이유 표시 | 구현됨, fixture 검증 필요 | `generatePost` 실패나 서버 에러는 `message`뿐 아니라 `detail`도 Alert에 표시한다. 실제 stale/bad fixture는 아직 확보하지 못했다. | stale/bad fixture 또는 테스트 이미지를 확보하고, 부패 사유 문구를 실제 앱에서 검증한다. |
+| 실패 후 대안 흐름 | 부분 구현 | 분석 결과 화면에는 재촬영과 작성 화면 진입이 있다. generate 실패 Alert는 `다시 촬영`/`갤러리 선택` 대안을 제공한다. 수동 입력 CTA는 아직 없다. | 실패 Alert에 수동 입력 선택지를 추가할지 결정한다. |
+| API 서버 연결 실패 | 부분 구현 | 홈/지도/냉장고 목록은 error/empty 상태와 retry UI를 분리했다. 위치 등록, 게시글 상세, 게시글 생성은 여전히 화면별 Alert 중심이다. | API 오류 문구 추출과 retry 패턴을 공통화한다. |
 | AI 서버 연결 실패 | 추가 검증 필요 | `postMultipart`는 네트워크 오류와 30초 타임아웃을 reject하고 `CameraScanScreen`이 Alert를 띄운다. mock 제거 후 실제 성공 경로는 검증했지만, AI 서버 중단/타임아웃 fault injection은 아직 하지 않았다. | AI 서버 중단/타임아웃 케이스를 실제 환경에서 재검증한다. |
 | 네트워크 끊김 | 미흡 | 공통 offline 상태가 없고, 화면별로 Alert 또는 로그만 남긴다. 홈/지도는 실패가 빈 상태처럼 보일 수 있다. | 공통 네트워크 에러 문구와 retry 패턴을 정한다. |
 | 중복 등록 방지 | 부분 구현 | `FridgeSelectScreen`은 `isSubmitting`으로 버튼을 비활성화한다. 실제 게시글 생성 성공은 확인했지만, 서버 idempotency나 같은 tick의 빠른 연타 방지는 아직 검증하지 않았다. | submit 시작 시 즉시 re-entry guard를 두고, 서버에도 idempotency key 또는 중복 방지 기준을 검토한다. |
@@ -182,16 +183,16 @@ MVP가 성공 케이스만 동작하는 상태인지, 실패 상황에서도 앱
 
 #### 버그/미구현 후보
 
-- `AnalysisResultScreen`의 부패 의심 CTA는 비활성처럼 보이지만 실제로는 `PostCreate`로 이동한다.
+- 부패 의심 등록 차단은 구현됐고, 서버 400 `detail`도 Alert에 표시하도록 수정했다. 실제 stale/bad fixture 검증이 남았다.
 - mock 파이프라인은 제거되어 실제 성공 경로는 확인됐다. 다만 부패 판정 fixture, AI 장애, 중복 생성 같은 실패 경로는 아직 별도 재현이 필요하다.
-- 홈/지도/냉장고 목록 조회 실패가 사용자에게 표시되지 않아 서버 장애가 "데이터 없음"처럼 보일 수 있다.
+- 홈/지도/냉장고 목록 조회 실패는 error/empty 상태가 분리됐지만, 네트워크 끊김/공통 오류 문구는 아직 화면별로 흩어져 있다.
 - 카메라/위치 권한 거부 후 대체 흐름이 부족하다.
 - 검색 결과 없음 상태는 검색 기능 자체가 연결되지 않아 검증 불가하다.
 - 대용량 이미지 정책과 네트워크 끊김 UX가 아직 없다.
 
 #### 다음 스프린트 처리 제안
 
-- 우선순위 1: 부패 의심 상태의 실제 등록 차단, stale/bad fixture 확보, 실제 게시글 생성의 중복 방지 검증
+- 우선순위 1: stale/bad fixture 확보, 부패 의심 실패 사유 실제 앱 검증, 실제 게시글 생성의 중복 방지 검증
 - 우선순위 2: API/AI/네트워크 실패 공통 UX, 권한 거부 대체 흐름, 목록 화면 retry 상태
 - 우선순위 3: 대용량 이미지 압축/제한, 중복 등록 idempotency, 검색 기능 또는 MVP 제외 결정
 
@@ -333,16 +334,16 @@ image=@android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png; type=image/png
 | raw AI 서버 응답 | 미확인 | 앱이 받는 것은 API 서버가 정리한 `PostGenerateResult`이다. | AI 서버 원 응답 schema 확보 |
 | 대표 객체 처리 | 현재 계약은 단일 객체 | 응답 schema가 `detectedFruit`/`detectedFruitKo` 단일 문자열만 제공한다. 배열, bounding box, object id 필드가 없다. | multi-object를 하려면 `detections[]` 같은 새 계약 필요 |
 | multi-object 실제 성능 | 미확인 | 여러 음식이 있는 테스트 이미지를 아직 호출하지 않았다. | 테스트 이미지 세트 준비 후 generate 반복 검증 |
-| confidence | 존재하지만 앱 로직 미사용 | `confidenceScore`가 응답에 있지만 화면 표시/차단/재촬영 조건에 쓰이지 않는다. 설명 문구 안의 신뢰도는 서버가 만든 텍스트다. | confidence 임계값 정책 결정 |
-| 부패도 category | 서버 값은 문자열 | 확인된 값은 `Fresh`; 앱은 `fresh/good`, `normal/mid/medium`, `rotten/stale/bad`를 매핑한다. `PostCreateScreen`의 품질 라벨은 `good`, `medium`, `bad` 매핑이 빠져 있다. | category enum을 서버와 앱에서 고정 |
-| `나쁨` 등록 실패 레이어 | 실제 차단 없음 | `AnalysisResultScreen`에서 `canShare=false`는 스타일만 바꾸고, `PostCreate`/`FridgeSelect`에는 품질 가드가 없다. | 분석 결과, 게시글 작성, 최종 등록 직전 3단계 가드 추가 |
+| confidence | 화면 표시/확인 필요 분기 구현 | `confidenceScore`는 분석 결과/작성 화면에 표시되고, 낮은 confidence는 `확인 필요`로 분기한다. 단, confidence만으로 즉시 등록 차단하지는 않는다. | threshold와 사용자 확인 UX를 실제 fixture로 검증 |
+| 신선도 등급 | 서버 값은 문자열 | 확인된 값은 `Fresh`; 앱은 `fresh/good`, `normal/mid/medium`, `rotten/stale/bad`를 **신선도 등급**으로 매핑한다. `Fresh/Normal` 계열은 나눔 가능, `Stale/Bad/Rotten` 계열은 부패 의심이다. | category enum을 서버와 앱에서 고정 |
+| 부패 의심 등록 가드 | 구현됨 | `AnalysisResultScreen`, `PostCreateScreen`, `FridgeSelectScreen`에서 `canShare=false`일 때 등록 진행과 최종 등록을 차단한다. | stale/bad fixture로 회귀 검증 |
 
 #### 다음 스프린트 AI 보강 작업 후보
 
 1. category enum 정합성 고정: `Fresh/Normal/Stale/Bad/Rotten` 등 서버 문자열과 앱 품질 라벨 매핑을 테스트로 고정한다.
 2. stale/bad 테스트 fixture 확보: `Fresh` 외에 `Normal`, `Stale/Bad/Rotten` 응답을 실제 이미지 또는 서버 fixture로 재현한다.
 3. confidence 정책 추가: 낮은 confidence일 때 재촬영, 수동 입력, 등록 차단 중 하나로 결정한다.
-4. 부패 의심 등록 차단 구현: `canShare=false`일 때 화면 이동과 최종 등록을 모두 막는다.
+4. 부패 의심 등록 차단 회귀 검증: `canShare=false`일 때 화면 이동과 최종 등록이 계속 막히는지 stale/bad fixture로 확인한다.
 5. multi-object 연구 항목 분리: 현재 계약은 단일 객체이므로 다음 스프린트에서는 `detections[]` 응답 구조와 UI 표시 방식을 먼저 설계한다.
 
 ### Codex 작업 지시 예시
@@ -399,9 +400,9 @@ docs/MVP_VALIDATION_AND_NEXT_SPRINT_TODO.md의 "3. AI 파이프라인 데이터 
 | 한 장으로 어려운 케이스 | 정책 결정 필요 | 유통기한 라벨, 포장 내부 상태, 절단면, 냄새/촉감, 캔/불투명 포장, 어두움/흔들림/가림, 여러 음식이 섞인 사진은 한 장만으로 신뢰하기 어렵다. | 현재 UI에는 보조 질문/추가 촬영 단계 없음 | 낮은 confidence 또는 불확실 상태에서 재촬영/수동 수정으로 보낸다 |
 | 라벨/유통기한/내부 상태 | 미구현 | 앱은 유통기한을 이미지에서 읽지 않고 게시글 생성 시 기본 3일 후로 설정한다. 라벨 OCR, 포장 내부 상태 확인, 유통기한 수동 입력 필드는 없다. | `PostCreateScreen`의 `expDate + 3일` | 유통기한 수동 입력 또는 라벨 사진/OCR은 다음 스프린트 후보 |
 | 잘못 찍은 사진 재촬영 UI | 부분 구현 | 분석 결과 화면에는 `다시 촬영` 버튼이 있다. 촬영 실패 Alert는 갤러리 선택 대안을 제공한다. 분석 실패 Alert는 아직 서버 오류 문구 중심이다. | `AnalysisResultScreen` footer, `CameraScanScreen` catch Alert | 분석 실패 Alert를 재촬영/갤러리/수동 입력 액션형 대안으로 변경 |
-| AI confidence 표시/활용 | 미구현 | API와 타입에는 `confidenceScore`가 있지만 UI 표시, 등록 차단, 재촬영 요구, 수동 입력 분기에는 사용하지 않는다. | `AiAnalysis.confidenceScore`, `AnalysisResultScreen`, `PostCreateScreen` | threshold 정책과 UI 상태 추가 |
-| confidence 낮을 때 등록 차단 | 정책 결정 필요 | 현재는 낮은 confidence를 앱이 판단하지 못한다. 부패 의심 category만 `canShare=false`로 계산하지만 `이대로 나눔하기` 버튼은 실제로 disabled 되지 않는다. | `AnalysisResultScreen.getQualityMeta()`, CTA `onPress` | confidence만으로 즉시 차단하지 말고 `확인 필요` 상태로 분기 |
-| confidence 낮을 때 재촬영 | 미구현 | 낮은 confidence 전용 문구나 재촬영 강제 흐름이 없다. | `AnalysisResultScreen`, `CameraScanScreen` | `confidenceScore < threshold`면 재촬영 CTA를 강조 |
+| AI confidence 표시/활용 | 부분 구현 | `confidenceScore`는 분석 결과/작성 화면에 표시되고 낮은 confidence는 `확인 필요`로 분기한다. 다만 재촬영 강제나 수동 입력 전용 CTA는 없다. | `AiAnalysis.confidenceScore`, `AnalysisResultScreen`, `PostCreateScreen` | 낮은 confidence fixture로 실제 UX 검증 |
+| confidence 낮을 때 등록 차단 | 정책 결정 완료 | 낮은 confidence는 단독 등록 차단 사유로 보지 않고 `확인 필요`로 표시한다. 부패 의심 신선도 등급만 `canShare=false`로 등록을 차단한다. | `AnalysisResultScreen`, `postPolicy.needsAnalysisReview()` | 확인 필요 상태에서 사용자 확인/수동 수정 UX 보강 |
+| confidence 낮을 때 재촬영 | 부분 구현 | 낮은 confidence 전용 안내는 표시되지만 재촬영을 강제하지는 않는다. | `AnalysisResultScreen`, `CameraScanScreen` | `confidenceScore < threshold`면 재촬영 CTA를 강조 |
 | confidence 낮을 때 수동 입력 | 부분 구현 | 분석 성공 뒤 게시글 작성 화면에서 제목/카테고리/설명은 수정 가능하다. 하지만 낮은 confidence 또는 분석 실패에서 바로 수동 입력으로 넘기는 흐름은 없다. | `PostCreateScreen` TextInput, category chip | `수동으로 입력` CTA 추가 |
 | 여러 음식 하나의 게시글 처리 | 현재 구조상 단일 대표 객체만 가능 | 현재 응답 계약은 `detectedFruit`, `detectedFruitKo` 단일 문자열이다. `detections[]`, bounding box, object id가 없다. | OpenAPI `PostGenerateResult`, `PostAIResult`, `src/types/post.ts` | MVP에서는 대표 객체 1개 게시글로만 처리 |
 | 여러 음식 객체별 분리 등록 | 미구현 | 앱 내 route param, 타입, 게시글 작성 화면이 모두 단일 결과를 전제로 한다. 객체별 분리 등록 UX가 없다. | `RootStackParamList`, `GenerateResult`, `PostCreateScreen` | 다음 스프린트에서 계약/UX 먼저 설계 |
@@ -417,12 +418,12 @@ docs/MVP_VALIDATION_AND_NEXT_SPRINT_TODO.md의 "3. AI 파이프라인 데이터 
 - 낮은 confidence는 단독 등록 차단 사유로 확정하지 않는다. 대신 재촬영, 갤러리 재선택, 수동 입력 중 하나를 요구한다.
 - `Stale/Bad/Rotten` 또는 서버 generate 400은 직접 나눔 등록으로 보내지 않고 재촬영/수동 확인으로 돌린다.
 - multi-object detection은 MVP 필수 기능이 아니라 다음 스프린트의 API 계약/UX 연구 항목으로 둔다.
-- multi-object를 도입할 경우 먼저 `detections[]` 계약을 정의한다. 최소 필드는 `label`, `labelKo`, `confidence`, `freshnessCategory`, `bbox`다.
+- multi-object를 도입할 경우 먼저 `detections[]` 계약을 정의한다. 최소 필드는 `label`, `labelKo`, `confidence`, `qualityCategory`, `bbox`다.
 
 #### 다음 스프린트 작업 후보
 
-1. `AnalysisResultScreen`에서 `canShare=false`일 때 `이대로 나눔하기`를 실제 disabled 처리하고 최종 등록 직전에도 guard를 둔다.
-2. `confidenceScore`를 화면에 표시하고 `확인 필요` 상태를 추가한다.
+1. 부패 의심(`canShare=false`) 등록 차단을 stale/bad fixture로 회귀 검증한다.
+2. 낮은 confidence fixture로 `확인 필요` 상태와 작성 화면 표시를 검증한다.
 3. 분석 실패/촬영 실패 Alert를 `다시 촬영`, `갤러리에서 선택`, `수동 입력` 액션으로 바꾼다.
 4. 유통기한 기본 3일 자동값 대신 수동 입력 필드를 추가하거나, 최소한 작성 화면에서 수정 가능하게 만든다.
 5. multi-object 검증용 이미지 세트를 준비한다: 단일 객체, 여러 객체, 흐림/어두움, 라벨/유통기한 포함, 포장 내부 미노출, 부패 의심.
@@ -601,28 +602,30 @@ docs/MVP_VALIDATION_AND_NEXT_SPRINT_TODO.md의 "5. 미구현 기능 상태 점�
 
 - 분류: 버그
 - 우선순위: P0
-- 배경: `AnalysisResultScreen`은 `canShare=false`일 때 CTA를 흐리게 보이게만 하고 실제 이동을 막지 않는다.
-- 현재 동작: `Stale/Bad/Rotten` 계열도 `PostCreate`로 이동할 수 있고, `PostCreateScreen`/`FridgeSelectScreen`에는 품질 가드가 없다.
+- 상태: 완료, fixture 회귀 검증 필요
+- 배경: `AnalysisResultScreen`은 과거에 `canShare=false`일 때 CTA를 흐리게 보이게만 하고 실제 이동을 막지 않았다.
+- 현재 동작: `AnalysisResultScreen`, `PostCreateScreen`, `FridgeSelectScreen`에서 부패 의심 신선도 등급의 등록 진행을 차단한다.
 - 기대 동작: 등록 불가 상태에서는 분석 결과 화면, 게시글 작성 화면, 최종 등록 직전에서 모두 차단한다.
 - Acceptance Criteria:
-  - [ ] `canShare=false`이면 `이대로 나눔하기` 버튼이 실제 disabled 처리된다.
-  - [ ] route 직접 진입 또는 상태 조작으로 `PostCreate`에 들어가도 최종 등록 전에 차단된다.
-  - [ ] 사용자에게 재촬영/갤러리 선택/수동 확인 중 최소 하나의 대안이 제공된다.
+  - [x] `canShare=false`이면 `이대로 나눔하기` 버튼이 실제 disabled 처리된다.
+  - [x] route 직접 진입 또는 상태 조작으로 `PostCreate`/`FridgeSelect`에 들어가도 최종 등록 전에 차단된다.
+  - [x] 사용자에게 재촬영/갤러리 선택 중 최소 하나의 대안이 제공된다.
 - 검증 방법: `AnalysisResultScreen` 단위 테스트, stale/bad fixture 기반 수동 QA, `FridgeSelectScreen` 최종 등록 guard 테스트
 - 관련 파일/화면/API: `src/screens/camera/AnalysisResultScreen.tsx`, `src/screens/post/PostCreateScreen.tsx`, `src/screens/post/FridgeSelectScreen.tsx`
-- 비고: 2번 실패 케이스, 3번 AI 파이프라인, 4번 UX 정책의 공통 최우선 항목이다.
+- 비고: 실제 stale/bad fixture가 아직 없어 수동 QA는 남아 있다.
 
 ## 게시글 상세 authorId/userId 계약 불일치 수정
 
 - 분류: 버그
 - 우선순위: P0
+- 상태: 완료
 - 배경: 실제 `GET /api/v1/posts/{id}` 응답은 `authorId`를 반환하지만 앱 `Post` 타입과 `PostDetailScreen`은 `userId`를 사용한다.
-- 현재 동작: 내가 만든 게시글이어도 `user?.id === post.userId`가 false가 되어 삭제 버튼이 표시되지 않을 수 있다.
+- 현재 동작: 작성자 판단은 `authorId` 기준으로 처리하고, 구형 fixture를 위해 `userId` fallback만 남겨둔다.
 - 기대 동작: API 응답 계약과 앱 타입/화면 로직이 일치하고, 작성자에게 삭제 버튼이 표시된다.
 - Acceptance Criteria:
-  - [ ] `Post` 타입이 실제 API 응답의 작성자 필드를 반영한다.
-  - [ ] 기존 목록/상세/삭제 UI가 동일한 작성자 판단 기준을 사용한다.
-  - [ ] 작성자 계정에서는 삭제 버튼이 보이고, 타 계정에서는 보이지 않는다.
+  - [x] `Post` 타입이 실제 API 응답의 작성자 필드를 반영한다.
+  - [x] 상세/삭제 UI가 동일한 작성자 판단 기준을 사용한다.
+  - [x] 작성자 계정에서는 삭제 버튼이 보이고, 타 계정에서는 보이지 않는다.
 - 검증 방법: 실제 post id `7` 상세 조회, 작성자/타 사용자 로그인 QA, 타입 체크
 - 관련 파일/화면/API: `src/types/post.ts`, `src/screens/post/PostDetailScreen.tsx`, `GET /api/v1/posts/{id}`
 - 비고: 7번 데이터 준비 중 실제 응답으로 추가 발견.
@@ -631,13 +634,14 @@ docs/MVP_VALIDATION_AND_NEXT_SPRINT_TODO.md의 "5. 미구현 기능 상태 점�
 
 - 분류: 버그
 - 우선순위: P1
+- 상태: 완료, 네트워크 fault injection QA 필요
 - 배경: 목록 조회 실패가 `console.warn`에만 남고 화면은 빈 상태처럼 보일 수 있다.
-- 현재 동작: 홈/지도/냉장고 목록 API 실패 시 사용자에게 retry나 오류 상태가 없다.
+- 현재 동작: 홈/지도/냉장고 목록 API 실패 시 오류 문구와 retry UI를 표시한다.
 - 기대 동작: API 실패와 실제 데이터 없음이 UI에서 구분된다.
 - Acceptance Criteria:
-  - [ ] 홈 주변 게시글 조회 실패 시 오류 문구와 다시 시도 버튼이 표시된다.
-  - [ ] 지도/냉장고 목록 조회 실패 시 오류 문구와 다시 시도 버튼이 표시된다.
-  - [ ] 정상 빈 상태 문구는 API 성공 + 데이터 0건일 때만 표시된다.
+  - [x] 홈 주변 게시글 조회 실패 시 오류 문구와 다시 시도 버튼이 표시된다.
+  - [x] 지도/냉장고 목록 조회 실패 시 오류 문구와 다시 시도 버튼이 표시된다.
+  - [x] 정상 빈 상태 문구는 API 성공 + 데이터 0건일 때만 표시된다.
 - 검증 방법: API base URL 오류 주입, 네트워크 차단 QA, 컴포넌트 테스트
 - 관련 파일/화면/API: `HomeScreen`, `MapScreen`, `FridgeSelectScreen`, `/posts/nearby`, `/fridges/nearby`, `/fridges/available`
 
@@ -645,12 +649,13 @@ docs/MVP_VALIDATION_AND_NEXT_SPRINT_TODO.md의 "5. 미구현 기능 상태 점�
 
 - 분류: 미구현
 - 우선순위: P1
+- 상태: 완료, 권한 거부 UX 보강 남음
 - 배경: 최초 위치 등록은 구현됐지만 위치 재설정 UI는 연결되지 않았다.
-- 현재 동작: 홈 위치 헤더와 프로필 설정 메뉴가 위치 재설정으로 이동하지 않는다.
+- 현재 동작: 홈 위치 헤더와 프로필 `동네 위치 재설정` 메뉴에서 `LocationSetup`으로 재진입한다.
 - 기대 동작: 사용자가 홈 또는 프로필에서 현재 위치 재설정 화면으로 진입할 수 있다.
 - Acceptance Criteria:
-  - [ ] 홈 위치 헤더 또는 프로필 설정에서 `LocationSetup` 재진입이 가능하다.
-  - [ ] 기존 위치가 있는 사용자도 새 좌표를 `/auth/me/location`에 저장할 수 있다.
+  - [x] 홈 위치 헤더 또는 프로필 설정에서 `LocationSetup` 재진입이 가능하다.
+  - [x] 기존 위치가 있는 사용자도 새 좌표를 `/auth/me/location`에 저장할 수 있다.
   - [ ] 위치 권한 거부 시 설정/재시도 안내가 표시된다.
 - 검증 방법: 위치 있는 계정으로 재설정 QA, `/auth/me` 좌표 변경 확인
 - 관련 파일/화면/API: `HomeScreen`, `ProfileScreen`, `LocationSetupScreen`, `PUT /api/v1/auth/me/location`
@@ -659,6 +664,7 @@ docs/MVP_VALIDATION_AND_NEXT_SPRINT_TODO.md의 "5. 미구현 기능 상태 점�
 
 - 분류: 검증 필요
 - 우선순위: P1
+- 상태: 에뮬레이터 검증 완료, 실제 기기 미검증
 - 배경: 에뮬레이터에서 셔터 촬영 시 `Capture error TypeError: undefined is not a function`가 발생했다.
 - 현재 동작: `react-native-vision-camera@5` API에 맞춰 `usePhotoOutput().capturePhotoToFile()`로 수정했고, 에뮬레이터에서 촬영 파일 생성 및 API 호출까지 확인했다.
 - 기대 동작: 실제 기기에서는 촬영 파일이 생성되고, 실패 시 갤러리 선택/수동 입력 대안이 제공된다.
@@ -668,20 +674,37 @@ docs/MVP_VALIDATION_AND_NEXT_SPRINT_TODO.md의 "5. 미구현 기능 상태 점�
   - [ ] 촬영/갤러리 모두 `generatePost()`까지 도달한다.
 - 검증 방법: 실제 기기 QA, 에뮬레이터 fallback QA, logcat 확인
 - 관련 파일/화면/API: `CameraScanScreen`, `react-native-vision-camera`, `POST /api/v1/posts/generate`
+- 체크리스트: [AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md](./AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md)
 
 ## AI confidence와 확인 필요 상태 도입
 
 - 분류: 정책 결정 필요
 - 우선순위: P1
+- 상태: 부분 완료, fixture 검증 필요
 - 배경: API는 `confidenceScore`를 반환하지만 앱은 표시/분기/차단에 사용하지 않는다.
-- 현재 동작: `Fresh`면 confidence와 관계없이 나눔 가능처럼 보인다.
+- 현재 동작: `confidenceScore`를 분석 결과/작성 화면에 표시하고, 낮은 confidence는 `확인 필요`로 분기한다.
 - 기대 동작: 낮은 confidence는 즉시 차단이 아니라 `확인 필요` 상태로 분기하고 재촬영/수동 입력을 유도한다.
 - Acceptance Criteria:
-  - [ ] confidence가 분석 결과 화면에 표시된다.
-  - [ ] threshold 미만일 때 `확인 필요` 상태와 대안 CTA가 표시된다.
-  - [ ] threshold 값과 정책이 문서화된다.
+  - [x] confidence가 분석 결과 화면에 표시된다.
+  - [x] threshold 미만일 때 `확인 필요` 상태가 표시된다.
+  - [x] threshold 값과 정책이 문서화된다.
 - 검증 방법: mock/fixture 응답으로 confidence 0.4/0.7/1.0 테스트, 수동 QA
 - 관련 파일/화면/API: `AiAnalysis.confidenceScore`, `AnalysisResultScreen`, `PostCreateScreen`
+
+## AI false-positive 차단 계약 정리
+
+- 분류: 정책 결정/서버 계약
+- 우선순위: P1
+- 상태: 정책 초안 작성, 서버/AI 계약 반영 필요
+- 배경: 에뮬레이터 QA에서 비식재료/스크린샷성 이미지가 `바나나 / 신선 / 100%`로 통과했다.
+- 현재 동작: 앱은 서버 AI 결과를 신뢰하므로 비식재료 여부를 자체 판별하지 않는다.
+- 기대 동작: 서버/AI는 비식재료, 스크린샷, 앱 아이콘, 실내 배경을 `Fresh` 식재료로 반환하지 않는다.
+- Acceptance Criteria:
+  - [ ] `not_food`, `low_quality`, `multi_object_review` 등 실패/검토 사유 enum을 서버 계약에 추가한다.
+  - [ ] 비식재료/스크린샷 fixture는 generate 400 또는 `확인 필요`로 처리된다.
+  - [ ] 앱은 서버 실패 사유를 사용자에게 보여주고 등록을 진행하지 않는다.
+- 검증 방법: [AI QA fixture 문서](./AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md)의 `not-food`, `screenshot-or-ui`, `low-quality` fixture로 반복 호출
+- 관련 파일/화면/API: `POST /api/v1/posts/generate`, `CameraScanScreen`, `AnalysisResultScreen`
 
 #### P2: 다음 스프린트 범위 조정 후보
 
@@ -808,15 +831,15 @@ docs/MVP_VALIDATION_AND_NEXT_SPRINT_TODO.md의 검증 결과를 바탕으로 다
 }
 ```
 
-주의: 상세 응답은 `authorId`를 반환한다. 앱 타입/상세 화면의 `userId` 기대와 다르므로 6번 백로그에 버그로 올렸다.
+주의: 상세 응답은 `authorId`를 반환한다. 앱은 `authorId` 기준으로 작성자 여부를 판단하고, 구형 fixture 호환을 위해 `userId` fallback만 남긴다.
 
 #### 아직 준비하지 못한 fixture
 
 | 항목 | 상태 | 이유 | 다음 액션 |
 | --- | --- | --- | --- |
-| AI 실패 케이스 이미지 | 미준비 | 현재 확보한 실제 이미지는 성공 케이스뿐이다. 서버 generate 400을 안정적으로 재현하는 이미지가 필요하다. | 어두움/흔들림/비식재료/너무 가까운 사진 세트 확보 |
-| 부패 상태 `나쁨` 이미지 | 미준비 | 실제 `Stale/Bad/Rotten` 응답을 만드는 테스트 이미지가 없다. | 부패 의심 과일/채소 fixture 또는 서버 fixture 모드 준비 |
-| multi-object 예시 이미지 | 미준비 | 여러 식재료가 동시에 담긴 실제 사진이 없다. 현재 API 계약도 단일 대표 객체만 반환한다. | 단일 접시에 여러 식재료가 있는 사진과 여러 개체가 분리된 사진을 각각 준비 |
+| AI 실패 케이스 이미지 | 미준비 | 현재 확보한 실제 이미지는 성공 케이스뿐이다. 서버 generate 400을 안정적으로 재현하는 이미지가 필요하다. | [AI QA fixture 문서](./AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md)의 `not-food`, `screenshot-or-ui`, `low-quality` 세트 확보 |
+| 부패 상태 `나쁨` 이미지 | 미준비 | 실제 `Stale/Bad/Rotten` 응답을 만드는 테스트 이미지가 없다. | [AI QA fixture 문서](./AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md)의 `stale-or-rotten` fixture 또는 서버 fixture 모드 준비 |
+| multi-object 예시 이미지 | 미준비 | 여러 식재료가 동시에 담긴 실제 사진이 없다. 현재 API 계약도 단일 대표 객체만 반환한다. | [AI QA fixture 문서](./AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md)의 `multi-object` fixture 확보 |
 | 주변 냉장고 없음 위치 | 준비 실패 | `0,0`, 제주, 부산, 뉴욕 좌표에서도 `/fridges/nearby`가 3건을 반환했다. 반경 필터가 기대와 다를 가능성이 있다. | 서버 냉장고 거리 필터를 확인하거나 no-fridge fixture를 백엔드에 추가 |
 
 #### 재현 명령 요약
@@ -837,7 +860,7 @@ GET /api/v1/fridges/available?latitude=35.1595&longitude=126.9136&radius_km=2.0
 다음 스프린트로 넘어가기 전에 최소한 아래 질문에 답할 수 있어야 한다.
 
 - 로그인하면 유저가 실제로 생성/업데이트되는가?
-- `default_location = NULL`인 유저가 앱을 써도 깨지지 않는가?
+- 동네 위치 미설정(`latitude = NULL`, `longitude = NULL`) 유저가 앱을 써도 깨지지 않는가?
 - 위치 등록 후 앱의 주요 화면이 정상적으로 위치를 사용하고 있는가?
 - 사진 촬영 데이터가 AI 파이프라인까지 실제로 전달되는가?
 - AI 응답이 게시글 등록 데이터로 어떻게 변환되는가?
