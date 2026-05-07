@@ -275,6 +275,8 @@
   - 검증 범위: `Fresh/Mid`, `Stale`/`isFresh=false`, generate 400, `imageToken` 누락, 낮은 confidence 확인 필요, Post fallback 응답 처리.
 - 실제 AI/API smoke QA:
   - 명령: `FOODLINK_API_BASE_URL=http://localhost:8080 FOODLINK_ACCESS_TOKEN=<token> node .\scripts\validate-ai-fixtures.js`
+  - 분석/기록용 명령: `FOODLINK_API_BASE_URL=http://localhost:8080 FOODLINK_ACCESS_TOKEN=<token> node .\scripts\validate-ai-fixtures.js --report-only`
+  - strict mode는 runnable fixture 실패 시 exit code `1`, report-only mode는 같은 실패를 출력하되 exit code `0`을 반환한다.
   - 통과:
     - `fresh-single`: `바나나`, `Fresh`, confidence `1`.
     - `not-food`: generate 400.

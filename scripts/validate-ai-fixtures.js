@@ -7,6 +7,7 @@ const repoRoot = path.resolve(__dirname, '..');
 const manifestPath = path.join(repoRoot, 'docs', 'qa-fixtures', 'manifest.json');
 const baseUrl = process.env.FOODLINK_API_BASE_URL || 'http://localhost:8080';
 const token = process.env.FOODLINK_ACCESS_TOKEN;
+const reportOnly = process.argv.includes('--report-only');
 const maxUploadImageBytes = 8 * 1024 * 1024;
 const confidenceReviewThreshold = 0.9;
 
@@ -199,7 +200,13 @@ const main = async () => {
     console.log('No fixture files found. Add images under docs/qa-fixtures first.');
   }
 
-  process.exitCode = failedCount > 0 ? 1 : 0;
+  if (reportOnly && failedCount > 0) {
+    console.log(
+      `Report-only mode: observed ${failedCount} failed fixture(s), exiting with code 0.`,
+    );
+  }
+
+  process.exitCode = failedCount > 0 && !reportOnly ? 1 : 0;
 };
 
 main();

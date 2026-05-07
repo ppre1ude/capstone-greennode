@@ -33,6 +33,15 @@
 FOODLINK_API_BASE_URL=http://localhost:8080 FOODLINK_ACCESS_TOKEN=<token> npm run qa:ai-fixtures
 ```
 
+- 기본 strict mode는 runnable fixture 실패가 하나라도 있으면 exit code `1`을 반환한다.
+- 알려진 백엔드/AI false-positive가 열려 있고 현재 상태를 관찰/기록하려면 report-only mode를 사용한다.
+
+```bash
+FOODLINK_API_BASE_URL=http://localhost:8080 FOODLINK_ACCESS_TOKEN=<token> npm run qa:ai-fixtures -- --report-only
+```
+
+- report-only mode는 같은 결과를 출력하지만 fixture 실패가 있어도 exit code `0`으로 종료한다.
+- 백엔드/AI 수정 후 acceptance gate로 검증할 때는 strict mode를 사용한다.
 - fixture 파일이 없으면 해당 항목은 `skipped`로 기록된다.
 - 실패/검토 케이스는 generate 400, 나눔 기준 미충족 category, 낮은 confidence, 또는 검토 사유 enum 중 하나를 기대한다.
 - 백엔드 Phase 1.5 기준 신선도 label은 `Fresh/Mid/Stale`이다. 기존 `Normal`은 `Mid` 그룹으로 번역하고, `Bad/Rotten`은 현재 서버 label이 아닌 방어 호환 label로만 본다.
