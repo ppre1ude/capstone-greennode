@@ -49,6 +49,18 @@
       "skillPath": "skills/grill-me/SKILL.md",
       "computedHash": "daf64ca15f4fa081a6747766db538e2dbd1131725ed4fcdd3d538dc62c7035ba"
     },
+    "plan-ceo-review": {
+      "source": "greennode-project",
+      "sourceType": "local",
+      "skillPath": ".agents/skills/plan-ceo-review/SKILL.md",
+      "computedHash": "fddcfdf23a922c9a0b13e84f5c85aa931e40bf50bab1b00142de3aea1672a1d8"
+    },
+    "plan-eng-review": {
+      "source": "greennode-project",
+      "sourceType": "local",
+      "skillPath": ".agents/skills/plan-eng-review/SKILL.md",
+      "computedHash": "8c16f1d09ea2f3b3d400cf32e8c1b0a107a0d8f2b139813f55b032f83fc58f9f"
+    },
     "improve-codebase-architecture": {
       "source": "mattpocock/skills",
       "sourceType": "github",
