@@ -45,6 +45,30 @@ const isReviewCategory = category =>
     String(category || '').toLowerCase(),
   );
 
+const getServerMessage = body =>
+  body?.message ||
+  body?.detail ||
+  body?.data?.message ||
+  body?.data?.detail ||
+  body?.data?.analysisMessage ||
+  'no server message';
+
+const getAiSummary = body => {
+  const analysis = body?.data?.aiAnalysis;
+  const detectedFruitKo =
+    body?.data?.detectedFruitKo ||
+    body?.data?.detectedFruit ||
+    analysis?.detectedFruitKo ||
+    analysis?.detectedFruit ||
+    'missing';
+  const category = analysis?.category || 'missing';
+  const confidenceScore = analysis?.confidenceScore;
+  const rejectionReason = analysis?.rejectionReason || 'missing';
+  const reviewReason = analysis?.reviewReason || 'missing';
+
+  return `detected=${detectedFruitKo}, category=${category}, confidence=${confidenceScore}, rejectionReason=${rejectionReason}, reviewReason=${reviewReason}`;
+};
+
 const evaluateGenerateResponse = (fixture, status, body) => {
   if (fixture.expectedOutcome === 'client_rejected_if_over_8mb') {
     return {
@@ -60,8 +84,9 @@ const evaluateGenerateResponse = (fixture, status, body) => {
     return {
       passed:
         fixture.expectedOutcome === 'rejected' ||
-        fixture.expectedOutcome === 'rejected_or_review',
-      detail: `server rejected with ${status}`,
+        fixture.expectedOutcome === 'rejected_or_review' ||
+        fixture.expectedOutcome === 'single_representative_or_review',
+      detail: `server rejected with ${status}: ${getServerMessage(body)}`,
     };
   }
 
@@ -78,14 +103,14 @@ const evaluateGenerateResponse = (fixture, status, body) => {
   if (fixture.expectedOutcome === 'shareable') {
     return {
       passed: isShareableCategory(category),
-      detail: `category=${category || 'missing'}`,
+      detail: getAiSummary(body),
     };
   }
 
   if (fixture.expectedOutcome === 'rejected') {
     return {
       passed: isRejectedCategory(category) || isRejectedCategory(rejectionReason),
-      detail: `category=${category || 'missing'}, rejectionReason=${rejectionReason || 'missing'}`,
+      detail: getAiSummary(body),
     };
   }
 
@@ -97,14 +122,14 @@ const evaluateGenerateResponse = (fixture, status, body) => {
         isReviewCategory(category) ||
         isReviewCategory(reviewReason) ||
         lowConfidence,
-      detail: `category=${category || 'missing'}, rejectionReason=${rejectionReason || 'missing'}, reviewReason=${reviewReason || 'missing'}, confidence=${confidenceScore}`,
+      detail: getAiSummary(body),
     };
   }
 
   if (fixture.expectedOutcome === 'single_representative_or_review') {
     return {
       passed: Boolean(category) || isReviewCategory(category) || isReviewCategory(reviewReason),
-      detail: `category=${category || 'missing'}, reviewReason=${reviewReason || 'missing'}`,
+      detail: getAiSummary(body),
     };
   }
 

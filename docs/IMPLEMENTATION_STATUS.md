@@ -74,6 +74,13 @@
 - 검증: `__tests__/locationSetup.notificationPermission.test.tsx`에 권한 거부/재시도/설정 열기 회귀 테스트를 추가했고, 해당 테스트와 TypeScript, ESLint를 통과했다.
 - 남은 검증: 실제 Android 기기에서 시스템 권한 팝업의 거부/다시 묻지 않음/설정 복귀 후 재시도 흐름은 별도 QA가 필요하다.
 
+### 2026-05-07 AI fixture smoke QA 업데이트
+
+- 준비: `docs/qa-fixtures/`에 커밋 가능한 이미지 fixture를 추가하고, `docs/qa-fixtures/SOURCES.md`에 출처/라이선스를 기록했다. `large-image`는 로컬 전용이라 커밋하지 않는다.
+- 프론트 응답 흐름 QA: `analysisResult.fallback`, `cameraScan.fallback`, `postPolicy`, `posts.api` 테스트 4 suites / 45 tests 통과.
+- 실제 VM API smoke QA: `fresh-single`, `not-food`, `multi-object`는 통과했다.
+- 발견한 충돌: `stale-or-rotten`, `screenshot-or-ui`, `low-quality` fixture가 live VM API에서 `Fresh`로 통과했다. 이 결과는 프론트 응답 파싱 오류가 아니라 백엔드/AI false-positive 또는 confidence 산정 정책 이슈로 분류한다.
+
 ---
 
 ## 1. 현재 상태 요약
@@ -83,7 +90,7 @@
 | 이메일 인증/로그인         | 구현됨                            | 이메일 회원가입, 로그인, JWT 저장, `/auth/me` 조회가 동작한다. 소셜 로그인과 이메일 verification은 미구현이다.                                                                                                                                                                                                                                                                                                             |
 | 최초 위치 등록             | 구현됨                            | 위치 없는 유저는 `LocationSetup`으로 이동하고 `/auth/me/location`에 좌표와 FCM 토큰을 저장한다. 홈/지도/나눔 등록 강제 진입도 위치 설정 CTA로 되돌린다. 위치 권한 거부/영구 거부/위치 탐색 실패 시 화면 안에서 재시도와 설정 열기 CTA를 제공하고, 좌표가 없으면 위치 저장을 비활성화한다.                                                                                                                           |
 | 위치 재설정                | 구현됨                            | 홈 위치 헤더와 프로필 `동네 위치 재설정` 메뉴에서 `LocationSetup`으로 재진입한다.                                                                                                                                                                                                                                                                                                                                          |
-| AI 분석                    | 부분 구현, 실제 기기 촬영 QA 통과 | mock 파이프라인은 제거됐고 실제 `/posts/generate` 호출이 동작한다. 백엔드 기준 label은 `Fresh/Mid/Stale/unknown`이며 `Mid`는 기존 `Normal` 그룹이다. `confidenceScore`는 Stage 2 신선도 분류 softmax max 확률이고 차단 기준이 아니다. 앱은 0.9 미만을 `확인 필요`로 표시한다. 에뮬레이터와 실제 Android 기기에서 셔터 촬영, 파일 생성, API 호출, 결과 표시를 확인했다. 단, 실제 기기에서 토마토 이미지가 `바나나`로 판별된 false-positive 품질 이슈가 있다.                                                        |
+| AI 분석                    | 부분 구현, 실제 기기 촬영 QA 통과 | mock 파이프라인은 제거됐고 실제 `/posts/generate` 호출이 동작한다. 백엔드 기준 label은 `Fresh/Mid/Stale/unknown`이며 `Mid`는 기존 `Normal` 그룹이다. `confidenceScore`는 Stage 2 신선도 분류 softmax max 확률이고 차단 기준이 아니다. 앱은 0.9 미만을 `확인 필요`로 표시한다. 에뮬레이터와 실제 Android 기기에서 셔터 촬영, 파일 생성, API 호출, 결과 표시를 확인했다. 이미지 fixture smoke QA에서 `fresh-single`은 통과했지만 `stale-or-rotten`, `screenshot-or-ui`, `low-quality`가 `Fresh`로 통과하는 백엔드/AI false-positive가 남아 있다.                                                        |
 | 나눔 식재료 등록           | 부분 구현, 실제 기기 등록 QA 통과 | 실제 `generate -> imageToken -> createPost` 흐름으로 서버 등록이 확인됐다. 백엔드 Phase 1.5 구조에 맞춰 작성 화면은 제목/설명/카테고리 입력 대신 AI 판별 식재료명, 신선도, confidence를 확인하고 `fridgeId`, `expirationDate`, `imageToken`만 최종 등록 payload로 보낸다. `canShare=false` 또는 `imageToken` 누락은 분석 결과, 작성, 최종 등록 단계에서 차단한다. 실제 기기에서 등록 완료와 홈 복귀 후 주변 목록 재조회를 확인했다. 단, 등록 후 Post 응답에서 AI 메타데이터가 null이 되어 홈/상세가 fallback을 표시하는 서버 계약 불일치가 남아 있다. |
 | 나눔 식재료 상세/삭제/신청 | 부분 구현                         | 실제 상세 응답의 `authorId` 기준으로 작성자 여부를 판단한다. 상세 화면은 구형 `title/description/category` 대신 `detectedFruitKo`, `freshnessLabel`, `confidenceScore`, `status`를 표시한다. `available` 나눔 식재료는 `requestShare(postId)`로 신청하고, 201/409 이후 `신청 접수` 상태로 CTA를 비활성화한다. 403은 작성자 본인 fallback 문구로 처리한다. 실제 기기 등록 직후 상세 진입은 통과했지만 AI 메타데이터 null fallback이 재현됐다.                                                                  |
 | 홈 주변 나눔 식재료        | 부분 구현, 실제 기기 홈 재조회 통과 | `/posts/nearby` 데이터를 카드로 표시한다. 홈 카드는 `detectedFruitKo`, `freshnessLabel`, `confidenceScore`, `status`를 사용한다. API 실패와 빈 상태는 UI에서 분리됐다. 위치가 없으면 API를 호출하지 않고 위치 설정 CTA를 표시한다. 홈은 냉장고보다 available 나눔 식재료를 먼저 보여주는 화면이다. 홈 포커스와 등록 완료 refresh token 변경 시 재조회한다. 실제 기기 등록 완료 후 주변 나눔 `1건`이 표시됐다.                                                                 |

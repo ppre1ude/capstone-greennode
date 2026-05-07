@@ -262,6 +262,37 @@
 - 남은 QA:
   - 실제 Android 기기에서 시스템 권한 팝업의 `거부`, `다시 묻지 않음`, 설정 복귀 후 재시도 흐름은 실기기 QA로 재확인한다.
 
+## 2026-05-07 AI 응답 흐름 fixture/API smoke QA 결과
+
+- 환경: Windows 로컬 워크스페이스, SSH tunnel `localhost:8080 -> NHN-Cloud-Server:80`, QA 계정 `qa162158@example.com`.
+- 준비:
+  - `docs/qa-fixtures/`에 커밋 가능한 이미지 fixture를 추가했다.
+  - source/license 기록은 `docs/qa-fixtures/SOURCES.md`에 둔다.
+  - `large-image`는 로컬 전용 fixture라 커밋하지 않는다.
+- 프론트 응답 흐름 QA:
+  - `node .\node_modules\jest\bin\jest.js --runTestsByPath .\__tests__\analysisResult.fallback.test.tsx .\__tests__\cameraScan.fallback.test.tsx .\__tests__\postPolicy.test.ts .\__tests__\posts.api.test.ts --runInBand`
+  - 4 suites / 45 tests 통과.
+  - 검증 범위: `Fresh/Mid`, `Stale`/`isFresh=false`, generate 400, `imageToken` 누락, 낮은 confidence 확인 필요, Post fallback 응답 처리.
+- 실제 AI/API smoke QA:
+  - 명령: `FOODLINK_API_BASE_URL=http://localhost:8080 FOODLINK_ACCESS_TOKEN=<token> node .\scripts\validate-ai-fixtures.js`
+  - 통과:
+    - `fresh-single`: `바나나`, `Fresh`, confidence `1`.
+    - `not-food`: generate 400.
+    - `multi-object`: generate 400. 현재 기대값은 대표 객체 1개 또는 review/reject 중 하나라 통과로 분류한다.
+  - 실패:
+    - `stale-or-rotten`: 썩은 사과 이미지가 `바나나`, `Fresh`, confidence `0.79`로 통과했다.
+    - `screenshot-or-ui`: synthetic UI 이미지가 `바나나`, `Fresh`, confidence `1`로 통과했다.
+    - `low-quality`: 저품질 바나나 파생 이미지가 `바나나`, `Fresh`, confidence `0.9794`로 통과했다.
+  - skipped: `large-image`는 로컬 전용이다.
+- 충돌:
+  - 충돌 문서/기준: `AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md`, `docs/qa-fixtures/manifest.json`은 `stale-or-rotten`, `screenshot-or-ui`, `low-quality`를 거부 또는 확인 필요로 기대한다.
+  - 실제 기준: 2026-05-07 live VM API `/posts/generate`.
+  - 판단: 실패 3건은 프론트 응답 파싱 오류가 아니라 백엔드/AI 파이프라인 false-positive 또는 confidence 산정 정책 이슈다.
+  - 영향: 프론트는 서버가 200 + `Fresh` + `imageToken`을 반환하면 등록 가능 흐름으로 보내는 것이 현재 계약상 맞다. 해당 케이스를 막으려면 백엔드/AI가 400, `isFresh=false`, rejection/review reason, 또는 낮은 confidence를 반환해야 한다.
+- 후속:
+  - 백엔드/AI에 `stale-or-rotten`, `screenshot-or-ui`, `low-quality` fixture 결과를 공유하고 수정 후 같은 script로 재검증한다.
+  - `large-image`는 실제 로컬/기기 업로드 크기 guard QA에서 별도로 검증한다.
+
 ## 2026-05-05 P0/P1 코드 보강 현황
 
 - P0 `authorId/userId` 계약 불일치: `PostDetailScreen`이 `authorId` 기준으로 작성자 여부를 판단하도록 수정했다. 구형 fixture용 `userId` fallback은 `postPolicy`에만 남겼다.

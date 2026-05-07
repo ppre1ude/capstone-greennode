@@ -89,7 +89,7 @@ FOODLINK_API_BASE_URL=http://localhost:8080 FOODLINK_ACCESS_TOKEN=<token> npm ru
 
 - 2026-05-05 확인 시 연결 장치는 `emulator-5554`뿐이었다.
 - `docs/qa-fixtures/manifest.json`과 `npm run qa:ai-fixtures` 반복 검증 스크립트를 추가했다. 2026-05-06 manifest JSON 파싱과 스크립트 실행을 재검증했고, 이미지가 없어 모든 케이스는 `skipped`로 종료됐다.
-- 실제 fixture 이미지는 아직 추가하지 않았다.
+- 2026-05-07 커밋 가능한 fixture 이미지를 추가했다. 출처와 라이선스는 `docs/qa-fixtures/SOURCES.md`에 기록한다. `large-image`는 로컬 전용이라 커밋하지 않는다.
 - 2026-05-06 실제 Android 기기 `SM-S928N` Android 15(API 35, serial `R3CX203CV8X`)에서 카메라 권한 허용, 프리뷰, 셔터 촬영, `/posts/generate` 분석 결과 표시, 등록 화면 진입, 냉장고 선택, 최종 등록 완료, 홈 목록 재조회, 상세 진입을 확인했다.
 - QA 빌드는 release APK + `adb reverse tcp:8080 tcp:8080` + SSH tunnel `localhost:8080 -> NHN-Cloud-Server:80` 조건으로 실행했다. `src/config/api.ts`의 `ANDROID_DEVICE_HOST`는 빌드 시점에만 `localhost`로 임시 변경했고 소스는 되돌렸다.
 - 증거 스크린샷은 `temp/real-device-camera-screen.png`, `temp/real-device-share-form.png`, `temp/real-device-after-share-create.png`, `temp/real-device-home-after-share-create.png`, `temp/real-device-detail-after-share-create.png`에 있다. `temp/` 파일은 커밋 대상이 아니다.
@@ -100,4 +100,13 @@ FOODLINK_API_BASE_URL=http://localhost:8080 FOODLINK_ACCESS_TOKEN=<token> npm ru
   - `temp/real-device-camera-screen.png`: 200, `바나나`, `Fresh`, confidence `0.5377`, `imageToken` 발급.
   - 충돌 문서/기준: 이 문서와 `docs/qa-fixtures/manifest.json`은 `screenshot-or-ui`를 400 또는 `확인 필요`로 기대한다. 실제 VM API는 화면 캡처를 `Fresh`로 통과시켰으므로, 이 케이스는 백엔드/AI 파이프라인 false-positive로 유지한다.
 - 2026-05-07 무기기 fallback 자동 테스트를 추가했다. 카메라 장치 없음 -> 갤러리 선택 -> 분석 결과 이동, generate 400 -> 재촬영/갤러리 대안, 지원하지 않는 이미지 형식의 generate 전 차단, `Stale`/`imageToken` 누락 등록 차단, 낮은 confidence 확인 필요 표시를 테스트로 고정했다.
+- 2026-05-07 fixture 이미지 기반 VM/API smoke QA를 실행했다.
+  - `fresh-single`: 통과. `바나나`, `Fresh`, confidence `1`, `imageToken` 발급.
+  - `not-food`: 통과. generate 400으로 거부.
+  - `multi-object`: 통과로 분류. generate 400으로 거부. 현재 기대값은 대표 객체 1개 또는 review/reject 중 하나다.
+  - `stale-or-rotten`: 실패. 썩은 사과 이미지가 `바나나`, `Fresh`, confidence `0.79`로 통과했다.
+  - `screenshot-or-ui`: 실패. synthetic UI 이미지가 `바나나`, `Fresh`, confidence `1`로 통과했다.
+  - `low-quality`: 실패. 저품질 파생 이미지가 `바나나`, `Fresh`, confidence `0.9794`로 통과했다.
+  - `large-image`: 의도적으로 skipped. 로컬 전용 업로드 크기 guard fixture다.
+  - 판단: 실패 3건은 프론트 응답 파싱 오류가 아니라 백엔드/AI 파이프라인 false-positive 또는 confidence 산정 정책 이슈다. 프론트는 400/`canShare=false`/rejection enum이 내려오는 경우를 방어적으로 처리한다.
 - 아직 남은 실제 기기 QA: `Stale`, `not-food`, `low-quality`, 실제 FCM foreground/background/terminated 수신.
