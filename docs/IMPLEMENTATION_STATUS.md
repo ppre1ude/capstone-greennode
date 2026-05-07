@@ -60,6 +60,13 @@
 - 통과: 전체 Jest 20 suites / 85 tests, TypeScript `--noEmit`, ESLint `--quiet`, `scripts/validate-ai-fixtures.js`를 실제 기기 없이 통과했다.
 - 남은 검증: 커밋 가능한 실제 fixture 이미지가 없어 `Stale`, `not-food`, `low-quality`, `multi-object` AI 품질은 아직 닫지 못했다. 실제 카메라 센서와 실제 FCM 수신은 실기기 QA로 남긴다.
 
+### 2026-05-07 Android emulator 지도 UI QA 업데이트
+
+- 기기: Android emulator `Medium_Phone_API_36.1` (`emulator-5554`), release APK, SSH tunnel `localhost:8080 -> NHN-Cloud-Server:80`, QA 계정 `qa162158@example.com`.
+- 통과: 지도 탭 진입, Google Map/marker 3개/냉장고 캐러셀 표시, `광주역 공유냉장고` empty 상태, `전남대학교 공유냉장고` 내부 available 목록 1건 표시, 목록 항목 탭 후 상세 화면 이동을 확인했다.
+- 발견한 충돌: `GET /fridges/4/posts?status=available`의 1건이 `detectedFruit/detectedFruitKo/freshnessLabel=null`로 내려와 지도 내부 목록과 상세가 `나눔 식재료 / 분석 중` fallback을 표시했다. 이는 기존 P0 Post AI 메타데이터 저장 불일치와 같은 원인으로 본다.
+- 증거: `temp/map-ui-map-loaded.png`, `temp/map-ui-fridge-posts.png`, `temp/map-ui-fridge-post-detail.png`.
+
 ---
 
 ## 1. 현재 상태 요약
@@ -73,7 +80,7 @@
 | 나눔 식재료 등록           | 부분 구현, 실제 기기 등록 QA 통과 | 실제 `generate -> imageToken -> createPost` 흐름으로 서버 등록이 확인됐다. 백엔드 Phase 1.5 구조에 맞춰 작성 화면은 제목/설명/카테고리 입력 대신 AI 판별 식재료명, 신선도, confidence를 확인하고 `fridgeId`, `expirationDate`, `imageToken`만 최종 등록 payload로 보낸다. `canShare=false` 또는 `imageToken` 누락은 분석 결과, 작성, 최종 등록 단계에서 차단한다. 실제 기기에서 등록 완료와 홈 복귀 후 주변 목록 재조회를 확인했다. 단, 등록 후 Post 응답에서 AI 메타데이터가 null이 되어 홈/상세가 fallback을 표시하는 서버 계약 불일치가 남아 있다. |
 | 나눔 식재료 상세/삭제/신청 | 부분 구현                         | 실제 상세 응답의 `authorId` 기준으로 작성자 여부를 판단한다. 상세 화면은 구형 `title/description/category` 대신 `detectedFruitKo`, `freshnessLabel`, `confidenceScore`, `status`를 표시한다. `available` 나눔 식재료는 `requestShare(postId)`로 신청하고, 201/409 이후 `신청 접수` 상태로 CTA를 비활성화한다. 403은 작성자 본인 fallback 문구로 처리한다. 실제 기기 등록 직후 상세 진입은 통과했지만 AI 메타데이터 null fallback이 재현됐다.                                                                  |
 | 홈 주변 나눔 식재료        | 부분 구현, 실제 기기 홈 재조회 통과 | `/posts/nearby` 데이터를 카드로 표시한다. 홈 카드는 `detectedFruitKo`, `freshnessLabel`, `confidenceScore`, `status`를 사용한다. API 실패와 빈 상태는 UI에서 분리됐다. 위치가 없으면 API를 호출하지 않고 위치 설정 CTA를 표시한다. 홈은 냉장고보다 available 나눔 식재료를 먼저 보여주는 화면이다. 홈 포커스와 등록 완료 refresh token 변경 시 재조회한다. 실제 기기 등록 완료 후 주변 나눔 `1건`이 표시됐다.                                                                 |
-| 지도/냉장고                | 프론트 코드 연동 완료, VM/API QA 통과 | `/fridges/nearby`, `/fridges/available` 조회와 지도 마커/냉장고 선택은 동작한다. 지도에서 냉장고를 선택하면 `GET /fridges/{id}/posts?status=available`로 내부 available 나눔 식재료를 조회하고, loading/error/empty/list 상태를 분리한다. VM API에서 생성 직후 냉장고 내부 목록 포함과 신청 후 `requested` 제외를 확인했다. 실제 Android UI 조작 QA는 후속이다.                    |
+| 지도/냉장고                | 부분 구현, emulator UI QA 통과        | `/fridges/nearby`, `/fridges/available` 조회와 지도 마커/냉장고 선택은 동작한다. 지도에서 냉장고를 선택하면 `GET /fridges/{id}/posts?status=available`로 내부 available 나눔 식재료를 조회하고, loading/error/empty/list 상태를 분리한다. VM API에서 생성 직후 냉장고 내부 목록 포함과 신청 후 `requested` 제외를 확인했다. Android emulator에서 냉장고 empty/list 상태와 목록 항목 상세 이동을 확인했다. 단, Post AI 메타데이터 null 때문에 내부 목록은 fallback 표시가 재현된다. |
 | 나눔 신청                  | 프론트 코드 연동 완료, VM/API QA 통과 | 백엔드는 `POST /posts/{id}/requests`, `available -> requested`, `SELECT ... FOR UPDATE` 경합 처리, 작성자 403, 중복/경합 409, 신청 알림을 구현/검증했다. 프론트는 `requestShare(postId)`, 상세 CTA, 201/403/409 UX, 홈 refresh store를 구현했다. 2026-05-06 VM API에서 작성자 본인 403, 첫 신청 201, 중복 신청 409, 신청 후 `requested` 전환과 주변 목록 제외를 확인했다.                                                                                                                               |
 | FCM                        | 프론트 코드 연동 완료, 수신 QA 필요 | FCM 토큰 등록과 `share_created`, `share_requested` 수신 handler가 있다. 위치 설정 화면은 진입 즉시 알림 권한을 요청하지 않고 `나눔 알림 받기` CTA를 눌렀을 때만 토큰을 준비한다. 기존 유저의 위치 자동 갱신 경로도 알림 권한 요청을 열지 않으며, 기존 `fcmToken`이 있을 때만 함께 보낸다. Android 13+ 알림 권한 거부 시 Firebase permission/register/getToken을 호출하지 않고 `fcmToken` 없이 위치 등록을 계속한다. payload는 문자열 + camelCase(`postId`, `requestId`, `fruitName`, `fridgeName`, `type`)로 검증한다. foreground/background/opened/initial 알림은 로컬 알림함에 기록하고, 알림 열기와 알림함 항목 탭은 `PostDetail`로 이동한다. `share_requested`는 내 나눔 관리 화면이 없으므로 MVP에서 상세 fallback을 쓴다. Firebase 설정이 없는 QA/release 빌드에서는 Messaging 인스턴스 생성 실패를 알림 handler와 FCM 토큰 조회 양쪽에서 guard한다. 실제 FCM 메시지 수신 QA와 읽음 상태 API는 없다. |
 | 채팅                       | 보류                              | 정적 채팅 mock 데이터는 제거했다. WebSocket/API 계약은 없다.                                                                                                                                                                                                                                                                                                                                                               |
@@ -142,9 +149,10 @@
   - 실제 냉장고 목록 조회
   - 선택 냉장고 내부 available 나눔 식재료 목록 조회와 상세 이동
   - 위치 미설정 상태에서는 전남대 기본 좌표 fallback 없이 위치 설정 CTA 표시
+  - Android emulator에서 냉장고 empty/list 상태와 내부 목록 항목 상세 이동 QA
 - 남은 작업:
   - 주변 냉장고 없음 fixture/API 검증
-  - 냉장고별 목록 실제 VM/API 런타임 QA
+  - 백엔드 Post AI 메타데이터 저장 수정 후 냉장고 내부 목록 표시명/상태 재검증
 
 ### Phase 6: 알림 및 내 정보
 
@@ -185,7 +193,7 @@
 4. 부분 완료: 카메라 실패 시 갤러리 fallback 개선. 실제 기기 촬영 재검증은 남음
 5. 완료, fixture QA 필요: AI confidence 표시와 `확인 필요` 상태 도입. 제품 기준은 `confidenceScore < 0.9`이며 단독 등록 차단 기준은 아니다.
 6. 완료, VM/API QA 통과: 나눔 신청하기 API 연동, 첫 신청 이후 추가 신청 차단, `available -> requested` 상태 전환, 403/409 처리
-7. 완료, VM/API QA 통과, 실제 앱 UI QA 후속: 냉장고별 나눔 식재료 조회 API 연동. 지도에서 선택한 냉장고의 available 목록을 표시하고 항목 탭 시 상세로 이동한다.
+7. 완료, VM/API QA 및 emulator UI QA 통과: 냉장고별 나눔 식재료 조회 API 연동. 지도에서 선택한 냉장고의 available 목록을 표시하고 항목 탭 시 상세로 이동한다. 단, Post AI 메타데이터 null 때문에 표시명/상태 fallback 재검증은 P0 백엔드 수정 후 필요하다.
 
 ### P2
 

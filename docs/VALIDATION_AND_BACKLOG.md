@@ -222,6 +222,30 @@
   - `screenshot-or-ui`는 실제 API false-positive로 재현됐으므로 백엔드/AI 수정 후 재검증한다.
   - 실제 카메라 센서 촬영, 실제 FCM 수신은 실기기 QA로 남긴다.
 
+## 2026-05-07 Android emulator 지도 냉장고 내부 목록 UI QA 결과
+
+- 환경: Android emulator `Medium_Phone_API_36.1` (`emulator-5554`), release APK, SSH tunnel `localhost:8080 -> NHN-Cloud-Server:80`, QA 계정 `qa162158@example.com`, 위치 `35.1595, 126.9136`.
+- 범위: 지도 탭 진입, 공유 냉장고 마커/캐러셀 렌더링, 냉장고 선택, `GET /fridges/{id}/posts?status=available` 기반 내부 목록 표시, empty 상태, 목록 항목 상세 이동.
+- 통과:
+  - 홈에서 지도 탭 진입 후 Google Map, marker 3개, 냉장고 검색창, 냉장고 캐러셀, `내부 보기` CTA가 표시됐다.
+  - `광주역 공유냉장고` 선택 시 내부 목록 panel이 열리고 `지금 가능한 나눔 식재료가 없습니다` empty 상태가 표시됐다.
+  - live VM API에서 available 나눔 식재료가 있는 냉장고가 `fridgeId=4`(`전남대학교 공유냉장고`)임을 확인했다.
+  - 캐러셀을 가로 스크롤해 `전남대학교 공유냉장고`를 선택하면 `지금 가능한 나눔 식재료` panel에 1건이 표시됐다.
+  - 내부 목록 항목을 탭하면 `PostDetail`로 이동하고 상세 화면에서 `나눔 가능`, `남은 기한`, `상태 안내`, `AI 분석 정보`, `나눔 신청하기` CTA가 표시됐다.
+  - 앱 프로세스는 QA 종료 시점에도 살아 있었다. crash buffer의 Fatal은 앱이 아니라 UIAutomator dump timeout 프로세스였다.
+- 충돌:
+  - 충돌 문서/공지: 백엔드 Phase 1.5 요약과 프론트 표시 정책은 `GET /fridges/{id}/posts?status=available`의 PostRead가 `detectedFruitKo/freshnessLabel/confidenceScore`를 제공한다고 설명한다.
+  - 실제 기준: 2026-05-07 live VM API와 Android emulator UI.
+  - 판단: `GET /fridges/4/posts?status=available`은 1건을 반환했지만 `detectedFruit`, `detectedFruitKo`, `freshnessLabel`이 `null`이었다. 지도 내부 목록은 fallback으로 `나눔 식재료 / 분석 중`을 표시했다.
+  - 영향: 냉장고 내부 목록의 선택/상세 이동 UI는 통과했지만, 식재료명/상태/신뢰도 표시 품질은 P0 `Post AI 메타데이터 저장 불일치`가 해결되어야 제품 기대 수준이 된다.
+- 증거:
+  - `temp/map-ui-map-loaded.png`
+  - `temp/map-ui-fridge-posts.png`
+  - `temp/map-ui-fridge-post-detail.png`
+- 후속:
+  - 백엔드가 Post AI 메타데이터 저장을 수정하면 같은 emulator 흐름에서 `전남대학교 공유냉장고 -> 내부 목록 -> 상세` 표시명을 재검증한다.
+  - 주변 냉장고 없음/error fixture는 별도 API/fixture 상태가 필요하므로 후속으로 남긴다.
+
 ## 2026-05-05 P0/P1 코드 보강 현황
 
 - P0 `authorId/userId` 계약 불일치: `PostDetailScreen`이 `authorId` 기준으로 작성자 여부를 판단하도록 수정했다. 구형 fixture용 `userId` fallback은 `postPolicy`에만 남겼다.
