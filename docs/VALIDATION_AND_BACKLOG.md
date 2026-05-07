@@ -269,10 +269,12 @@
   - `docs/qa-fixtures/`에 커밋 가능한 이미지 fixture를 추가했다.
   - source/license 기록은 `docs/qa-fixtures/SOURCES.md`에 둔다.
   - `large-image`는 로컬 전용 fixture라 커밋하지 않는다.
+  - 백엔드 전달용 압축 문서는 [BACKEND_AI_FIXTURE_QA_NOTICE_2026-05-07.md](./BACKEND_AI_FIXTURE_QA_NOTICE_2026-05-07.md)에 둔다.
 - 프론트 응답 흐름 QA:
   - `node .\node_modules\jest\bin\jest.js --runTestsByPath .\__tests__\analysisResult.fallback.test.tsx .\__tests__\cameraScan.fallback.test.tsx .\__tests__\postPolicy.test.ts .\__tests__\posts.api.test.ts --runInBand`
   - 4 suites / 45 tests 통과.
   - 검증 범위: `Fresh/Mid`, `Stale`/`isFresh=false`, generate 400, `imageToken` 누락, 낮은 confidence 확인 필요, Post fallback 응답 처리.
+  - 낮은 confidence에서 `확인 필요`만 보여주면 실제 false-positive 위험이 충분히 드러나지 않아, 분석 결과 화면과 등록 확인 화면의 보조 문구를 `AI가 나눔 가능으로 분석했지만 실제 상태를 직접 확인한 뒤 등록해주세요.`로 강화했다.
 - 실제 AI/API smoke QA:
   - 명령: `FOODLINK_API_BASE_URL=http://localhost:8080 FOODLINK_ACCESS_TOKEN=<token> node .\scripts\validate-ai-fixtures.js`
   - 분석/기록용 명령: `FOODLINK_API_BASE_URL=http://localhost:8080 FOODLINK_ACCESS_TOKEN=<token> node .\scripts\validate-ai-fixtures.js --report-only`
@@ -294,6 +296,31 @@
 - 후속:
   - 백엔드/AI에 `stale-or-rotten`, `screenshot-or-ui`, `low-quality` fixture 결과를 공유하고 수정 후 같은 script로 재검증한다.
   - `large-image`는 실제 로컬/기기 업로드 크기 guard QA에서 별도로 검증한다.
+
+## 2026-05-07 QA 후속 검증 결과
+
+- 환경: Windows 로컬 워크스페이스, Android emulator `emulator-5554`, 최신 release APK 재설치 후 진행.
+- P0 백엔드 전달용 압축:
+  - [BACKEND_AI_FIXTURE_QA_NOTICE_2026-05-07.md](./BACKEND_AI_FIXTURE_QA_NOTICE_2026-05-07.md)를 추가했다.
+  - 전달 대상은 `stale-or-rotten`, `screenshot-or-ui`, `low-quality` false-positive와 `fresh-single`, `not-food`, `multi-object` 통과 결과다.
+  - 판단 기준: 프론트는 서버가 200 + `Fresh` + `imageToken`을 반환하면 현재 계약상 등록 가능 흐름으로 보내는 것이 맞다. 해당 케이스를 막으려면 백엔드/AI가 400, `isFresh=false`, rejection/review reason, 또는 낮은 confidence를 반환해야 한다.
+- P1 실패 결과 표시 보강:
+  - `AnalysisResultScreen`과 `PostCreateScreen`의 낮은 confidence 안내 문구를 강화했다.
+  - 통과: `node .\node_modules\jest\bin\jest.js --runTestsByPath .\__tests__\analysisResult.fallback.test.tsx .\__tests__\postCreate.reviewNotice.test.tsx .\__tests__\imageUploadPolicy.test.ts --runInBand`
+  - 통과: `node .\node_modules\typescript\bin\tsc --noEmit`
+- P1 실제 Android 위치 권한 거부 QA:
+  - 최신 release APK를 emulator에 설치한 뒤 QA 계정 `qa162158@example.com`으로 로그인했다.
+  - `pm revoke`로 `ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION`을 제거하고 프로필 `동네 위치 재설정`으로 진입했다.
+  - Android 권한 팝업에서 `Don't allow`를 선택하면 앱 화면에 `설정에서 위치 권한을 켜주세요`, `설정 열기`, `다시 확인`이 표시됐다.
+  - 좌표가 없으므로 `이 위치로 설정하기`는 disabled 상태였고 `/auth/me/location`을 호출할 수 없는 UI 상태였다.
+  - `설정 열기` CTA는 Android App info 화면으로 이동했다.
+  - 증거: `temp/location-permission-denied-emulator.png`.
+  - 남은 범위: 물리 기기에서 `거부`, `다시 묻지 않음`, 설정에서 권한 허용 후 앱 복귀 재시도 흐름은 아직 별도 QA가 필요하다.
+- P2 대용량 이미지 local-only QA:
+  - `temp/large-image-local-only-20260507.jpg`를 8,388,609 bytes로 생성해 8MB 초과 local-only fixture를 확인했다.
+  - `validateImageForUpload()`는 `MAX_UPLOAD_IMAGE_BYTES + 1`을 업로드 전 차단하고 `이미지 용량이 8MB를 초과합니다. 더 작은 사진을 선택하거나 촬영 후 다시 시도해주세요.`를 반환한다.
+  - 통과: `node .\node_modules\jest\bin\jest.js --runTestsByPath .\__tests__\imageUploadPolicy.test.ts --runInBand`
+  - 이 fixture는 커밋하지 않고 `temp/` 또는 공유 드라이브 증거로만 둔다.
 
 ## 2026-05-05 P0/P1 코드 보강 현황
 

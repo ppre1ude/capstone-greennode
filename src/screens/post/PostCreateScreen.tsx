@@ -128,7 +128,7 @@ const PostCreateScreen = ({ route, navigation }: Props) => {
           </View>
           {needsReview && (
             <Text style={styles.reviewNotice}>
-              사진으로 상태를 한 번 더 확인해주세요.
+              AI가 나눔 가능으로 분석했지만 실제 상태를 직접 확인한 뒤 등록해주세요.
             </Text>
           )}
 

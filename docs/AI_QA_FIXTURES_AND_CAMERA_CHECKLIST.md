@@ -118,4 +118,7 @@ FOODLINK_API_BASE_URL=http://localhost:8080 FOODLINK_ACCESS_TOKEN=<token> npm ru
   - `low-quality`: 실패. 저품질 파생 이미지가 `바나나`, `Fresh`, confidence `0.9794`로 통과했다.
   - `large-image`: 의도적으로 skipped. 로컬 전용 업로드 크기 guard fixture다.
   - 판단: 실패 3건은 프론트 응답 파싱 오류가 아니라 백엔드/AI 파이프라인 false-positive 또는 confidence 산정 정책 이슈다. 프론트는 400/`canShare=false`/rejection enum이 내려오는 경우를 방어적으로 처리한다.
+- 2026-05-07 백엔드 전달용 압축 문서는 `docs/BACKEND_AI_FIXTURE_QA_NOTICE_2026-05-07.md`에 정리했다. 백엔드/AI가 수정해야 하는 최소 신호는 generate 400, `isFresh=false`, rejection/review reason, 또는 낮은 confidence 중 하나다.
+- 2026-05-07 낮은 confidence 프론트 문구를 강화했다. 분석 결과 화면과 등록 확인 화면은 `AI가 나눔 가능으로 분석했지만 실제 상태를 직접 확인한 뒤 등록해주세요.`를 표시한다. 낮은 confidence는 여전히 등록 차단 기준이 아니다.
+- 2026-05-07 `large-image` local-only QA를 진행했다. `temp/large-image-local-only-20260507.jpg`는 8,388,609 bytes이며, `validateImageForUpload()` 테스트가 8MB 초과 이미지를 업로드 전 차단하는지 확인한다. 대용량 원본은 git에 넣지 않는다.
 - 아직 남은 실제 기기 QA: `Stale`, `not-food`, `low-quality`, 실제 FCM foreground/background/terminated 수신.

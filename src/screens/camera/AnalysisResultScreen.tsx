@@ -136,7 +136,7 @@ const AnalysisResultScreen = ({ route, navigation }: Props) => {
             <View style={[styles.summaryBox, styles.reviewBox]}>
               <Text style={styles.reviewTitle}>확인 필요</Text>
               <Text style={styles.summaryText}>
-                사진으로 상태를 한 번 더 확인해주세요.
+                AI가 나눔 가능으로 분석했지만 실제 상태를 직접 확인한 뒤 등록해주세요.
               </Text>
             </View>
           )}
