@@ -1,5 +1,11 @@
 import React from 'react';
-import {PermissionsAndroid, Platform, Text, TouchableOpacity} from 'react-native';
+import {
+  Linking,
+  PermissionsAndroid,
+  Platform,
+  Text,
+  TouchableOpacity,
+} from 'react-native';
 import Geolocation from 'react-native-geolocation-service';
 import ReactTestRenderer from 'react-test-renderer';
 import LocationSetupScreen from '@/screens/location/LocationSetupScreen';
@@ -22,6 +28,7 @@ const mockedGetFcmToken = getFcmToken as jest.MockedFunction<
   typeof getFcmToken
 >;
 const mockedGetCurrentPosition = Geolocation.getCurrentPosition as jest.Mock;
+const mockedOpenSettings = jest.spyOn(Linking, 'openSettings');
 
 const findButtonByText = (
   renderer: ReactTestRenderer.ReactTestRenderer,
@@ -58,6 +65,7 @@ describe('LocationSetupScreen notification permission flow', () => {
       });
     });
     mockedGetFcmToken.mockResolvedValue('fcm-token');
+    mockedOpenSettings.mockResolvedValue();
     mockedUpdateLocation.mockResolvedValue({
       success: true,
       message: 'ok',
@@ -132,5 +140,83 @@ describe('LocationSetupScreen notification permission flow', () => {
       longitude: 126.9132,
       fcmToken: 'fcm-token',
     });
+  });
+
+  it('keeps a recoverable in-screen path when Android location permission is denied', async () => {
+    jest
+      .spyOn(PermissionsAndroid, 'request')
+      .mockResolvedValueOnce(PermissionsAndroid.RESULTS.DENIED);
+
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(
+        <LocationSetupScreen
+          navigation={navigation as never}
+          route={{params: {allowBack: false}} as never}
+        />,
+      );
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(mockedGetCurrentPosition).not.toHaveBeenCalled();
+    expect(
+      renderer!.root.findAllByProps({children: '위치 권한이 필요해요'}),
+    ).not.toHaveLength(0);
+    expect(findButtonByText(renderer!, '권한 다시 요청')).toBeTruthy();
+    expect(findButtonByText(renderer!, '설정 열기')).toBeTruthy();
+
+    const submitButton = findButtonByText(renderer!, '이 위치로 설정하기');
+    expect(submitButton?.props.disabled).toBe(true);
+
+    await ReactTestRenderer.act(async () => {
+      submitButton?.props.onPress();
+      await Promise.resolve();
+    });
+
+    expect(mockedUpdateLocation).not.toHaveBeenCalled();
+
+    const settingsButton = findButtonByText(renderer!, '설정 열기');
+    await ReactTestRenderer.act(async () => {
+      settingsButton?.props.onPress();
+      await Promise.resolve();
+    });
+
+    expect(mockedOpenSettings).toHaveBeenCalledTimes(1);
+  });
+
+  it('lets the user retry location permission from the denied state', async () => {
+    jest
+      .spyOn(PermissionsAndroid, 'request')
+      .mockResolvedValueOnce(PermissionsAndroid.RESULTS.DENIED)
+      .mockResolvedValueOnce(PermissionsAndroid.RESULTS.GRANTED);
+
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(
+        <LocationSetupScreen
+          navigation={navigation as never}
+          route={{params: {allowBack: false}} as never}
+        />,
+      );
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    const retryButton = findButtonByText(renderer!, '권한 다시 요청');
+    expect(retryButton).toBeTruthy();
+
+    await ReactTestRenderer.act(async () => {
+      retryButton?.props.onPress();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(mockedGetCurrentPosition).toHaveBeenCalledTimes(1);
+    expect(
+      renderer!.root.findAllByProps({children: '35.15950, 126.91320'}),
+    ).not.toHaveLength(0);
   });
 });

@@ -119,6 +119,58 @@ export const styles = StyleSheet.create({
     color: colors.textTertiary,
     lineHeight: 20,
   },
+  locationIssueBox: {
+    marginTop: 16,
+    padding: 14,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#F8D7DA',
+    backgroundColor: '#FFF5F5',
+    gap: 8,
+  },
+  locationIssueTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  locationIssueMessage: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    lineHeight: 19,
+  },
+  locationIssueActions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 4,
+  },
+  locationIssuePrimaryButton: {
+    minHeight: 38,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  locationIssuePrimaryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  locationIssueSecondaryButton: {
+    minHeight: 38,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  locationIssueSecondaryButtonText: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    fontWeight: '700',
+  },
   // 하단
   footer: {
     paddingHorizontal: 24,

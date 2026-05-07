@@ -14,6 +14,7 @@ import {
   StatusBar,
   Alert,
   ActivityIndicator,
+  Linking,
   Platform,
   PermissionsAndroid,
 } from 'react-native';
@@ -33,12 +34,51 @@ interface LocationCoords {
 }
 
 type NotificationSetupStatus = 'idle' | 'requesting' | 'ready' | 'unavailable';
+type LocationIssue =
+  | 'permissionDenied'
+  | 'permissionBlocked'
+  | 'positionUnavailable';
+
+const LOCATION_ISSUE_COPY: Record<
+  LocationIssue,
+  {
+    title: string;
+    message: string;
+    primaryAction: string;
+    secondaryAction: string;
+  }
+> = {
+  permissionDenied: {
+    title: '위치 권한이 필요해요',
+    message:
+      '내 주변 공유 냉장고와 나눔 식재료를 찾으려면 위치 접근을 허용해야 합니다.',
+    primaryAction: '권한 다시 요청',
+    secondaryAction: '설정 열기',
+  },
+  permissionBlocked: {
+    title: '설정에서 위치 권한을 켜주세요',
+    message:
+      '권한 요청 창을 다시 띄울 수 없는 상태입니다. 앱 설정에서 위치 권한을 허용한 뒤 다시 확인해주세요.',
+    primaryAction: '설정 열기',
+    secondaryAction: '다시 확인',
+  },
+  positionUnavailable: {
+    title: '현재 위치를 찾지 못했어요',
+    message:
+      '기기의 위치 서비스가 켜져 있는지 확인한 뒤 현재 위치를 다시 찾아주세요.',
+    primaryAction: '위치 다시 찾기',
+    secondaryAction: '설정 열기',
+  },
+};
 
 const LocationSetupScreen = ({route, navigation}: Props) => {
   const [location, setLocation] = useState<LocationCoords | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
   const [locationName, setLocationName] = useState('위치를 탐색 중...');
+  const [locationIssue, setLocationIssue] = useState<LocationIssue | null>(
+    null,
+  );
   const [fcmToken, setFcmToken] = useState<string | undefined>();
   const [notificationStatus, setNotificationStatus] =
     useState<NotificationSetupStatus>('idle');
@@ -59,6 +99,9 @@ const LocationSetupScreen = ({route, navigation}: Props) => {
   }, []);
 
   const getCurrentPosition = useCallback(() => {
+    setIsFetching(true);
+    setLocationIssue(null);
+    setLocationName('위치를 탐색 중...');
     Geolocation.getCurrentPosition(
       position => {
         const coords = {
@@ -70,15 +113,14 @@ const LocationSetupScreen = ({route, navigation}: Props) => {
           `${coords.latitude.toFixed(5)}, ${coords.longitude.toFixed(5)}`,
         );
         setIsFetching(false);
+        setLocationIssue(null);
       },
       error => {
         console.warn('Geolocation error:', error);
+        setLocation(null);
         setIsFetching(false);
         setLocationName('현재 위치를 가져올 수 없습니다');
-        Alert.alert(
-          '위치 탐색 실패',
-          '기기의 위치 서비스가 켜져 있는지 확인한 뒤 다시 시도해주세요.',
-        );
+        setLocationIssue('positionUnavailable');
       },
       {
         enableHighAccuracy: true,
@@ -92,6 +134,11 @@ const LocationSetupScreen = ({route, navigation}: Props) => {
 
   const requestLocationPermission = useCallback(async () => {
     try {
+      setLocation(null);
+      setIsFetching(true);
+      setLocationIssue(null);
+      setLocationName('위치를 탐색 중...');
+
       if (Platform.OS === 'android') {
         const granted = await PermissionsAndroid.request(
           PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
@@ -107,11 +154,14 @@ const LocationSetupScreen = ({route, navigation}: Props) => {
           getCurrentPosition();
         } else {
           setIsFetching(false);
-          setLocationName('위치 권한이 거부되었습니다');
-          Alert.alert(
-            '위치 권한 필요',
-            'FoodLink는 위치 기반 서비스입니다. 설정에서 위치 권한을 허용해주세요.',
+          const blocked =
+            granted === PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN;
+          setLocationName(
+            blocked
+              ? '설정에서 위치 권한을 허용해주세요'
+              : '위치 권한이 거부되었습니다',
           );
+          setLocationIssue(blocked ? 'permissionBlocked' : 'permissionDenied');
         }
       } else {
         const auth = await Geolocation.requestAuthorization('whenInUse');
@@ -119,11 +169,21 @@ const LocationSetupScreen = ({route, navigation}: Props) => {
           getCurrentPosition();
         } else {
           setIsFetching(false);
-          setLocationName('위치 권한이 거부되었습니다');
+          setLocationName(
+            auth === 'disabled'
+              ? '위치 서비스를 사용할 수 없습니다'
+              : '위치 권한이 거부되었습니다',
+          );
+          setLocationIssue(
+            auth === 'disabled' ? 'positionUnavailable' : 'permissionBlocked',
+          );
         }
       }
     } catch (err) {
+      setLocation(null);
       setIsFetching(false);
+      setLocationName('위치 권한을 확인할 수 없습니다');
+      setLocationIssue('positionUnavailable');
       console.warn('Permission error:', err);
     }
   }, [getCurrentPosition]);
@@ -134,7 +194,7 @@ const LocationSetupScreen = ({route, navigation}: Props) => {
 
   const handleSetLocation = async () => {
     if (!location) {
-      Alert.alert('오류', '위치 정보를 가져올 수 없습니다.');
+      setLocationIssue(current => current ?? 'positionUnavailable');
       return;
     }
 
@@ -158,6 +218,39 @@ const LocationSetupScreen = ({route, navigation}: Props) => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleOpenSettings = useCallback(async () => {
+    try {
+      await Linking.openSettings();
+    } catch {
+      Alert.alert(
+        '설정을 열 수 없습니다',
+        '기기 설정에서 FoodLink의 위치 권한을 직접 확인해주세요.',
+      );
+    }
+  }, []);
+
+  const locationIssueCopy = locationIssue
+    ? LOCATION_ISSUE_COPY[locationIssue]
+    : null;
+
+  const handlePrimaryLocationIssueAction = () => {
+    if (locationIssue === 'permissionBlocked') {
+      void handleOpenSettings();
+      return;
+    }
+
+    void requestLocationPermission();
+  };
+
+  const handleSecondaryLocationIssueAction = () => {
+    if (locationIssue === 'permissionBlocked') {
+      void requestLocationPermission();
+      return;
+    }
+
+    void handleOpenSettings();
   };
 
   return (
@@ -204,6 +297,32 @@ const LocationSetupScreen = ({route, navigation}: Props) => {
           <Text style={styles.locationHint}>
             설정하신 위치를 중심으로 2km 이내 이웃과 연결됩니다.
           </Text>
+          {locationIssueCopy ? (
+            <View style={styles.locationIssueBox}>
+              <Text style={styles.locationIssueTitle}>
+                {locationIssueCopy.title}
+              </Text>
+              <Text style={styles.locationIssueMessage}>
+                {locationIssueCopy.message}
+              </Text>
+              <View style={styles.locationIssueActions}>
+                <TouchableOpacity
+                  style={styles.locationIssuePrimaryButton}
+                  onPress={handlePrimaryLocationIssueAction}>
+                  <Text style={styles.locationIssuePrimaryButtonText}>
+                    {locationIssueCopy.primaryAction}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.locationIssueSecondaryButton}
+                  onPress={handleSecondaryLocationIssueAction}>
+                  <Text style={styles.locationIssueSecondaryButtonText}>
+                    {locationIssueCopy.secondaryAction}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : null}
         </View>
       </View>
 
@@ -245,10 +364,11 @@ const LocationSetupScreen = ({route, navigation}: Props) => {
         <TouchableOpacity
           style={[
             styles.submitButton,
-            (isLoading || isFetching) && styles.submitButtonDisabled,
+            (isLoading || isFetching || !location) &&
+              styles.submitButtonDisabled,
           ]}
           onPress={handleSetLocation}
-          disabled={isLoading || isFetching}>
+          disabled={isLoading || isFetching || !location}>
           {isLoading ? (
             <ActivityIndicator color="#FFFFFF" />
           ) : (

@@ -246,12 +246,29 @@
   - 백엔드가 Post AI 메타데이터 저장을 수정하면 같은 emulator 흐름에서 `전남대학교 공유냉장고 -> 내부 목록 -> 상세` 표시명을 재검증한다.
   - 주변 냉장고 없음/error fixture는 별도 API/fixture 상태가 필요하므로 후속으로 남긴다.
 
+## 2026-05-07 위치 권한 거부 UX 보강 결과
+
+- 환경: Windows 로컬 워크스페이스, React Native unit test.
+- 범위: `LocationSetup`의 Android 위치 권한 `denied`, 재시도 후 `granted`, 설정 열기 fallback.
+- 수정:
+  - 위치 권한이 거부되면 Alert만 띄우지 않고 화면 안에 `위치 권한이 필요해요` 안내와 `권한 다시 요청`, `설정 열기` CTA를 남긴다.
+  - Android `NEVER_ASK_AGAIN`과 iOS 비허용 상태는 설정 이동 중심 안내로 분리한다.
+  - 위치 탐색 실패는 `현재 위치를 찾지 못했어요` 상태로 분리하고 `위치 다시 찾기`/`설정 열기`를 제공한다.
+  - 좌표가 없을 때 `이 위치로 설정하기`는 비활성화되어 `/auth/me/location`을 호출하지 않는다.
+- 검증:
+  - `node .\node_modules\jest\bin\jest.js --runTestsByPath .\__tests__\locationSetup.notificationPermission.test.tsx --runInBand`
+  - `node .\node_modules\typescript\bin\tsc --noEmit`
+  - `node .\node_modules\eslint\bin\eslint.js src\screens\location\LocationSetupScreen.tsx src\screens\location\LocationSetupScreen.styles.ts __tests__\locationSetup.notificationPermission.test.tsx --quiet`
+- 남은 QA:
+  - 실제 Android 기기에서 시스템 권한 팝업의 `거부`, `다시 묻지 않음`, 설정 복귀 후 재시도 흐름은 실기기 QA로 재확인한다.
+
 ## 2026-05-05 P0/P1 코드 보강 현황
 
 - P0 `authorId/userId` 계약 불일치: `PostDetailScreen`이 `authorId` 기준으로 작성자 여부를 판단하도록 수정했다. 구형 fixture용 `userId` fallback은 `postPolicy`에만 남겼다.
 - P0 `canShare=false` 등록 차단: `AnalysisResultScreen` 버튼 disabled, `PostCreateScreen` 진입 후 guard, `FridgeSelectScreen` 최종 등록 guard를 추가했다.
 - P1 목록 실패/빈 상태 분리: 홈 주변 나눔 식재료, 지도 냉장고, 등록 가능 냉장고 목록에 loading/error/empty 상태와 retry UI를 분리했다.
 - P1 위치 재설정: 홈 위치 헤더와 프로필 `동네 위치 재설정` 메뉴에서 `LocationSetup`으로 재진입한다.
+- P1 위치 권한 거부 UX: `LocationSetup`에서 권한 거부/영구 거부/위치 탐색 실패를 화면 상태로 분리하고 재시도/설정 열기 CTA를 제공한다.
 - P1 위치 미설정 공통 가드: 홈, 지도, AI 스캔 진입점, 냉장고 선택 화면이 `getRegisteredLocation()` 기준을 공유한다. 위치가 없으면 주변 API를 호출하지 않고 `LocationSetup` CTA를 표시한다.
 - P1 등록 완료 후 홈 재조회: `PostCompleteScreen`이 홈 탭에 `nearbyPostsRefreshToken`을 전달하고, `HomeScreen`은 포커스/토큰 변경 시 `/posts/nearby`를 다시 조회한다.
 - P1 카메라 촬영/fallback: `react-native-vision-camera@5`의 `usePhotoOutput().capturePhotoToFile()` 경로로 수정했다. 에뮬레이터와 실제 Android 기기에서 촬영 파일 생성 및 실제 `/posts/generate` 호출까지 확인했다. 무기기 fallback 자동 테스트는 추가됐고, 실제 `Stale`/`not-food`/`low-quality` fixture QA는 남아 있다.
@@ -975,15 +992,15 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
 
 - 분류: 미구현
 - 우선순위: P1
-- 상태: 완료, 권한 거부 UX 보강 남음
+- 상태: 완료, 실제 기기 권한 거부 QA 필요
 - 배경: 최초 위치 등록은 구현됐지만 위치 재설정 UI는 연결되지 않았다.
-- 현재 동작: 홈 위치 헤더와 프로필 `동네 위치 재설정` 메뉴에서 `LocationSetup`으로 재진입한다.
+- 현재 동작: 홈 위치 헤더와 프로필 `동네 위치 재설정` 메뉴에서 `LocationSetup`으로 재진입한다. 위치 권한 거부 시 화면 안에서 재시도와 설정 열기 CTA를 제공한다.
 - 기대 동작: 사용자가 홈 또는 프로필에서 현재 위치 재설정 화면으로 진입할 수 있다.
 - Acceptance Criteria:
   - [x] 홈 위치 헤더 또는 프로필 설정에서 `LocationSetup` 재진입이 가능하다.
   - [x] 기존 위치가 있는 사용자도 새 좌표를 `/auth/me/location`에 저장할 수 있다.
-  - [ ] 위치 권한 거부 시 설정/재시도 안내가 표시된다.
-- 검증 방법: 위치 있는 계정으로 재설정 QA, `/auth/me` 좌표 변경 확인
+  - [x] 위치 권한 거부 시 설정/재시도 안내가 표시된다.
+- 검증 방법: 위치 있는 계정으로 재설정 QA, `/auth/me` 좌표 변경 확인, `__tests__/locationSetup.notificationPermission.test.tsx`
 - 관련 파일/화면/API: `HomeScreen`, `ProfileScreen`, `LocationSetupScreen`, `PUT /api/v1/auth/me/location`
 
 ## 위치 미설정 강제 진입 공통 가드
