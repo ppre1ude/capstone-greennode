@@ -23,6 +23,7 @@ import MapView, {Marker, Circle, PROVIDER_DEFAULT} from 'react-native-maps';
 import {getFridgePosts, getNearbyFridges} from '@/api/fridges';
 import {getImageUrl} from '@/api/posts';
 import {useAuthStore} from '@/store/authStore';
+import {useFeedRefreshStore} from '@/store/feedRefreshStore';
 import type {Fridge, PostNearbyRead} from '@/types';
 import {filterFridges} from '@/utils/fridgeSearch';
 import {
@@ -37,6 +38,7 @@ import {styles} from './MapScreen.styles';
 
 const MapScreen = () => {
   const user = useAuthStore(state => state.user);
+  const requestedPostId = useFeedRefreshStore(state => state.requestedPostId);
   const navigation = useNavigation<any>();
   const [fridges, setFridges] = useState<Fridge[]>([]);
   const [fridgeState, setFridgeState] = useState<
@@ -180,6 +182,20 @@ const MapScreen = () => {
 
     void fetchFridgePosts(selectedFridgeId);
   }, [fetchFridgePosts, resetFridgePosts, selectedFridgeId]);
+
+  useEffect(() => {
+    if (requestedPostId == null) {
+      return;
+    }
+
+    const nextPosts = fridgePosts.filter(post => post.id !== requestedPostId);
+    if (nextPosts.length === fridgePosts.length) {
+      return;
+    }
+
+    setFridgePosts(nextPosts);
+    setFridgePostsState(nextPosts.length > 0 ? 'ready' : 'empty');
+  }, [fridgePosts, requestedPostId]);
 
   const focusFridge = (fridge: Fridge, index?: number) => {
     setSelectedFridgeId(fridge.id);

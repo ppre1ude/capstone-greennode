@@ -112,13 +112,13 @@
 | 나눔 신청 API         | `POST /posts/{id}/requests` 구현, 201/403/409 VM 검증 완료                                          | `requestShare(postId)`, 상세 CTA, 201/403/409 UI, 홈 refresh 신호 구현 완료                    | 2026-05-06 VM API 201/403/409 통과                     |
 | 신청 동시 경합        | `SELECT ... FOR UPDATE` + 단일 트랜잭션으로 첫 신청만 성공. 이후 요청은 409                         | 409를 정상 race 결과로 처리하고 CTA를 `신청 접수` 상태로 비활성화                              | 중복 신청 409 확인. 병렬 경합 부하 테스트는 후속       |
 | 나눔 상태             | `available`, `requested`, `completed` 존재. `/posts/nearby`는 available만 반환                      | `Post.status` 타입과 상세/홈 상태 표시 반영. 신청 성공/409 시 상세 상태와 홈 refresh 신호 반영 | requested 전환 후 `/posts/nearby` 제외 확인            |
-| Post 구조             | `title/description/category` 제거, `detectedFruitKo/freshnessLabel/confidenceScore` 추가. 2026-05-08 `imageToken` sidecar AI 메타데이터 저장/복원 수정 VM 배포 완료. `/posts/nearby`, `/fridges/{id}/posts`는 `PostNearbyRead`라 `confidenceScore`가 없다 | `src/types/post.ts`, `PostNearbyRead`, `createPost()` payload, 홈/냉장고 카드, 상세, 등록 확인 화면 반영 완료 | 2026-05-08 VM/API 재검증과 로컬 계약 회귀 통과. 실제 Android UI 재확인 남음 |
+| Post 구조             | `title/description/category` 제거, `detectedFruitKo/freshnessLabel/confidenceScore` 추가. 2026-05-08 `imageToken` sidecar AI 메타데이터 저장/복원 수정 VM 배포 완료. `/posts/nearby`, `/fridges/{id}/posts`는 `PostNearbyRead`라 `confidenceScore`가 없다 | `src/types/post.ts`, `PostNearbyRead`, `createPost()` payload, 홈/냉장고 카드, 상세, 등록 확인 화면 반영 완료 | 2026-05-08 VM/API 재검증, 로컬 계약 회귀, 실제 Android 홈/상세/지도 UI 재검증 통과 |
 | AI label              | `Fresh/Mid/Stale/unknown`, `Mid`는 기존 `Normal` 그룹                                               | `postPolicy`가 `Fresh/Mid`를 나눔 가능, `Stale/unknown`을 등록 불가로 매핑                     | fixture 기반 수동 QA                                   |
 | confidenceScore       | Stage 2 신선도 분류 softmax max 확률로 확정. 백엔드 표시 가이드는 0.9 이상 높음, 0.9 미만 확인 필요 | 앱 기준을 `confidenceScore < 0.9`로 갱신. 단독 등록 차단은 하지 않음                           | 0.4/0.7/1.0 fixture로 확인 필요 표시 QA                |
 | rejection reason enum | `not_food`, `low_quality`, `screenshot`, `ui_screenshot`, `review_required`, `multi_object_review` 등은 Post-MVP | 앱은 enum을 받으면 방어적으로 처리 가능. screenshot/UI는 MVP에서 서버 차단 불가라 통과 허용     | false-positive fixture는 report-only 관찰 및 후속 계약 검증 |
 | Stale 최종 등록 방어  | `Stale`이면 generate 400, `imageToken` 미발급. create는 무효/만료 토큰 400                          | 프론트도 `canShare=false` UX 가드를 갖고 있음                                                  | 서버가 최종 방어선임을 전제로 stale/token 실패 UX 검증 |
 | 알림                  | `share_created`, `share_requested` payload 구현                                                     | FCM 수신 handler와 로컬 알림함 구현. 읽음 상태 API 없음                                        | 실제 기기 foreground/background/terminated 수신 QA     |
-| 냉장고별 나눔 식재료  | `GET /fridges/{id}/posts?status=available` 구현/검증                                                | 지도에서 선택 냉장고 내부 available 목록 노출 구현. `PostNearbyRead` 타입/fixture는 `confidenceScore`, `authorId`, `updatedAt` 없이 `fridgeName` 포함 형태로 정렬 | 실제 앱 UI QA 후속    |
+| 냉장고별 나눔 식재료  | `GET /fridges/{id}/posts?status=available` 구현/검증                                                | 지도에서 선택 냉장고 내부 available 목록 노출 구현. `PostNearbyRead` 타입/fixture는 `confidenceScore`, `authorId`, `updatedAt` 없이 `fridgeName` 포함 형태로 정렬. 신청 성공 후 지도 내부 목록도 `requestedPostId` refresh 신호로 즉시 제거 | 실제 Android UI 재검증 통과 |
 
 ## 2026-05-08 백엔드 공식 답변 반영
 
@@ -153,7 +153,7 @@
   - MVP에서 `reserved`, `cancelled`, `expired`는 코드/계약에 없고, `completed`는 DB에 있지만 전환 API가 없다.
   - 신청 후 `/posts/nearby`와 `/fridges/{id}/posts?status=available`에서 제외되는 것이 최종 계약이다.
 
-프론트 후속 재검증 범위: `generate -> create -> GET /posts/{id} -> /posts/nearby -> /fridges/{id}/posts?status=available -> request -> requested 제외`, generate 400/detail, 무효 `imageToken`, screenshot fixture MVP 허용은 2026-05-08 VM/API에서 재검증했다. 실제 Android UI와 실제 FCM 수신은 남아 있다.
+프론트 후속 재검증 범위: `generate -> create -> GET /posts/{id} -> /posts/nearby -> /fridges/{id}/posts?status=available -> request -> requested 제외`, generate 400/detail, 무효 `imageToken`, screenshot fixture MVP 허용은 2026-05-08 VM/API에서 재검증했다. 홈/상세/지도/신청의 실제 Android UI는 2026-05-08 실기기에서 재검증했다. 실제 FCM 수신은 남아 있다.
 
 ## 2026-05-08 백엔드 답변 기반 VM/API 재검증 결과
 
@@ -178,8 +178,32 @@
   - `node .\node_modules\jest\bin\jest.js --runTestsByPath .\__tests__\posts.api.test.ts .\__tests__\postPolicy.test.ts .\__tests__\postDetail.requestShare.test.tsx .\__tests__\home.nearbyRefresh.test.tsx .\__tests__\map.fridgePosts.test.tsx .\__tests__\notificationService.test.ts --runInBand`
   - 6 suites / 50 tests 통과.
 - 남은 QA:
-  - 실제 Android 앱에서 신규 Post 카드/상세 표시가 fallback 없이 보이는지 재확인한다.
   - 실제 FCM 토큰이 있는 기기 2대로 `share_created`, `share_requested` foreground/background/terminated 수신을 확인한다.
+
+## 2026-05-08 실제 Android 기기 백엔드 P0 후속 QA 결과
+
+- 환경: 실제 Android 기기 `SM-S928N` Android 15(API 35, serial `R3CX203CV8X`), release APK, SSH tunnel `localhost:8080 -> NHN-Cloud-Server:80`, `adb reverse tcp:8080 tcp:8080`, QA 계정 `codex_device_1778219070@example.com`.
+- 준비:
+  - USB 디버깅 기기가 `adb devices -l`에서 `device` 상태로 인식됐다.
+  - `/health`는 `FoodLink API is running`을 반환했다.
+  - 실제 기기 release APK 검증은 기존 방식대로 `src/config/api.ts`의 `ANDROID_DEVICE_HOST`를 빌드 시점에만 `localhost`로 임시 변경해 수행했고, 소스는 QA 후 빈 값으로 되돌렸다.
+  - `android/app/google-services.json`이 없어 Firebase services는 비활성화된 상태다. 실제 FCM 수신 QA는 이번 범위에서 제외했다.
+- 통과:
+  - 이메일 로그인과 위치 권한 허용, 위치 저장이 통과했다. 저장 위치는 `35.1775512, 126.9031512` 기준이다.
+  - fresh fixture로 API 생성한 신규 Post id `5`가 `detectedFruitKo=바나나`, `freshnessLabel=Fresh`, `confidenceScore=1.0`, `status=available`을 반환했다.
+  - 홈 pull-to-refresh 후 신규 카드가 `바나나 / 상태가 좋아 보여요 / 전남대학교 공유냉장고`로 표시됐다. 기존 sidecar 수정 전 null 데이터 id `3`은 `나눔 식재료 / 분석 중` fallback으로 남았고, 이는 MVP 허용 동작이다.
+  - 상세 화면에서 신규 Post가 `바나나`, `상태가 좋아 보여요`, `AI 신뢰도 100%로 상태가 좋아 보여요 상태로 확인됐어요.`를 표시했다.
+  - 지도에서 `전남대학교 공유냉장고 -> 내부 보기`를 열면 내부 available 목록에 신규 Post가 `바나나 / 상태가 좋아 보여요`로 표시됐다.
+  - 다른 작성자 fixture Post id `6`, id `7`을 현재 기기 계정으로 신청했을 때 `신청 완료 / 나눔 신청이 접수되었습니다.` 알림이 표시되고 상세 CTA가 `신청 접수` disabled 상태로 전환됐다.
+  - API 교차확인: id `7`은 `requested`로 전환됐고 `/fridges/4/posts?status=available`에는 id `5,3`만 남아 id `7`이 제외됐다.
+- 발견 및 수정:
+  - 발견: 신청 성공 후 상세에서 지도 냉장고 내부 목록으로 뒤로 돌아오면, API에서는 `requested`로 제외됐지만 지도 목록 state에는 방금 신청한 항목이 수동 새로고침 전까지 남았다.
+  - 수정: `MapScreen`이 `useFeedRefreshStore.requestedPostId`를 구독해 선택 냉장고 내부 목록에서도 신청된 항목을 즉시 제거하도록 보강했다.
+  - 회귀: `__tests__/map.fridgePosts.test.tsx`에 선택 냉장고 목록에서 requested post를 제거하는 테스트를 추가했다.
+  - 실기기 재확인: QA용 localhost release APK로 id `7` 신청 후 뒤로 돌아온 지도 내부 목록에서 방금 신청한 항목이 수동 새로고침 없이 즉시 제거되고, 남은 available 항목 `id 5`, 기존 fallback `id 3`만 표시되는 것을 확인했다.
+- 미검증:
+  - 실제 앱 카메라/갤러리에서 `generate -> create`를 다시 끝까지 수행하지는 않았다. 이번 P0 후속 UI 검증은 VM API fixture 생성 게시글을 실제 앱 홈/상세/지도/신청 UI에서 확인하는 방식으로 수행했다.
+  - 실제 FCM 수신은 Firebase 설정 파일과 실제 토큰이 있는 2기기/2계정 환경이 필요하다.
 
 ## 2026-05-08 subagent-driven Phase 1.5 QA 통합 결과
 
@@ -198,12 +222,12 @@
   - ESLint: 0 errors, 기존 warning 10건.
   - `git diff --check`: whitespace error 없음. LF/CRLF 경고만 표시.
 - Android/FCM 준비도:
-  - `adb devices -l` 결과 연결된 기기/에뮬레이터가 없었다.
+  - 이후 `SM-S928N` 실제 기기를 연결해 백엔드 P0 후속 홈/상세/지도/신청 UI를 재검증했다.
   - `android/app/google-services.json`이 없어 Gradle이 Firebase services를 비활성화하는 상태다.
   - 실제 FCM 수신 QA는 Firebase 설정이 포함된 빌드, 알림 권한을 허용한 두 테스트 기기/계정, VM Firebase credentials 또는 실제 발송 로그가 필요하다.
 - Phase 1.5 closeout 판단:
-  - API 계약, 로컬 회귀, VM/API 재검증은 닫았다.
-  - 실제 Android UI 재확인과 실제 FCM foreground/background/terminated 수신은 환경 blocker로 남긴다.
+  - API 계약, 로컬 회귀, VM/API 재검증, 실제 Android 홈/상세/지도/신청 UI 재검증은 닫았다.
+  - 실제 FCM foreground/background/terminated 수신은 환경 blocker로 남긴다.
 
 ## 2026-05-06 VM/API 런타임 QA 결과
 
@@ -925,7 +949,7 @@ docs/VALIDATION_AND_BACKLOG.md의 "4. 한 장 촬영 UX와 multi-object 정책 �
 | 푸쉬 알림                 | 프론트 코드 연동 완료, 실제 수신 QA 필요 | Firebase Messaging 의존성, Android 알림 권한, FCM 토큰 등록이 있다. `share_created`, `share_requested` foreground/background/opened/initial handler를 구현했고, payload는 문자열 + camelCase(`type`, `postId`, `requestId`, `fruitName`, `fridgeName`)로 검증한다. Firebase 설정이 없는 QA/release 빌드에서는 알림 handler와 FCM 토큰 등록을 안전하게 건너뛴다. 알림함은 로컬 수신 기록/빈 상태 중심이며 읽음 상태 API는 없다. | 실제 기기에서 foreground/background/terminated 수신과 알림 탭 라우팅을 검증한다. |
 | 유저 프로필               | 부분 구현                      | 닉네임/이메일은 실제 유저 정보를 표시한다. 프로필 수정, 메뉴 이동, 내 나눔/관심/받은 나눔은 연결되어 있지 않다.                                                                                                                                                      | 프로필 수정 또는 내 나눔 내역 중 하나만 우선 연결.                                                        |
 | 유저 통계                 | 정리됨                         | 신선도 온도, 포인트, 탄소 절감량의 하드코딩 숫자를 제거하고 `준비 중` 상태로 표시한다.                                                                                                                                                                               | 실제 지표를 넣으려면 계산식과 API 계약을 먼저 정의.                                                       |
-| 냉장고별 나눔 식재료 조회 | 프론트 코드 연동 완료, VM/API QA 통과, Android UI 재확인 필요 | 지도에서 특정 냉장고를 선택하면 `GET /fridges/{id}/posts?status=available`로 내부 available 목록을 조회한다. loading/error/empty/list 상태를 분리하고 항목 탭 시 상세로 이동한다. 2026-05-08 VM/API에서 `PostNearbyRead` 카드 필드와 requested 제외를 재확인했다.                                                                 | 실제 Android UI에서 백엔드 P0 수정 후 신규 Post 표시명/상태가 fallback 없이 보이는지 재확인한다. 별도 inventory 개념은 후속으로 분리. |
+| 냉장고별 나눔 식재료 조회 | 프론트 코드 연동 완료, VM/API QA 및 Android UI 재확인 통과 | 지도에서 특정 냉장고를 선택하면 `GET /fridges/{id}/posts?status=available`로 내부 available 목록을 조회한다. loading/error/empty/list 상태를 분리하고 항목 탭 시 상세로 이동한다. 2026-05-08 VM/API에서 `PostNearbyRead` 카드 필드와 requested 제외를 재확인했고, 실제 Android UI에서 신규 Post 표시명/상태와 신청 후 즉시 제거를 확인했다. | 별도 inventory 개념은 후속으로 분리. |
 | 지도 근처 냉장고 조회     | 구현됨                         | `MapScreen`이 `/fridges/nearby`, `FridgeSelectScreen`이 `/fridges/available`을 호출한다. 1번 검증에서 실제 냉장고 목록 표시를 확인했다.                                                                                                                              | 위치 미설정 기본 좌표 fallback과 API 실패 UI 보강.                                                        |
 | 채팅 탭                   | 알림함으로 축소/구현됨         | `ChatListScreen`의 `MOCK_CHATS`를 제거하고 탭 라벨을 `알림`으로 바꿨다. 현재는 FCM 수신 기록/빈 상태를 보여준다. WebSocket, 채팅방 상세, 메시지 송수신 API는 없다.                                                                                                 | MVP에서는 알림함으로 유지하고 WebSocket 채팅은 보류.                                                      |
 | WebSocket 채팅            | 미구현/보류 권장               | 코드와 OpenAPI 모두 실시간 채팅 계약이 없다. 구현/검증 비용이 크다.                                                                                                                                                                                                  | 다음 스프린트에서는 단순 문의/예약 CTA 또는 알림함으로 축소한다.                                          |
@@ -1004,7 +1028,7 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
 
 - 분류: 서버 계약 변경 대응
 - 우선순위: P0
-- 상태: 프론트 구현 완료. 2026-05-06 VM/API와 실제 Android 기기 QA에서 서버 메타데이터 저장 불일치 발견, 2026-05-08 백엔드 수정/VM 재배포 완료, 2026-05-08 VM/API 재검증 통과. 실제 Android UI 재확인은 남아 있음
+- 상태: 프론트 구현 완료. 2026-05-06 VM/API와 실제 Android 기기 QA에서 서버 메타데이터 저장 불일치 발견, 2026-05-08 백엔드 수정/VM 재배포 완료, 2026-05-08 VM/API 및 실제 Android UI 재검증 통과
 - 배경: 백엔드가 Post 컬럼에서 `title`, `description`, `category`를 제거하고 `detectedFruitKo`, `freshnessLabel`, `confidenceScore`를 추가했다. 프론트 타입과 화면은 이 작업 전까지 구형 작성/표시 필드에 의존했다.
 - 현재 동작: `src/types/post.ts`의 `Post`, `GenerateResult`, `PostCreateData`가 백엔드 Phase 1.5 구조를 반영한다. `createPost()`는 `fridgeId`, `expirationDate`, `imageToken`만 전송한다. 홈/냉장고 카드는 `PostNearbyRead` 기준으로 `detectedFruitKo`, `freshnessLabel`, `status`를 표시하고, 상세/등록 화면은 `confidenceScore`까지 표시한다.
 - 기대 동작: 프론트는 백엔드 Phase 1.5 응답 구조를 기준으로 나눔 식재료명, 신선도 등급, 이미지, 냉장고, 상태를 표시한다. `confidenceScore`는 `PostRead`/등록 확인처럼 응답에 포함되는 화면에서만 표시한다. 사용자-facing 문구는 `나눔 식재료` 기준을 유지한다.
@@ -1021,7 +1045,7 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
 
 - 분류: 서버 계약 불일치
 - 우선순위: P0
-- 상태: 백엔드 버그로 확정, 2026-05-08 VM 수정 배포 완료, 2026-05-08 VM/API 재검증 통과. 실제 Android UI 재확인은 남아 있음
+- 상태: 백엔드 버그로 확정, 2026-05-08 VM 수정 배포 완료, 2026-05-08 VM/API 및 실제 Android UI 재검증 통과
 - 배경: 제품/프론트 계약은 나눔 식재료 표시가 `detectedFruitKo`, `freshnessLabel`, `status`를 기준으로 하고, 상세/등록 화면에서는 `confidenceScore`까지 표시한다고 정했다. 백엔드 Phase 1.5 답변도 Post 컬럼 추가를 완료했다고 설명했다.
 - 현재 동작: 2026-05-08 VM/API 재검증에서 `POST /posts/generate` fresh fixture가 `바나나/Fresh/confidence=1/imageToken`을 반환했고, 같은 `imageToken`으로 생성한 id `4`의 `POST /posts` 생성 응답과 `GET /posts/4` 상세 응답 모두 `detectedFruitKo`, `freshnessLabel`, `confidenceScore`를 non-null로 반환했다. 2026-05-06 VM QA와 실제 Android 기기 QA에서는 같은 흐름이 null/fallback으로 재현됐으나, 이는 백엔드 sidecar 수정 전 증거다.
 - 기대 동작: 서버는 `imageToken`에 연결된 AI 분석 결과를 최종 Post에 저장한다. 수정 후 generate는 임시 저장소에 이미지와 `{imageToken}.json` AI 메타데이터를 저장하고, create는 이미지 이동과 JSON 복원을 수행해 Post row에 저장한다. 프론트는 `imageToken`, `fridgeId`, `expirationDate`만 보낸다.
@@ -1040,7 +1064,7 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
 - 우선순위: P1
 - 상태: 프론트 코드 연동 완료, VM/API 런타임 QA 통과
 - 배경: MVP 수요자 흐름인 `available -> requested`가 백엔드에 구현됐다. 이 작업에서 상세 화면 CTA를 실제 신청 API에 연결했다.
-- 현재 동작: 상세 화면의 `나눔 신청하기` CTA가 `POST /api/v1/posts/{post_id}/requests`를 호출한다. 성공 시 상세 `post.status`를 `requested`로 바꾸고 Home refresh store에 requested post id를 전달한다. 403/409는 사용자-facing 문구로 분기한다.
+- 현재 동작: 상세 화면의 `나눔 신청하기` CTA가 `POST /api/v1/posts/{post_id}/requests`를 호출한다. 성공 시 상세 `post.status`를 `requested`로 바꾸고 Home/Map refresh store에 requested post id를 전달한다. 403/409는 사용자-facing 문구로 분기한다.
 - 기대 동작: 수요자가 available 나눔 식재료 상세에서 `나눔 신청하기`를 누르면 `POST /api/v1/posts/{post_id}/requests`를 호출하고, 성공 시 신청 접수 상태를 표시한다.
 - Acceptance Criteria:
   - [x] `requestShare(postId)` API client가 추가된다.
@@ -1050,7 +1074,7 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
   - [x] 신청 성공 후 상세 상태와 홈 `/posts/nearby` 재조회 또는 항목 제거가 보장된다.
 - 검증 방법: API client unit test 통과, PostDetail interaction test 통과, Home refresh test 통과, 실제 VM API 201/403/409 QA 통과
 - 관련 파일/화면/API: `src/api/posts.ts`, `src/types/post.ts`, `PostDetailScreen`, `HomeScreen`, `POST /api/v1/posts/{post_id}/requests`
-- 비고: 2026-05-06 VM QA에서 작성자 본인 신청 403, 첫 신청 201, 중복 신청 409, 신청 후 상세 `status=requested`를 확인했다.
+- 비고: 2026-05-06 VM QA에서 작성자 본인 신청 403, 첫 신청 201, 중복 신청 409, 신청 후 상세 `status=requested`를 확인했다. 2026-05-08 실제 Android 기기에서 신청 완료 alert, 상세 `신청 접수` disabled CTA, 지도 냉장고 내부 목록 즉시 제거를 확인했다.
 
 ## 냉장고별 나눔 식재료 조회 프론트 연동
 
@@ -1058,7 +1082,7 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
 - 우선순위: P1
 - 상태: 프론트 코드 연동 완료, VM/API 런타임 QA 통과, 실제 앱 UI QA 남음
 - 배경: 지도는 주변 공유 냉장고와 그 안의 available 나눔 식재료를 탐색하는 화면이다. 백엔드는 `GET /fridges/{id}/posts?status=available`를 구현했다.
-- 현재 동작: 지도는 냉장고 목록/마커/캐러셀을 보여주고, 특정 냉장고 선택 시 내부 available 나눔 식재료 목록을 조회한다. 항목 탭 시 상세/신청 흐름으로 이동한다.
+- 현재 동작: 지도는 냉장고 목록/마커/캐러셀을 보여주고, 특정 냉장고 선택 시 내부 available 나눔 식재료 목록을 조회한다. 항목 탭 시 상세/신청 흐름으로 이동한다. 상세에서 신청이 성공하면 `requestedPostId` refresh 신호를 받아 지도 내부 목록에서도 해당 항목을 즉시 제거한다.
 - 기대 동작: 사용자가 지도에서 냉장고를 선택하면 해당 냉장고의 available 나눔 식재료를 확인하고 상세/신청 흐름으로 이동할 수 있다.
 - Acceptance Criteria:
   - [x] `getFridgePosts(fridgeId, status='available')` API client가 추가된다.
@@ -1067,7 +1091,7 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
   - [x] 위치 미설정 상태에서는 기존 위치 설정 CTA 가드를 유지한다.
 - 검증 방법: API client unit test, 지도 냉장고 선택 QA, empty/error 상태 QA, 실제 VM API available 포함/제외 확인
 - 관련 파일/화면/API: `src/api/fridges.ts`, `MapScreen`, `PostDetailScreen`, `GET /api/v1/fridges/{fridge_id}/posts`, `__tests__/fridges.api.test.ts`, `__tests__/map.fridgePosts.test.tsx`
-- 비고: 2026-05-06 VM QA에서 생성 직후 냉장고 id `1` 내부 목록에 포함되고, 신청 후 `requested` 상태가 되면 `status=available` 목록에서 제외됨을 확인했다. 2026-05-08 백엔드 답변 기준 이 API는 `PostRead`가 아니라 `/posts/nearby`와 같은 `PostNearbyRead`를 반환하며, `confidenceScore`는 포함하지 않는다.
+- 비고: 2026-05-06 VM QA에서 생성 직후 냉장고 id `1` 내부 목록에 포함되고, 신청 후 `requested` 상태가 되면 `status=available` 목록에서 제외됨을 확인했다. 2026-05-08 백엔드 답변 기준 이 API는 `PostRead`가 아니라 `/posts/nearby`와 같은 `PostNearbyRead`를 반환하며, `confidenceScore`는 포함하지 않는다. 2026-05-08 실제 Android 기기에서 신청 후 뒤로 돌아온 지도 내부 목록이 stale 항목을 표시하던 문제를 발견해 수정했고, 수동 새로고침 없이 즉시 제거되는 것을 재확인했다.
 
 ## 나눔 기준 미충족/등록 차단 상태에서 실제 등록 차단
 

@@ -101,6 +101,7 @@ FOODLINK_API_BASE_URL=http://localhost:8080 FOODLINK_ACCESS_TOKEN=<token> npm ru
 - 2026-05-07 커밋 가능한 fixture 이미지를 추가했다. 출처와 라이선스는 `docs/qa-fixtures/SOURCES.md`에 기록한다. `large-image`는 로컬 전용이라 커밋하지 않는다.
 - 2026-05-06 실제 Android 기기 `SM-S928N` Android 15(API 35, serial `R3CX203CV8X`)에서 카메라 권한 허용, 프리뷰, 셔터 촬영, `/posts/generate` 분석 결과 표시, 등록 화면 진입, 냉장고 선택, 최종 등록 완료, 홈 목록 재조회, 상세 진입을 확인했다.
 - QA 빌드는 release APK + `adb reverse tcp:8080 tcp:8080` + SSH tunnel `localhost:8080 -> NHN-Cloud-Server:80` 조건으로 실행했다. `src/config/api.ts`의 `ANDROID_DEVICE_HOST`는 빌드 시점에만 `localhost`로 임시 변경했고 소스는 되돌렸다.
+- 2026-05-08 백엔드 P0 sidecar 수정 후 같은 실제 Android 기기에서 VM API fixture 생성 Post를 홈/상세/지도/신청 UI로 재확인했다. 신규 Post는 `바나나 / 상태가 좋아 보여요 / AI 신뢰도 100%`로 표시됐고, 기존 null 데이터는 fallback으로 유지됐다. 이 재검증은 실제 카메라 촬영이 아니라 API fixture 생성 게시글의 앱 UI 검증이다.
 - 증거 스크린샷은 `temp/real-device-camera-screen.png`, `temp/real-device-share-form.png`, `temp/real-device-after-share-create.png`, `temp/real-device-home-after-share-create.png`, `temp/real-device-detail-after-share-create.png`에 있다. `temp/` 파일은 커밋 대상이 아니다.
 - 발견한 충돌: 등록 직전 분석 결과는 `바나나 / 상태가 좋아 보여요 / 91%`였지만, 등록 후 홈/상세는 `나눔 식재료 / 분석 중` fallback을 표시했다. 이는 VM/API QA에서 발견한 Post AI 메타데이터 저장 불일치가 실제 앱에서도 재현된 결과다.
 - false-positive 증거: 실제 촬영 대상은 화면상 토마토 이미지였으나 AI가 `바나나`로 판별했다. 이 케이스는 `screenshot-or-ui` 또는 `fresh-single`이 아니라 AI 분류 품질/스크린 촬영 false-positive 증거로 기록한다.

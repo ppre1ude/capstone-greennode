@@ -4,6 +4,7 @@ import ReactTestRenderer from 'react-test-renderer';
 import MapScreen from '@/screens/map/MapScreen';
 import {getFridgePosts, getNearbyFridges} from '@/api/fridges';
 import {useAuthStore} from '@/store/authStore';
+import {useFeedRefreshStore} from '@/store/feedRefreshStore';
 import type {ApiResponse, PostNearbyRead} from '@/types';
 
 const mockRootNavigate = jest.fn();
@@ -147,6 +148,10 @@ describe('MapScreen fridge posts', () => {
       isLoggedIn: true,
       hasLocation: true,
     });
+    useFeedRefreshStore.setState({
+      nearbyPostsRefreshToken: 0,
+      requestedPostId: null,
+    });
   });
 
   afterEach(async () => {
@@ -233,5 +238,48 @@ describe('MapScreen fridge posts', () => {
     expect(
       renderer!.root.findAllByProps({children: '냉장고 내부 목록 오류'}),
     ).not.toHaveLength(0);
+  });
+
+  it('removes a requested post from the selected fridge list', async () => {
+    const remainingPost: PostNearbyRead = {
+      ...post,
+      id: 11,
+      detectedFruit: 'banana',
+      detectedFruitKo: 'banana-qa',
+      imageUrl: '/static/posts/11.jpg',
+    };
+    mockedGetFridgePosts.mockResolvedValue({
+      success: true,
+      message: 'ok',
+      data: [post, remainingPost],
+    });
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(<MapScreen />);
+    });
+
+    await ReactTestRenderer.act(async () => {
+      findTouchableByText(renderer!, '전남대 공유 냉장고').props.onPress();
+    });
+
+    expect(
+      renderer!.root.findAllByProps({children: post.detectedFruitKo}).length,
+    ).toBeGreaterThan(0);
+    expect(
+      renderer!.root.findAllByProps({children: remainingPost.detectedFruitKo})
+        .length,
+    ).toBeGreaterThan(0);
+
+    await ReactTestRenderer.act(async () => {
+      useFeedRefreshStore.getState().requestNearbyPostsRefresh(post.id);
+    });
+
+    expect(
+      renderer!.root.findAllByProps({children: post.detectedFruitKo}),
+    ).toHaveLength(0);
+    expect(
+      renderer!.root.findAllByProps({children: remainingPost.detectedFruitKo})
+        .length,
+    ).toBeGreaterThan(0);
   });
 });
