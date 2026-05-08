@@ -1,97 +1,207 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# FoodLink
 
-# Getting Started
+FoodLink는 사용자가 남는 식재료를 AI로 확인하고, 가까운 공유 냉장고를 통해 이웃에게 나눔 식재료로 연결하는 React Native 앱입니다. 패키지명은 `greennode`입니다.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+핵심 가치는 남는 식재료 처리의 귀찮음과 죄책감을 줄이는 것입니다. 환경 성취 지표는 보조 레이어로 두고, MVP에서는 "처리가 끝났다"는 안도감과 "근처 이웃에게 알림이 갔다"는 완료감을 먼저 검증합니다.
 
-## Step 1: Start Metro
+## MVP 범위
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+현재 MVP는 아래 흐름을 기준으로 개발하고 검증합니다.
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+### 공급자 흐름
 
-```sh
-# Using npm
-npm start
-
-# OR using Yarn
-yarn start
+```text
+남는 식재료 촬영/갤러리 선택
+  -> AI 분석
+  -> 나눔 가능 기준 확인
+  -> 나눔 식재료 등록 정보 확인
+  -> 등록 가능 공유 냉장고 선택
+  -> 등록 완료
+  -> 근처 사용자에게 푸시 알림
 ```
 
-## Step 2: Build and run your app
+### 수요자 흐름
 
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
-
-### Android
-
-```sh
-# Using npm
-npm run android
-
-# OR using Yarn
-yarn android
+```text
+홈에서 근처 available 나눔 식재료 발견
+  -> 상세 화면 진입
+  -> 보관 공유 냉장고 확인
+  -> 나눔 신청하기
+  -> status: available -> requested
+  -> 공급자에게 신청 알림
 ```
 
-### iOS
+`requested`는 신청 접수 상태이며 예약 확정이나 수령 완료가 아닙니다. MVP는 `available -> requested` 전환까지를 기준 흐름으로 둡니다.
 
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
+## 주요 기능
 
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
+- 이메일 회원가입/로그인과 JWT 기반 인증
+- 동네 위치 등록, 위치 미설정 사용자 보호
+- 홈의 근처 available 나눔 식재료 목록
+- 카메라 촬영/갤러리 선택 후 AI 분석
+- AI 분석 결과 기반 나눔 식재료 등록
+- 등록 가능 공유 냉장고 선택
+- 지도에서 주변 공유 냉장고와 냉장고별 나눔 식재료 탐색
+- 나눔 식재료 상세 조회와 나눔 신청
+- FCM payload 검증, 로컬 알림함, 알림 클릭 라우팅
+
+## 현재 구현 상태
+
+2026-05-08 기준으로 핵심 앱 흐름은 실제 Android 기기와 VM API에서 재검증했습니다.
+
+- `generate -> create -> home/detail/map -> request -> requested 제외` 흐름 통과
+- 백엔드 AI 메타데이터 sidecar 저장/복원 수정 반영
+- `POST /posts/{id}/requests` 신청 API 연동 완료
+- `GET /fridges/{id}/posts?status=available` 냉장고별 목록 연동 완료
+- Firebase 설정 파일이 없는 빌드에서도 앱 시작과 위치 등록이 크래시하지 않도록 guard 처리
+- 실제 FCM foreground/background/terminated 수신 QA는 환경 준비가 필요해 다음 검증 항목으로 남아 있음
+
+자세한 검증 결과와 남은 백로그는 [docs/VALIDATION_AND_BACKLOG.md](./docs/VALIDATION_AND_BACKLOG.md)를 기준으로 확인합니다.
+
+## 기술 스택
+
+| 영역 | 기술 |
+| --- | --- |
+| 앱 | React Native 0.85, React 19, TypeScript |
+| 네비게이션 | React Navigation |
+| 상태 관리 | Zustand |
+| HTTP 클라이언트 | Axios |
+| 카메라 | react-native-vision-camera |
+| 이미지 선택 | react-native-image-picker |
+| 지도 | react-native-maps |
+| 위치 | react-native-geolocation-service |
+| 푸시 알림 | @react-native-firebase/messaging |
+| 폼/검증 | react-hook-form, zod |
+| 테스트 | Jest, React Test Renderer |
+
+## 프로젝트 구조
+
+```text
+src/
+  api/          API client와 인증 이벤트
+  components/   재사용 UI 컴포넌트
+  config/       API base URL 등 실행 설정
+  navigation/   Auth/Main/Root 네비게이션
+  screens/      화면 단위 구현
+  services/     FCM, 디바이스 등록, 알림 처리
+  store/        Zustand store
+  theme/        컬러, 타이포그래피, spacing 토큰
+  types/        API/도메인 타입
+  utils/        정책, validation, storage helper
+docs/           제품/도메인/API/검증 문서
+scripts/        mock API, QA fixture 검증 스크립트
+__tests__/      단위/화면/API 계약 테스트
+```
+
+## 시작하기
+
+### 1. 요구 사항
+
+- Node.js `>= 22.11.0`
+- npm
+- React Native 개발 환경
+- Android Studio 또는 Xcode
+- iOS 실행 시 CocoaPods와 Ruby Bundler
+
+React Native 공통 개발 환경은 공식 문서의 [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment)를 따릅니다.
+
+### 2. 의존성 설치
+
+```sh
+npm install
+```
+
+iOS에서 실행할 때는 CocoaPods 의존성을 설치합니다.
 
 ```sh
 bundle install
-```
-
-Then, and every time you update your native dependencies, run:
-
-```sh
+pushd ios
 bundle exec pod install
+popd
 ```
 
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
+### 3. API 터널 열기
+
+NHN Cloud API는 SSH 터널을 통해 접근합니다. 앱에서 실제 API를 사용하려면 별도 터미널에서 아래 명령을 실행하고 열어둡니다.
 
 ```sh
-# Using npm
-npm run ios
-
-# OR using Yarn
-yarn ios
+ssh -L 8080:localhost:80 NHN-Cloud-Server
 ```
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
+환경별 base URL은 [src/config/api.ts](./src/config/api.ts)에 정의되어 있습니다.
 
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
+- Android 에뮬레이터: `http://10.0.2.2:8080`
+- iOS 시뮬레이터: `http://localhost:8080`
+- Android 실기기: [src/config/api.ts](./src/config/api.ts)의 `ANDROID_DEVICE_HOST`에 SSH 터널을 연 PC의 LAN IP를 설정
 
-## Step 3: Modify your app
+상세 API 계약은 [docs/API_INTEGRATION_CONTRACT.md](./docs/API_INTEGRATION_CONTRACT.md)를 확인합니다.
 
-Now that you have successfully run the app, let's make changes!
+### 4. Metro 실행
 
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
+```sh
+npm start
+```
 
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
+### 5. 앱 실행
 
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
+Android:
 
-## Congratulations! :tada:
+```sh
+npm run android
+```
 
-You've successfully run and modified your React Native App. :partying_face:
+iOS:
 
-### Now what?
+```sh
+npm run ios
+```
 
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
+## 개발 명령
 
-# Troubleshooting
+```sh
+npm run lint
+npm test -- --runInBand
+node ./node_modules/typescript/bin/tsc --noEmit
+npm run qa:ai-fixtures
+npm run mock:api
+```
 
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
+## AI/나눔 정책 요약
 
-# Learn More
+- 백엔드 AI label은 `Fresh`, `Mid`, `Stale`, `unknown`입니다.
+- `Fresh`와 `Mid`는 사용자에게 `상태가 좋아 보여요`, `나눔 가능`으로 통합 표시합니다.
+- `Stale`은 `나눔 기준에 맞지 않아요`로 안내하고 등록하지 않습니다.
+- `confidenceScore`는 신선도 분류 모델의 softmax max 확률이며, 단독 등록 차단 기준이 아닙니다.
+- `confidenceScore < 0.9`는 `확인 필요` UX로 표시합니다.
+- screenshot/UI false-positive 차단은 MVP 서버 계약에 없으며 Post-MVP rejection reason 후보입니다.
+- API/code의 `Post`는 도메인 문서와 사용자-facing 문구에서 **나눔 식재료**로 번역합니다.
 
-To learn more about React Native, take a look at the following resources:
+## 다음 작업 후보
 
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+현재 검증 문서 기준 남은 주요 작업은 아래와 같습니다.
+
+- 실제 FCM 토큰이 있는 2대 기기로 `share_created`, `share_requested` 수신 QA
+- Post-MVP AI rejection reason 계약 정리
+- 주변 공유 냉장고 없음 상태를 위한 백엔드 필터 또는 fixture 검증
+- 실제 환경 성취 지표 API와 계산식 정의
+- `requested` 이후 `reserved`, `completed`, `cancelled`, `expired` 흐름 설계
+- 관리자 화면과 운영자 조정 기능 설계
+
+## 문서 지도
+
+| 문서 | 역할 |
+| --- | --- |
+| [docs/PRODUCT_BRIEF.md](./docs/PRODUCT_BRIEF.md) | 제품 비전, MVP 경계, 사용자 흐름 |
+| [docs/DOMAIN_MODEL.md](./docs/DOMAIN_MODEL.md) | FoodLink 도메인 용어와 상태 모델 |
+| [docs/API_INTEGRATION_CONTRACT.md](./docs/API_INTEGRATION_CONTRACT.md) | API 접속, 요청/응답 계약, FCM 계약 |
+| [docs/VALIDATION_AND_BACKLOG.md](./docs/VALIDATION_AND_BACKLOG.md) | 실제 검증 결과와 다음 백로그 |
+| [docs/IMPLEMENTATION_STATUS.md](./docs/IMPLEMENTATION_STATUS.md) | 구현 상태 요약 |
+| [docs/DESIGN_SYSTEM.md](./docs/DESIGN_SYSTEM.md) | 디자인 토큰과 UI 가이드 |
+| [docs/AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md](./docs/AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md) | AI fixture와 카메라 QA 체크리스트 |
+
+## 용어 원칙
+
+- 사용자-facing 문구에는 `post`, `게시글`, `product` 대신 `나눔 식재료`를 사용합니다.
+- `default_location` 대신 `동네 위치`를 사용합니다.
+- AI 결과를 `부패`, `상함`, `썩음`처럼 확정적으로 표현하지 않습니다.
+- `requested`는 `신청 접수`이며 `예약 확정`이 아닙니다.
