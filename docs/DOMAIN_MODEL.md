@@ -90,7 +90,7 @@ _Avoid_: 핵심 가치 제안, 등록 이유의 1순위
 - AI 분석은 대표 **식재료** 하나에 대해 하나의 **신선도 등급**과 하나의 **나눔 가능 여부**를 만든다.
 - `Fresh`와 `Mid` 계열 **신선도 등급**은 사용자 흐름에서 모두 `상태가 좋아 보여요`와 `나눔 가능`으로 통합 표시한다. 기존 프론트 문서의 `Normal`은 `Mid`와 같은 그룹이다.
 - `Stale`은 **나눔 기준 미충족**으로 보고 등록하지 않는다. `unknown`은 바로 등록 가능한 상태로 보지 않고 확인/실패 상태로 처리한다. `Bad`, `Rotten`은 현재 백엔드 label은 아니지만 구형/후속 label로 내려오면 같은 차단 그룹으로 다룬다.
-- `not_food`, `non_food`, `low_quality`, `screenshot`, `ui_screenshot` 계열은 **나눔 기준 미충족** 또는 식재료 사진 확인 실패로 보고 등록하지 않는다.
+- `not_food`, `non_food`, `low_quality` 계열은 서버가 rejection/review 신호를 주면 **나눔 기준 미충족** 또는 식재료 사진 확인 실패로 보고 등록하지 않는다. 단, 2026-05-08 MVP 서버 계약에서 `screenshot`, `ui_screenshot` 계열은 별도 판별 모델이 없어 `Fresh + imageToken`으로 통과할 수 있으며, 이 경우 낮은 confidence는 **확인 필요**로만 표시하고 등록은 허용한다. `screenshot`, `ui_screenshot`은 Post-MVP rejection reason 후보로 관리한다.
 - `confidenceScore`는 Stage 2 신선도 분류 모델의 softmax max 확률이다. 객체 탐지 confidence나 식재료 여부 confidence가 아니며, 단독 차단 기준으로 쓰지 않는다.
 - 하나의 **나눔 식재료**는 작성자 한 명과 **공유 냉장고** 하나에 속한다.
 - 하나의 **공유 냉장고**에는 0개 이상의 **나눔 식재료**가 연결될 수 있다.
@@ -145,6 +145,9 @@ _Avoid_: 핵심 가치 제안, 등록 이유의 1순위
 > **Dev:** "confidence가 45%면 등록을 막나요?"
 > **Domain expert:** "아니요. `confidenceScore`는 신선도 분류 모델이 Fresh/Mid/Stale 중 하나로 분류한 softmax max 확률입니다. 0.9 미만이면 `확인 필요`로 표시하지만, 값만으로 등록을 막지는 않습니다."
 >
+> **Dev:** "스크린샷이 `Fresh + imageToken`으로 통과하면 프론트가 막아야 하나요?"
+> **Domain expert:** "MVP에서는 막지 않습니다. 서버가 screenshot/UI 판별 모델을 갖고 있지 않으므로 현재 계약은 통과 허용이고, 프론트는 낮은 confidence를 `확인 필요`로만 표시합니다. 차단은 Post-MVP rejection reason이 내려온 뒤 적용합니다."
+>
 > **Dev:** "수요자가 나눔 신청을 누르면 예약 확정인가요?"
 > **Domain expert:** "아니요. MVP의 `requested`는 신청 접수입니다. 예약 확정과 수령 완료는 후속 상태입니다."
 
@@ -157,5 +160,6 @@ _Avoid_: 핵심 가치 제안, 등록 이유의 1순위
 - `Bad/Rotten`은 현재 백엔드 label이 아니다. 해결: 현재 서버 계약에서는 `Stale`만 나눔 기준 미충족 label로 보고, `Bad/Rotten`은 방어적 호환 label로만 차단한다.
 - `confidenceScore`의 의미가 불명확했다. 해결: Stage 2 신선도 분류 모델의 softmax max 확률이며, 단독 등록 차단 기준으로 쓰지 않는다.
 - confidence 표시 threshold는 백엔드 활용 가이드를 따라 0.9 미만으로 확정했다. 단, 낮은 confidence만으로 등록을 차단하지 않고 `확인 필요` UX로만 사용한다.
+- `screenshot`/`ui_screenshot` 처리 범위가 불명확했다. 해결: 2026-05-08 MVP 계약에서는 서버가 `Fresh + imageToken`을 반환하면 등록을 허용하고, Post-MVP rejection reason 후보로만 관리한다.
 - 첫 신청 이후 추가 신청 차단은 백엔드에서 구현됐다. 해결: 첫 신청 접수 후 `requested`로 전환하고 추가 신청은 409로 거절한다.
 - 관리자 화면은 제품 범위에는 포함되지만 MVP 구현 범위에서는 제외한다. 초기 운영 제어는 수동 운영으로 처리한다.

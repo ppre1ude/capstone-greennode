@@ -83,7 +83,7 @@ Host NHN-Cloud-Server
 | `status`                                        | 나눔 상태                  | `available`, `requested` 등 생명주기 상태                                                   |
 | `category`/`freshnessLabel` in AI/post data     | 신선도 등급                | 현재 백엔드 기준 `Fresh`, `Mid`, `Stale`. 도메인상 `Mid`는 기존 `Normal` 그룹으로 번역한다. |
 | `detectedFruitKo`                               | 식재료명                   | 나눔 식재료 카드/상세/알림에서 사용자에게 보여줄 대표 식재료명                              |
-| `title`, `description`, `category` in post data | 구형 나눔 식재료 작성 필드 | 백엔드 Phase 1.5에서 Post 컬럼에서 제거됨. 프론트 타입/화면은 새 계약으로 갱신해야 한다.    |
+| `title`, `description`, `category` in post data | 구형 나눔 식재료 작성 필드 | 백엔드 Phase 1.5에서 Post 컬럼에서 제거됨. 프론트 타입/화면은 새 계약으로 갱신됐다.    |
 
 ### 응답 공통 형식
 
@@ -149,7 +149,7 @@ Host NHN-Cloud-Server
 | 작성자 본인 신청 차단      | 403                                                                                       | 반영 완료. 작성자 CTA 숨김, 403 fallback은 `내가 등록한 나눔 식재료예요`                        |
 | 신청 알림                  | `share_requested` FCM payload 구현                                                        | 반영 완료. foreground/background/opened/initial 수신 기록, 알림함, 상세 fallback 라우팅 구현    |
 | 냉장고별 나눔 식재료       | `GET /fridges/{id}/posts?status=available` 구현. 응답은 `PostNearbyRead`이며 `status` 정확히 일치하는 항목만 반환 | 반영 완료. 지도에서 선택 냉장고의 내부 available 목록, loading/error/empty/list 상태, 상세 이동 구현 |
-| Post 응답 구조             | `title/description/category` 제거, `detectedFruitKo/freshnessLabel/confidenceScore` 추가. 2026-05-08 수정 후 `imageToken` sidecar AI 메타데이터를 create 시 복원 | 반영 완료. `src/types/post.ts`, `createPost()`, 홈 카드, 상세, 등록 확인 화면은 새 구조 사용    |
+| Post 응답 구조             | `title/description/category` 제거, `detectedFruitKo/freshnessLabel/confidenceScore` 추가. 2026-05-08 수정 후 `imageToken` sidecar AI 메타데이터를 create 시 복원. 단, `/posts/nearby`, `/fridges/{id}/posts`의 `PostNearbyRead`에는 `confidenceScore`가 없다 | 반영 완료. `src/types/post.ts`, `createPost()`, 홈/냉장고 카드, 상세, 등록 확인 화면은 새 구조 사용 |
 | 나눔 기준 미충족 서버 방어 | `Stale`/`isFresh=false`이면 generate 400이고 `imageToken` 미발급. create는 유효한 `imageToken` 없으면 400 | 프론트 `canShare`는 UX 가드로 유지하되 서버가 최종 방어선임을 전제로 오류 처리                  |
 
 ---
@@ -694,7 +694,7 @@ GET /posts/nearby → 근처 available 나눔 식재료
 - [ ] 앱 실행 시 위치는 갱신하고, FCM 토큰은 명시적 알림 권한 허용 또는 기존 저장 토큰이 있을 때만 서버에 등록
 - [ ] 나눔 식재료 상세 작성자 판단은 실제 응답의 `authorId` 기준으로 처리
 - [ ] `POST /posts`에는 `imageToken + fridgeId + expirationDate`만 보내고 AI 메타데이터는 재전송하지 않는다
-- [ ] `/fridges/{id}/posts`와 `/posts/nearby`는 `PostNearbyRead`라 `confidenceScore`가 없을 수 있다
-- [x] 백엔드 Phase 1.5 Post 구조 반영: `title/description/category` 의존 제거, `detectedFruitKo/freshnessLabel/confidenceScore/status` 사용
+- [x] `/fridges/{id}/posts`와 `/posts/nearby`는 `PostNearbyRead`라 `confidenceScore`가 없을 수 있다
+- [x] 백엔드 Phase 1.5 Post 구조 반영: `title/description/category` 의존 제거, 카드 요약은 `PostNearbyRead` 필드 중심, 상세/등록은 `detectedFruitKo/freshnessLabel/confidenceScore/status` 사용
 - [x] 나눔 신청 API 연동: `POST /posts/{id}/requests`, 201/403/409 처리, 신청 후 상세/홈 상태 갱신
 - [x] FCM payload는 문자열 + camelCase `postId`, `requestId`, `fruitName`, `fridgeName`, `type` 사용
