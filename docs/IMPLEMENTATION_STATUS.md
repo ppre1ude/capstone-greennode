@@ -50,7 +50,7 @@
 - 수정: Firebase Messaging 인스턴스 획득을 `firebaseMessaging.ts` 공통 helper로 분리하고, 알림 handler뿐 아니라 FCM 토큰 조회 경로도 Firebase 설정 부재를 안전하게 건너뛰도록 보강했다. 회귀 테스트는 `__tests__/notificationService.firebaseFallback.test.ts`, `__tests__/deviceRegistration.firebaseFallback.test.ts`다.
 - 수정: `docs/qa-fixtures/manifest.json`이 깨진 JSON이라 `qa:ai-fixtures`가 시작 전 실패할 수 있었다. manifest와 fixture README를 복구했다.
 - 통과: 전체 Jest 16 suites / 76 tests, TypeScript `--noEmit`, ESLint `--quiet`, `scripts/validate-ai-fixtures.js`, Android `:app:assembleRelease`를 실제 기기 없이 통과했다.
-- 남은 검증: fixture 이미지가 없어 `Stale`, `not-food`, `screenshot-or-ui`, `low-quality`, `multi-object` AI 품질 검증은 아직 skipped 상태다. 실제 FCM 메시지 수신도 별도 기기/FCM 환경이 필요하다.
+- 남은 검증: 당시에는 fixture 이미지가 없어 `Stale`, `not-food`, `screenshot-or-ui`, `low-quality`, `multi-object` AI 품질 검증이 skipped였다. 2026-05-07 이후 커밋 가능한 fixture가 추가됐고, 2026-05-08 백엔드 답변 기준 stale/screenshot/low-quality false-positive는 Post-MVP AI 계약 항목으로 재분류했다. 실제 FCM 메시지 수신은 계속 별도 기기/FCM 환경이 필요하다.
 
 ### 2026-05-07 무기기 fixture/API/fallback QA 업데이트
 
@@ -58,7 +58,7 @@
 - 발견한 충돌: `AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md`와 `docs/qa-fixtures/manifest.json`은 `screenshot-or-ui`를 400 또는 `확인 필요`로 기대했지만, live VM API는 `temp/real-device-camera-screen.png`를 `바나나/Fresh/confidence=0.5377/imageToken`으로 통과시켰다. 판단 기준은 2026-05-07 live VM API다. 2026-05-08 백엔드 답변으로 이 케이스는 MVP 허용, Post-MVP rejection 목표로 재분류했다.
 - 수정: `CameraScanScreen`의 무기기 fallback 경로와 `AnalysisResultScreen`의 등록 차단/확인 필요 정책을 회귀 테스트로 고정했다. 회귀 테스트는 `__tests__/cameraScan.fallback.test.tsx`, `__tests__/analysisResult.fallback.test.tsx`다.
 - 통과: 전체 Jest 20 suites / 85 tests, TypeScript `--noEmit`, ESLint `--quiet`, `scripts/validate-ai-fixtures.js`를 실제 기기 없이 통과했다.
-- 남은 검증: 커밋 가능한 실제 fixture 이미지가 없어 `Stale`, `not-food`, `low-quality`, `multi-object` AI 품질은 아직 닫지 못했다. 실제 카메라 센서와 실제 FCM 수신은 실기기 QA로 남긴다.
+- 남은 검증: 이 시점에는 커밋 가능한 fixture 이미지가 부족했으나, 이후 `docs/qa-fixtures/`에 fixture를 추가해 VM/API report-only 검증까지 진행했다. 최신 판정은 `stale-or-rotten`, `screenshot-or-ui`, `low-quality`가 MVP blocker가 아니라 Post-MVP AI false-positive/계약 항목이라는 것이다. 실제 카메라/generate/create/request/exclusion은 2026-05-08 실기기 closeout으로 닫혔고, 실제 FCM 수신만 Firebase 환경 준비 후 검증한다.
 
 ### 2026-05-07 Android emulator 지도 UI QA 업데이트
 
@@ -91,6 +91,7 @@
 ### 2026-05-08 백엔드 답변 반영 업데이트
 
 - P0 Post AI 메타데이터 null은 백엔드 버그로 확정됐고, `imageToken` sidecar AI 메타데이터 저장/복원 방식으로 수정되어 VM에 재배포됐다. 프론트는 구현을 바꾸지 않고 `imageToken`, `fridgeId`, `expirationDate`만 전송한다. 2026-05-08 VM/API 재검증에서 생성 응답과 `GET /posts/{id}`의 AI 메타데이터 non-null, `PostNearbyRead` 카드 필드, requested 후 available 목록 제외를 확인했다. 같은 날 실제 Android 기기에서 홈/상세/지도 내부 목록의 신규 Post 표시명/상태가 fallback 없이 보이고, 신청 후 상세와 지도 목록이 `requested` 전환을 반영하는 것을 확인했다.
+- MVP flow closeout: 2026-05-08 실제 Android 기기에서 카메라 generate 400 실패 Alert(`다시 촬영`/`갤러리 선택`), 갤러리 fresh fixture 선택, `generate -> create -> home/detail/map`, 다른 테스트 계정의 신청 후 nearby/fridge available 제외까지 재검증했다. 생성된 Post id `8`은 `바나나 / Fresh / confidence 100%`로 저장됐고, 신청 후 `requested`로 전환되어 홈/지도 목록에서 제외됐다. 실제 FCM 수신은 Firebase 설정 파일과 2기기/2계정 token 환경 부재로 남아 있다.
 - 기존 null Post 데이터는 마이그레이션하지 않는다. 홈/상세/지도 내부 목록의 fallback은 기존 데이터 대응으로 유지한다.
 - generate 400에서 안정적으로 읽을 필드는 FastAPI `detail`이다. `message`, `analysisMessage`는 400 계약 필드가 아니다.
 - screenshot/UI false-positive는 MVP 허용으로 재분류했다. 현재 서버/AI는 screenshot/UI 판별 모델이 없으며, `Fresh + imageToken`이면 낮은 confidence에서도 등록 가능하다. 앱은 `confidenceScore < 0.9`에서 `확인 필요`만 표시한다.
@@ -107,10 +108,10 @@
 | 이메일 인증/로그인         | 구현됨                            | 이메일 회원가입, 로그인, JWT 저장, `/auth/me` 조회가 동작한다. 소셜 로그인과 이메일 verification은 미구현이다.                                                                                                                                                                                                                                                                                                             |
 | 최초 위치 등록             | 구현됨                            | 위치 없는 유저는 `LocationSetup`으로 이동하고 `/auth/me/location`에 좌표와 FCM 토큰을 저장한다. 홈/지도/나눔 등록 강제 진입도 위치 설정 CTA로 되돌린다. 위치 권한 거부/영구 거부/위치 탐색 실패 시 화면 안에서 재시도와 설정 열기 CTA를 제공하고, 좌표가 없으면 위치 저장을 비활성화한다.                                                                                                                           |
 | 위치 재설정                | 구현됨                            | 홈 위치 헤더와 프로필 `동네 위치 재설정` 메뉴에서 `LocationSetup`으로 재진입한다.                                                                                                                                                                                                                                                                                                                                          |
-| AI 분석                    | 부분 구현, 실제 기기 촬영 QA 통과 | mock 파이프라인은 제거됐고 실제 `/posts/generate` 호출이 동작한다. 백엔드 기준 label은 `Fresh/Mid/Stale/unknown`이며 `Mid`는 기존 `Normal` 그룹이다. `confidenceScore`는 Stage 2 신선도 분류 softmax max 확률이고 차단 기준이 아니다. 앱은 0.9 미만을 `확인 필요`로 표시하며, 낮은 confidence 안내는 실제 상태 직접 확인을 명시한다. 에뮬레이터와 실제 Android 기기에서 셔터 촬영, 파일 생성, API 호출, 결과 표시를 확인했다. 2026-05-08 백엔드 답변 기준 screenshot/UI 통과는 MVP 허용이고, rejection reason enum은 Post-MVP다.                                                        |
-| 나눔 식재료 등록           | 부분 구현, 실제 기기 등록 QA 통과 | 실제 `generate -> imageToken -> createPost` 흐름으로 서버 등록이 확인됐다. 백엔드 Phase 1.5 구조에 맞춰 작성 화면은 제목/설명/카테고리 입력 대신 AI 판별 식재료명, 신선도, confidence를 확인하고 `fridgeId`, `expirationDate`, `imageToken`만 최종 등록 payload로 보낸다. `canShare=false` 또는 `imageToken` 누락은 분석 결과, 작성, 최종 등록 단계에서 차단한다. 실제 기기에서 등록 완료와 홈 복귀 후 주변 목록 재조회를 확인했다. 2026-05-08 VM/API에서 백엔드 sidecar 저장/복원 수정 후 신규 Post 생성 응답의 AI 메타데이터 non-null을 확인했고, 실제 Android 홈/상세/지도 UI에서도 신규 Post가 fallback 없이 표시되는 것을 재확인했다. |
+| AI 분석                    | 부분 구현, 실제 기기 촬영/갤러리 QA 통과 | mock 파이프라인은 제거됐고 실제 `/posts/generate` 호출이 동작한다. 백엔드 기준 label은 `Fresh/Mid/Stale/unknown`이며 `Mid`는 기존 `Normal` 그룹이다. `confidenceScore`는 Stage 2 신선도 분류 softmax max 확률이고 차단 기준이 아니다. 앱은 0.9 미만을 `확인 필요`로 표시하며, 낮은 confidence 안내는 실제 상태 직접 확인을 명시한다. 에뮬레이터와 실제 Android 기기에서 셔터 촬영, 파일 생성, API 호출, 결과 표시를 확인했다. 2026-05-08 실제 기기에서 카메라 촬영 generate 400 실패 Alert와 갤러리 fresh fixture 분석 성공을 모두 확인했다. 백엔드 답변 기준 screenshot/UI 통과는 MVP 허용이고, rejection reason enum은 Post-MVP다.                                                        |
+| 나눔 식재료 등록           | 부분 구현, 실제 기기 등록 QA 통과 | 실제 `generate -> imageToken -> createPost` 흐름으로 서버 등록이 확인됐다. 백엔드 Phase 1.5 구조에 맞춰 작성 화면은 제목/설명/카테고리 입력 대신 AI 판별 식재료명, 신선도, confidence를 확인하고 `fridgeId`, `expirationDate`, `imageToken`만 최종 등록 payload로 보낸다. `canShare=false` 또는 `imageToken` 누락은 분석 결과, 작성, 최종 등록 단계에서 차단한다. 2026-05-08 실제 기기 갤러리 fresh fixture로 Post id `8`을 생성했고, 홈 복귀 후 주변 목록 재조회, 상세 AI 메타데이터, 지도 냉장고 내부 목록을 확인했다. VM/API에서 백엔드 sidecar 저장/복원 수정 후 신규 Post 생성 응답의 AI 메타데이터 non-null도 확인했다. |
 | 나눔 식재료 상세/삭제/신청 | 부분 구현, 실제 기기 신청 QA 통과 | 실제 상세 응답의 `authorId` 기준으로 작성자 여부를 판단한다. 상세 화면은 구형 `title/description/category` 대신 `detectedFruitKo`, `freshnessLabel`, `confidenceScore`, `status`를 표시한다. `available` 나눔 식재료는 `requestShare(postId)`로 신청하고, 201/409 이후 `신청 접수` 상태로 CTA를 비활성화한다. 403은 작성자 본인 fallback 문구로 처리한다. 2026-05-08 VM/API에서 신규 Post 상세 AI 메타데이터 non-null과 `available -> requested` 전환을 재확인했고, 실제 Android 기기에서도 신청 완료 alert와 `신청 접수` disabled CTA를 확인했다.                                                                  |
-| 홈 주변 나눔 식재료        | 부분 구현, 실제 기기 홈 재조회 통과 | `/posts/nearby` 데이터를 카드로 표시한다. 홈 카드는 `PostNearbyRead` 기준으로 `detectedFruitKo`, `freshnessLabel`, `status`, `fridgeName`을 사용하며 `confidenceScore`는 이 응답 계약에 없다. API 실패와 빈 상태는 UI에서 분리됐다. 위치가 없으면 API를 호출하지 않고 위치 설정 CTA를 표시한다. 홈은 냉장고보다 available 나눔 식재료를 먼저 보여주는 화면이다. 홈 포커스와 등록 완료 refresh token 변경 시 재조회한다. 실제 기기 등록 완료 후 주변 나눔 `1건`이 표시됐다.                                                                 |
+| 홈 주변 나눔 식재료        | 부분 구현, 실제 기기 홈 재조회 통과 | `/posts/nearby` 데이터를 카드로 표시한다. 홈 카드는 `PostNearbyRead` 기준으로 `detectedFruitKo`, `freshnessLabel`, `status`, `fridgeName`을 사용하며 `confidenceScore`는 이 응답 계약에 없다. API 실패와 빈 상태는 UI에서 분리됐다. 위치가 없으면 API를 호출하지 않고 위치 설정 CTA를 표시한다. 홈은 냉장고보다 available 나눔 식재료를 먼저 보여주는 화면이다. 홈 포커스와 등록 완료 refresh token 변경 시 재조회한다. 2026-05-08 실제 기기 등록 완료 후 주변 나눔 `3건`에 신규 `바나나`가 표시됐고, 다른 계정 신청 후 `2건`으로 줄어 requested 항목이 제외됐다.                                                                 |
 | 지도/냉장고                | 부분 구현, 실제 기기 UI QA 통과        | `/fridges/nearby`, `/fridges/available` 조회와 지도 마커/냉장고 선택은 동작한다. 지도에서 냉장고를 선택하면 `GET /fridges/{id}/posts?status=available`로 내부 available 나눔 식재료를 조회하고, loading/error/empty/list 상태를 분리한다. VM API에서 생성 직후 냉장고 내부 목록 포함과 신청 후 `requested` 제외를 확인했다. Android emulator에서 냉장고 empty/list 상태와 목록 항목 상세 이동을 확인했다. 2026-05-08 VM/API에서 응답이 `PostNearbyRead`이며 `confidenceScore`를 포함하지 않고, 신규 Post의 카드 표시명/상태가 내려오는 것을 재확인했다. 실제 Android 기기에서는 신규 Post가 `바나나 / 상태가 좋아 보여요`로 표시되고, 상세 신청 후 지도 내부 목록에서 수동 새로고침 없이 제거되는 것을 확인했다. |
 | 나눔 신청                  | 프론트 코드 연동 완료, 실제 기기 QA 통과 | 백엔드는 `POST /posts/{id}/requests`, `available -> requested`, `SELECT ... FOR UPDATE` 경합 처리, 작성자 403, 중복/경합 409, 신청 알림을 구현/검증했다. 프론트는 `requestShare(postId)`, 상세 CTA, 201/403/409 UX, 홈/지도 refresh store를 구현했다. 2026-05-06 VM API에서 작성자 본인 403, 첫 신청 201, 중복 신청 409, 신청 후 `requested` 전환과 주변 목록 제외를 확인했다. 2026-05-08 실제 Android 기기에서 신청 완료 alert, 상세 `신청 접수` 전환, 지도 냉장고 내부 목록 즉시 제거를 확인했다.                                                                                                                               |
 | FCM                        | 프론트 코드 연동 완료, 수신 QA 필요 | FCM 토큰 등록과 `share_created`, `share_requested` 수신 handler가 있다. 위치 설정 화면은 진입 즉시 알림 권한을 요청하지 않고 `나눔 알림 받기` CTA를 눌렀을 때만 토큰을 준비한다. 기존 유저의 위치 자동 갱신 경로도 알림 권한 요청을 열지 않으며, 기존 `fcmToken`이 있을 때만 함께 보낸다. Android 13+ 알림 권한 거부 시 Firebase permission/register/getToken을 호출하지 않고 `fcmToken` 없이 위치 등록을 계속한다. payload는 문자열 + camelCase(`postId`, `requestId`, `fruitName`, `fridgeName`, `type`)로 검증한다. `share_created`는 반경 2km 내 FCM 토큰이 있는 다른 사용자에게, `share_requested`는 공급자 FCM 토큰이 있을 때 발송된다. foreground/background/opened/initial 알림은 로컬 알림함에 기록하고, 알림 열기와 알림함 항목 탭은 `PostDetail`로 이동한다. `share_requested`는 내 나눔 관리 화면이 없으므로 MVP에서 상세 fallback을 쓴다. Firebase 설정이 없는 QA/release 빌드에서는 Messaging 인스턴스 생성 실패를 알림 handler와 FCM 토큰 조회 양쪽에서 guard한다. 실제 FCM 메시지 수신 QA와 읽음 상태 API는 없다. |
@@ -152,10 +153,11 @@
   - 갤러리 이미지 선택 후 실제 AI generate 호출
   - 실제 AI 응답의 `detectedFruit`, `aiAnalysis`, `imageToken` 수신
   - 분석 결과 화면 표시
+  - 실제 Android 기기 카메라 셔터 촬영 후 generate 400 실패 Alert와 재촬영/갤러리 대안 표시
+  - 실제 Android 기기 갤러리 fresh fixture 선택 후 분석 결과 표시
 - 남은 작업:
-  - 실제 기기 카메라 셔터 검증
-  - `Stale` fixture로 나눔 기준 미충족 결과 재검증
-  - `confidenceScore` 0.4/0.7/1.0 fixture로 `확인 필요` 표시 재검증
+  - Post-MVP AI/rejection contract: `stale-or-rotten`, `screenshot-or-ui`, `low-quality` false-positive를 rejection/review reason으로 처리할지 결정
+  - 실제 FCM 수신 QA와 분리된 순수 알림 표시 UX polish
   - 분석 실패 후 수동 입력 CTA 추가 여부 결정
 
 ### Phase 4: 나눔 식재료 등록 흐름
@@ -170,7 +172,6 @@
   - 위치 미설정 상태의 냉장고 선택 강제 진입 시 `/fridges/available` 호출 차단과 위치 설정 CTA 표시
   - 등록 완료 후 홈 복귀 시 `/posts/nearby` 재조회 신호 전달과 홈 포커스 재조회
 - 남은 작업:
-  - `Stale` generate 400과 `imageToken` 미발급/무효 토큰 create 400 UX 검증
   - 유통기한 기본 3일 자동값 정책 정리
 
 ### Phase 5: 지도 및 냉장고 탐색
@@ -184,7 +185,6 @@
   - Android emulator에서 냉장고 empty/list 상태와 내부 목록 항목 상세 이동 QA
 - 남은 작업:
   - 주변 냉장고 없음 fixture/API 검증
-  - 백엔드 Post AI 메타데이터 저장 수정 후 냉장고 내부 목록 표시명/상태 재검증
 
 ### Phase 6: 알림 및 내 정보
 
@@ -203,7 +203,6 @@
 - 남은 작업:
   - 프로필 수정/내 나눔/관심/받은 나눔 메뉴 연결
   - 실제 기기 FCM foreground/background/terminated 수신 QA
-  - 나눔 신청하기 실제 VM API 201/403/409 QA
   - 알림 읽음 상태/API 계약 구현
   - 실제 활동 지표 API 계약 구현
 
@@ -223,8 +222,8 @@
 2. 완료: 위치 재설정 진입점 연결
 3. 완료: 위치 미설정 강제 진입 공통 가드와 위치 설정 CTA 정리
 4. 완료, 실제 기기 QA 필요: 위치 권한 거부/영구 거부/위치 탐색 실패 UX 보강. `LocationSetup`은 재시도/설정 열기 CTA를 제공하고 좌표가 없으면 위치 저장을 막는다.
-5. 부분 완료: 카메라 실패 시 갤러리 fallback 개선. 실제 기기 촬영 재검증은 남음
-6. 완료, fixture QA 필요: AI confidence 표시와 `확인 필요` 상태 도입. 제품 기준은 `confidenceScore < 0.9`이며 단독 등록 차단 기준은 아니다.
+5. 완료, 실제 기기 QA 통과: 카메라 실패 시 `다시 촬영`/`갤러리 선택` 대안과 갤러리 fresh fixture 기반 등록 flow를 확인했다.
+6. 완료, Post-MVP AI 계약 필요: AI confidence 표시와 `확인 필요` 상태 도입. 제품 기준은 `confidenceScore < 0.9`이며 단독 등록 차단 기준은 아니다. `stale-or-rotten`, `screenshot-or-ui`, `low-quality` false-positive는 Post-MVP rejection/review reason 계약으로 분리한다.
 7. 완료, VM/API QA 통과: 나눔 신청하기 API 연동, 첫 신청 이후 추가 신청 차단, `available -> requested` 상태 전환, 403/409 처리
 8. 완료, VM/API QA 및 실제 Android UI QA 통과: 냉장고별 나눔 식재료 조회 API 연동. 지도에서 선택한 냉장고의 available 목록을 표시하고 항목 탭 시 상세로 이동한다. 2026-05-08 VM/API와 실제 Android 기기에서 백엔드 Post AI 메타데이터 수정 후 신규 Post 표시명/상태, requested 제외, 신청 후 지도 내부 목록 즉시 제거를 재확인했다.
 

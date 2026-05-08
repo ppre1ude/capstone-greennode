@@ -97,12 +97,18 @@ FOODLINK_API_BASE_URL=http://localhost:8080 FOODLINK_ACCESS_TOKEN=<token> npm ru
 현재 상태:
 
 - 2026-05-05 확인 시 연결 장치는 `emulator-5554`뿐이었다.
-- `docs/qa-fixtures/manifest.json`과 `npm run qa:ai-fixtures` 반복 검증 스크립트를 추가했다. 2026-05-06 manifest JSON 파싱과 스크립트 실행을 재검증했고, 이미지가 없어 모든 케이스는 `skipped`로 종료됐다.
+- `docs/qa-fixtures/manifest.json`과 `npm run qa:ai-fixtures` 반복 검증 스크립트를 추가했다. 2026-05-06 manifest JSON 파싱과 스크립트 실행을 재검증했고, 당시에는 이미지가 없어 모든 케이스가 `skipped`로 종료됐다.
 - 2026-05-07 커밋 가능한 fixture 이미지를 추가했다. 출처와 라이선스는 `docs/qa-fixtures/SOURCES.md`에 기록한다. `large-image`는 로컬 전용이라 커밋하지 않는다.
 - 2026-05-06 실제 Android 기기 `SM-S928N` Android 15(API 35, serial `R3CX203CV8X`)에서 카메라 권한 허용, 프리뷰, 셔터 촬영, `/posts/generate` 분석 결과 표시, 등록 화면 진입, 냉장고 선택, 최종 등록 완료, 홈 목록 재조회, 상세 진입을 확인했다.
 - QA 빌드는 release APK + `adb reverse tcp:8080 tcp:8080` + SSH tunnel `localhost:8080 -> NHN-Cloud-Server:80` 조건으로 실행했다. `src/config/api.ts`의 `ANDROID_DEVICE_HOST`는 빌드 시점에만 `localhost`로 임시 변경했고 소스는 되돌렸다.
 - 2026-05-08 백엔드 P0 sidecar 수정 후 같은 실제 Android 기기에서 VM API fixture 생성 Post를 홈/상세/지도/신청 UI로 재확인했다. 신규 Post는 `바나나 / 상태가 좋아 보여요 / AI 신뢰도 100%`로 표시됐고, 기존 null 데이터는 fallback으로 유지됐다. 이 재검증은 실제 카메라 촬영이 아니라 API fixture 생성 게시글의 앱 UI 검증이다.
+- 2026-05-08 MVP flow closeout에서 같은 실제 Android 기기와 QA용 localhost release APK로 실제 앱 경로를 재검증했다.
+  - 카메라 셔터 촬영: `/posts/generate`가 400을 반환했고 앱은 `분석 실패`, `나눔 기준에 맞지 않아요. (나눔 기준에 맞지 않아요.)`, `다시 촬영`, `갤러리 선택`을 표시했다.
+  - 갤러리 선택: `fresh-single-fresh-20260505.jpg`를 Android Photo Picker에서 선택했고 분석 결과가 `바나나`, `상태가 좋아 보여요`, `AI 신뢰도 100%`, `나눔 가능`으로 표시됐다.
+  - 등록: `전남대학교 공유냉장고`를 선택해 Post id `8`을 생성했고, 홈/상세/지도에서 `바나나 / 상태가 좋아 보여요`로 표시됐다.
+  - 신청/제외: 다른 테스트 계정으로 id `8`을 신청하자 API 상태가 `requested`로 바뀌고 `/posts/nearby`, `/fridges/4/posts?status=available`, 앱 홈/지도 내부 목록에서 제외됐다.
 - 증거 스크린샷은 `temp/real-device-camera-screen.png`, `temp/real-device-share-form.png`, `temp/real-device-after-share-create.png`, `temp/real-device-home-after-share-create.png`, `temp/real-device-detail-after-share-create.png`에 있다. `temp/` 파일은 커밋 대상이 아니다.
+- 2026-05-08 closeout 증거 스크린샷은 `temp/mvp-flow-camera-entry.png`, `temp/mvp-flow-camera-stale-failure.png`, `temp/mvp-flow-photo-picker.png`, `temp/mvp-flow-gallery-analysis-result.png`, `temp/mvp-flow-gallery-post-create.png`, `temp/mvp-flow-gallery-fridge-selected.png`, `temp/mvp-flow-gallery-complete.png`, `temp/mvp-flow-home-after-gallery-create.png`, `temp/mvp-flow-detail-after-gallery-create.png`, `temp/mvp-flow-home-after-request-exclusion.png`, `temp/mvp-flow-map-after-request-exclusion.png`에 있다. `temp/` 파일은 커밋 대상이 아니다.
 - 발견한 충돌: 등록 직전 분석 결과는 `바나나 / 상태가 좋아 보여요 / 91%`였지만, 등록 후 홈/상세는 `나눔 식재료 / 분석 중` fallback을 표시했다. 이는 VM/API QA에서 발견한 Post AI 메타데이터 저장 불일치가 실제 앱에서도 재현된 결과다.
 - false-positive 증거: 실제 촬영 대상은 화면상 토마토 이미지였으나 AI가 `바나나`로 판별했다. 이 케이스는 `screenshot-or-ui` 또는 `fresh-single`이 아니라 AI 분류 품질/스크린 촬영 false-positive 증거로 기록한다.
 - 2026-05-07 실기기 없이 `localhost:8080` VM API에 직접 fixture를 업로드했다.
@@ -124,4 +130,12 @@ FOODLINK_API_BASE_URL=http://localhost:8080 FOODLINK_ACCESS_TOKEN=<token> npm ru
 - 2026-05-07 `large-image` local-only QA를 진행했다. `temp/large-image-local-only-20260507.jpg`는 8,388,609 bytes이며, `validateImageForUpload()` 테스트가 8MB 초과 이미지를 업로드 전 차단하는지 확인한다. 대용량 원본은 git에 넣지 않는다.
 - 2026-05-08 백엔드 답변으로 screenshot/UI false-positive는 MVP 허용으로 재분류했다. 현재 AI 파이프라인은 과일 종류 판별과 신선도 분류만 수행하며 스크린샷/UI 여부 판별 로직은 없다. 낮은 confidence는 `확인 필요` 표시만 하고 등록은 허용한다.
 - 2026-05-08 백엔드 답변으로 `not_food`, `low_quality`, `screenshot`, `ui_screenshot`, `review_required`, `multi_object_review`는 Post-MVP rejection reason enum 후보로 기록한다.
-- 아직 남은 실제 기기 QA: `Stale`, `not-food`, `low-quality`, 실제 FCM foreground/background/terminated 수신.
+- 2026-05-08 인증 토큰 포함 `node scripts\validate-ai-fixtures.js --report-only` 결과:
+  - `fresh-single`: 통과. `바나나`, `Fresh`, confidence `1`.
+  - `not-food`: 통과. generate 400.
+  - `multi-object`: 통과로 분류. generate 400.
+  - `stale-or-rotten`: report-only 실패. `바나나`, `Fresh`, confidence `0.79`.
+  - `screenshot-or-ui`: report-only 실패. `바나나`, `Fresh`, confidence `1`.
+  - `low-quality`: report-only 실패. `바나나`, `Fresh`, confidence `0.9794`.
+  - `large-image`: skipped. 로컬 전용 업로드 크기 guard fixture다.
+- 남은 실제 기기 QA: 실제 FCM foreground/background/terminated 수신. `stale-or-rotten`, `screenshot-or-ui`, `low-quality` 차단은 MVP blocker가 아니라 Post-MVP AI/rejection contract 항목이다.
