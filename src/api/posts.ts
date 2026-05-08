@@ -6,6 +6,7 @@ import apiClient, { BASE_URL } from './client';
 import type {
   ApiResponse,
   Post,
+  PostNearbyRead,
   GenerateResult,
   PostCreateData,
   ShareRequestResult,
@@ -62,7 +63,7 @@ export const getNearbyPosts = async (
   radiusKm: number = 2.0,
   skip: number = 0,
   limit: number = 50,
-): Promise<ApiResponse<Post[]>> => {
+): Promise<ApiResponse<PostNearbyRead[]>> => {
   const response = await apiClient.get(`${POSTS_PREFIX}/nearby`, {
     params: { latitude, longitude, radius_km: radiusKm, skip, limit },
   });

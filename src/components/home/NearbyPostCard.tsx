@@ -6,25 +6,23 @@
  */
 import React from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
-import type { Post } from '@/types';
+import type { PostNearbyRead } from '@/types';
 import { getImageUrl } from '@/api/posts';
 import { colors } from '@/theme';
 import {
-  getConfidencePercent,
   getPostDisplayName,
   getPostStatusLabel,
   getQualityMeta,
 } from '@/utils/postPolicy';
 
 interface Props {
-  post: Post;
+  post: PostNearbyRead;
   onPress: () => void;
 }
 
 const NearbyPostCard = ({ post, onPress }: Props) => {
   const displayName = getPostDisplayName(post);
   const quality = getQualityMeta(post.freshnessLabel);
-  const confidencePercent = getConfidencePercent(post.confidenceScore);
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>
@@ -54,9 +52,7 @@ const NearbyPostCard = ({ post, onPress }: Props) => {
           {displayName}
         </Text>
         <Text style={styles.location} numberOfLines={1}>
-          {confidencePercent != null
-            ? `AI 신뢰도 ${confidencePercent}%`
-            : '근처 공유 냉장고'}
+          {post.fridgeName || '근처 공유 냉장고'}
         </Text>
       </View>
     </TouchableOpacity>

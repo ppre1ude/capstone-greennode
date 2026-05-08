@@ -14,6 +14,25 @@ describe('getApiErrorMessage', () => {
     ).toBe('이미지가 만료되었습니다.');
   });
 
+  it('can prefer FastAPI detail for generate errors', () => {
+    expect(
+      getApiErrorMessage(
+        {
+          message: 'Request failed with status code 400',
+          response: {
+            data: {
+              message: 'legacy generate error',
+              detail:
+                '게시할 수 없는 식재료입니다. 사유: 식재료가 부패한 상태입니다. 게시할 수 없습니다.',
+            },
+          },
+        },
+        'AI 분석에 실패했습니다.',
+        {preferDetail: true},
+      ),
+    ).toBe('나눔 기준에 맞지 않아요. 다시 촬영해주세요.');
+  });
+
   it('translates unsafe FastAPI detail into user-facing copy', () => {
     expect(
       getApiErrorMessage({

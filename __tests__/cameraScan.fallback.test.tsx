@@ -152,6 +152,7 @@ describe('CameraScanScreen fallback QA', () => {
       response: {
         status: 400,
         data: {
+          message: 'legacy generate error',
           detail: '식재료가 부패한 상태입니다. 게시할 수 없습니다.',
         },
       },

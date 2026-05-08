@@ -280,9 +280,6 @@ Content-Type: multipart/form-data
   "data": {
     "detectedFruit": "apple",
     "detectedFruitKo": "사과",
-    "freshnessLabel": "Fresh",
-    "confidenceScore": 0.92,
-    "isFresh": true,
     "aiAnalysis": {
       "isFresh": true,
       "confidenceScore": 0.92,
@@ -300,7 +297,7 @@ Content-Type: multipart/form-data
 }
 ```
 
-> 2026-05-06 live VM note: 현재 `GET /openapi.json`과 VM 응답 기준 `PostGenerateResult`의 root 필드는 `detectedFruit`, `detectedFruitKo`, `aiAnalysis`, `imageToken`이다. `freshnessLabel`, `confidenceScore`, `isFresh`는 root가 아니라 `data.aiAnalysis.category`, `data.aiAnalysis.confidenceScore`, `data.aiAnalysis.isFresh`에서 확인된다. 프론트는 이미 `aiAnalysis` fallback을 읽는다. root 예시는 제품 의도/프론트 호환 예시로 남아 있으나, 백엔드와 canonical 위치를 다시 맞춰야 한다.
+> 2026-05-08 canonical 기준: `POST /posts/generate`의 AI 신선도 판정은 `data.aiAnalysis.category`, `data.aiAnalysis.confidenceScore`, `data.aiAnalysis.isFresh`를 기준으로 읽는다. Post 생성/조회 응답의 최종 저장 필드는 root `freshnessLabel`, `confidenceScore`, `detectedFruit`, `detectedFruitKo`이지만, generate 응답의 canonical 위치는 `aiAnalysis`다. 프론트 타입은 과거/호환 응답을 방어적으로 받기 위해 root `freshnessLabel`, `confidenceScore`, `isFresh`를 optional로 유지한다.
 
 **에러 시 → 400 및 프론트 표시 정책**:
 
@@ -681,6 +678,8 @@ GET /posts/nearby → 근처 available 나눔 식재료
 
 ## 8. 주의사항 체크리스트
 
+> 이 체크리스트의 빈 항목은 매 개발/QA 실행 때 확인할 조건이다. 구현 완료 여부는 2.2와 [VALIDATION_AND_BACKLOG.md](./VALIDATION_AND_BACKLOG.md)를 기준으로 본다.
+
 - [ ] SSH 터널 열어둔 상태에서 개발
 - [ ] 로그인 요청은 `application/x-www-form-urlencoded` (JSON 아님)
 - [ ] 로그인 필드명은 `username` (email 아님)
@@ -694,7 +693,7 @@ GET /posts/nearby → 근처 available 나눔 식재료
 - [ ] 앱 실행 시 위치는 갱신하고, FCM 토큰은 명시적 알림 권한 허용 또는 기존 저장 토큰이 있을 때만 서버에 등록
 - [ ] 나눔 식재료 상세 작성자 판단은 실제 응답의 `authorId` 기준으로 처리
 - [ ] `POST /posts`에는 `imageToken + fridgeId + expirationDate`만 보내고 AI 메타데이터는 재전송하지 않는다
-- [x] `/fridges/{id}/posts`와 `/posts/nearby`는 `PostNearbyRead`라 `confidenceScore`가 없을 수 있다
+- [x] `/fridges/{id}/posts`와 `/posts/nearby`는 `PostNearbyRead`라 `confidenceScore`가 없다
 - [x] 백엔드 Phase 1.5 Post 구조 반영: `title/description/category` 의존 제거, 카드 요약은 `PostNearbyRead` 필드 중심, 상세/등록은 `detectedFruitKo/freshnessLabel/confidenceScore/status` 사용
 - [x] 나눔 신청 API 연동: `POST /posts/{id}/requests`, 201/403/409 처리, 신청 후 상세/홈 상태 갱신
 - [x] FCM payload는 문자열 + camelCase `postId`, `requestId`, `fruitName`, `fridgeName`, `type` 사용

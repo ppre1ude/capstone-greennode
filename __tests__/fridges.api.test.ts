@@ -24,16 +24,14 @@ describe('fridges API contract', () => {
           {
             id: 10,
             fridgeId: 7,
-            authorId: 1,
+            fridgeName: '전남대 공유 냉장고',
             detectedFruit: 'apple',
             detectedFruitKo: '사과',
             freshnessLabel: 'Fresh',
-            confidenceScore: 0.95,
             imageUrl: '/static/posts/10.jpg',
             expirationDate: '2026-05-08',
             status: 'available',
             createdAt: '2026-05-06T00:00:00Z',
-            updatedAt: '2026-05-06T00:00:00Z',
           },
         ],
       },
@@ -48,5 +46,6 @@ describe('fridges API contract', () => {
       },
     );
     expect(response.data?.[0].fridgeId).toBe(7);
+    expect(response.data?.[0].fridgeName).toBe('전남대 공유 냉장고');
   });
 });

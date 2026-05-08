@@ -3,7 +3,7 @@
  * @see docs/API_INTEGRATION_CONTRACT.md § 4.9~4.10
  */
 import apiClient from './client';
-import type {ApiResponse, Fridge, Post, PostStatus} from '@/types';
+import type {ApiResponse, Fridge, PostNearbyRead, PostStatus} from '@/types';
 
 const FRIDGES_PREFIX = '/api/v1/fridges';
 
@@ -35,7 +35,7 @@ export const getAvailableFridges = async (
 export const getFridgePosts = async (
   fridgeId: number,
   status: PostStatus = 'available',
-): Promise<ApiResponse<Post[]>> => {
+): Promise<ApiResponse<PostNearbyRead[]>> => {
   const response = await apiClient.get(`${FRIDGES_PREFIX}/${fridgeId}/posts`, {
     params: {status},
   });

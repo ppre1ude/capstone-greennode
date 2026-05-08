@@ -4,7 +4,7 @@ import ReactTestRenderer from 'react-test-renderer';
 import MapScreen from '@/screens/map/MapScreen';
 import {getFridgePosts, getNearbyFridges} from '@/api/fridges';
 import {useAuthStore} from '@/store/authStore';
-import type {ApiResponse, Post} from '@/types';
+import type {ApiResponse, PostNearbyRead} from '@/types';
 
 const mockRootNavigate = jest.fn();
 
@@ -74,19 +74,17 @@ const mockedGetFridgePosts = getFridgePosts as jest.MockedFunction<
   typeof getFridgePosts
 >;
 
-const post: Post = {
+const post: PostNearbyRead = {
   id: 10,
   fridgeId: 7,
-  authorId: 2,
+  fridgeName: '전남대 공유 냉장고',
   detectedFruit: 'apple',
   detectedFruitKo: '사과',
   freshnessLabel: 'Fresh',
-  confidenceScore: 0.95,
   imageUrl: '/static/posts/10.jpg',
   expirationDate: '2026-05-08',
   status: 'available',
   createdAt: '2026-05-06T00:00:00Z',
-  updatedAt: '2026-05-06T00:00:00Z',
 };
 
 const findTouchableByText = (
@@ -181,7 +179,7 @@ describe('MapScreen fridge posts', () => {
   });
 
   it('separates loading and empty states for selected fridge posts', async () => {
-    let resolvePosts!: (value: ApiResponse<Post[]>) => void;
+    let resolvePosts!: (value: ApiResponse<PostNearbyRead[]>) => void;
     mockedGetFridgePosts.mockReturnValue(
       new Promise(resolve => {
         resolvePosts = resolve;

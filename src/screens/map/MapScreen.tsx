@@ -23,7 +23,7 @@ import MapView, {Marker, Circle, PROVIDER_DEFAULT} from 'react-native-maps';
 import {getFridgePosts, getNearbyFridges} from '@/api/fridges';
 import {getImageUrl} from '@/api/posts';
 import {useAuthStore} from '@/store/authStore';
-import type {Fridge, Post} from '@/types';
+import type {Fridge, PostNearbyRead} from '@/types';
 import {filterFridges} from '@/utils/fridgeSearch';
 import {
   getRegisteredLocation,
@@ -31,11 +31,7 @@ import {
   LOCATION_REQUIRED_MESSAGE,
   LOCATION_REQUIRED_TITLE,
 } from '@/utils/locationGuard';
-import {
-  getConfidencePercent,
-  getPostDisplayName,
-  getQualityMeta,
-} from '@/utils/postPolicy';
+import {getPostDisplayName, getQualityMeta} from '@/utils/postPolicy';
 import {colors} from '@/theme';
 import {styles} from './MapScreen.styles';
 
@@ -49,7 +45,7 @@ const MapScreen = () => {
   const [fridgeError, setFridgeError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFridgeId, setSelectedFridgeId] = useState<number | null>(null);
-  const [fridgePosts, setFridgePosts] = useState<Post[]>([]);
+  const [fridgePosts, setFridgePosts] = useState<PostNearbyRead[]>([]);
   const [fridgePostsState, setFridgePostsState] = useState<
     'idle' | 'loading' | 'ready' | 'empty' | 'error'
   >('idle');
@@ -236,10 +232,9 @@ const MapScreen = () => {
     );
   };
 
-  const renderFridgePostItem = ({item}: {item: Post}) => {
+  const renderFridgePostItem = ({item}: {item: PostNearbyRead}) => {
     const displayName = getPostDisplayName(item);
     const quality = getQualityMeta(item.freshnessLabel);
-    const confidencePercent = getConfidencePercent(item.confidenceScore);
 
     return (
       <TouchableOpacity
@@ -258,9 +253,7 @@ const MapScreen = () => {
             {displayName}
           </Text>
           <Text style={styles.fridgePostMeta} numberOfLines={1}>
-            {confidencePercent != null
-              ? `${quality.label} · AI 신뢰도 ${confidencePercent}%`
-              : quality.label}
+            {quality.label}
           </Text>
         </View>
         <Text style={styles.fridgePostChevron}>›</Text>

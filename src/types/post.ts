@@ -24,6 +24,25 @@ export interface Post {
   updatedAt: string;
 }
 
+export interface PostNearbyRead {
+  id: number;
+  detectedFruit?: string | null;
+  detectedFruitKo?: string | null;
+  freshnessLabel?: FreshnessLabel | string | null;
+  imageUrl: string;
+  expirationDate: string;
+  status: PostStatus;
+  fridgeId: number;
+  fridgeName: string;
+  createdAt: string;
+  confidenceScore?: never;
+  authorId?: never;
+  userId?: never;
+  latitude?: never;
+  longitude?: never;
+  updatedAt?: never;
+}
+
 export interface AiAnalysis {
   isFresh: boolean;
   confidenceScore?: number | null;

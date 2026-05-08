@@ -5,6 +5,10 @@ type ErrorWithResponse = {
   };
 };
 
+type ApiErrorMessageOptions = {
+  preferDetail?: boolean;
+};
+
 const GENERIC_REQUEST_FAILURE = /^Request failed with status code \d+$/;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -58,6 +62,14 @@ const extractMessageFromData = (data: unknown): string | null => {
   return extractDetailMessage(data.detail);
 };
 
+const extractDetailFromData = (data: unknown): string | null => {
+  if (!isRecord(data)) {
+    return null;
+  }
+
+  return extractDetailMessage(data.detail);
+};
+
 const normalizeDomainErrorMessage = (message: string): string => {
   if (/부패|상함|썩음|썩은|게시할 수 없는 식재료/.test(message)) {
     return '나눔 기준에 맞지 않아요. 다시 촬영해주세요.';
@@ -77,13 +89,17 @@ const normalizeDomainErrorMessage = (message: string): string => {
 export const getApiErrorMessage = (
   error: unknown,
   fallback: string = '서버 오류가 발생했습니다.',
+  options: ApiErrorMessageOptions = {},
 ): string => {
   if (typeof error === 'string' && error.trim()) {
     return normalizeDomainErrorMessage(error);
   }
 
   const errorLike = isRecord(error) ? (error as ErrorWithResponse) : {};
-  const responseMessage = extractMessageFromData(errorLike.response?.data);
+  const responseMessage = options.preferDetail
+    ? extractDetailFromData(errorLike.response?.data) ??
+      extractMessageFromData(errorLike.response?.data)
+    : extractMessageFromData(errorLike.response?.data);
 
   if (responseMessage) {
     return normalizeDomainErrorMessage(responseMessage);

@@ -27,7 +27,7 @@ import {
   useRoute,
 } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
-import type { Post } from '@/types';
+import type { PostNearbyRead } from '@/types';
 import { getNearbyPosts } from '@/api/posts';
 import { useAuthStore } from '@/store/authStore';
 import { useFeedRefreshStore } from '@/store/feedRefreshStore';
@@ -43,7 +43,7 @@ import {
 import { colors } from '@/theme';
 
 const HomeScreen = () => {
-  const [posts, setPosts] = useState<Post[]>([]);
+  const [posts, setPosts] = useState<PostNearbyRead[]>([]);
   const [feedState, setFeedState] = useState<
     'loading' | 'ready' | 'empty' | 'error'
   >('loading');
