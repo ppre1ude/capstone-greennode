@@ -31,7 +31,7 @@
       "localPath": "docs/qa-fixtures/screenshot-or-ui-rejected-20260505.jpg",
       "expectedOutcome": "rejected_or_review",
       "expectedRejectionReasons": ["screenshot", "ui_screenshot"],
-      "notes": "App screen, map, search result, or icon capture. A Fresh result is a false-positive."
+      "notes": "App screen, map, search result, or icon capture. MVP backend may still return Fresh + imageToken; keep this as a Post-MVP rejection target and run report-only during MVP."
     },
     {
       "id": "low-quality",

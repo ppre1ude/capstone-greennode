@@ -1,6 +1,6 @@
 # AI QA Fixtures and Camera Checklist
 
-> 기준일: 2026-05-06
+> 기준일: 2026-05-08
 > 목적: AI 분석 실패 UX, false-positive 정책, 실제 기기 카메라 검증을 반복 가능하게 만든다.
 
 ## Fixture Set
@@ -10,7 +10,7 @@
 | `fresh-single`     | 신선 성공        | 외관이 잘 보이는 단일 과일/채소 사진          | `Fresh` 또는 `Mid`, `canShare=true`, 나눔 식재료 등록 진입 가능 | 분석 결과와 작성 화면에 식재료명/상태/신뢰도가 표시된다.                       |
 | `stale-or-rotten`  | 나눔 기준 미충족 | 무름, 곰팡이, 변색이 보이는 과일/채소 사진    | `Stale` 또는 generate 400                                       | 앱은 등록 화면으로 보내지 않고 `나눔 기준에 맞지 않아요` 계열 문구를 보여준다. |
 | `not-food`         | 비식재료         | 책상, 방, 전자기기 등 식재료가 아닌 사진      | generate 400 또는 `확인 필요`                                   | 식재료 나눔으로 바로 등록되지 않는다.                                          |
-| `screenshot-or-ui` | 스크린샷/아이콘  | 앱 화면 캡처, 런처 아이콘, 지도 캡처          | generate 400 또는 `확인 필요`                                   | 실제 식재료 사진이 아닌데 `Fresh`로 통과하면 false-positive 버그로 기록한다.   |
+| `screenshot-or-ui` | 스크린샷/아이콘  | 앱 화면 캡처, 런처 아이콘, 지도 캡처          | MVP: `Fresh + imageToken` 통과 가능. Post-MVP: generate 400 또는 `확인 필요` | MVP에서는 차단 불가로 허용하되 낮은 confidence면 `확인 필요`로 표시한다.       |
 | `low-quality`      | 흐림/어두움/가림 | 흔들림, 저조도, 부분 가림 사진                | 낮은 confidence 또는 실패                                       | `확인 필요` 또는 재촬영 안내가 표시된다.                                       |
 | `large-image`      | 대용량 이미지    | 8MB 이상 또는 고해상도 원본                   | 8MB 초과는 업로드 전 차단                                       | 앱이 멈추지 않고 명확한 오류 문구를 제공한다.                                  |
 | `multi-object`     | 여러 식재료      | 한 장에 서로 다른 식재료가 2개 이상 있는 사진 | 현재는 대표 객체 1개 처리                                       | multi-object는 `detections[]` 계약 전까지 정책 검증용으로만 쓴다.              |
@@ -41,9 +41,9 @@ FOODLINK_API_BASE_URL=http://localhost:8080 FOODLINK_ACCESS_TOKEN=<token> npm ru
 ```
 
 - report-only mode는 같은 결과를 출력하지만 fixture 실패가 있어도 exit code `0`으로 종료한다.
-- 백엔드/AI 수정 후 acceptance gate로 검증할 때는 strict mode를 사용한다.
+- 백엔드/AI 수정 후 acceptance gate로 검증할 때는 strict mode를 사용한다. 단, `screenshot-or-ui`는 2026-05-08 백엔드 답변 기준 MVP 허용 케이스이므로 Post-MVP rejection enum 도입 전까지 report-only 관찰 대상으로 둔다.
 - fixture 파일이 없으면 해당 항목은 `skipped`로 기록된다.
-- 실패/검토 케이스는 generate 400, 나눔 기준 미충족 category, 낮은 confidence, 또는 검토 사유 enum 중 하나를 기대한다.
+- 실패/검토 케이스는 generate 400, 나눔 기준 미충족 category, 낮은 confidence, 또는 검토 사유 enum 중 하나를 기대한다. MVP에서 screenshot/UI는 예외적으로 통과할 수 있다.
 - 백엔드 Phase 1.5 기준 신선도 label은 `Fresh/Mid/Stale`이다. 기존 `Normal`은 `Mid` 그룹으로 번역하고, `Bad/Rotten`은 현재 서버 label이 아닌 방어 호환 label로만 본다.
 - 백엔드 AI는 `unknown`도 반환할 수 있다. `unknown`은 바로 등록 가능한 성공 상태로 보지 않고 `확인 필요` 또는 실패 UX로 기록한다.
 - confidence 테스트는 `0.4`, `0.7`, `1.0`을 포함한다. 제품 기준은 백엔드 활용 가이드를 따라 `0.9` 미만을 `확인 필요` UX로 본다. 따라서 `0.4`와 `0.7`은 확인 필요, `1.0`은 바로 나눔 가능 표시가 기대값이다. 단, 낮은 confidence만으로 등록을 차단하지 않는다.
@@ -51,20 +51,20 @@ FOODLINK_API_BASE_URL=http://localhost:8080 FOODLINK_ACCESS_TOKEN=<token> npm ru
 
 ## False-positive Policy
 
-현재 앱은 이미지 내용을 직접 판별하지 않고 서버의 AI 결과를 신뢰한다. 따라서 비식재료/스크린샷을 막는 1차 책임은 서버/AI 파이프라인에 둔다.
+현재 앱은 이미지 내용을 직접 판별하지 않고 서버의 AI 결과를 신뢰한다. 따라서 비식재료/스크린샷을 막는 1차 책임은 서버/AI 파이프라인에 둔다. 다만 2026-05-08 백엔드 답변 기준 MVP 서버/AI에는 스크린샷/UI 캡처 판별 모델이 없으므로, screenshot/UI false-positive는 MVP에서 허용하고 Post-MVP rejection enum 후보로 관리한다.
 
 앱 책임:
 
-- generate 실패의 `message` 또는 `detail`을 사용자에게 그대로 이해 가능한 문구로 표시한다.
+- generate 실패의 FastAPI `detail`을 사용자에게 그대로 이해 가능한 문구로 표시한다. `message`, `analysisMessage`는 400 응답의 안정 계약 필드가 아니다.
 - `canShare=false`, generate 400, `not_food/non_food/low_quality/screenshot/ui_screenshot` category 또는 `rejectionReason`은 나눔 식재료 작성/최종 등록으로 진행하지 않는다.
-- 낮은 confidence는 즉시 등록 차단이 아니라 `확인 필요`로 보여주고 재촬영/갤러리/수동 확인을 유도한다. 현재 제품 기준은 `confidenceScore < 0.9`다.
+- 낮은 confidence는 즉시 등록 차단이 아니라 `확인 필요`로 보여주고 재촬영/갤러리/수동 확인을 유도한다. 현재 제품 기준은 `confidenceScore < 0.9`다. 서버가 `Fresh + imageToken`을 반환하면 낮은 confidence만으로 최종 등록을 막지 않는다.
 
 서버/AI 책임:
 
-- 비식재료, 스크린샷, 앱 아이콘, 실내 배경은 `Fresh` 식재료로 반환하지 않는다.
-- 식재료 여부가 불확실하면 `confidence`를 낮게 반환하거나 generate 400으로 거부한다.
+- 제품 목표상 비식재료, 스크린샷, 앱 아이콘, 실내 배경은 `Fresh` 식재료로 반환하지 않아야 한다. MVP에서는 스크린샷/UI 판별 모델이 없어 이 기준을 강제하지 못한다.
+- `Stale` 또는 `isFresh=false`이면 서버는 generate 400을 반환하고 `imageToken`을 발급하지 않는다.
 - 실패/검토 사유 enum은 Post-MVP 백엔드 항목이다. 도입 시 `not_food`, `non_food`, `low_quality`, `screenshot`, `ui_screenshot`, `multi_object_review`, `review_required`를 우선 사용한다.
-- 200 응답으로 검토 상태를 돌려보낼 때는 `aiAnalysis.rejectionReason` 또는 `aiAnalysis.reviewReason`을 포함한다. 서버가 400을 반환하는 경우에는 `message` 또는 FastAPI `detail`에 같은 사유를 사람이 읽을 수 있는 문구로 담는다.
+- 200 응답으로 검토 상태를 돌려보낼 때는 `aiAnalysis.rejectionReason` 또는 `aiAnalysis.reviewReason`을 포함한다. 서버가 400을 반환하는 경우에는 FastAPI `detail`에 같은 사유를 사람이 읽을 수 있는 문구로 담는다.
 
 ## Actual Android Device Camera Checklist
 
@@ -107,7 +107,7 @@ FOODLINK_API_BASE_URL=http://localhost:8080 FOODLINK_ACCESS_TOKEN=<token> npm ru
 - 2026-05-07 실기기 없이 `localhost:8080` VM API에 직접 fixture를 업로드했다.
   - `temp/qa-vm-banana.jpg`: 200, `바나나`, `Fresh`, confidence `1.0`, `imageToken` 발급.
   - `temp/real-device-camera-screen.png`: 200, `바나나`, `Fresh`, confidence `0.5377`, `imageToken` 발급.
-  - 충돌 문서/기준: 이 문서와 `docs/qa-fixtures/manifest.json`은 `screenshot-or-ui`를 400 또는 `확인 필요`로 기대한다. 실제 VM API는 화면 캡처를 `Fresh`로 통과시켰으므로, 이 케이스는 백엔드/AI 파이프라인 false-positive로 유지한다.
+  - 충돌 문서/기준: 당시 이 문서와 `docs/qa-fixtures/manifest.json`은 `screenshot-or-ui`를 400 또는 `확인 필요`로 기대했다. 2026-05-08 백엔드 답변 기준 MVP에서는 화면 캡처를 `Fresh`로 통과시키는 것이 허용되며, manifest 기대값은 Post-MVP rejection 목표로만 해석한다.
 - 2026-05-07 무기기 fallback 자동 테스트를 추가했다. 카메라 장치 없음 -> 갤러리 선택 -> 분석 결과 이동, generate 400 -> 재촬영/갤러리 대안, 지원하지 않는 이미지 형식의 generate 전 차단, `Stale`/`imageToken` 누락 등록 차단, 낮은 confidence 확인 필요 표시를 테스트로 고정했다.
 - 2026-05-07 fixture 이미지 기반 VM/API smoke QA를 실행했다.
   - `fresh-single`: 통과. `바나나`, `Fresh`, confidence `1`, `imageToken` 발급.
@@ -121,4 +121,6 @@ FOODLINK_API_BASE_URL=http://localhost:8080 FOODLINK_ACCESS_TOKEN=<token> npm ru
 - 2026-05-07 백엔드 전달용 압축 문서는 `docs/BACKEND_AI_FIXTURE_QA_NOTICE_2026-05-07.md`에 정리했다. 백엔드/AI가 수정해야 하는 최소 신호는 generate 400, `isFresh=false`, rejection/review reason, 또는 낮은 confidence 중 하나다.
 - 2026-05-07 낮은 confidence 프론트 문구를 강화했다. 분석 결과 화면과 등록 확인 화면은 `AI가 나눔 가능으로 분석했지만 실제 상태를 직접 확인한 뒤 등록해주세요.`를 표시한다. 낮은 confidence는 여전히 등록 차단 기준이 아니다.
 - 2026-05-07 `large-image` local-only QA를 진행했다. `temp/large-image-local-only-20260507.jpg`는 8,388,609 bytes이며, `validateImageForUpload()` 테스트가 8MB 초과 이미지를 업로드 전 차단하는지 확인한다. 대용량 원본은 git에 넣지 않는다.
+- 2026-05-08 백엔드 답변으로 screenshot/UI false-positive는 MVP 허용으로 재분류했다. 현재 AI 파이프라인은 과일 종류 판별과 신선도 분류만 수행하며 스크린샷/UI 여부 판별 로직은 없다. 낮은 confidence는 `확인 필요` 표시만 하고 등록은 허용한다.
+- 2026-05-08 백엔드 답변으로 `not_food`, `low_quality`, `screenshot`, `ui_screenshot`, `review_required`, `multi_object_review`는 Post-MVP rejection reason enum 후보로 기록한다.
 - 아직 남은 실제 기기 QA: `Stale`, `not-food`, `low-quality`, 실제 FCM foreground/background/terminated 수신.

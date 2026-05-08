@@ -98,8 +98,8 @@
 
 ### 후속 결정 필요
 
-- `not_food`, `low_quality`, `review_required` 등 rejection reason enum은 Post-MVP에서 백엔드와 확정한다.
-- 백엔드 Phase 1.5의 Post 구조 변경(`title/description/category` 제거, `detectedFruitKo/freshnessLabel/confidenceScore` 추가)은 프론트 코드 반영과 VM/API 런타임 QA를 진행했다. 단, 실제 VM `POST /posts`/`GET /posts/{id}` 응답에서 AI 메타데이터가 `null`로 저장되는 계약 불일치를 발견했다.
+- `not_food`, `low_quality`, `screenshot`, `ui_screenshot`, `review_required`, `multi_object_review` 등 rejection reason enum은 Post-MVP에서 백엔드와 확정한다.
+- 백엔드 Phase 1.5의 Post 구조 변경(`title/description/category` 제거, `detectedFruitKo/freshnessLabel/confidenceScore` 추가)은 프론트 코드 반영과 VM/API 런타임 QA를 진행했다. 2026-05-06에는 실제 VM `POST /posts`/`GET /posts/{id}` 응답에서 AI 메타데이터가 `null`로 저장되는 계약 불일치를 발견했고, 2026-05-08 백엔드가 버그로 인정해 sidecar 저장/복원 방식으로 수정 및 VM 재배포했다. 프론트 재검증은 아직 남아 있다.
 - 프론트는 백엔드가 구현한 `POST /posts/{id}/requests`와 `GET /fridges/{id}/posts?status=available`를 연동했다. 둘 다 2026-05-06 VM/API 런타임 QA에서 상태 전환과 available 제외 동작을 확인했다.
 - `requested` 이후 `reserved`, `completed`, `cancelled`, `expired` 흐름은 후속 버전에서 설계한다.
 
@@ -112,13 +112,48 @@
 | 나눔 신청 API         | `POST /posts/{id}/requests` 구현, 201/403/409 VM 검증 완료                                          | `requestShare(postId)`, 상세 CTA, 201/403/409 UI, 홈 refresh 신호 구현 완료                    | 2026-05-06 VM API 201/403/409 통과                     |
 | 신청 동시 경합        | `SELECT ... FOR UPDATE` + 단일 트랜잭션으로 첫 신청만 성공. 이후 요청은 409                         | 409를 정상 race 결과로 처리하고 CTA를 `신청 접수` 상태로 비활성화                              | 중복 신청 409 확인. 병렬 경합 부하 테스트는 후속       |
 | 나눔 상태             | `available`, `requested`, `completed` 존재. `/posts/nearby`는 available만 반환                      | `Post.status` 타입과 상세/홈 상태 표시 반영. 신청 성공/409 시 상세 상태와 홈 refresh 신호 반영 | requested 전환 후 `/posts/nearby` 제외 확인            |
-| Post 구조             | `title/description/category` 제거, `detectedFruitKo/freshnessLabel/confidenceScore` 추가            | `src/types/post.ts`, `createPost()` payload, 홈 카드, 상세, 등록 확인 화면 반영 완료           | VM API에서 AI 메타데이터 저장 불일치 발견. P0 후속     |
+| Post 구조             | `title/description/category` 제거, `detectedFruitKo/freshnessLabel/confidenceScore` 추가. 2026-05-08 `imageToken` sidecar AI 메타데이터 저장/복원 수정 VM 배포 완료 | `src/types/post.ts`, `createPost()` payload, 홈 카드, 상세, 등록 확인 화면 반영 완료           | 프론트 `generate -> create -> detail/nearby/fridge` 재검증 |
 | AI label              | `Fresh/Mid/Stale/unknown`, `Mid`는 기존 `Normal` 그룹                                               | `postPolicy`가 `Fresh/Mid`를 나눔 가능, `Stale/unknown`을 등록 불가로 매핑                     | fixture 기반 수동 QA                                   |
 | confidenceScore       | Stage 2 신선도 분류 softmax max 확률로 확정. 백엔드 표시 가이드는 0.9 이상 높음, 0.9 미만 확인 필요 | 앱 기준을 `confidenceScore < 0.9`로 갱신. 단독 등록 차단은 하지 않음                           | 0.4/0.7/1.0 fixture로 확인 필요 표시 QA                |
-| rejection reason enum | `not_food`, `low_quality` 등은 Post-MVP                                                             | 앱은 enum을 받으면 방어적으로 처리 가능                                                        | false-positive fixture는 후속 계약 검증으로 유지       |
+| rejection reason enum | `not_food`, `low_quality`, `screenshot`, `ui_screenshot`, `review_required`, `multi_object_review` 등은 Post-MVP | 앱은 enum을 받으면 방어적으로 처리 가능. screenshot/UI는 MVP에서 서버 차단 불가라 통과 허용     | false-positive fixture는 report-only 관찰 및 후속 계약 검증 |
 | Stale 최종 등록 방어  | `Stale`이면 generate 400, `imageToken` 미발급. create는 무효/만료 토큰 400                          | 프론트도 `canShare=false` UX 가드를 갖고 있음                                                  | 서버가 최종 방어선임을 전제로 stale/token 실패 UX 검증 |
 | 알림                  | `share_created`, `share_requested` payload 구현                                                     | FCM 수신 handler와 로컬 알림함 구현. 읽음 상태 API 없음                                        | 실제 기기 foreground/background/terminated 수신 QA     |
 | 냉장고별 나눔 식재료  | `GET /fridges/{id}/posts?status=available` 구현/검증                                                | 지도에서 선택 냉장고 내부 available 목록 노출 구현                                             | VM API available 목록/제외 확인. 실제 앱 UI QA 후속    |
+
+## 2026-05-08 백엔드 공식 답변 반영
+
+- 환경/근거: 백엔드 소스 전수 분석, P0 수정, VM SCP 전송, `docker compose up -d --build api`, health OK 완료 답변.
+- P0 Post AI 메타데이터 null:
+  - 분류: 백엔드 버그, 수정 완료 및 VM 배포 완료.
+  - 원인: `POST /posts/generate`의 AI 분석 결과가 HTTP 응답으로만 내려가고 `imageToken`과 함께 서버에 보관되지 않았다.
+  - 수정 후 계약: generate는 이미지와 `{imageToken}.json` AI 메타데이터 sidecar를 임시 저장하고, create는 `move_temp_to_final()`에서 이미지 이동과 JSON 복원을 수행해 Post row에 저장한다.
+  - 프론트 payload: 기존대로 `imageToken + fridgeId + expirationDate`만 전송한다. AI 메타데이터를 재전송하지 않는다. 서버 보관 값이 프론트 전송 값보다 우선한다.
+  - 기존 null 데이터: 마이그레이션하지 않으며 프론트 fallback(`나눔 식재료 / 분석 중`)을 MVP에서 허용한다.
+- AI rejection:
+  - `Stale` 또는 `isFresh=false`는 generate 400이며 `imageToken`은 발급되지 않는다.
+  - 400 body에서 안정적으로 읽을 필드는 FastAPI `detail`이다. `message`, `analysisMessage`는 400 계약 필드가 아니다.
+- confidence:
+  - `confidenceScore`는 Stage 2 신선도 모델(Fresh/Mid/Stale)의 softmax max 확률이다.
+  - 서버는 confidence만으로 등록을 차단하지 않는다. 프론트의 `< 0.9 => 확인 필요`는 제품 표시 정책이다.
+- screenshot/UI false-positive:
+  - MVP AI 파이프라인은 screenshot/UI 판별 모델이 없어 차단할 수 없다.
+  - `Fresh + imageToken`이 반환되면 등록 허용이 현재 계약이다. 낮은 confidence는 `확인 필요` 표시만 한다.
+  - `not_food`, `low_quality`, `screenshot`, `ui_screenshot`, `review_required`, `multi_object_review`는 Post-MVP rejection reason 후보로 둔다.
+- 냉장고별 목록:
+  - `GET /fridges/{id}/posts?status=available`은 `/posts/nearby`와 같은 `PostNearbyRead` 카드 요약 스키마다.
+  - `PostNearbyRead`는 `confidenceScore`, `authorId`, `latitude/longitude`, `updatedAt`을 포함하지 않고 `fridgeName`을 포함한다.
+  - `status=available`은 `requested`, `completed`를 제외한다.
+- FCM:
+  - `share_created`는 냉장고 반경 2km 안에 FCM 토큰이 등록된 다른 사용자가 있을 때 발송된다. 작성자 본인은 제외한다.
+  - `share_requested`는 공급자 `fcmToken`이 등록되어 있을 때 발송된다.
+  - payload는 문자열 + camelCase(`type`, `postId`, `requestId`, `fruitName`, `fridgeName`)로 확정한다.
+  - 별도 테스트 발송 API는 없고, 테스트 계정 2개로 실제 흐름 QA를 권장한다.
+- requested:
+  - `requested`는 신청 접수 상태이며 예약 확정/수령 완료가 아니다.
+  - MVP에서 `reserved`, `cancelled`, `expired`는 코드/계약에 없고, `completed`는 DB에 있지만 전환 API가 없다.
+  - 신청 후 `/posts/nearby`와 `/fridges/{id}/posts?status=available`에서 제외되는 것이 최종 계약이다.
+
+프론트 후속 재검증 범위: `generate -> create -> GET /posts/{id} -> /posts/nearby -> /fridges/{id}/posts?status=available -> request -> requested 제외`, generate 400/detail, 무효 `imageToken`, screenshot fixture MVP 허용, 실제 FCM 수신.
 
 ## 2026-05-06 VM/API 런타임 QA 결과
 
@@ -203,9 +238,9 @@
   - `temp/qa-vm-banana.jpg`: 200, `detectedFruitKo=바나나`, `aiAnalysis.category=Fresh`, `aiAnalysis.confidenceScore=1.0`, `imageToken` 발급. Fresh happy path는 API 기준 통과.
   - `temp/real-device-camera-screen.png`: 200, `detectedFruitKo=바나나`, `aiAnalysis.category=Fresh`, `aiAnalysis.confidenceScore=0.5377`, `imageToken` 발급.
 - 충돌:
-  - 충돌 문서/기준: `AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md`와 `docs/qa-fixtures/manifest.json`은 `screenshot-or-ui`를 generate 400 또는 `확인 필요`로 기대한다.
+  - 충돌 문서/기준: 당시 `AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md`와 `docs/qa-fixtures/manifest.json`은 `screenshot-or-ui`를 generate 400 또는 `확인 필요`로 기대했다. 2026-05-08 이후 이 기대값은 MVP acceptance가 아니라 Post-MVP rejection 목표로 해석한다.
   - 실제 기준: 2026-05-07 live VM API `/posts/generate`.
-  - 판단: 앱 화면 캡처가 `Fresh`로 통과하고 `imageToken`까지 발급되므로, 프론트 fallback만으로는 이 케이스를 차단할 수 없다. `screenshot-or-ui` false-positive는 백엔드/AI 파이프라인 품질 이슈로 유지한다.
+  - 판단: 앱 화면 캡처가 `Fresh`로 통과하고 `imageToken`까지 발급되므로, 프론트 fallback만으로는 이 케이스를 차단할 수 없다. 당시에는 백엔드/AI 파이프라인 품질 이슈로 기록했으나, 2026-05-08 백엔드 답변으로 MVP 차단 불가/허용 케이스로 재분류했다.
 - fallback 자동 테스트 보강:
   - `CameraScanScreen`: 카메라 장치가 없는 환경에서 `갤러리에서 선택하기 -> generate -> AnalysisResult`가 이어지는지 고정했다.
   - `CameraScanScreen`: generate 400 실패 시 등록 화면으로 이동하지 않고 `다시 촬영`/`갤러리 선택` 대안을 제공하는지 고정했다.
@@ -219,7 +254,7 @@
   - `node .\node_modules\eslint\bin\eslint.js . --quiet`: 통과.
 - 남은 QA:
   - 커밋 가능한 실제 fixture 이미지가 아직 없어 `Stale`, `not-food`, `low-quality`, `multi-object`의 AI 판정 품질은 닫지 못했다.
-  - `screenshot-or-ui`는 실제 API false-positive로 재현됐으므로 백엔드/AI 수정 후 재검증한다.
+  - `screenshot-or-ui`는 실제 API false-positive로 재현됐지만, 2026-05-08 답변 기준 MVP에서는 차단하지 않는다. Post-MVP rejection enum 도입 전까지 report-only로 관찰한다.
   - 실제 카메라 센서 촬영, 실제 FCM 수신은 실기기 QA로 남긴다.
 
 ## 2026-05-07 Android emulator 지도 냉장고 내부 목록 UI QA 결과
@@ -234,10 +269,10 @@
   - 내부 목록 항목을 탭하면 `PostDetail`로 이동하고 상세 화면에서 `나눔 가능`, `남은 기한`, `상태 안내`, `AI 분석 정보`, `나눔 신청하기` CTA가 표시됐다.
   - 앱 프로세스는 QA 종료 시점에도 살아 있었다. crash buffer의 Fatal은 앱이 아니라 UIAutomator dump timeout 프로세스였다.
 - 충돌:
-  - 충돌 문서/공지: 백엔드 Phase 1.5 요약과 프론트 표시 정책은 `GET /fridges/{id}/posts?status=available`의 PostRead가 `detectedFruitKo/freshnessLabel/confidenceScore`를 제공한다고 설명한다.
+  - 충돌 문서/공지: 당시 백엔드 Phase 1.5 요약과 프론트 표시 정책은 `GET /fridges/{id}/posts?status=available`의 카드 응답 필드 범위를 명확히 분리하지 않았다. 2026-05-08 백엔드 답변 기준 이 API는 `PostRead`가 아니라 `PostNearbyRead`이다.
   - 실제 기준: 2026-05-07 live VM API와 Android emulator UI.
   - 판단: `GET /fridges/4/posts?status=available`은 1건을 반환했지만 `detectedFruit`, `detectedFruitKo`, `freshnessLabel`이 `null`이었다. 지도 내부 목록은 fallback으로 `나눔 식재료 / 분석 중`을 표시했다.
-  - 영향: 냉장고 내부 목록의 선택/상세 이동 UI는 통과했지만, 식재료명/상태/신뢰도 표시 품질은 P0 `Post AI 메타데이터 저장 불일치`가 해결되어야 제품 기대 수준이 된다.
+  - 영향: 냉장고 내부 목록의 선택/상세 이동 UI는 통과했지만, 식재료명/상태 표시 품질은 P0 `Post AI 메타데이터 저장 불일치`가 해결되어야 제품 기대 수준이 된다. `confidenceScore`는 `PostNearbyRead`에 포함되지 않는다.
 - 증거:
   - `temp/map-ui-map-loaded.png`
   - `temp/map-ui-fridge-posts.png`
@@ -483,7 +518,7 @@ MVP가 성공 케이스만 동작하는 상태인지, 실패 상황에서도 앱
 | 항목                            | 판정                             | 현재 동작/근거                                                                                                                                                                                        | 후속 작업                                                                                         |
 | ------------------------------- | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
 | 나눔 기준 미충족 등록 차단      | 구현됨                           | `AnalysisResultScreen`은 `canShare=false`일 때 CTA를 disabled 처리하고, `PostCreateScreen`/`FridgeSelectScreen`에도 최종 품질 가드가 있다.                                                            | `Stale` fixture로 회귀 검증                                                                       |
-| 나눔 기준 미충족 실패 이유 표시 | 구현됨, fixture 검증 필요        | `generatePost` 실패나 서버 에러는 `message`뿐 아니라 `detail`도 Alert에 표시한다. 실제 `Stale` fixture는 아직 확보하지 못했다.                                                                        | `Stale` fixture 또는 테스트 이미지를 확보하고, 나눔 기준 미충족 사유 문구를 실제 앱에서 검증한다. |
+| 나눔 기준 미충족 실패 이유 표시 | 구현됨, fixture 검증 필요        | `generatePost` 실패나 서버 에러는 FastAPI `detail`을 Alert에 표시한다. 2026-05-08 백엔드 답변 기준 generate 400의 안정 필드는 `detail`뿐이다. 실제 `Stale` fixture는 아직 확보하지 못했다.             | `Stale` fixture 또는 테스트 이미지를 확보하고, 나눔 기준 미충족 사유 문구를 실제 앱에서 검증한다. |
 | 실패 후 대안 흐름               | 부분 구현                        | 분석 결과 화면에는 재촬영과 작성 화면 진입이 있다. generate 실패 Alert는 `다시 촬영`/`갤러리 선택` 대안을 제공한다. 수동 입력 CTA는 아직 없다.                                                        | 실패 Alert에 수동 입력 선택지를 추가할지 결정한다.                                                |
 | API 서버 연결 실패              | 부분 구현                        | 홈/지도/냉장고 목록은 error/empty 상태와 retry UI를 분리했다. 위치 등록, 나눔 식재료 상세, 나눔 식재료 생성은 여전히 화면별 Alert 중심이다.                                                           | API 오류 문구 추출과 retry 패턴을 공통화한다.                                                     |
 | AI 서버 연결 실패               | 추가 검증 필요                   | `postMultipart`는 네트워크 오류와 30초 타임아웃을 reject하고 `CameraScanScreen`이 Alert를 띄운다. mock 제거 후 실제 성공 경로는 검증했지만, AI 서버 중단/타임아웃 fault injection은 아직 하지 않았다. | AI 서버 중단/타임아웃 케이스를 실제 환경에서 재검증한다.                                          |
@@ -919,7 +954,7 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
 
 - 분류: 서버 계약 변경 대응
 - 우선순위: P0
-- 상태: 프론트 구현 완료, VM/API와 실제 Android 기기 QA에서 서버 메타데이터 저장 불일치 발견
+- 상태: 프론트 구현 완료. 2026-05-06 VM/API와 실제 Android 기기 QA에서 서버 메타데이터 저장 불일치 발견, 2026-05-08 백엔드 수정/VM 재배포 완료. 프론트 재검증 필요
 - 배경: 백엔드가 Post 컬럼에서 `title`, `description`, `category`를 제거하고 `detectedFruitKo`, `freshnessLabel`, `confidenceScore`를 추가했다. 프론트 타입과 화면은 이 작업 전까지 구형 작성/표시 필드에 의존했다.
 - 현재 동작: `src/types/post.ts`의 `Post`, `GenerateResult`, `PostCreateData`가 백엔드 Phase 1.5 구조를 반영한다. `createPost()`는 `fridgeId`, `expirationDate`, `imageToken`만 전송하고, 홈 카드/상세/등록 화면은 `detectedFruitKo`, `freshnessLabel`, `confidenceScore`, `status`를 표시한다.
 - 기대 동작: 프론트는 백엔드 Phase 1.5 응답 구조를 기준으로 나눔 식재료명, 신선도 등급, confidence, 이미지, 냉장고, 상태를 표시한다. 사용자-facing 문구는 `나눔 식재료` 기준을 유지한다.
@@ -930,24 +965,24 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
   - [x] `Fresh/Mid/Stale/unknown` 매핑과 `Mid = Normal 그룹` 정책이 테스트로 고정된다.
 - 검증 방법: typecheck 통과, `postPolicy`/`posts.api` unit test 통과, 실제 `GET /posts/{id}`/`POST /posts` VM API 검증, 앱 카드/상세 QA
 - 관련 파일/화면/API: `src/types/post.ts`, `src/api/posts.ts`, `HomeScreen`, `PostDetailScreen`, `PostCreateScreen`, `POST /api/v1/posts`, `GET /api/v1/posts/{id}`
-- 비고: 2026-05-06 VM API에서 `POST /posts/generate`는 AI 분석 결과를 반환했지만, `POST /posts`로 저장한 id `2`의 상세 응답은 `detectedFruit/detectedFruitKo/freshnessLabel/confidenceScore=null`이었다. 같은 현상이 실제 Android 기기 등록 후 홈/상세에서도 `나눔 식재료 / 분석 중` fallback으로 재현됐다. 프론트 fallback은 유지하되, 백엔드 저장 계약 확인이 필요하다.
+- 비고: 2026-05-06 VM API에서 `POST /posts/generate`는 AI 분석 결과를 반환했지만, `POST /posts`로 저장한 id `2`의 상세 응답은 `detectedFruit/detectedFruitKo/freshnessLabel/confidenceScore=null`이었다. 같은 현상이 실제 Android 기기 등록 후 홈/상세에서도 `나눔 식재료 / 분석 중` fallback으로 재현됐다. 2026-05-08 백엔드가 버그로 인정하고 `imageToken` sidecar AI 메타데이터 저장/복원 방식으로 수정했다. 프론트 fallback은 기존 null 데이터 대응으로 유지한다.
 
 ## Post AI 메타데이터 저장 계약 불일치 정리
 
 - 분류: 서버 계약 불일치
 - 우선순위: P0
-- 상태: VM/API와 실제 Android 기기에서 재현, 백엔드 확인 필요
+- 상태: 백엔드 버그로 확정, 2026-05-08 VM 수정 배포 완료. 프론트 재검증 필요
 - 배경: 제품/프론트 계약은 나눔 식재료 카드와 상세가 `detectedFruitKo`, `freshnessLabel`, `confidenceScore`를 기준으로 표시된다고 정했다. 백엔드 Phase 1.5 답변도 Post 컬럼 추가를 완료했다고 설명했다.
 - 현재 동작: 2026-05-06 VM QA에서 `POST /posts/generate`는 `data.detectedFruitKo=바나나`, `data.aiAnalysis.category=Fresh`, `data.aiAnalysis.confidenceScore=1.0`을 반환했다. 하지만 같은 `imageToken`으로 `POST /posts`를 호출해 생성한 id `2`의 `GET /posts/2` 응답은 `detectedFruit`, `detectedFruitKo`, `freshnessLabel`, `confidenceScore`가 모두 `null`이었다. 실제 Android 기기에서도 등록 직전 화면은 `바나나 / 91%`를 표시했지만, 등록 후 홈/상세는 `나눔 식재료 / 분석 중` fallback으로 표시됐다.
-- 기대 동작: 서버는 `imageToken`에 연결된 AI 분석 결과를 최종 Post에 저장하거나, Post 응답에서 해당 값이 비어 있을 수 있음을 명시하고 프론트/제품 표시 정책을 다시 정한다. 현재 제품 의도상 저장하는 쪽이 우선이다.
+- 기대 동작: 서버는 `imageToken`에 연결된 AI 분석 결과를 최종 Post에 저장한다. 수정 후 generate는 임시 저장소에 이미지와 `{imageToken}.json` AI 메타데이터를 저장하고, create는 이미지 이동과 JSON 복원을 수행해 Post row에 저장한다. 프론트는 `imageToken`, `fridgeId`, `expirationDate`만 보낸다.
 - Acceptance Criteria:
   - [ ] `POST /posts` 성공 후 `GET /posts/{id}`가 `detectedFruit`, `detectedFruitKo`, `freshnessLabel`, `confidenceScore`를 반환한다.
-  - [ ] `/posts/nearby`와 `/fridges/{id}/posts?status=available`도 카드 표시에 필요한 나눔 식재료명과 상태 값을 제공한다.
+  - [ ] `/posts/nearby`와 `/fridges/{id}/posts?status=available`도 카드 표시에 필요한 나눔 식재료명과 상태 값을 제공한다. 단, 해당 카드 요약 스키마(`PostNearbyRead`)는 `confidenceScore`를 포함하지 않는다.
   - [ ] `POST /posts/generate` 응답의 root 필드와 `aiAnalysis` 필드 중 어느 쪽이 canonical인지 OpenAPI와 문서가 일치한다.
   - [ ] 프론트는 백엔드 수정 전까지 null 메타데이터 fallback으로 화면이 깨지지 않음을 테스트로 유지한다.
 - 검증 방법: 공개 fresh fixture로 `generate -> create -> detail -> nearby -> fridge posts` VM API 재검증, 실제 Android 기기 `generate -> create -> home -> detail` 재검증, `NearbyPostCard`/`PostDetailScreen` null metadata fixture 테스트
 - 관련 파일/화면/API: `POST /api/v1/posts/generate`, `POST /api/v1/posts`, `GET /api/v1/posts/{id}`, `GET /api/v1/posts/nearby`, `GET /api/v1/fridges/{fridge_id}/posts`, `NearbyPostCard`, `PostDetailScreen`, `MapScreen`
-- 비고: 충돌 판단 기준은 live VM API와 `GET /openapi.json`이다. 요약 문서보다 실제 검증 결과를 우선한다.
+- 비고: 충돌 판단 기준은 2026-05-06 live VM API와 `GET /openapi.json`이었다. 2026-05-08 백엔드 답변 기준 코드는 수정/배포됐으나, 프론트 쪽 런타임 재검증 전까지 완료 체크는 보류한다.
 
 ## 나눔 신청 API 프론트 연동
 
@@ -982,7 +1017,7 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
   - [x] 위치 미설정 상태에서는 기존 위치 설정 CTA 가드를 유지한다.
 - 검증 방법: API client unit test, 지도 냉장고 선택 QA, empty/error 상태 QA, 실제 VM API available 포함/제외 확인
 - 관련 파일/화면/API: `src/api/fridges.ts`, `MapScreen`, `PostDetailScreen`, `GET /api/v1/fridges/{fridge_id}/posts`, `__tests__/fridges.api.test.ts`, `__tests__/map.fridgePosts.test.tsx`
-- 비고: 2026-05-06 VM QA에서 생성 직후 냉장고 id `1` 내부 목록에 포함되고, 신청 후 `requested` 상태가 되면 `status=available` 목록에서 제외됨을 확인했다.
+- 비고: 2026-05-06 VM QA에서 생성 직후 냉장고 id `1` 내부 목록에 포함되고, 신청 후 `requested` 상태가 되면 `status=available` 목록에서 제외됨을 확인했다. 2026-05-08 백엔드 답변 기준 이 API는 `PostRead`가 아니라 `/posts/nearby`와 같은 `PostNearbyRead`를 반환하며, `confidenceScore`는 포함하지 않는다.
 
 ## 나눔 기준 미충족/등록 차단 상태에서 실제 등록 차단
 
@@ -1118,15 +1153,15 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
 
 - 분류: 정책 결정/서버 계약
 - 우선순위: P1
-- 상태: 앱 방어 로직/fixture 반복 검증 스크립트 추가, 실제 기기 false-positive 증거 추가, rejection reason enum은 Post-MVP
+- 상태: 앱 방어 로직/fixture 반복 검증 스크립트 추가, 실제 기기 false-positive 증거 추가. 2026-05-08 백엔드 답변 기준 screenshot/UI 차단은 MVP 허용, rejection reason enum은 Post-MVP
 - 배경: 에뮬레이터 QA에서 비식재료/스크린샷성 이미지가 `바나나 / 신선 / 100%`로 통과했다. 2026-05-06 실제 Android 기기 QA에서도 화면상 토마토 이미지를 촬영했으나 AI가 `바나나 / 나눔 가능 / 91%`로 판별했다.
-- 현재 동작: 앱은 이미지 내용을 자체 판별하지 않는다. 서버가 `not_food/non_food/low_quality/screenshot/ui_screenshot` category 또는 `rejectionReason`을 주면 등록 차단으로 처리한다. 다만 백엔드 Phase 1.5 기준 해당 enum은 아직 구현되지 않았고 Post-MVP로 기록됐다.
-- 기대 동작: 서버/AI는 비식재료, 스크린샷, 앱 아이콘, 실내 배경을 `Fresh` 식재료로 반환하지 않는다.
+- 현재 동작: 앱은 이미지 내용을 자체 판별하지 않는다. 서버가 `not_food/non_food/low_quality/screenshot/ui_screenshot` category 또는 `rejectionReason`을 주면 등록 차단으로 처리한다. 다만 백엔드 Phase 1.5 기준 해당 enum은 아직 구현되지 않았고 Post-MVP로 기록됐다. MVP 서버/AI는 screenshot/UI 판별 모델이 없어 `Fresh + imageToken`을 반환할 수 있다.
+- 기대 동작: MVP에서는 서버가 `Fresh + imageToken`을 반환하면 등록을 허용하고, 낮은 confidence는 `확인 필요`로만 표시한다. Post-MVP에서는 서버/AI가 비식재료, 스크린샷, 앱 아이콘, 실내 배경을 `Fresh` 식재료로 반환하지 않도록 rejection/review reason 계약을 추가한다.
 - Acceptance Criteria:
-  - [ ] Post-MVP에서 `not_food`, `low_quality`, `multi_object_review` 등 실패/검토 사유 enum을 서버 계약에 추가한다.
-  - [ ] 비식재료/스크린샷 fixture는 generate 400 또는 `확인 필요`로 처리된다.
+  - [ ] Post-MVP에서 `not_food`, `low_quality`, `screenshot`, `ui_screenshot`, `review_required`, `multi_object_review` 등 실패/검토 사유 enum을 서버 계약에 추가한다.
+  - [ ] Post-MVP에서 비식재료/스크린샷 fixture는 generate 400 또는 `확인 필요`로 처리된다.
   - [x] 앱은 서버 실패 사유를 사용자에게 보여주고 등록을 진행하지 않는다.
-- 검증 방법: [AI QA fixture 문서](./AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md)의 `not-food`, `screenshot-or-ui`, `low-quality` fixture로 `npm run qa:ai-fixtures` 반복 호출
+- 검증 방법: [AI QA fixture 문서](./AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md)의 `not-food`, `screenshot-or-ui`, `low-quality` fixture로 `npm run qa:ai-fixtures -- --report-only` 반복 호출. Post-MVP 차단 계약 도입 후 strict mode로 승격한다.
 - 관련 파일/화면/API: `POST /api/v1/posts/generate`, `CameraScanScreen`, `AnalysisResultScreen`, `postPolicy`
 
 #### P2: 다음 스프린트 범위 조정 후보
@@ -1164,7 +1199,7 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
 - 분류: 기능 구현
 - 우선순위: P2
 - 배경: FCM 토큰 등록은 있지만 알림 수신/목록/읽음 처리는 없다.
-- 현재 동작: FCM token은 사용자가 위치 설정 화면의 `나눔 알림 받기` CTA를 눌렀을 때 권한 요청 후 `/auth/me/location`으로 등록한다. 위치 설정 진입과 기존 유저의 위치 자동 갱신만으로는 알림 권한을 요청하지 않으며, Android 13+ `POST_NOTIFICATIONS` 거부 시 Firebase permission/register/getToken을 호출하지 않고 `fcmToken` 없이 위치 등록을 계속한다. `share_created`, `share_requested` handler는 foreground/background/opened/initial 메시지를 로컬 알림함에 기록한다. 알림 열기와 알림함 항목 탭은 `PostDetail`로 이동하며, `share_requested`는 내 나눔 관리 화면이 없으므로 상세 fallback을 쓴다. Firebase 앱이 설정되지 않은 QA/release 빌드에서는 Messaging 인스턴스 생성 실패를 잡고 handler 등록과 FCM 토큰 조회를 건너뛰어 앱 시작/위치 갱신 크래시를 막는다.
+- 현재 동작: FCM token은 사용자가 위치 설정 화면의 `나눔 알림 받기` CTA를 눌렀을 때 권한 요청 후 `/auth/me/location`으로 등록한다. 위치 설정 진입과 기존 유저의 위치 자동 갱신만으로는 알림 권한을 요청하지 않으며, Android 13+ `POST_NOTIFICATIONS` 거부 시 Firebase permission/register/getToken을 호출하지 않고 `fcmToken` 없이 위치 등록을 계속한다. `share_created`, `share_requested` handler는 foreground/background/opened/initial 메시지를 로컬 알림함에 기록한다. 알림 열기와 알림함 항목 탭은 `PostDetail`로 이동하며, `share_requested`는 내 나눔 관리 화면이 없으므로 상세 fallback을 쓴다. Firebase 앱이 설정되지 않은 QA/release 빌드에서는 Messaging 인스턴스 생성 실패를 잡고 handler 등록과 FCM 토큰 조회를 건너뛰어 앱 시작/위치 갱신 크래시를 막는다. 2026-05-08 백엔드 답변 기준 `share_created`는 반경 2km 내 FCM 토큰이 있는 다른 사용자에게, `share_requested`는 공급자 FCM 토큰이 있을 때 발송된다.
 - 기대 동작: MVP에서는 WebSocket 채팅 대신 알림함과 단순 신청 흐름으로 축소한다. 읽음 상태 API는 후속으로 분리한다.
 - Acceptance Criteria:
   - [x] foreground/background 알림 수신 handler가 정의된다.
@@ -1179,6 +1214,7 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
   - [x] 위치 설정 진입만으로 알림 권한을 요청하지 않고, 사용자가 알림 CTA를 누를 때만 FCM 토큰을 준비한다.
   - [x] 기존 유저의 위치 자동 갱신 경로는 알림 권한 요청을 열지 않는다.
   - [x] Android 알림 권한 거부 시 FCM token/register 경로를 호출하지 않는다.
+  - [ ] 실제 흐름 테스트로 백엔드 로그의 발송 완료/Mock FCM/반경 내 사용자 없음 상태를 분리한다.
 - 검증 방법: FCM 테스트 메시지 수신 QA, 앱 foreground/background 확인, `notificationService.firebaseFallback.test.ts`, `deviceRegistration.firebaseFallback.test.ts`, `deviceRegistration.notificationPermission.test.ts`, `locationSetup.notificationPermission.test.tsx`
 - 관련 파일/화면/API: `notifications.ts`, `deviceRegistration.ts`, `firebaseMessaging.ts`, `notificationStore.ts`, `ChatListScreen`, `index.js`, `AppNavigator`, Firebase Messaging
 
