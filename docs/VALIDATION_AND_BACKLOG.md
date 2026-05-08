@@ -240,6 +240,41 @@
   - `camera/gallery -> generate -> create -> home/detail/map -> request -> requested available 제외` core flow는 닫았다.
   - 실제 FCM 수신은 제품 알림 claim의 별도 blocker로 남긴다.
 
+## 2026-05-08 스프린트 종료 결정
+
+- 판정: 이번 스프린트는 닫는다.
+- Scope mode: `HOLD_SCOPE`.
+- 닫힌 범위:
+  - MVP core flow: `camera/gallery -> generate -> create -> home/detail/map -> request -> requested available 제외`.
+  - FCM 프론트 구현: token 준비 경로, 문자열 + camelCase payload 검증, foreground/background/opened/initial handler, 로컬 알림함, Firebase 미설정 fallback.
+  - 검색 MVP 범위: 지도 공유 냉장고 이름/주소 로컬 필터.
+  - 홈/프로필 mock 통계 숫자 제거.
+- 이월 범위:
+  - FCM 실수신 QA. 이월 사유는 구현 미완성이 아니라 외부 Firebase/NHN Cloud 환경 blocker다.
+  - 현재 blocker: `android/app/google-services.json` 부재, NHN Cloud VM의 Firebase Admin/service account credentials 설정 여부 미확인, 실제 FCM 발송 로그와 Mock FCM 로그 구분 미확인, 2 Android client/2계정/2 FCM token 환경 미준비.
+  - `2026-GreenNode.pem`은 NHN Cloud SSH 터널/접속용 키이며 Firebase 앱 초기화나 FCM 발송 권한을 대신하지 않는다.
+- 관리자 요청 항목:
+  - Android package `com.greennode`용 `google-services.json`.
+  - NHN Cloud 백엔드 VM의 Firebase Admin/service account credentials 설정 여부.
+  - `share_created`, `share_requested` 발생 시 실제 FCM 발송 완료, `[Mock FCM]`, 반경 내 사용자 없음, 발송 실패 로그를 구분하는 방법.
+- 다음 스프린트 시작 조건:
+  - Firebase 설정 포함 Android 빌드가 가능해야 한다.
+  - 실기기 1대 + Google Play services Android emulator 1대 또는 동등한 2 Android client 환경이 있어야 한다.
+  - 두 테스트 계정이 같은 냉장고 반경 2km 안 위치와 FCM token을 서버에 등록해야 한다.
+- 다음 스프린트 P0:
+  - `share_created`: 계정 A가 나눔 식재료 등록 후 계정 B가 수신하는지 foreground/background/terminated에서 확인한다.
+  - `share_requested`: 계정 B가 나눔 신청 후 계정 A가 수신하는지 foreground/background/terminated에서 확인한다.
+  - 알림 탭/알림 열기 라우팅이 `PostDetail` fallback으로 이어지는지 확인한다.
+- 다음 스프린트 P1:
+  - 카메라 권한 거부 시 재요청, 설정 열기, 갤러리 선택 대체 UX를 보강한다.
+  - AI 서버 timeout/네트워크 실패를 fault injection으로 재검증하고 화면별 Alert 중심 오류를 공통 retry 패턴으로 정리한다.
+  - `stale-or-rotten`, `screenshot-or-ui`, `low-quality` false-positive를 Post-MVP rejection/review reason 계약으로 승격할지 백엔드/AI와 결정한다.
+  - 중복 등록 방지를 위해 서버 idempotency key 또는 중복 생성 방지 기준을 검토한다.
+- 다음 스프린트 P2:
+  - 주변 냉장고 없음 fixture 또는 서버 거리 필터를 검증한다.
+  - `detections[]` multi-object 계약 초안과 대표 객체 1개 처리/객체별 분리 등록 UX 방향을 결정한다.
+  - 서버 검색 확장 여부, 읽음 상태 API, 내 나눔/받은 나눔, 실제 활동 지표 API는 후순위로 둔다.
+
 ## 2026-05-08 subagent-driven Phase 1.5 QA 통합 결과
 
 - 방식: 문서 감사, 로컬 자동 회귀, Android/FCM 준비도, API/알림 계약 코드 감사를 서브에이전트 단위로 분리하고 오케스트레이션에서 결과를 통합했다.

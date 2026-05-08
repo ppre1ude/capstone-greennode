@@ -98,6 +98,7 @@
 - `GET /fridges/{id}/posts`는 `/posts/nearby`와 같은 `PostNearbyRead` 카드 요약 스키마이며, `confidenceScore`를 포함하지 않는다.
 - 프론트 타입과 테스트도 `PostNearbyRead`를 분리해 카드 요약 응답에는 `confidenceScore`, `authorId`, `updatedAt`이 없고 `fridgeName`이 있다는 계약에 맞췄다. generate 400은 `detail`을 우선 읽도록 보강했다.
 - FCM payload는 문자열 + camelCase로 확정했고, `share_created`는 반경 2km 내 FCM 토큰이 등록된 다른 사용자에게, `share_requested`는 공급자 FCM 토큰이 있을 때 발송된다.
+- 스프린트 종료 판정: `camera/gallery -> generate -> create -> home/detail/map -> request -> requested available 제외` core flow와 FCM 프론트 구현은 닫았다. 실제 FCM 수신 QA는 `android/app/google-services.json`, NHN Cloud VM Firebase Admin/service account credentials, 2 Android client/2계정/2 FCM token 환경이 필요하므로 다음 스프린트 P0로 이월한다. `2026-GreenNode.pem`은 SSH 터널용 키라 Firebase 자격증명을 대체하지 않는다.
 
 ---
 

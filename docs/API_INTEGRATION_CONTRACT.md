@@ -563,6 +563,15 @@ const imageFullUrl = `${BASE_URL}${post.imageUrl}`;
 2. `@react-native-firebase/app` + `@react-native-firebase/messaging` 설치
 3. `google-services.json` (Android) / `GoogleService-Info.plist` (iOS) 배치
 
+### 자격증명 경계
+
+- `android/app/google-services.json`: Android package `com.greennode`용 Firebase 클라이언트 설정 파일이다. 앱이 Firebase로 초기화되고 FCM token을 발급받기 위해 필요하다. 이 파일이 없으면 `android/app/build.gradle`은 Google Services plugin을 적용하지 않고 Firebase services를 비활성화한다.
+- `GoogleService-Info.plist`: iOS용 Firebase 클라이언트 설정 파일이다. 현재 MVP 실수신 QA는 Android 기준으로 진행한다.
+- Firebase Admin/service account credentials: 백엔드가 실제 FCM 메시지를 발송할 때 필요한 서버용 자격증명이다. 앱/프론트 repo에 넣지 않고 NHN Cloud VM 또는 백엔드 배포 환경의 secret으로 관리해야 한다.
+- `2026-GreenNode.pem`: NHN Cloud VM SSH 접속과 터널을 위한 키다. Firebase 앱 초기화, FCM token 발급, FCM 서버 발송 권한을 대신할 수 없다.
+
+FCM 실수신 QA를 하려면 클라이언트 설정 파일과 서버 발송 자격증명이 모두 필요하다. `google-services.json`만 있으면 앱 token 발급 경로를 확인할 수 있지만, `share_created`/`share_requested` 실제 수신까지 검증하려면 백엔드 VM이 Firebase Admin/service account credentials로 실제 발송해야 한다. VM에 credentials가 없으면 `[Mock FCM]` 계열 로그만 남을 수 있다.
+
 ### 토큰 등록
 
 ```javascript
