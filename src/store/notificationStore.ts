@@ -11,6 +11,8 @@ interface NotificationState {
   clearNotifications: () => void;
 }
 
+let pendingRehydration: Promise<void> | null = null;
+
 export const useNotificationStore = create<NotificationState>()(
   persist(
     set => ({
@@ -36,3 +38,15 @@ export const useNotificationStore = create<NotificationState>()(
     },
   ),
 );
+
+export const rehydrateNotificationStore = async () => {
+  if (!pendingRehydration) {
+    pendingRehydration = Promise.resolve(
+      useNotificationStore.persist.rehydrate(),
+    ).finally(() => {
+      pendingRehydration = null;
+    });
+  }
+
+  return pendingRehydration;
+};

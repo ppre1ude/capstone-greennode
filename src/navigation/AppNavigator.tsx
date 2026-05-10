@@ -6,7 +6,8 @@
  * - 로그인 + 위치 미등록 → LocationSetup
  * - 로그인 + 위치 등록 → MainTab
  */
-import React, {useEffect} from 'react';
+import React, {useEffect, useRef} from 'react';
+import {AppState, type AppStateStatus} from 'react-native';
 import {NavigationContainer} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import type {RootStackParamList} from './types';
@@ -18,6 +19,7 @@ import {
   flushPendingNotificationNavigation,
   registerForegroundNotificationHandlers,
 } from '@/services/notifications';
+import {rehydrateNotificationStore} from '@/store/notificationStore';
 
 import AuthStack from './AuthStack';
 import MainTab from './MainTab';
@@ -35,6 +37,7 @@ const AppNavigator = () => {
   const user = useAuthStore(state => state.user);
   const isLoggedIn = useAuthStore(state => state.isLoggedIn);
   const logout = useAuthStore(state => state.logout);
+  const appState = useRef<AppStateStatus>(AppState.currentState);
 
   useEffect(() => {
     return onUnauthorized(async () => {
@@ -56,6 +59,22 @@ const AppNavigator = () => {
   }, [isLoggedIn, user]);
 
   useEffect(() => registerForegroundNotificationHandlers(), []);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', nextAppState => {
+      const wasBackgrounded =
+        appState.current === 'background' || appState.current === 'inactive';
+      appState.current = nextAppState;
+
+      if (wasBackgrounded && nextAppState === 'active') {
+        rehydrateNotificationStore().catch(error => {
+          console.warn('Notification store rehydration failed:', error);
+        });
+      }
+    });
+
+    return () => subscription.remove();
+  }, []);
 
   return (
     <NavigationContainer

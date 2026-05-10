@@ -4,8 +4,18 @@ import {updateLocation} from '@/api/auth';
 import {getMessagingOrNull} from '@/services/firebaseMessaging';
 import type {User} from '@/types';
 
+type MessagingInstance = NonNullable<ReturnType<typeof getMessagingOrNull>>;
+
+const isAuthorizedMessagingStatus = (
+  authorizationStatus: unknown,
+): boolean =>
+  authorizationStatus === 1 ||
+  authorizationStatus === 2 ||
+  authorizationStatus === 3 ||
+  authorizationStatus === true;
+
 const requestNotificationPermission = async (
-  messagingInstance: NonNullable<ReturnType<typeof getMessagingOrNull>>,
+  messagingInstance: MessagingInstance,
 ): Promise<boolean> => {
   if (Platform.OS === 'android' && Number(Platform.Version) >= 33) {
     const result = await PermissionsAndroid.request(
@@ -20,9 +30,7 @@ const requestNotificationPermission = async (
   const authorizationStatus: unknown =
     await messagingInstance.requestPermission();
   const isAuthorized =
-    authorizationStatus === 1 ||
-    authorizationStatus === 2 ||
-    authorizationStatus === true ||
+    isAuthorizedMessagingStatus(authorizationStatus) ||
     authorizationStatus === undefined;
 
   if (!isAuthorized) {
@@ -31,6 +39,28 @@ const requestNotificationPermission = async (
 
   await messagingInstance.registerDeviceForRemoteMessages();
   return true;
+};
+
+const getCurrentDeviceFcmTokenIfAuthorized = async (): Promise<
+  string | undefined
+> => {
+  const messagingInstance = getMessagingOrNull();
+  if (!messagingInstance) {
+    return undefined;
+  }
+
+  try {
+    const authorizationStatus = await messagingInstance.hasPermission();
+    if (!isAuthorizedMessagingStatus(authorizationStatus)) {
+      return undefined;
+    }
+
+    await messagingInstance.registerDeviceForRemoteMessages();
+    return await messagingInstance.getToken();
+  } catch (error) {
+    console.warn('FCM token refresh error:', error);
+    return undefined;
+  }
 };
 
 export const getFcmToken = async (): Promise<string | undefined> => {
@@ -80,7 +110,7 @@ export const refreshDeviceRegistration = async (user: User) => {
     return;
   }
 
-  const fcmToken = user.fcmToken ?? undefined;
+  const fcmToken = await getCurrentDeviceFcmTokenIfAuthorized();
   let latitude = user.latitude;
   let longitude = user.longitude;
 

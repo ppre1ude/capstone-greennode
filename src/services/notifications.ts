@@ -1,7 +1,10 @@
 import type {FirebaseMessagingTypes} from '@react-native-firebase/messaging';
 import {rootNavigationRef} from '@/navigation/rootNavigation';
 import {getMessagingOrNull} from '@/services/firebaseMessaging';
-import {useNotificationStore} from '@/store/notificationStore';
+import {
+  rehydrateNotificationStore,
+  useNotificationStore,
+} from '@/store/notificationStore';
 import type {
   FcmStringDataPayload,
   FoodLinkFcmPayload,
@@ -173,6 +176,10 @@ export const handleRemoteNotification = async (
   }
 
   const record = createNotificationRecord(payload, source, message.messageId);
+  if (source === 'background') {
+    await rehydrateNotificationStore();
+  }
+
   useNotificationStore.getState().addNotification(record);
 
   if (openTarget) {
@@ -220,8 +227,10 @@ export const registerForegroundNotificationHandlers = () => {
     .getInitialNotification()
     .then(message => {
       if (message) {
-        void handleRemoteNotification(message, 'opened', true);
+        return handleRemoteNotification(message, 'opened', true);
       }
+
+      return null;
     })
     .catch(error => {
       console.warn('Initial notification handling failed:', error);

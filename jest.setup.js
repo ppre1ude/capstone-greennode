@@ -15,6 +15,7 @@ const mockMessagingInstance = {
   requestPermission: jest.fn(),
   registerDeviceForRemoteMessages: jest.fn(),
   getToken: jest.fn(),
+  hasPermission: jest.fn(),
   onMessage: jest.fn(() => jest.fn()),
   onNotificationOpenedApp: jest.fn(() => jest.fn()),
   getInitialNotification: jest.fn(() => Promise.resolve(null)),
