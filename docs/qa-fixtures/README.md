@@ -1,23 +1,44 @@
 # QA Fixture Index
 
-이 디렉터리는 커밋 가능한 AI QA 샘플 이미지와 결과 기록을 두는 위치다.
+This directory stores small, commit-safe AI QA fixture images and the expected
+outcomes used by `scripts/validate-ai-fixtures.js`.
 
-현재 실제 이미지는 아직 추가하지 않았다. 먼저 아래 파일 세트를 확보한다.
+Small, non-private fixture images are stored with the filenames listed in
+`manifest.json`. Large originals or images containing private information must
+stay outside git; record only the filename and QA result in
+`docs/AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md`.
+
+Source and license details are tracked in [SOURCES.md](./SOURCES.md).
 
 | Fixture ID | Required file | Status |
 | --- | --- | --- |
-| `fresh-single` | `fresh-single-fresh-YYYYMMDD.jpg` | 필요 |
-| `stale-or-rotten` | `stale-or-rotten-rejected-YYYYMMDD.jpg` | 필요 |
-| `not-food` | `not-food-rejected-YYYYMMDD.jpg` | 필요 |
-| `screenshot-or-ui` | `screenshot-or-ui-rejected-YYYYMMDD.png` | 필요 |
-| `low-quality` | `low-quality-review-YYYYMMDD.jpg` | 필요 |
-| `large-image` | 로컬/공유 드라이브에만 보관 | 필요 |
-| `multi-object` | `multi-object-review-YYYYMMDD.jpg` | 필요 |
+| `fresh-single` | `fresh-single-fresh-20260505.jpg` | ready |
+| `stale-or-rotten` | `stale-or-rotten-rejected-20260505.jpg` | ready |
+| `not-food` | `not-food-rejected-20260505.jpg` | ready |
+| `screenshot-or-ui` | `screenshot-or-ui-rejected-20260505.jpg` | ready |
+| `low-quality` | `low-quality-review-20260505.jpg` | ready |
+| `large-image` | `large-image-local-only-20260505.jpg` | local only |
+| `multi-object` | `multi-object-review-20260505.jpg` | ready |
 
-대용량 원본이나 개인정보가 포함될 수 있는 사진은 이 디렉터리에 커밋하지 않는다. 결과만 `docs/AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md`에 기록한다.
-
-반복 검증 기준은 `manifest.json`에 기록한다. 실제 이미지가 준비되면 아래 명령을 실행한다.
+Run strict validation when fixture failures should fail the command:
 
 ```bash
 FOODLINK_API_BASE_URL=http://localhost:8080 FOODLINK_ACCESS_TOKEN=<token> npm run qa:ai-fixtures
 ```
+
+Run report-only validation when known backend/AI false-positives are still open
+and you only need an observable QA report. As of 2026-05-08,
+`screenshot-or-ui` is an MVP-allowed backend behavior and should remain
+report-only until a Post-MVP rejection reason contract exists:
+
+```bash
+FOODLINK_API_BASE_URL=http://localhost:8080 FOODLINK_ACCESS_TOKEN=<token> npm run qa:ai-fixtures -- --report-only
+```
+
+Modes:
+
+- Strict mode exits with code `1` when any runnable fixture fails.
+- Report-only mode prints the same pass/fail details but exits with code `0`.
+- Use report-only for analysis/current-state recording. Use strict mode as the
+  acceptance gate after backend/AI fixes. Keep `screenshot-or-ui` report-only
+  during MVP.

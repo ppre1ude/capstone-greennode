@@ -3,7 +3,7 @@
  * @see docs/API_INTEGRATION_CONTRACT.md § 4.9~4.10
  */
 import apiClient from './client';
-import type {ApiResponse, Fridge} from '@/types';
+import type {ApiResponse, Fridge, PostNearbyRead, PostStatus} from '@/types';
 
 const FRIDGES_PREFIX = '/api/v1/fridges';
 
@@ -27,6 +27,17 @@ export const getAvailableFridges = async (
 ): Promise<ApiResponse<Fridge[]>> => {
   const response = await apiClient.get(`${FRIDGES_PREFIX}/available`, {
     params: {latitude, longitude, radius_km: radiusKm},
+  });
+  return response.data;
+};
+
+/** 냉장고 내부 나눔 식재료 조회 — GET /api/v1/fridges/{id}/posts */
+export const getFridgePosts = async (
+  fridgeId: number,
+  status: PostStatus = 'available',
+): Promise<ApiResponse<PostNearbyRead[]>> => {
+  const response = await apiClient.get(`${FRIDGES_PREFIX}/${fridgeId}/posts`, {
+    params: {status},
   });
   return response.data;
 };

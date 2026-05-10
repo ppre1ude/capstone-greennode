@@ -4,7 +4,7 @@
  * PostCreateScreen에서 전달받은 postData에
  * 사용자가 선택한 fridgeId를 더해 최종적으로 서버에 나눔 식재료 등록 요청(createPost)
  */
-import React, {useCallback, useEffect, useRef, useState} from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -14,27 +14,27 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import type {NativeStackScreenProps} from '@react-navigation/native-stack';
-import type {RootStackParamList} from '@/navigation/types';
-import {getAvailableFridges} from '@/api/fridges';
-import {createPost} from '@/api/posts';
-import {useAuthStore} from '@/store/authStore';
-import type {Fridge} from '@/types';
-import {getApiErrorMessage} from '@/utils/apiError';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '@/navigation/types';
+import { getAvailableFridges } from '@/api/fridges';
+import { createPost } from '@/api/posts';
+import { useAuthStore } from '@/store/authStore';
+import type { Fridge } from '@/types';
+import { getApiErrorMessage } from '@/utils/apiError';
 import {
   getRegisteredLocation,
   LOCATION_REQUIRED_CTA,
   LOCATION_REQUIRED_MESSAGE,
   LOCATION_REQUIRED_TITLE,
 } from '@/utils/locationGuard';
-import {isShareableCategory} from '@/utils/postPolicy';
-import {colors} from '@/theme';
-import {styles} from './FridgeSelectScreen.styles';
+import { isShareableCategory } from '@/utils/postPolicy';
+import { colors } from '@/theme';
+import { styles } from './FridgeSelectScreen.styles';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'FridgeSelect'>;
 
-const FridgeSelectScreen = ({route, navigation}: Props) => {
-  const {postData, qualityCategory, qualityCanShare} = route.params;
+const FridgeSelectScreen = ({ route, navigation }: Props) => {
+  const { postData, qualityCategory, qualityCanShare } = route.params;
   const user = useAuthStore(state => state.user);
   const location = getRegisteredLocation(user);
 
@@ -54,7 +54,9 @@ const FridgeSelectScreen = ({route, navigation}: Props) => {
         setFridges(response.data);
       } else {
         setFridges([]);
-        setFridgeError(response.message || '등록 가능한 냉장고를 불러오지 못했습니다.');
+        setFridgeError(
+          response.message || '등록 가능한 냉장고를 불러오지 못했습니다.',
+        );
       }
     } catch (error) {
       console.warn('Failed to fetch fridges', error);
@@ -66,7 +68,7 @@ const FridgeSelectScreen = ({route, navigation}: Props) => {
   }, []);
 
   const openLocationSetup = useCallback(() => {
-    navigation.navigate('LocationSetup', {allowBack: true});
+    navigation.navigate('LocationSetup', { allowBack: true });
   }, [navigation]);
 
   useEffect(() => {
@@ -82,8 +84,12 @@ const FridgeSelectScreen = ({route, navigation}: Props) => {
   }, [fetchFridges, user]);
 
   const handleComplete = async () => {
-    if (!selectedFridgeId || !postData) {return;}
-    if (isSubmittingRef.current) {return;}
+    if (!selectedFridgeId || !postData) {
+      return;
+    }
+    if (isSubmittingRef.current) {
+      return;
+    }
 
     if (qualityCanShare === false || !isShareableCategory(qualityCategory)) {
       Alert.alert(
@@ -102,9 +108,12 @@ const FridgeSelectScreen = ({route, navigation}: Props) => {
       });
 
       if (response.success && response.data) {
-        navigation.replace('PostComplete', {postId: response.data.id});
+        navigation.replace('PostComplete', { postId: response.data.id });
       } else {
-        Alert.alert('등록 실패', response.message || '나눔 등록에 실패했습니다.');
+        Alert.alert(
+          '등록 실패',
+          response.message || '나눔 등록에 실패했습니다.',
+        );
       }
     } catch (error) {
       Alert.alert('오류', getApiErrorMessage(error));
@@ -114,7 +123,7 @@ const FridgeSelectScreen = ({route, navigation}: Props) => {
     }
   };
 
-  const renderItem = ({item}: {item: Fridge}) => {
+  const renderItem = ({ item }: { item: Fridge }) => {
     const isSelected = selectedFridgeId === item.id;
     return (
       <TouchableOpacity
@@ -124,11 +133,16 @@ const FridgeSelectScreen = ({route, navigation}: Props) => {
           <Text style={[styles.fridgeName, isSelected && styles.textSelected]}>
             {item.name}
           </Text>
-          <Text style={[styles.fridgeAddress, isSelected && styles.textSelected]}>
+          <Text
+            style={[styles.fridgeAddress, isSelected && styles.textSelected]}>
             {item.address}
           </Text>
           {item.distance !== undefined && (
-            <Text style={[styles.fridgeDistance, isSelected && styles.textSelected]}>
+            <Text
+              style={[
+                styles.fridgeDistance,
+                isSelected && styles.textSelected,
+              ]}>
               {item.distance.toFixed(2)}km
             </Text>
           )}
@@ -146,7 +160,9 @@ const FridgeSelectScreen = ({route, navigation}: Props) => {
 
       {/* 헤더 */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.headerButton}>
           <Text style={styles.headerIcon}>←</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>냉장고 선택</Text>
@@ -167,7 +183,9 @@ const FridgeSelectScreen = ({route, navigation}: Props) => {
         ) : fridgeError ? (
           <View style={styles.centerBox}>
             <Text style={styles.errorTitle}>
-              {location ? '냉장고를 불러오지 못했습니다' : LOCATION_REQUIRED_TITLE}
+              {location
+                ? '냉장고를 불러오지 못했습니다'
+                : LOCATION_REQUIRED_TITLE}
             </Text>
             <Text style={styles.errorSubtitle}>{fridgeError}</Text>
             <TouchableOpacity
@@ -191,7 +209,9 @@ const FridgeSelectScreen = ({route, navigation}: Props) => {
         ) : fridges.length === 0 ? (
           <View style={styles.centerBox}>
             <Text style={styles.emptyEmoji}>🏢</Text>
-            <Text style={styles.emptyText}>반경 2km 이내에{'\n'}사용 가능한 냉장고가 없습니다.</Text>
+            <Text style={styles.emptyText}>
+              반경 2km 이내에{'\n'}사용 가능한 냉장고가 없습니다.
+            </Text>
           </View>
         ) : (
           <FlatList
@@ -209,10 +229,11 @@ const FridgeSelectScreen = ({route, navigation}: Props) => {
           <TouchableOpacity
             style={[
               styles.submitButton,
-              (!selectedFridgeId || isSubmitting) && styles.submitDisabled,
+              (!selectedFridgeId || !postData || isSubmitting) &&
+                styles.submitDisabled,
             ]}
             onPress={handleComplete}
-            disabled={!selectedFridgeId || isSubmitting}>
+            disabled={!selectedFridgeId || !postData || isSubmitting}>
             {isSubmitting ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (

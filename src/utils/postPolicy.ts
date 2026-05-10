@@ -1,8 +1,13 @@
-import type {AiAnalysis, GenerateResult} from '@/types';
+import type { AiAnalysis, GenerateResult } from '@/types';
 
 type PostOwnershipFields = {
   authorId?: number | null;
   userId?: number | null;
+};
+
+type PostDisplayFields = {
+  detectedFruit?: string | null;
+  detectedFruitKo?: string | null;
 };
 
 export type QualityMeta = {
@@ -18,6 +23,7 @@ const SHAREABLE_CATEGORIES = new Set([
   'medium',
 ]);
 const UNSAFE_CATEGORIES = new Set(['rotten', 'stale', 'bad']);
+const UNKNOWN_CATEGORIES = new Set(['unknown', '알 수 없음']);
 const REJECTED_CATEGORIES = new Set([
   'not_food',
   'non_food',
@@ -37,29 +43,36 @@ const REVIEW_CATEGORIES = new Set([
   'multi-object-review',
 ]);
 
+const REVIEW_LABEL = '확인 필요';
+export const CONFIDENCE_REVIEW_THRESHOLD_PERCENT = 90;
+
 export const getQualityMeta = (category?: string | null): QualityMeta => {
   const normalized = (category || '').toLowerCase();
 
   if (SHAREABLE_CATEGORIES.has(normalized)) {
-    return {label: '상태가 좋아 보여요', canShare: true};
+    return { label: '상태가 좋아 보여요', canShare: true };
   }
 
   if (UNSAFE_CATEGORIES.has(normalized)) {
-    return {label: '나눔 기준에 맞지 않아요', canShare: false};
+    return { label: '나눔 기준에 맞지 않아요', canShare: false };
+  }
+
+  if (UNKNOWN_CATEGORIES.has(normalized)) {
+    return { label: '사진으로 상태를 확인하기 어려워요', canShare: false };
   }
 
   if (REJECTED_CATEGORIES.has(normalized)) {
     if (['low_quality', 'low-quality'].includes(normalized)) {
-      return {label: '사진으로 상태를 확인하기 어려워요', canShare: false};
+      return { label: '사진으로 상태를 확인하기 어려워요', canShare: false };
     }
-    return {label: '식재료 사진으로 확인되지 않았어요', canShare: false};
+    return { label: '식재료 사진으로 확인되지 않았어요', canShare: false };
   }
 
   if (REVIEW_CATEGORIES.has(normalized)) {
-    return {label: '확인 필요', canShare: true};
+    return { label: REVIEW_LABEL, canShare: true };
   }
 
-  return {label: category || '분석 중', canShare: true};
+  return { label: category || '분석 중', canShare: true };
 };
 
 export const isShareableCategory = (category?: string | null): boolean =>
@@ -68,24 +81,57 @@ export const isShareableCategory = (category?: string | null): boolean =>
 export const getAnalysisQualityMeta = (
   analysis?: Partial<AiAnalysis> | null,
 ): QualityMeta => {
+  if (analysis?.isFresh === false) {
+    return { label: '나눔 기준에 맞지 않아요', canShare: false };
+  }
+
   const rejectionMeta = getQualityMeta(analysis?.rejectionReason);
 
-  if (!rejectionMeta.canShare || rejectionMeta.label === '확인 필요') {
+  if (!rejectionMeta.canShare || rejectionMeta.label === REVIEW_LABEL) {
     return rejectionMeta;
   }
 
   const reviewMeta = getQualityMeta(analysis?.reviewReason);
 
-  if (reviewMeta.label === '확인 필요') {
+  if (reviewMeta.label === REVIEW_LABEL) {
     return reviewMeta;
   }
 
   return getQualityMeta(analysis?.category);
 };
 
+export const getGenerateResultQualityMeta = (
+  result?: Partial<GenerateResult> | null,
+): QualityMeta => {
+  if (!result?.aiAnalysis && !result?.freshnessLabel) {
+    return { label: '분석 중', canShare: false };
+  }
+
+  if (result?.isFresh === false) {
+    return { label: '나눔 기준에 맞지 않아요', canShare: false };
+  }
+
+  const analysisMeta = getAnalysisQualityMeta(result?.aiAnalysis);
+
+  if (!analysisMeta.canShare || analysisMeta.label === REVIEW_LABEL) {
+    return analysisMeta;
+  }
+
+  const rootFreshnessMeta = getQualityMeta(result?.freshnessLabel);
+
+  if (result?.freshnessLabel && rootFreshnessMeta.label !== '분석 중') {
+    return rootFreshnessMeta;
+  }
+
+  return analysisMeta;
+};
+
 export const canShareAnalysisResult = (
-  result?: Pick<GenerateResult, 'aiAnalysis'> | null,
-): boolean => getAnalysisQualityMeta(result?.aiAnalysis).canShare;
+  result?: Pick<
+    GenerateResult,
+    'aiAnalysis' | 'freshnessLabel' | 'isFresh'
+  > | null,
+): boolean => getGenerateResultQualityMeta(result).canShare;
 
 export const getConfidencePercent = (
   confidenceScore?: number | null,
@@ -103,7 +149,7 @@ export const getConfidencePercent = (
 
 export const needsAnalysisReview = (
   confidenceScore?: number | null,
-  thresholdPercent: number = 60,
+  thresholdPercent: number = CONFIDENCE_REVIEW_THRESHOLD_PERCENT,
 ): boolean => {
   const confidencePercent = getConfidencePercent(confidenceScore);
   return confidencePercent != null && confidencePercent < thresholdPercent;
@@ -116,3 +162,19 @@ export const isPostAuthoredByUser = (
   post: PostOwnershipFields,
   userId?: number | null,
 ): boolean => userId != null && getPostAuthorId(post) === userId;
+
+export const getPostDisplayName = (post: PostDisplayFields): string =>
+  post.detectedFruitKo || post.detectedFruit || '나눔 식재료';
+
+export const getPostStatusLabel = (status?: string | null): string => {
+  switch (status) {
+    case 'available':
+      return '나눔 가능';
+    case 'requested':
+      return '신청 접수';
+    case 'completed':
+      return '나눔 완료';
+    default:
+      return '상태 확인 중';
+  }
+};

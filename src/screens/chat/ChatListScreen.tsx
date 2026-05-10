@@ -10,26 +10,109 @@ import {
   StyleSheet,
   StatusBar,
   Platform,
+  TouchableOpacity,
+  ScrollView,
 } from 'react-native';
 import {colors} from '@/theme';
+import {useNotificationStore} from '@/store/notificationStore';
+import {openNotificationTarget} from '@/services/notifications';
+import type {NotificationRecord} from '@/types';
+
+const formatNotificationTime = (receivedAt: string) => {
+  const date = new Date(receivedAt);
+  if (Number.isNaN(date.getTime())) {
+    return '수신 시간 확인 필요';
+  }
+
+  return date.toLocaleString('ko-KR', {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};
+
+const getSourceLabel = (source: NotificationRecord['source']) => {
+  switch (source) {
+    case 'foreground':
+      return '앱 사용 중 수신';
+    case 'background':
+      return '백그라운드 수신';
+    case 'opened':
+      return '알림 열기';
+    default:
+      return '수신 기록';
+  }
+};
 
 const ChatListScreen = () => {
+  const notifications = useNotificationStore(state => state.notifications);
+  const clearNotifications = useNotificationStore(
+    state => state.clearNotifications,
+  );
+
+  const renderNotification = ({item}: {item: NotificationRecord}) => (
+    <TouchableOpacity
+      style={styles.notificationCard}
+      activeOpacity={0.82}
+      onPress={() => openNotificationTarget(item)}>
+      <View style={styles.notificationHeader}>
+        <Text style={styles.notificationTitle} numberOfLines={1}>
+          {item.title}
+        </Text>
+        <Text style={styles.notificationTime}>
+          {formatNotificationTime(item.receivedAt)}
+        </Text>
+      </View>
+      <Text style={styles.notificationBody} numberOfLines={2}>
+        {item.body}
+      </Text>
+      <View style={styles.notificationMetaRow}>
+        <Text style={styles.notificationMeta}>{getSourceLabel(item.source)}</Text>
+        <Text style={styles.notificationMeta}>
+          {item.fridgeName || '공유 냉장고'}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
-      {/* 헤더 */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>알림</Text>
+        <View>
+          <Text style={styles.headerTitle}>알림</Text>
+          <Text style={styles.headerSubtitle}>
+            나눔 등록과 신청 수신 기록을 확인합니다
+          </Text>
+        </View>
+        {notifications.length > 0 ? (
+          <TouchableOpacity
+            style={styles.clearButton}
+            onPress={clearNotifications}>
+            <Text style={styles.clearButtonText}>비우기</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
 
-      <View style={styles.emptyContainer}>
-        <Text style={styles.emptyIcon}>🔔</Text>
-        <Text style={styles.emptyTitle}>아직 알림이 없습니다</Text>
-        <Text style={styles.emptyText}>
-          나눔 신청, 등록 완료, 예약 상태 변경 알림이 이곳에 표시됩니다.
-        </Text>
-      </View>
+      {notifications.length > 0 ? (
+        <ScrollView contentContainerStyle={styles.listContent}>
+          {notifications.map(notification => (
+            <View key={notification.id}>
+              {renderNotification({item: notification})}
+            </View>
+          ))}
+        </ScrollView>
+      ) : (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyIcon}>🔔</Text>
+          <Text style={styles.emptyTitle}>아직 알림이 없습니다</Text>
+          <Text style={styles.emptyText}>
+            근처 나눔 등록과 나눔 신청 알림이 이곳에 기록됩니다.
+          </Text>
+        </View>
+      )}
     </View>
   );
 };
@@ -40,6 +123,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 24,
     paddingTop: Platform.OS === 'ios' ? 56 : 24,
     paddingBottom: 16,
@@ -50,6 +136,71 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: '700',
     color: colors.textPrimary,
+  },
+  headerSubtitle: {
+    marginTop: 4,
+    fontSize: 12,
+    color: colors.textTertiary,
+  },
+  clearButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: colors.surface,
+  },
+  clearButtonText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.textSecondary,
+  },
+  listContent: {
+    padding: 20,
+    gap: 12,
+  },
+  notificationCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+  },
+  notificationHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  notificationTitle: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  notificationTime: {
+    fontSize: 11,
+    color: colors.textTertiary,
+  },
+  notificationBody: {
+    marginTop: 8,
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.textSecondary,
+  },
+  notificationMetaRow: {
+    marginTop: 12,
+    flexDirection: 'row',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  notificationMeta: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.primary,
+    backgroundColor: colors.primaryLight,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    overflow: 'hidden',
   },
   emptyContainer: {
     flex: 1,

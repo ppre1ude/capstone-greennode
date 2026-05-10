@@ -2,16 +2,15 @@
  * PostCreateScreen — 나눔 식재료 정보 입력 폼
  *
  * AnalysisResultScreen에서 "이대로 나눔하기" 선택 시 진입.
- * AI가 추천한 제목, 카테고리, 설명을 기본값으로 채워주고 유저가 수정 가능.
+ * AI가 판별한 식재료명과 신선도 결과를 확인한 뒤 공유 냉장고를 선택함.
  * 등록(다음) 버튼 누르면 냉장고 선택 화면(FridgeSelect)으로 이동.
  *
  * @wireframe wireframe-foodlink/scanapply.html
  */
-import React, {useState} from 'react';
+import React from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   StatusBar,
   Alert,
@@ -20,55 +19,45 @@ import {
   Platform,
   KeyboardAvoidingView,
 } from 'react-native';
-import type {NativeStackScreenProps} from '@react-navigation/native-stack';
-import type {RootStackParamList} from '@/navigation/types';
-import {colors} from '@/theme';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '@/navigation/types';
 import {
   getConfidencePercent,
-  getAnalysisQualityMeta,
+  getGenerateResultQualityMeta,
   needsAnalysisReview,
 } from '@/utils/postPolicy';
-import {styles} from './PostCreateScreen.styles';
+import { styles } from './PostCreateScreen.styles';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PostCreate'>;
 
-const CATEGORIES = ['과일', '채소', '가공식품', '유제품', '기타'];
-
 const formatDateOnly = (date: Date) => date.toISOString().slice(0, 10);
 
-const PostCreateScreen = ({route, navigation}: Props) => {
-  const {result, imageUri} = route.params;
+const PostCreateScreen = ({ route, navigation }: Props) => {
+  const { result, imageUri } = route.params;
   const detectedCrop =
     result.detectedFruitKo ||
     result.aiAnalysis?.detectedFruitKo ||
     result.detectedFruit ||
     result.aiAnalysis?.detectedFruit ||
     '알 수 없음';
-  const quality = getAnalysisQualityMeta(result.aiAnalysis);
+  const quality = getGenerateResultQualityMeta(result);
   const confidencePercent = getConfidencePercent(
-    result.aiAnalysis?.confidenceScore,
+    result.confidenceScore ?? result.aiAnalysis?.confidenceScore,
   );
   const needsReview =
     quality.canShare &&
     (quality.label === '확인 필요' ||
-      needsAnalysisReview(result.aiAnalysis?.confidenceScore));
-
-  const [title, setTitle] = useState(result.suggestedTitle || '');
-  const [category, setCategory] = useState(result.suggestedCategory || '과일');
-  const [description, setDescription] = useState(
-    result.suggestedDescription || '',
-  );
+      needsAnalysisReview(
+        result.confidenceScore ?? result.aiAnalysis?.confidenceScore,
+      ));
+  const hasImageToken = Boolean(result.imageToken);
 
   const handleNext = () => {
-    if (!quality.canShare) {
+    if (!quality.canShare || !hasImageToken) {
       Alert.alert(
         '나눔 기준에 맞지 않아요',
         '이 식재료는 나눔 기준에 맞는 상태로 확인되지 않았어요. 다시 촬영해주세요.',
       );
-      return;
-    }
-
-    if (!title.trim() || !description.trim()) {
       return;
     }
 
@@ -78,13 +67,11 @@ const PostCreateScreen = ({route, navigation}: Props) => {
 
     navigation.navigate('FridgeSelect', {
       postData: {
-        title,
-        description,
-        category,
-        imageToken: result.imageToken,
+        imageToken: result.imageToken as string,
         expirationDate: formatDateOnly(expDate),
       },
-      qualityCategory: result.aiAnalysis?.category,
+      qualityCategory:
+        result.aiAnalysis?.category ?? result.freshnessLabel ?? undefined,
       qualityCanShare: quality.canShare,
     });
   };
@@ -109,7 +96,7 @@ const PostCreateScreen = ({route, navigation}: Props) => {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* 이미지 미리보기 */}
         <View style={styles.imagePreview}>
-          <Image source={{uri: imageUri}} style={styles.image} />
+          <Image source={{ uri: imageUri }} style={styles.image} />
           <View style={styles.aiBadge}>
             <Text style={styles.aiBadgeIcon}>✨</Text>
             <Text style={styles.aiBadgeText}>AI 분석 완료</Text>
@@ -141,58 +128,16 @@ const PostCreateScreen = ({route, navigation}: Props) => {
           </View>
           {needsReview && (
             <Text style={styles.reviewNotice}>
-              사진으로 상태를 한 번 더 확인해주세요.
+              AI가 나눔 가능으로 분석했지만 실제 상태를 직접 확인한 뒤 등록해주세요.
             </Text>
           )}
 
-          {/* 제목 */}
-          <View style={styles.field}>
-            <Text style={styles.label}>제목</Text>
-            <TextInput
-              style={styles.input}
-              value={title}
-              onChangeText={setTitle}
-              placeholder="예) 싱싱한 사과 나눕니다"
-              placeholderTextColor={colors.textPlaceholder}
-            />
-          </View>
-
-          {/* 카테고리 */}
-          <View style={styles.field}>
-            <Text style={styles.label}>나눔 카테고리</Text>
-            <View style={styles.categoryContainer}>
-              {CATEGORIES.map(cat => (
-                <TouchableOpacity
-                  key={cat}
-                  style={[
-                    styles.categoryChip,
-                    category === cat && styles.categoryChipActive,
-                  ]}
-                  onPress={() => setCategory(cat)}>
-                  <Text
-                    style={[
-                      styles.categoryText,
-                      category === cat && styles.categoryTextActive,
-                    ]}>
-                    {cat}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          {/* 상세 설명 */}
-          <View style={styles.field}>
-            <Text style={styles.label}>상세 설명</Text>
-            <TextInput
-              style={styles.textArea}
-              value={description}
-              onChangeText={setDescription}
-              placeholder="식재료의 상태나 보관 방법 등을 적어주세요."
-              placeholderTextColor={colors.textPlaceholder}
-              multiline
-              textAlignVertical="top"
-            />
+          <View style={styles.summaryCard}>
+            <Text style={styles.summaryTitle}>등록될 나눔 식재료</Text>
+            <Text style={styles.summaryName}>{detectedCrop}</Text>
+            <Text style={styles.summaryDescription}>
+              공유 냉장고를 선택하면 이 식재료가 나눔 가능 상태로 등록됩니다.
+            </Text>
           </View>
         </View>
       </ScrollView>
@@ -202,11 +147,11 @@ const PostCreateScreen = ({route, navigation}: Props) => {
         <TouchableOpacity
           style={[
             styles.submitButton,
-            (!title.trim() || !description.trim() || !quality.canShare) &&
+            (!quality.canShare || !hasImageToken) &&
               styles.submitButtonDisabled,
           ]}
           onPress={handleNext}
-          disabled={!title.trim() || !description.trim() || !quality.canShare}>
+          disabled={!quality.canShare || !hasImageToken}>
           <Text style={styles.submitButtonText}>
             {quality.canShare ? '다음 단계로' : '나눔 기준 미충족'}
           </Text>

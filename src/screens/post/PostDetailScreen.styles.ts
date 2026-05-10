@@ -1,5 +1,5 @@
-import {StyleSheet, Platform} from 'react-native';
-import {colors} from '@/theme';
+import { StyleSheet, Platform } from 'react-native';
+import { colors } from '@/theme';
 
 export const styles = StyleSheet.create({
   container: {
@@ -141,6 +141,9 @@ export const styles = StyleSheet.create({
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  chatButtonDisabled: {
+    opacity: 0.55,
   },
   chatButtonText: {
     color: '#FFFFFF',

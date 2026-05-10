@@ -2,9 +2,16 @@
  * Posts API 함수
  * @see docs/API_INTEGRATION_CONTRACT.md § 4.4~4.9
  */
-import apiClient, {BASE_URL} from './client';
-import type {ApiResponse, Post, GenerateResult, PostCreateData} from '@/types';
-import {getToken} from '@/utils/storage';
+import apiClient, { BASE_URL } from './client';
+import type {
+  ApiResponse,
+  Post,
+  PostNearbyRead,
+  GenerateResult,
+  PostCreateData,
+  ShareRequestResult,
+} from '@/types';
+import { getToken } from '@/utils/storage';
 
 const POSTS_PREFIX = '/api/v1/posts';
 
@@ -13,7 +20,7 @@ const POSTS_PREFIX = '/api/v1/posts';
  * ⚠️ multipart/form-data, snake_case 필드명
  */
 export const generatePost = async (
-  image: {uri: string; type: string; name: string},
+  image: { uri: string; type: string; name: string },
   userHint?: string,
 ): Promise<ApiResponse<GenerateResult>> => {
   const formData = new FormData();
@@ -36,7 +43,7 @@ export const createPost = async (
   const response = await fetch(`${BASE_URL}${POSTS_PREFIX}`, {
     method: 'POST',
     headers: {
-      ...(token ? {Authorization: `Bearer ${token}`} : {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       'Content-Type': 'application/x-www-form-urlencoded',
     },
     body: `data=${encodeURIComponent(JSON.stringify(data))}`,
@@ -56,9 +63,9 @@ export const getNearbyPosts = async (
   radiusKm: number = 2.0,
   skip: number = 0,
   limit: number = 50,
-): Promise<ApiResponse<Post[]>> => {
+): Promise<ApiResponse<PostNearbyRead[]>> => {
   const response = await apiClient.get(`${POSTS_PREFIX}/nearby`, {
-    params: {latitude, longitude, radius_km: radiusKm, skip, limit},
+    params: { latitude, longitude, radius_km: radiusKm, skip, limit },
   });
   return response.data;
 };
@@ -68,6 +75,14 @@ export const getPostDetail = async (
   postId: number,
 ): Promise<ApiResponse<Post>> => {
   const response = await apiClient.get(`${POSTS_PREFIX}/${postId}`);
+  return response.data;
+};
+
+/** 나눔 신청하기 — POST /api/v1/posts/{id}/requests */
+export const requestShare = async (
+  postId: number,
+): Promise<ApiResponse<ShareRequestResult>> => {
+  const response = await apiClient.post(`${POSTS_PREFIX}/${postId}/requests`);
   return response.data;
 };
 
@@ -85,10 +100,12 @@ export const getImageUrl = (relativeUrl: string): string => {
 };
 
 const createApiError = (status: number, data: unknown) => {
-  const error = new Error(`Request failed with status code ${status}`) as Error & {
-    response?: {status: number; data: unknown};
+  const error = new Error(
+    `Request failed with status code ${status}`,
+  ) as Error & {
+    response?: { status: number; data: unknown };
   };
-  error.response = {status, data};
+  error.response = { status, data };
   return error;
 };
 

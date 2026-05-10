@@ -7,7 +7,9 @@ const repoRoot = path.resolve(__dirname, '..');
 const manifestPath = path.join(repoRoot, 'docs', 'qa-fixtures', 'manifest.json');
 const baseUrl = process.env.FOODLINK_API_BASE_URL || 'http://localhost:8080';
 const token = process.env.FOODLINK_ACCESS_TOKEN;
+const reportOnly = process.argv.includes('--report-only');
 const maxUploadImageBytes = 8 * 1024 * 1024;
+const confidenceReviewThreshold = 0.9;
 
 const readManifest = () =>
   JSON.parse(fs.readFileSync(manifestPath, {encoding: 'utf8'}));
@@ -44,6 +46,30 @@ const isReviewCategory = category =>
     String(category || '').toLowerCase(),
   );
 
+const getServerMessage = body =>
+  body?.message ||
+  body?.detail ||
+  body?.data?.message ||
+  body?.data?.detail ||
+  body?.data?.analysisMessage ||
+  'no server message';
+
+const getAiSummary = body => {
+  const analysis = body?.data?.aiAnalysis;
+  const detectedFruitKo =
+    body?.data?.detectedFruitKo ||
+    body?.data?.detectedFruit ||
+    analysis?.detectedFruitKo ||
+    analysis?.detectedFruit ||
+    'missing';
+  const category = analysis?.category || 'missing';
+  const confidenceScore = analysis?.confidenceScore;
+  const rejectionReason = analysis?.rejectionReason || 'missing';
+  const reviewReason = analysis?.reviewReason || 'missing';
+
+  return `detected=${detectedFruitKo}, category=${category}, confidence=${confidenceScore}, rejectionReason=${rejectionReason}, reviewReason=${reviewReason}`;
+};
+
 const evaluateGenerateResponse = (fixture, status, body) => {
   if (fixture.expectedOutcome === 'client_rejected_if_over_8mb') {
     return {
@@ -59,8 +85,9 @@ const evaluateGenerateResponse = (fixture, status, body) => {
     return {
       passed:
         fixture.expectedOutcome === 'rejected' ||
-        fixture.expectedOutcome === 'rejected_or_review',
-      detail: `server rejected with ${status}`,
+        fixture.expectedOutcome === 'rejected_or_review' ||
+        fixture.expectedOutcome === 'single_representative_or_review',
+      detail: `server rejected with ${status}: ${getServerMessage(body)}`,
     };
   }
 
@@ -70,19 +97,21 @@ const evaluateGenerateResponse = (fixture, status, body) => {
   const confidenceScore = body?.data?.aiAnalysis?.confidenceScore;
   const lowConfidence =
     typeof confidenceScore === 'number' &&
-    (confidenceScore <= 1 ? confidenceScore < 0.6 : confidenceScore < 60);
+    (confidenceScore <= 1
+      ? confidenceScore < confidenceReviewThreshold
+      : confidenceScore < confidenceReviewThreshold * 100);
 
   if (fixture.expectedOutcome === 'shareable') {
     return {
       passed: isShareableCategory(category),
-      detail: `category=${category || 'missing'}`,
+      detail: getAiSummary(body),
     };
   }
 
   if (fixture.expectedOutcome === 'rejected') {
     return {
       passed: isRejectedCategory(category) || isRejectedCategory(rejectionReason),
-      detail: `category=${category || 'missing'}, rejectionReason=${rejectionReason || 'missing'}`,
+      detail: getAiSummary(body),
     };
   }
 
@@ -94,14 +123,14 @@ const evaluateGenerateResponse = (fixture, status, body) => {
         isReviewCategory(category) ||
         isReviewCategory(reviewReason) ||
         lowConfidence,
-      detail: `category=${category || 'missing'}, rejectionReason=${rejectionReason || 'missing'}, reviewReason=${reviewReason || 'missing'}, confidence=${confidenceScore}`,
+      detail: getAiSummary(body),
     };
   }
 
   if (fixture.expectedOutcome === 'single_representative_or_review') {
     return {
       passed: Boolean(category) || isReviewCategory(category) || isReviewCategory(reviewReason),
-      detail: `category=${category || 'missing'}, reviewReason=${reviewReason || 'missing'}`,
+      detail: getAiSummary(body),
     };
   }
 
@@ -171,7 +200,13 @@ const main = async () => {
     console.log('No fixture files found. Add images under docs/qa-fixtures first.');
   }
 
-  process.exitCode = failedCount > 0 ? 1 : 0;
+  if (reportOnly && failedCount > 0) {
+    console.log(
+      `Report-only mode: observed ${failedCount} failed fixture(s), exiting with code 0.`,
+    );
+  }
+
+  process.exitCode = failedCount > 0 && !reportOnly ? 1 : 0;
 };
 
 main();

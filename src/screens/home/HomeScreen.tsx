@@ -9,7 +9,7 @@
  *
  * @wireframe wireframe-foodlink/homescreen.html + temp/screen-home.html
  */
-import React, {useState, useCallback} from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -21,12 +21,17 @@ import {
   ActivityIndicator,
   Platform,
 } from 'react-native';
-import {useFocusEffect, useNavigation, useRoute} from '@react-navigation/native';
-import type {RouteProp} from '@react-navigation/native';
-import type {Post} from '@/types';
-import {getNearbyPosts} from '@/api/posts';
-import {useAuthStore} from '@/store/authStore';
-import type {MainTabParamList} from '@/navigation/types';
+import {
+  useFocusEffect,
+  useNavigation,
+  useRoute,
+} from '@react-navigation/native';
+import type { RouteProp } from '@react-navigation/native';
+import type { PostNearbyRead } from '@/types';
+import { getNearbyPosts } from '@/api/posts';
+import { useAuthStore } from '@/store/authStore';
+import { useFeedRefreshStore } from '@/store/feedRefreshStore';
+import type { MainTabParamList } from '@/navigation/types';
 import NearbyPostCard from '@/components/home/NearbyPostCard';
 import {
   getRegisteredLocation,
@@ -35,10 +40,10 @@ import {
   LOCATION_REQUIRED_MESSAGE,
   LOCATION_REQUIRED_TITLE,
 } from '@/utils/locationGuard';
-import {colors} from '@/theme';
+import { colors } from '@/theme';
 
 const HomeScreen = () => {
-  const [posts, setPosts] = useState<Post[]>([]);
+  const [posts, setPosts] = useState<PostNearbyRead[]>([]);
   const [feedState, setFeedState] = useState<
     'loading' | 'ready' | 'empty' | 'error'
   >('loading');
@@ -48,10 +53,14 @@ const HomeScreen = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<RouteProp<MainTabParamList, 'Home'>>();
   const nearbyPostsRefreshToken = route.params?.nearbyPostsRefreshToken;
+  const feedRefreshToken = useFeedRefreshStore(
+    state => state.nearbyPostsRefreshToken,
+  );
+  const requestedPostId = useFeedRefreshStore(state => state.requestedPostId);
   const hasLocation = hasRegisteredLocation(user);
 
   const openLocationSetup = useCallback(() => {
-    navigation.getParent()?.navigate('LocationSetup', {allowBack: true});
+    navigation.getParent()?.navigate('LocationSetup', { allowBack: true });
   }, [navigation]);
 
   const openCameraScan = useCallback(() => {
@@ -75,7 +84,10 @@ const HomeScreen = () => {
     setFeedState('loading');
     setFeedError(null);
     try {
-      const response = await getNearbyPosts(location.latitude, location.longitude);
+      const response = await getNearbyPosts(
+        location.latitude,
+        location.longitude,
+      );
       if (response.success && response.data) {
         setPosts(response.data);
         setFeedState(response.data.length > 0 ? 'ready' : 'empty');
@@ -96,9 +108,20 @@ const HomeScreen = () => {
     useCallback(() => {
       // Keep the token in this closure so post completion can force a focus refetch.
       void nearbyPostsRefreshToken;
+      void feedRefreshToken;
       void fetchPosts();
-    }, [fetchPosts, nearbyPostsRefreshToken]),
+    }, [feedRefreshToken, fetchPosts, nearbyPostsRefreshToken]),
   );
+
+  useEffect(() => {
+    if (requestedPostId == null) {
+      return;
+    }
+
+    setPosts(currentPosts =>
+      currentPosts.filter(post => post.id !== requestedPostId),
+    );
+  }, [requestedPostId]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -171,7 +194,7 @@ const HomeScreen = () => {
           </View>
           <View style={styles.statCard}>
             <Text style={styles.statLabel}>탄소 절감</Text>
-            <Text style={[styles.statValue, {color: colors.primary}]}>
+            <Text style={[styles.statValue, { color: colors.primary }]}>
               준비 중
             </Text>
           </View>
@@ -189,12 +212,16 @@ const HomeScreen = () => {
           {feedState === 'loading' ? (
             <View style={styles.emptyFeed}>
               <ActivityIndicator color={colors.primary} />
-              <Text style={styles.emptyTitle}>주변 나눔을 불러오는 중입니다</Text>
+              <Text style={styles.emptyTitle}>
+                주변 나눔을 불러오는 중입니다
+              </Text>
             </View>
           ) : feedState === 'error' ? (
             <View style={styles.emptyFeed}>
               <Text style={styles.emptyTitle}>
-                {hasLocation ? '목록을 불러오지 못했습니다' : LOCATION_REQUIRED_TITLE}
+                {hasLocation
+                  ? '목록을 불러오지 못했습니다'
+                  : LOCATION_REQUIRED_TITLE}
               </Text>
               <Text style={styles.emptySubtitle}>{feedError}</Text>
               <TouchableOpacity
@@ -222,11 +249,10 @@ const HomeScreen = () => {
           ) : (
             <View style={styles.emptyFeed}>
               <Text style={styles.emptyIcon}>🌿</Text>
-              <Text style={styles.emptyTitle}>
-                아직 근처에 나눔이 없어요
-              </Text>
+              <Text style={styles.emptyTitle}>아직 근처에 나눔이 없어요</Text>
               <Text style={styles.emptySubtitle}>
-                첫 번째 나눔을 시작해보세요!{'\n'}AI 스캔으로 신선도를 확인하고 등록할 수 있어요.
+                첫 번째 나눔을 시작해보세요!{'\n'}AI 스캔으로 신선도를 확인하고
+                등록할 수 있어요.
               </Text>
             </View>
           )}

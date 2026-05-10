@@ -158,7 +158,9 @@ const CameraScanScreen = ({navigation}: Props) => {
         response: error?.response?.data,
         image: {uri, type, name},
       });
-      const message = getApiErrorMessage(error, 'AI 분석에 실패했습니다.');
+      const message = getApiErrorMessage(error, 'AI 분석에 실패했습니다.', {
+        preferDetail: true,
+      });
       Alert.alert('분석 실패', message, [
         {text: '다시 촬영', style: 'cancel'},
         {text: '갤러리 선택', onPress: handleGallery},

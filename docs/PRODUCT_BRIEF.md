@@ -1,6 +1,6 @@
 # FoodLink Product Brief
 
-> **최종 수정일**: 2026-05-06
+> **최종 수정일**: 2026-05-08
 > **프로젝트명**: FoodLink (패키지명: greennode)  
 > **플랫폼**: React Native (Android / iOS)
 
@@ -45,9 +45,10 @@ FoodLink의 핵심 가치는 남는 식재료 처리의 귀찮음과 죄책감�
 
 - 공급자가 남는 식재료를 촬영/선택한다.
 - AI가 대표 식재료와 나눔 가능 여부를 판단한다.
-- `Fresh/Normal` 계열은 사용자에게 `상태가 좋아 보여요`와 `나눔 가능`으로 통합 표시한다.
-- `Stale/Bad/Rotten`, `not_food`, `low_quality`, `screenshot` 계열은 사용자에게 `나눔 기준에 맞지 않아요` 또는 사진 확인 실패로 안내하고 등록하지 않는다.
-- `confidenceScore`는 차단 기준이 아니라 보조 표시/검토 신호로만 사용한다.
+- 백엔드 AI label은 `Fresh/Mid/Stale`이다. `Mid`는 기존 프론트 문서의 `Normal` 그룹으로 번역한다.
+- `Fresh/Mid` 계열은 사용자에게 `상태가 좋아 보여요`와 `나눔 가능`으로 통합 표시한다.
+- `Stale`은 사용자에게 `나눔 기준에 맞지 않아요`로 안내하고 등록하지 않는다. `not_food`, `low_quality`, `screenshot` 계열 rejection reason은 Post-MVP 백엔드 항목이다. 특히 screenshot/UI 캡처는 MVP 서버가 차단할 수 없어 `Fresh + imageToken`으로 통과할 수 있으며, 이 경우 앱은 `확인 필요` 표시만 하고 등록은 허용한다.
+- `confidenceScore`는 Stage 2 신선도 분류 모델의 softmax max 확률이며, 차단 기준이 아니라 보조 표시/검토 신호로만 사용한다. 제품 기준은 백엔드 활용 가이드를 따라 0.9 미만을 `확인 필요` 구간으로 본다.
 - 공급자는 공유 냉장고를 선택해 나눔 식재료를 등록한다.
 - 등록 완료 후 근처 사용자에게 푸시 알림을 보낸다.
 - 수요자는 홈/알림/지도에서 나눔 식재료를 확인하고 `나눔 신청하기`를 누른다.
@@ -64,16 +65,17 @@ FoodLink의 핵심 가치는 남는 식재료 처리의 귀찮음과 죄책감�
 
 ## MVP Flow Contract
 
-| Flow slice | Entry point | Must happen | Result state/effect | Explicitly not MVP |
-| --- | --- | --- | --- | --- |
-| 남는 식재료 등록 | 카메라, 갤러리 | AI 분석 결과를 보여주고, 나눔 기준 통과 항목만 등록 정보 확인으로 보낸다. | `POST /posts` 성공 후 `status=available`, 근처 사용자 푸시 발송 | QR/토큰/관리자 승인으로 실제 보관 여부 강제 |
-| 나눔 기준 미충족 | AI 분석 결과 | `Stale/Bad/Rotten`, 비식재료, 저품질 사진은 등록 흐름으로 보내지 않는다. | 사용자에게 `나눔 기준에 맞지 않아요` 계열 문구 표시 | 부패/상함/썩음 같은 확정 판정 표현 |
-| 근처 나눔 발견 | 홈, 푸시 알림 | 홈은 냉장고보다 available 나눔 식재료를 먼저 보여준다. | 상세 화면에서 보관 공유 냉장고와 신청 CTA 확인 | 실제 인기 랭킹, 채팅 기반 탐색 |
-| 공유 냉장고 탐색 | 지도 | 지도는 주변 공유 냉장고와 냉장고 안의 available 나눔 식재료를 탐색하게 한다. | 냉장고 기준으로 상세/신청 흐름에 진입 | 지도를 홈 피드의 대체 화면으로 사용 |
-| 나눔 신청 | 상세 화면 | 첫 신청을 접수하면 `available -> requested`로 전환하는 것을 MVP 기준 흐름으로 둔다. | 신청 접수 알림, 추가 신청 CTA 비활성화 | 예약 확정, 수령 완료, 공급자 승인/거절 |
-| 환경 성취 확인 | 등록 완료 후 | 사용자의 좋은 행동을 숫자로 확인시키는 보조 레이어로만 제공한다. | 안도감/완료감 이후 보조 지표 노출 | 핵심 가치나 수익 모델을 대체하는 1차 동기 |
+| Flow slice       | Entry point    | Must happen                                                                                                                                              | Result state/effect                                             | Explicitly not MVP                          |
+| ---------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- | ------------------------------------------- |
+| 남는 식재료 등록 | 카메라, 갤러리 | AI 분석 결과를 보여주고, 나눔 기준 통과 항목만 등록 정보 확인으로 보낸다.                                                                                | `POST /posts` 성공 후 `status=available`, 근처 사용자 푸시 발송 | QR/토큰/관리자 승인으로 실제 보관 여부 강제 |
+| 나눔 기준 미충족 | AI 분석 결과   | 현재 백엔드 기준 `Stale`은 등록 흐름으로 보내지 않는다. screenshot/UI 캡처는 MVP에서 차단 불가이므로 통과 가능하며, 비식재료/저품질 사진은 Post-MVP rejection reason 계약 전까지 false-positive 검증 대상으로 둔다. | 사용자에게 `나눔 기준에 맞지 않아요` 또는 `확인 필요` 계열 문구 표시 | 부패/상함/썩음 같은 확정 판정 표현          |
+| 근처 나눔 발견   | 홈, 푸시 알림  | 홈은 냉장고보다 available 나눔 식재료를 먼저 보여준다.                                                                                                   | 상세 화면에서 보관 공유 냉장고와 신청 CTA 확인                  | 실제 인기 랭킹, 채팅 기반 탐색              |
+| 공유 냉장고 탐색 | 지도           | 지도는 주변 공유 냉장고와 냉장고 안의 available 나눔 식재료를 탐색하게 한다.                                                                             | 냉장고 기준으로 상세/신청 흐름에 진입                           | 지도를 홈 피드의 대체 화면으로 사용         |
+| 나눔 신청        | 상세 화면      | 첫 신청을 접수하면 `available -> requested`로 전환하는 것을 MVP 기준 흐름으로 둔다.                                                                      | 신청 접수 알림, 추가 신청 CTA 비활성화                          | 예약 확정, 수령 완료, 공급자 승인/거절      |
+| 환경 성취 확인   | 등록 완료 후   | 사용자의 좋은 행동을 숫자로 확인시키는 보조 레이어로만 제공한다.                                                                                         | 안도감/완료감 이후 보조 지표 노출                               | 핵심 가치나 수익 모델을 대체하는 1차 동기   |
 
 `나눔 신청`의 첫 신청 잠금 정책은 현재 제품 가정이다. 기존 회의에서 최종 확정이 보류된 항목이므로, 기획자가 다른 결정을 내리면 이 문서와 [VALIDATION_AND_BACKLOG.md](./VALIDATION_AND_BACKLOG.md)에 충돌 기준과 변경 이유를 함께 남긴다.
+백엔드 Phase 1.5는 이 제품 가정에 맞춰 첫 신청 접수 후 `requested`로 전환하고, 작성자 본인 신청은 403, 중복/경합 신청은 409로 거절하도록 구현했다.
 
 ## Product Loops
 
@@ -103,7 +105,7 @@ FoodLink의 핵심 가치는 남는 식재료 처리의 귀찮음과 죄책감�
   -> 공급자에게 신청 알림
 ```
 
-MVP에서 공급자는 `requested` 이후 별도 승인 행동을 하지 않는다. 첫 신청 이후 추가 신청을 막는 정책을 권장하지만, 최종 기획 확인이 남아 있다.
+MVP에서 공급자는 `requested` 이후 별도 승인 행동을 하지 않는다. 첫 신청 이후 추가 신청은 막는다.
 
 ## Home And Map Roles
 
@@ -139,15 +141,17 @@ MVP에서 공급자는 `requested` 이후 별도 승인 행동을 하지 않는�
 
 - 사진 한 장으로 대표 식재료와 내부 신선도 등급을 분석한다.
 - 기획/백엔드 목표: YOLOv8 기반 객체 탐지, ResNet-50 기반 신선도 분류.
-- 현재 앱 계약: `POST /api/v1/posts/generate`가 `PostGenerateResult`를 반환하고, 앱은 단일 대표 객체와 `Fresh/Normal/Stale/Bad/Rotten` 계열 **신선도 등급** 문자열을 매핑한다.
-- 현재 앱 정책: `Fresh/Normal`은 나눔 가능으로 통합 표시, `Stale/Bad/Rotten`은 AI/백엔드 정의 전까지 보수적으로 등록 차단, 낮은 confidence는 차단이 아니라 보조 표시.
+- 현재 백엔드 계약: `POST /api/v1/posts/generate`가 대표 식재료, `Fresh/Mid/Stale` 신선도 등급, `isFresh`, `confidenceScore`, `imageToken`을 반환한다. LLM은 비활성화되어 있다. generate는 Post row를 만들지 않지만, 2026-05-08 백엔드 수정 후 서버 임시 저장소에 이미지와 AI 메타데이터 sidecar를 저장하고 `POST /posts` 시점에 복원한다.
+- 현재 앱 정책: `Fresh/Mid`는 나눔 가능으로 통합 표시, `Stale`은 등록 차단, 낮은 confidence는 차단이 아니라 보조 표시.
 
 ### 2. 나눔 식재료 등록
 
 - AI 분석 결과를 기반으로 제목/설명/카테고리 초안을 채운다.
+- 백엔드 Phase 1.5 이후 Post 저장 구조는 제목/설명/카테고리보다 `detectedFruitKo`, `freshnessLabel`, `confidenceScore` 중심이다. 프론트 작성 화면은 사용자가 확인해야 할 최소 정보와 수정 가능 범위를 이 구조에 맞게 재정렬해야 한다.
 - 공급자는 정보를 확인/수정하고 공유 냉장고를 선택한다.
 - 등록이 완료되면 근처 사용자에게 푸시 알림을 보낸다.
 - MVP는 실제 보관 검증을 QR/토큰/관리자 승인으로 강제하지 않는다.
+- 서버는 `Stale` 분석 결과에 대해 `imageToken`을 발급하지 않고, 무효/만료 토큰으로는 최종 등록을 막는다. 프론트의 나눔 가능 가드는 사용자 경험용이며 서버가 최종 방어선이다. 프론트는 `POST /posts`에 `imageToken`, `fridgeId`, `expirationDate`만 보내고 AI 메타데이터를 재전송하지 않는다.
 
 ### 3. 근처 나눔 식재료 발견
 
@@ -159,7 +163,7 @@ MVP에서 공급자는 `requested` 이후 별도 승인 행동을 하지 않는�
 
 - 지도는 주변 공유 냉장고와 그 안의 available 나눔 식재료를 탐색하게 한다.
 - 공유 냉장고는 수령 장소이자 신뢰 장치다.
-- 현재 검증 결과: 광주 전남대 인근 좌표에서 냉장고 목록은 실제 API로 조회됐다. 단, 주변 냉장고 없음 상태는 임의 좌표에서도 서버가 3건을 반환해 별도 서버 필터 검증이 필요하다.
+- 현재 검증 결과: 광주 전남대 인근 좌표에서 냉장고 목록은 실제 API로 조회됐다. 백엔드는 `GET /fridges/{id}/posts?status=available`도 구현했다. 단, 주변 냉장고 없음 상태는 임의 좌표에서도 서버가 3건을 반환해 별도 서버 필터 검증이 필요하다.
 
 ### 5. 나눔 신청과 푸시 알림
 
@@ -167,6 +171,7 @@ MVP에서 공급자는 `requested` 이후 별도 승인 행동을 하지 않는�
 - 수요자는 상세 화면에서 `나눔 신청하기`를 누른다.
 - MVP 목표 상태 전환은 `available -> requested`다.
 - `requested`는 신청 접수이며 예약 확정이 아니다.
+- 백엔드는 `POST /posts/{id}/requests`, `share_requested` 알림, 403/409 상태 처리를 구현했다. 프론트는 상세 CTA와 로컬 알림함을 이 계약에 맞게 연결했다. 실제 기기 FCM foreground/background/terminated QA는 남아 있다.
 - 채팅은 MVP에서 보류하고 알림함/신청 흐름으로 축소한다.
 
 ### 6. 환경 성취 지표
@@ -177,18 +182,18 @@ MVP에서 공급자는 `requested` 이후 별도 승인 행동을 하지 않는�
 
 ## Technical Stack
 
-| 영역 | 기술 |
-|------|------|
-| 프론트엔드 | React Native (TypeScript) |
-| 네비게이션 | React Navigation (Stack + Bottom Tabs) |
-| 상태 관리 | Zustand |
-| HTTP 클라이언트 | Axios |
-| 카메라 | react-native-vision-camera |
-| 지도 | react-native-maps (Google Maps) |
-| 위치 | react-native-geolocation-service |
-| 푸시 알림 | @react-native-firebase/messaging |
-| 폼 검증 | react-hook-form + zod |
-| 인증 | JWT Bearer Token (AsyncStorage) |
+| 영역            | 기술                                   |
+| --------------- | -------------------------------------- |
+| 프론트엔드      | React Native (TypeScript)              |
+| 네비게이션      | React Navigation (Stack + Bottom Tabs) |
+| 상태 관리       | Zustand                                |
+| HTTP 클라이언트 | Axios                                  |
+| 카메라          | react-native-vision-camera             |
+| 지도            | react-native-maps (Google Maps)        |
+| 위치            | react-native-geolocation-service       |
+| 푸시 알림       | @react-native-firebase/messaging       |
+| 폼 검증         | react-hook-form + zod                  |
+| 인증            | JWT Bearer Token (AsyncStorage)        |
 
 ## Backend Integration
 
@@ -207,9 +212,9 @@ MVP에서 공급자는 `requested` 이후 별도 승인 행동을 하지 않는�
 
 ## Related Documents
 
-| 문서 | 경로 | 설명 |
-|------|------|------|
-| 도메인 모델 | [DOMAIN_MODEL.md](./DOMAIN_MODEL.md) | FoodLink 용어, 관계, 모호성 |
-| API 연동 계약 | [API_INTEGRATION_CONTRACT.md](./API_INTEGRATION_CONTRACT.md) | 백엔드 API 명세 및 연동 방법 |
-| 검증/백로그 | [VALIDATION_AND_BACKLOG.md](./VALIDATION_AND_BACKLOG.md) | MVP 검증 결과와 다음 작업 |
-| 디자인 시스템 | [DESIGN_SYSTEM.md](./DESIGN_SYSTEM.md) | 컬러, 타이포그래피, 스페이싱 토큰 |
+| 문서          | 경로                                                         | 설명                              |
+| ------------- | ------------------------------------------------------------ | --------------------------------- |
+| 도메인 모델   | [DOMAIN_MODEL.md](./DOMAIN_MODEL.md)                         | FoodLink 용어, 관계, 모호성       |
+| API 연동 계약 | [API_INTEGRATION_CONTRACT.md](./API_INTEGRATION_CONTRACT.md) | 백엔드 API 명세 및 연동 방법      |
+| 검증/백로그   | [VALIDATION_AND_BACKLOG.md](./VALIDATION_AND_BACKLOG.md)     | MVP 검증 결과와 다음 작업         |
+| 디자인 시스템 | [DESIGN_SYSTEM.md](./DESIGN_SYSTEM.md)                       | 컬러, 타이포그래피, 스페이싱 토큰 |

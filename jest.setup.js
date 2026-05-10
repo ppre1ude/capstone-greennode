@@ -11,10 +11,19 @@ jest.mock('react-native-geolocation-service', () => ({
   requestAuthorization: jest.fn(),
 }));
 
-jest.mock('@react-native-firebase/messaging', () => () => ({
+const mockMessagingInstance = {
   requestPermission: jest.fn(),
   registerDeviceForRemoteMessages: jest.fn(),
   getToken: jest.fn(),
+  onMessage: jest.fn(() => jest.fn()),
+  onNotificationOpenedApp: jest.fn(() => jest.fn()),
+  getInitialNotification: jest.fn(() => Promise.resolve(null)),
+  setBackgroundMessageHandler: jest.fn(),
+};
+
+jest.mock('@react-native-firebase/messaging', () => ({
+  __esModule: true,
+  default: () => mockMessagingInstance,
 }));
 
 jest.mock('react-native-image-picker', () => ({

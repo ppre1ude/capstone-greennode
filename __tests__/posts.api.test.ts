@@ -1,12 +1,30 @@
-import {createPost, generatePost, getImageUrl} from '@/api/posts';
-import {API_BASE_URL} from '@/config/api';
-import {getToken} from '@/utils/storage';
+import apiClient from '@/api/client';
+import {
+  createPost,
+  generatePost,
+  getImageUrl,
+  requestShare,
+} from '@/api/posts';
+import { API_BASE_URL } from '@/config/api';
+import { getToken } from '@/utils/storage';
+
+jest.mock('@/api/client', () => {
+  const { API_BASE_URL: actualBaseUrl } = jest.requireActual('@/config/api');
+  return {
+    __esModule: true,
+    default: {
+      post: jest.fn(),
+    },
+    BASE_URL: actualBaseUrl,
+  };
+});
 
 jest.mock('@/utils/storage', () => ({
   getToken: jest.fn(),
 }));
 
 const mockedGetToken = getToken as jest.MockedFunction<typeof getToken>;
+const mockedApiClient = apiClient as jest.Mocked<typeof apiClient>;
 const testGlobal = globalThis as typeof globalThis & {
   fetch: jest.Mock;
   FormData: typeof FormData;
@@ -35,11 +53,11 @@ class MockXMLHttpRequest {
       success: true,
       message: 'ok',
       data: {
-        suggestedTitle: '신선한 사과 나눔합니다',
-        suggestedDescription: 'AI 분석 결과: Fresh (신뢰도 100%).',
-        suggestedCategory: '기타',
         detectedFruit: 'apple',
         detectedFruitKo: '사과',
+        freshnessLabel: 'Fresh',
+        confidenceScore: 1,
+        isFresh: true,
         aiAnalysis: {
           isFresh: true,
           confidenceScore: 1,
@@ -81,7 +99,7 @@ class MockXMLHttpRequest {
 
   send(body: unknown) {
     this.body = body;
-    const {status, body: responseBody} = MockXMLHttpRequest.nextResponse;
+    const { status, body: responseBody } = MockXMLHttpRequest.nextResponse;
     this.status = status;
     this.responseText = JSON.stringify(responseBody);
     this.onload?.();
@@ -102,6 +120,7 @@ describe('posts API contract', () => {
       MockXMLHttpRequest as unknown as typeof XMLHttpRequest;
     MockXMLHttpRequest.instances = [];
     MockXMLHttpRequest.nextResponse.status = 200;
+    mockedApiClient.post.mockReset();
   });
 
   afterAll(() => {
@@ -112,7 +131,7 @@ describe('posts API contract', () => {
 
   it('sends selected image to generate endpoint as multipart form data', async () => {
     const response = await generatePost(
-      {uri: 'file:///photo.jpg', type: 'image/jpeg', name: 'photo.jpg'},
+      { uri: 'file:///photo.jpg', type: 'image/jpeg', name: 'photo.jpg' },
       '어제 샀어요',
     );
 
@@ -124,7 +143,10 @@ describe('posts API contract', () => {
     expect(request.timeout).toBe(30000);
     expect(request.headers.Authorization).toBe('Bearer access-token');
     expect(formData.fields).toEqual([
-      ['image', {uri: 'file:///photo.jpg', type: 'image/jpeg', name: 'photo.jpg'}],
+      [
+        'image',
+        { uri: 'file:///photo.jpg', type: 'image/jpeg', name: 'photo.jpg' },
+      ],
       ['user_hint', '어제 샀어요'],
     ]);
     expect(response.data?.imageToken).toBe('image-token-1');
@@ -132,9 +154,6 @@ describe('posts API contract', () => {
 
   it('creates post with encoded JSON data and imageToken only', async () => {
     const postData = {
-      title: '신선한 사과 나눔합니다',
-      description: 'AI 분석 결과: Fresh.',
-      category: '기타',
       fridgeId: 1,
       expirationDate: '2026-05-08',
       imageToken: 'image-token-1',
@@ -146,7 +165,20 @@ describe('posts API contract', () => {
       json: async () => ({
         success: true,
         message: 'created',
-        data: {id: 10, ...postData, imageUrl: '/static/posts/10.jpg', authorId: 1},
+        data: {
+          id: 10,
+          fridgeId: 1,
+          authorId: 1,
+          detectedFruit: 'apple',
+          detectedFruitKo: '사과',
+          freshnessLabel: 'Fresh',
+          confidenceScore: 1,
+          imageUrl: '/static/posts/10.jpg',
+          expirationDate: '2026-05-08',
+          status: 'available',
+          createdAt: '2026-05-06T00:00:00Z',
+          updatedAt: '2026-05-06T00:00:00Z',
+        },
       }),
     } satisfies MockFetchResponse);
 
@@ -184,16 +216,53 @@ describe('posts API contract', () => {
 
     await expect(
       createPost({
-        title: '신선한 사과 나눔합니다',
-        description: 'AI 분석 결과: Fresh.',
-        category: '기타',
         fridgeId: 1,
         expirationDate: '2026-05-08',
         imageToken: 'expired-token',
       }),
     ).rejects.toMatchObject({
-      response: {status: 400, data: errorBody},
+      response: { status: 400, data: errorBody },
     });
+  });
+
+  it('requests a share for a specific post and returns request plus updated post', async () => {
+    mockedApiClient.post.mockResolvedValue({
+      data: {
+        success: true,
+        message: '나눔 신청이 완료되었습니다.',
+        data: {
+          request: {
+            id: 1,
+            postId: 10,
+            requesterId: 2,
+            status: 'requested',
+            createdAt: '2026-05-06T00:00:00Z',
+          },
+          post: {
+            id: 10,
+            fridgeId: 1,
+            authorId: 1,
+            detectedFruit: 'apple',
+            detectedFruitKo: '사과',
+            freshnessLabel: 'Fresh',
+            confidenceScore: 1,
+            imageUrl: '/static/posts/10.jpg',
+            expirationDate: '2026-05-08',
+            status: 'requested',
+            createdAt: '2026-05-06T00:00:00Z',
+            updatedAt: '2026-05-06T00:00:00Z',
+          },
+        },
+      },
+    });
+
+    const response = await requestShare(10);
+
+    expect(mockedApiClient.post).toHaveBeenCalledWith(
+      '/api/v1/posts/10/requests',
+    );
+    expect(response.data?.request.id).toBe(1);
+    expect(response.data?.post.status).toBe('requested');
   });
 
   it('builds absolute image URLs from server relative paths', () => {

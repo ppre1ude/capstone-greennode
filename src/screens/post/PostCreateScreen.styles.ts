@@ -1,5 +1,5 @@
-import {Platform, StyleSheet} from 'react-native';
-import {colors} from '@/theme';
+import { Platform, StyleSheet } from 'react-native';
+import { colors } from '@/theme';
 
 export const styles = StyleSheet.create({
   container: {
@@ -31,7 +31,7 @@ export const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.textPrimary,
   },
-  headerSpacer: {width: 40},
+  headerSpacer: { width: 40 },
   scrollContent: {
     paddingBottom: 40,
   },
@@ -57,7 +57,7 @@ export const styles = StyleSheet.create({
     borderRadius: 20,
     gap: 4,
   },
-  aiBadgeIcon: {fontSize: 12},
+  aiBadgeIcon: { fontSize: 12 },
   aiBadgeText: {
     color: '#FFFFFF',
     fontSize: 12,
@@ -107,6 +107,29 @@ export const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 13,
     lineHeight: 19,
+  },
+  summaryCard: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    padding: 18,
+    gap: 8,
+  },
+  summaryTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.textSecondary,
+  },
+  summaryName: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: colors.textPrimary,
+  },
+  summaryDescription: {
+    fontSize: 14,
+    lineHeight: 21,
+    color: colors.textSecondary,
   },
   field: {
     gap: 8,

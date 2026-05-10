@@ -7,7 +7,7 @@
  *
  * @wireframe (별도 와이어프레임은 없으나, 피드 상세 기능을 위해 필요)
  */
-import React, {useCallback, useEffect, useState} from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -18,24 +18,50 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import type {NativeStackScreenProps} from '@react-navigation/native-stack';
-import type {RootStackParamList} from '@/navigation/types';
-import {getPostDetail, deletePost, getImageUrl} from '@/api/posts';
-import {useAuthStore} from '@/store/authStore';
-import type {Post} from '@/types';
-import {isPostAuthoredByUser} from '@/utils/postPolicy';
-import {colors} from '@/theme';
-import {styles} from './PostDetailScreen.styles';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '@/navigation/types';
+import {
+  getPostDetail,
+  deletePost,
+  getImageUrl,
+  requestShare,
+} from '@/api/posts';
+import { useAuthStore } from '@/store/authStore';
+import { useFeedRefreshStore } from '@/store/feedRefreshStore';
+import type { Post } from '@/types';
+import { getApiErrorMessage } from '@/utils/apiError';
+import {
+  getConfidencePercent,
+  getPostDisplayName,
+  getPostStatusLabel,
+  getQualityMeta,
+  isPostAuthoredByUser,
+} from '@/utils/postPolicy';
+import { colors } from '@/theme';
+import { styles } from './PostDetailScreen.styles';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PostDetail'>;
 
-const PostDetailScreen = ({route, navigation}: Props) => {
-  const {postId} = route.params;
+const getErrorStatus = (error: unknown): number | null => {
+  if (typeof error !== 'object' || error === null) {
+    return null;
+  }
+
+  const response = (error as { response?: { status?: unknown } }).response;
+  return typeof response?.status === 'number' ? response.status : null;
+};
+
+const PostDetailScreen = ({ route, navigation }: Props) => {
+  const { postId } = route.params;
   const user = useAuthStore(state => state.user);
+  const requestNearbyPostsRefresh = useFeedRefreshStore(
+    state => state.requestNearbyPostsRefresh,
+  );
 
   const [post, setPost] = useState<Post | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isRequesting, setIsRequesting] = useState(false);
 
   const fetchPostDetail = useCallback(async () => {
     try {
@@ -43,7 +69,10 @@ const PostDetailScreen = ({route, navigation}: Props) => {
       if (response.success && response.data) {
         setPost(response.data);
       } else {
-        Alert.alert('오류', response.message || '나눔 식재료를 불러올 수 없습니다.');
+        Alert.alert(
+          '오류',
+          response.message || '나눔 식재료를 불러올 수 없습니다.',
+        );
         navigation.goBack();
       }
     } catch (error) {
@@ -60,33 +89,71 @@ const PostDetailScreen = ({route, navigation}: Props) => {
   }, [fetchPostDetail]);
 
   const handleDelete = () => {
-    Alert.alert(
-      '나눔 취소',
-      '정말로 이 나눔을 취소(삭제)하시겠습니까?',
-      [
-        {text: '아니오', style: 'cancel'},
-        {
-          text: '예',
-          style: 'destructive',
-          onPress: async () => {
-            setIsDeleting(true);
-            try {
-              const response = await deletePost(postId);
-              if (response.success) {
-                Alert.alert('완료', '나눔이 취소되었습니다.');
-                navigation.goBack(); // 또는 홈으로 리셋
-              } else {
-                Alert.alert('오류', response.message || '삭제에 실패했습니다.');
-              }
-            } catch {
-              Alert.alert('오류', '서버에 연결할 수 없습니다.');
-            } finally {
-              setIsDeleting(false);
+    Alert.alert('나눔 취소', '정말로 이 나눔을 취소(삭제)하시겠습니까?', [
+      { text: '아니오', style: 'cancel' },
+      {
+        text: '예',
+        style: 'destructive',
+        onPress: async () => {
+          setIsDeleting(true);
+          try {
+            const response = await deletePost(postId);
+            if (response.success) {
+              Alert.alert('완료', '나눔이 취소되었습니다.');
+              navigation.goBack(); // 또는 홈으로 리셋
+            } else {
+              Alert.alert('오류', response.message || '삭제에 실패했습니다.');
             }
-          },
+          } catch {
+            Alert.alert('오류', '서버에 연결할 수 없습니다.');
+          } finally {
+            setIsDeleting(false);
+          }
         },
-      ],
-    );
+      },
+    ]);
+  };
+
+  const handleRequestShare = async () => {
+    if (!post || post.status !== 'available' || isRequesting) {
+      return;
+    }
+
+    if (isPostAuthoredByUser(post, user?.id)) {
+      Alert.alert('신청 불가', '내가 등록한 나눔 식재료예요.');
+      return;
+    }
+
+    setIsRequesting(true);
+    try {
+      const response = await requestShare(post.id);
+      if (response.success && response.data) {
+        setPost(response.data.post);
+        requestNearbyPostsRefresh(response.data.post.id);
+        Alert.alert('신청 완료', '나눔 신청이 접수되었습니다.');
+        return;
+      }
+
+      Alert.alert('신청 실패', response.message || '나눔 신청에 실패했습니다.');
+    } catch (error) {
+      const status = getErrorStatus(error);
+      if (status === 403) {
+        Alert.alert('신청 불가', '내가 등록한 나눔 식재료예요.');
+      } else if (status === 409) {
+        setPost(currentPost =>
+          currentPost ? { ...currentPost, status: 'requested' } : currentPost,
+        );
+        requestNearbyPostsRefresh(post.id);
+        Alert.alert('신청 마감', '다른 사용자가 먼저 신청했어요.');
+      } else {
+        Alert.alert(
+          '신청 실패',
+          getApiErrorMessage(error, '나눔 신청에 실패했습니다.'),
+        );
+      }
+    } finally {
+      setIsRequesting(false);
+    }
   };
 
   if (isLoading) {
@@ -102,6 +169,16 @@ const PostDetailScreen = ({route, navigation}: Props) => {
   }
 
   const isMyPost = isPostAuthoredByUser(post, user?.id);
+  const displayName = getPostDisplayName(post);
+  const quality = getQualityMeta(post.freshnessLabel);
+  const confidencePercent = getConfidencePercent(post.confidenceScore);
+  const statusLabel = getPostStatusLabel(post.status);
+  const canRequestShare = !isMyPost && post.status === 'available';
+  const requestButtonLabel = isRequesting
+    ? '신청 중...'
+    : canRequestShare
+    ? '나눔 신청하기'
+    : statusLabel;
   const daysLeft = Math.ceil(
     (new Date(post.expirationDate).getTime() - new Date().getTime()) /
       (1000 * 3600 * 24),
@@ -109,7 +186,11 @@ const PostDetailScreen = ({route, navigation}: Props) => {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor="transparent"
+        translucent
+      />
 
       <ScrollView contentContainerStyle={styles.scrollContent} bounces={false}>
         {/* 헤더 (이미지 위 오버레이) */}
@@ -129,7 +210,7 @@ const PostDetailScreen = ({route, navigation}: Props) => {
         {/* 상단 이미지 */}
         <View style={styles.imageContainer}>
           <Image
-            source={{uri: getImageUrl(post.imageUrl)}}
+            source={{ uri: getImageUrl(post.imageUrl) }}
             style={styles.image}
             resizeMode="cover"
           />
@@ -138,13 +219,13 @@ const PostDetailScreen = ({route, navigation}: Props) => {
         {/* 본문 영역 */}
         <View style={styles.body}>
           <View style={styles.titleRow}>
-            <Text style={styles.categoryBadge}>{post.category || '식재료'}</Text>
+            <Text style={styles.categoryBadge}>{statusLabel}</Text>
             <Text style={styles.timeText}>
               {new Date(post.createdAt).toLocaleDateString()} 등록
             </Text>
           </View>
 
-          <Text style={styles.title}>{post.title}</Text>
+          <Text style={styles.title}>{displayName}</Text>
 
           {/* 주요 정보 박스 */}
           <View style={styles.infoBox}>
@@ -159,25 +240,34 @@ const PostDetailScreen = ({route, navigation}: Props) => {
             </View>
             <View style={styles.dividerVertical} />
             <View style={styles.infoItem}>
-              <Text style={styles.infoIcon}>🏢</Text>
+              <Text style={styles.infoIcon}>✓</Text>
               <View>
-                <Text style={styles.infoLabel}>보관 장소</Text>
-                <Text style={styles.infoValue}>공유 냉장고</Text>
+                <Text style={styles.infoLabel}>상태 안내</Text>
+                <Text style={styles.infoValue}>{quality.label}</Text>
               </View>
             </View>
           </View>
 
-          {/* 상세 설명 */}
-          <Text style={styles.sectionTitle}>상세 설명</Text>
-          <Text style={styles.description}>{post.description}</Text>
+          <Text style={styles.sectionTitle}>AI 분석 정보</Text>
+          <Text style={styles.description}>
+            {confidencePercent != null
+              ? `AI 신뢰도 ${confidencePercent}%로 ${quality.label} 상태로 확인됐어요.`
+              : `${quality.label} 상태로 확인됐어요.`}
+          </Text>
         </View>
       </ScrollView>
 
       {/* 하단 CTA (내가 쓴 글이 아닐 경우 채팅하기 등) */}
       {!isMyPost && (
         <View style={styles.footer}>
-          <TouchableOpacity style={styles.chatButton}>
-            <Text style={styles.chatButtonText}>나눔 신청하기 (준비중)</Text>
+          <TouchableOpacity
+            style={[
+              styles.chatButton,
+              (!canRequestShare || isRequesting) && styles.chatButtonDisabled,
+            ]}
+            onPress={handleRequestShare}
+            disabled={!canRequestShare || isRequesting}>
+            <Text style={styles.chatButtonText}>{requestButtonLabel}</Text>
           </TouchableOpacity>
         </View>
       )}

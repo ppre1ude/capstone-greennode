@@ -1,24 +1,51 @@
 import {PermissionsAndroid, Platform} from 'react-native';
 import Geolocation from 'react-native-geolocation-service';
-import messaging from '@react-native-firebase/messaging';
 import {updateLocation} from '@/api/auth';
+import {getMessagingOrNull} from '@/services/firebaseMessaging';
 import type {User} from '@/types';
 
-const requestNotificationPermission = async () => {
+const requestNotificationPermission = async (
+  messagingInstance: NonNullable<ReturnType<typeof getMessagingOrNull>>,
+): Promise<boolean> => {
   if (Platform.OS === 'android' && Number(Platform.Version) >= 33) {
-    await PermissionsAndroid.request(
+    const result = await PermissionsAndroid.request(
       PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
     );
+
+    if (result !== PermissionsAndroid.RESULTS.GRANTED) {
+      return false;
+    }
   }
 
-  await messaging().requestPermission();
-  await messaging().registerDeviceForRemoteMessages();
+  const authorizationStatus: unknown =
+    await messagingInstance.requestPermission();
+  const isAuthorized =
+    authorizationStatus === 1 ||
+    authorizationStatus === 2 ||
+    authorizationStatus === true ||
+    authorizationStatus === undefined;
+
+  if (!isAuthorized) {
+    return false;
+  }
+
+  await messagingInstance.registerDeviceForRemoteMessages();
+  return true;
 };
 
 export const getFcmToken = async (): Promise<string | undefined> => {
+  const messagingInstance = getMessagingOrNull();
+  if (!messagingInstance) {
+    return undefined;
+  }
+
   try {
-    await requestNotificationPermission();
-    return await messaging().getToken();
+    const granted = await requestNotificationPermission(messagingInstance);
+    if (!granted) {
+      return undefined;
+    }
+
+    return await messagingInstance.getToken();
   } catch (error) {
     console.warn('FCM token error:', error);
     return undefined;
@@ -53,7 +80,7 @@ export const refreshDeviceRegistration = async (user: User) => {
     return;
   }
 
-  const fcmToken = await getFcmToken();
+  const fcmToken = user.fcmToken ?? undefined;
   let latitude = user.latitude;
   let longitude = user.longitude;
 

@@ -2,8 +2,8 @@
 
 > **문서 목적**: React Native 프론트엔드 개발자가 백엔드 API와 연동할 때 필요한 모든 정보
 >
-> **기준일**: 2026-05-06
-> **검증 기준**: `GET /openapi.json`, 실제 앱/API 검증, [VALIDATION_AND_BACKLOG.md](./VALIDATION_AND_BACKLOG.md)
+> **기준일**: 2026-05-08
+> **검증 기준**: `GET /openapi.json`, 실제 앱/API 검증, 백엔드 Phase 1.5 완료 답변(2026-05-06), 백엔드 P0 수정/VM 재배포 완료 답변(2026-05-08), [VALIDATION_AND_BACKLOG.md](./VALIDATION_AND_BACKLOG.md)
 > **도메인 용어 기준**: [DOMAIN_MODEL.md](./DOMAIN_MODEL.md)
 
 ---
@@ -40,18 +40,20 @@ ssh -L 8080:localhost:80 NHN-Cloud-Server
 
 ### 접속 주소 (Base URL)
 
-| 환경 | Base URL |
-|------|---------|
-| 브라우저 (Swagger UI) | `http://localhost:8080/docs` |
-| React Native (Android 에뮬레이터) | `http://10.0.2.2:8080` |
-| React Native (iOS 시뮬레이터) | `http://localhost:8080` |
-| React Native (실기기, 같은 WiFi) | `http://{내PC_IP}:8080` |
+| 환경                              | Base URL                     |
+| --------------------------------- | ---------------------------- |
+| 브라우저 (Swagger UI)             | `http://localhost:8080/docs` |
+| React Native (Android 에뮬레이터) | `http://10.0.2.2:8080`       |
+| React Native (iOS 시뮬레이터)     | `http://localhost:8080`      |
+| React Native (실기기, 같은 WiFi)  | `http://{내PC_IP}:8080`      |
 
 ### SSH 키 공유 방법
 
 프론트 개발자도 SSH 터널을 열어야 하므로, 아래 파일이 필요하다:
+
 1. SSH 키 파일: `2026-GreenNode.pem`
 2. SSH config 설정:
+
 ```
 Host NHN-Cloud-Server
     HostName 133.186.200.133
@@ -73,14 +75,15 @@ Host NHN-Cloud-Server
 
 현재 서버와 앱 코드에는 `/posts`, `Post`, `postId` 계열 명칭이 남아 있다. 제품/도메인 문서에서는 이를 **나눔 식재료**로 번역한다.
 
-| API/code term | Domain term | Note |
-| --- | --- | --- |
-| `post`, `Post`, `/posts` | 나눔 식재료 | 현재 기술 명칭. 사용자-facing 용어로 쓰지 않는다. |
-| `createPost` | 나눔 식재료 등록 | AI generate 이후 최종 등록 단계 |
-| `nearby posts` | 근처 나눔 식재료 | 홈 피드의 핵심 데이터 |
-| `status` | 나눔 상태 | `available`, `requested` 등 생명주기 상태 |
-| `category` in `aiAnalysis` | 신선도 등급 | `Fresh/Normal/Stale/Bad/Rotten` 계열 |
-| `category` in post data | 나눔 카테고리 | 과일/채소/기타 등 사용자 분류 |
+| API/code term                                   | Domain term                | Note                                                                                        |
+| ----------------------------------------------- | -------------------------- | ------------------------------------------------------------------------------------------- |
+| `post`, `Post`, `/posts`                        | 나눔 식재료                | 현재 기술 명칭. 사용자-facing 용어로 쓰지 않는다.                                           |
+| `createPost`                                    | 나눔 식재료 등록           | AI generate 이후 최종 등록 단계                                                             |
+| `nearby posts`                                  | 근처 나눔 식재료           | 홈 피드의 핵심 데이터                                                                       |
+| `status`                                        | 나눔 상태                  | `available`, `requested` 등 생명주기 상태                                                   |
+| `category`/`freshnessLabel` in AI/post data     | 신선도 등급                | 현재 백엔드 기준 `Fresh`, `Mid`, `Stale`. 도메인상 `Mid`는 기존 `Normal` 그룹으로 번역한다. |
+| `detectedFruitKo`                               | 식재료명                   | 나눔 식재료 카드/상세/알림에서 사용자에게 보여줄 대표 식재료명                              |
+| `title`, `description`, `category` in post data | 구형 나눔 식재료 작성 필드 | 백엔드 Phase 1.5에서 Post 컬럼에서 제거됨. 프론트 타입/화면은 새 계약으로 갱신됐다.    |
 
 ### 응답 공통 형식
 
@@ -93,6 +96,7 @@ Host NHN-Cloud-Server
 ```
 
 에러 시:
+
 ```json
 {
   "success": false,
@@ -103,43 +107,50 @@ Host NHN-Cloud-Server
 
 ### HTTP 상태 코드
 
-| 코드 | 의미 |
-|------|------|
-| 200 | 조회/수정 성공 |
-| 201 | 생성 성공 |
-| 400 | 잘못된 요청 (비즈니스 규칙 위반) |
-| 401 | 인증 실패 (토큰 없음/만료) |
-| 403 | 권한 없음 |
-| 404 | 리소스 없음 |
-| 422 | 유효성 검증 실패 (필수 필드 누락) |
+| 코드 | 의미                                 |
+| ---- | ------------------------------------ |
+| 200  | 조회/수정 성공                       |
+| 201  | 생성 성공                            |
+| 400  | 잘못된 요청 (비즈니스 규칙 위반)     |
+| 401  | 인증 실패 (토큰 없음/만료)           |
+| 403  | 권한 없음                            |
+| 409  | 충돌 (이미 신청 접수됨 등 상태 경합) |
+| 404  | 리소스 없음                          |
+| 422  | 유효성 검증 실패 (필수 필드 누락)    |
 
 ---
 
 ## 3. API 엔드포인트 전체 목록
 
-| # | 메서드 | 경로 | 설명 | 인증 |
-|---|--------|------|------|------|
-| 1 | POST | /api/v1/auth/signup | 회원가입 | ❌ |
-| 2 | POST | /api/v1/auth/login | 로그인 | ❌ |
-| 3 | GET | /api/v1/auth/me | 내 정보 조회 | ✅ |
-| 4 | PUT | /api/v1/auth/me/location | 위치+FCM 토큰 갱신 | ✅ |
-| 5 | POST | /api/v1/posts | 나눔 식재료 등록 | ✅ |
-| 6 | POST | /api/v1/posts/generate | AI+LLM 나눔 식재료 미리보기 | ✅ |
-| 7 | GET | /api/v1/posts/nearby | 근처 나눔 식재료 목록 | ✅ |
-| 8 | GET | /api/v1/posts/{id} | 나눔 식재료 상세 | ✅ |
-| 9 | DELETE | /api/v1/posts/{id} | 나눔 식재료 삭제 | ✅ |
-| 10 | GET | /api/v1/fridges/nearby | 근처 냉장고 현황 | ✅ |
-| 11 | GET | /api/v1/fridges/available | 등록 가능 냉장고 | ✅ |
+| #   | 메서드 | 경로                        | 설명                      | 인증 |
+| --- | ------ | --------------------------- | ------------------------- | ---- |
+| 1   | POST   | /api/v1/auth/signup         | 회원가입                  | ❌   |
+| 2   | POST   | /api/v1/auth/login          | 로그인                    | ❌   |
+| 3   | GET    | /api/v1/auth/me             | 내 정보 조회              | ✅   |
+| 4   | PUT    | /api/v1/auth/me/location    | 위치+FCM 토큰 갱신        | ✅   |
+| 5   | POST   | /api/v1/posts               | 나눔 식재료 등록          | ✅   |
+| 6   | POST   | /api/v1/posts/generate      | AI 나눔 식재료 미리보기   | ✅   |
+| 7   | GET    | /api/v1/posts/nearby        | 근처 나눔 식재료 목록     | ✅   |
+| 8   | GET    | /api/v1/posts/{id}          | 나눔 식재료 상세          | ✅   |
+| 9   | DELETE | /api/v1/posts/{id}          | 나눔 식재료 삭제          | ✅   |
+| 10  | POST   | /api/v1/posts/{id}/requests | 나눔 신청                 | ✅   |
+| 11  | GET    | /api/v1/fridges/nearby      | 근처 냉장고 현황          | ✅   |
+| 12  | GET    | /api/v1/fridges/available   | 등록 가능 냉장고          | ✅   |
+| 13  | GET    | /api/v1/fridges/{id}/posts  | 냉장고별 나눔 식재료 조회 | ✅   |
 
-### MVP 목표 API 공백
+### 백엔드 구현 완료, 프론트 연동 필요
 
-아래 흐름은 제품 MVP에는 포함되지만 현재 검증된 OpenAPI/앱 구현에는 없다. 구현 전에 백엔드 계약을 확정해야 한다.
+아래 흐름은 백엔드 Phase 1.5에서 구현/VM 검증이 완료된 항목이다. 프론트 반영 상태는 항목별로 다르므로, 구현 전 이 표와 [VALIDATION_AND_BACKLOG.md](./VALIDATION_AND_BACKLOG.md)를 함께 확인한다.
 
-| Product flow | Current state | Needed contract |
-| --- | --- | --- |
-| 나눔 신청하기 | 상세 화면 CTA는 준비중이며 검증된 신청 API가 없다. | `available` 나눔 식재료에 첫 신청을 접수하고 `requested`로 바꾸는 API |
-| 신청 중복 방지 | 정책은 첫 신청 이후 추가 신청 차단을 권장한다. | 이미 `requested`인 나눔 식재료에 대한 400/409 응답과 사용자 문구 |
-| 신청 알림 | 공급자에게 신청 알림을 보내는 흐름은 목표 상태다. | 신청 성공 후 알림 payload와 알림함 연결 계약 |
+| Product flow               | Backend state                                                                             | Frontend state                                                                                  |
+| -------------------------- | ----------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| 나눔 신청하기              | `POST /posts/{id}/requests` 구현, 성공 시 201                                             | 반영 완료. `requestShare(postId)`, 상세 CTA, 성공/실패 UI, 상태 갱신 구현                       |
+| 신청 동시 경합 방지        | `SELECT ... FOR UPDATE` + 단일 트랜잭션. 첫 신청만 201, 이후 409                          | 반영 완료. 409를 정상 race 결과로 보고 `다른 사용자가 먼저 신청했어요` 문구와 CTA 비활성화 처리 |
+| 작성자 본인 신청 차단      | 403                                                                                       | 반영 완료. 작성자 CTA 숨김, 403 fallback은 `내가 등록한 나눔 식재료예요`                        |
+| 신청 알림                  | `share_requested` FCM payload 구현                                                        | 반영 완료. foreground/background/opened/initial 수신 기록, 알림함, 상세 fallback 라우팅 구현    |
+| 냉장고별 나눔 식재료       | `GET /fridges/{id}/posts?status=available` 구현. 응답은 `PostNearbyRead`이며 `status` 정확히 일치하는 항목만 반환 | 반영 완료. 지도에서 선택 냉장고의 내부 available 목록, loading/error/empty/list 상태, 상세 이동 구현 |
+| Post 응답 구조             | `title/description/category` 제거, `detectedFruitKo/freshnessLabel/confidenceScore` 추가. 2026-05-08 수정 후 `imageToken` sidecar AI 메타데이터를 create 시 복원. 단, `/posts/nearby`, `/fridges/{id}/posts`의 `PostNearbyRead`에는 `confidenceScore`가 없다 | 반영 완료. `src/types/post.ts`, `createPost()`, 홈/냉장고 카드, 상세, 등록 확인 화면은 새 구조 사용 |
+| 나눔 기준 미충족 서버 방어 | `Stale`/`isFresh=false`이면 generate 400이고 `imageToken` 미발급. create는 유효한 `imageToken` 없으면 400 | 프론트 `canShare`는 UX 가드로 유지하되 서버가 최종 방어선임을 전제로 오류 처리                  |
 
 ---
 
@@ -161,6 +172,7 @@ Content-Type: application/json
 ```
 
 **응답 (201)**:
+
 ```json
 {
   "success": true,
@@ -211,6 +223,7 @@ const result = await response.json();
 ```
 
 **응답 (200)**:
+
 ```json
 {
   "success": true,
@@ -224,7 +237,8 @@ const result = await response.json();
 
 ### 4.3 위치 + FCM 토큰 등록
 
-> 앱 실행 시 + 로그인 직후 반드시 호출해야 한다. 이 정보가 없으면 근처 나눔 식재료 조회/알림이 동작하지 않는다.
+> 앱 실행 시 + 로그인 직후 위치가 있는 유저는 좌표 갱신을 호출한다. 알림 토큰은 사용자가 명시적으로 알림 권한을 허용했거나 서버에 저장된 기존 토큰이 있을 때만 함께 보낸다.
+> 알림 권한은 위치 설정 진입 시 자동으로 요청하지 않는다. 사용자가 알림 CTA를 누르면 앱이 `POST_NOTIFICATIONS`/Firebase permission을 요청하고, 허용된 경우에만 FCM 토큰을 함께 보낸다. 사용자가 알림을 건너뛰거나 거부해도 위치 등록은 `fcmToken` 없이 진행한다.
 
 ```
 PUT /api/v1/auth/me/location
@@ -240,9 +254,10 @@ Content-Type: application/json
 }
 ```
 
-### 4.4 나눔 식재료 자동 생성 (AI + LLM 미리보기)
+### 4.4 나눔 식재료 자동 생성 (AI 미리보기)
 
-> 이 API는 DB에 저장하지 않는다. 추천 결과만 반환하며, 사용자가 확인/수정 후 4.5의 등록 API로 최종 저장한다.
+> 이 API는 Post row를 만들지 않는다. 대신 2026-05-08 백엔드 수정 후 서버 임시 저장소에 이미지와 `{imageToken}.json` AI 메타데이터 sidecar를 함께 저장하고, 분석 결과와 `imageToken`을 반환한다. 사용자가 확인/수정 후 4.5의 등록 API로 최종 저장한다.
+> 백엔드 Phase 1.5 기준 LLM은 비활성화되어 있으며, 대표 식재료와 신선도 분류 결과를 반환한다.
 
 ```
 POST /api/v1/posts/generate
@@ -250,28 +265,26 @@ Authorization: Bearer {token}
 Content-Type: multipart/form-data
 ```
 
-| 필드 | 타입 | 필수 | 설명 |
-|------|------|------|------|
-| image | File | ✅ | 촬영한 사진 |
-| user_hint | string | ❌ | 추가 설명 (예: "어제 샀어요") |
+| 필드      | 타입   | 필수 | 설명                          |
+| --------- | ------ | ---- | ----------------------------- |
+| image     | File   | ✅   | 촬영한 사진                   |
+| user_hint | string | ❌   | 추가 설명 (예: "어제 샀어요") |
 
 > ⚠️ 현재 OpenAPI 기준 필수 form 필드는 `image`뿐이다. `user_hint`는 선택이며 snake_case를 사용한다.
 
 **응답 (200)**:
+
 ```json
 {
   "success": true,
   "data": {
-    "suggestedTitle": "신선한 사과 나눔합니다",
-    "suggestedDescription": "AI 분석 결과 신선한 사과입니다.",
-    "suggestedCategory": "과일",
     "detectedFruit": "apple",
     "detectedFruitKo": "사과",
     "aiAnalysis": {
       "isFresh": true,
       "confidenceScore": 0.92,
       "category": "Fresh",
-      "analysisMessage": "식재료가 신선합니다.",
+      "analysisMessage": "상태가 좋아 보여요. 나눔이 가능합니다.",
       "detectedFruit": "apple",
       "detectedFruitKo": "사과",
       "analysisSkipped": false,
@@ -284,32 +297,40 @@ Content-Type: multipart/form-data
 }
 ```
 
+> 2026-05-08 canonical 기준: `POST /posts/generate`의 AI 신선도 판정은 `data.aiAnalysis.category`, `data.aiAnalysis.confidenceScore`, `data.aiAnalysis.isFresh`를 기준으로 읽는다. Post 생성/조회 응답의 최종 저장 필드는 root `freshnessLabel`, `confidenceScore`, `detectedFruit`, `detectedFruitKo`이지만, generate 응답의 canonical 위치는 `aiAnalysis`다. 프론트 타입은 과거/호환 응답을 방어적으로 받기 위해 root `freshnessLabel`, `confidenceScore`, `isFresh`를 optional로 유지한다.
+
 **에러 시 → 400 및 프론트 표시 정책**:
 
-| 상황 | 서버 응답 기준 | 사용자-facing 표시 |
-|------|-----------|-----------|
-| 나눔 기준 미충족(Stale/Bad/Rotten) | generate 400 또는 `category/rejectionReason` | "나눔 기준에 맞는 상태로 확인되지 않았어요. 다시 촬영해주세요." |
-| AI 서버 장애 | generate 400/5xx 또는 네트워크 오류 | "AI 분석 서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요." |
-| 비이미지 파일 | generate 400 | "지원하지 않는 파일 형식입니다. JPEG, PNG, WebP 이미지만 업로드 가능합니다." |
+| 상황                      | 서버 응답 기준                                           | 사용자-facing 표시                                                           |
+| ------------------------- | -------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| 나눔 기준 미충족(`Stale`) | generate 400. `imageToken` 미발급                         | "나눔 기준에 맞지 않아요. 다시 촬영해주세요."                                |
+| AI 서버 장애              | generate 400/5xx 또는 네트워크 오류                      | "AI 분석 서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요."              |
+| 비이미지 파일             | generate 400                                             | "지원하지 않는 파일 형식입니다. JPEG, PNG, WebP 이미지만 업로드 가능합니다." |
 
-> 프론트에서는 실패 응답의 `message` 또는 FastAPI 형식의 `detail`을 Toast/Alert로 표시한다.
+> 2026-05-08 백엔드 답변 기준 generate 400에서 안정적으로 읽을 수 있는 필드는 FastAPI `detail`뿐이다. `message`, `analysisMessage`는 400 계약 필드가 아니다. 프론트는 `detail`을 읽되 사용자-facing 문구로 안전하게 번역한다.
 > 단, `부패`, `상함`, `썩음`처럼 분쟁을 만들 수 있는 표현은 사용자-facing 문구에서 `나눔 기준에 맞지 않아요` 계열로 번역한다.
 
-> 용어 기준: `Fresh/Normal/Stale/Bad/Rotten`은 **신선도 등급**이다. `Fresh/Normal`은 사용자 흐름에서 `상태가 좋아 보여요`와 `나눔 가능`으로 통합 표시한다. `Stale/Bad/Rotten`은 AI/백엔드가 `Stale`의 의미를 더 정확히 정의하기 전까지 **나눔 기준 미충족**으로 보고 분석 결과, 작성, 최종 등록 단계에서 모두 막는다.
+> 용어 기준: 현재 백엔드 AI 신선도 등급은 `Fresh`, `Mid`, `Stale`, `unknown`이다. 기존 프론트 문서의 `Normal`은 `Mid`와 같은 나눔 가능 그룹으로 취급한다. `Fresh/Mid`는 사용자 흐름에서 `상태가 좋아 보여요`와 `나눔 가능`으로 통합 표시한다. `Stale`은 **나눔 기준 미충족**으로 보고 분석 결과, 작성, 최종 등록 단계에서 모두 막는다. `unknown`은 바로 등록 가능한 상태로 보지 않고 `확인 필요` 또는 실패 문구로 처리한다. `Bad/Rotten`은 현재 백엔드 label이 아니라 구형/후속 label로만 방어적으로 매핑한다.
 
-> confidence 기준: `confidenceScore`는 현재 차단 정책이 아니라 보조 표시/검토 신호다. 이 값이 객체 탐지, 신선도 분류, 식재료 여부 중 무엇의 confidence인지 AI/백엔드 계약에서 정의되기 전까지 단독 등록 차단 기준으로 쓰지 않는다.
+> confidence 기준: `confidenceScore`는 **Stage 2 신선도 분류 모델의 softmax max 확률**이다. 객체 탐지 confidence나 식재료 여부 confidence가 아니다. "이 식재료가 Fresh/Mid/Stale 중 어떤 상태인지"에 대한 모델 확신도로 표시하며, 이 값 자체로 등록을 차단하지 않는다. 차단 기준은 `isFresh=false` 또는 나눔 기준 미충족 신선도 등급이다.
+>
+> confidence 표시 가이드: 제품 기준은 백엔드 답변을 따라 0.9 이상은 높은 확신, 0.9 미만은 사용자가 한 번 더 확인해야 하는 `확인 필요` 구간으로 본다. 이 구간은 등록 차단 기준이 아니라 UX 강조 기준이다.
 
-> false-positive 계약: 비식재료/스크린샷/저품질 이미지는 `Fresh`로 통과시키지 않는다. 서버는 generate 400의 `message/detail` 또는 200 응답의 `aiAnalysis.rejectionReason`/`aiAnalysis.reviewReason`에 `not_food`, `non_food`, `low_quality`, `screenshot`, `ui_screenshot`, `multi_object_review`, `review_required` 중 하나를 담는다. 앱은 등록 차단 사유는 차단하고, 검토 사유는 `확인 필요`로 표시한다.
+> false-positive 계약: MVP 서버/AI 파이프라인은 스크린샷/UI 캡처 여부를 별도로 판별하지 못한다. 따라서 `isFresh=true`이면 낮은 `confidenceScore`에서도 `Fresh + imageToken`이 발급될 수 있으며, 프론트는 `확인 필요`를 표시하되 등록은 허용한다. `not_food`, `low_quality`, `screenshot`, `ui_screenshot`, `review_required`, `multi_object_review` 같은 rejection reason enum은 백엔드 Post-MVP 항목이다. 앱은 enum이 내려오면 방어적으로 처리한다.
+>
+> 서버 방어선: `Stale` 또는 `isFresh=false` 결과는 generate 단계에서 400으로 거부되며 `imageToken`이 발급되지 않는다. `POST /posts`는 `imageToken`이 필수이고, 만료/무효 토큰은 400으로 거부된다. 따라서 프론트의 `canShare=false` 가드는 UX 편의용이고, 실제 최종 방어선은 서버의 `imageToken` 체계다.
 
 **사용자-facing AI 결과 문구**
 
-| Internal result | User-facing status | CTA |
-| --- | --- | --- |
-| `Fresh`, `Normal` | `상태가 좋아 보여요`, `나눔 가능` | `이대로 나눔 등록하기` |
-| `Stale`, `Bad`, `Rotten` | `나눔 기준에 맞지 않아요` | `다시 촬영하기`, `다른 사진 선택` |
-| `not_food`, `non_food` | `식재료 사진으로 확인되지 않았어요` | `다시 촬영하기`, `다른 사진 선택` |
-| `low_quality` | `사진으로 상태를 확인하기 어려워요` | `다시 촬영하기`, `다른 사진 선택` |
-| low `confidenceScore` only | `상태를 한 번 더 확인해주세요` | 등록 차단 아님 |
+| Internal result                | User-facing status                  | CTA                                          |
+| ------------------------------ | ----------------------------------- | -------------------------------------------- |
+| `Fresh`, `Mid` (`Normal` 그룹) | `상태가 좋아 보여요`, `나눔 가능`   | `이대로 나눔 등록하기`                       |
+| `Stale`                        | `나눔 기준에 맞지 않아요`           | `다시 촬영하기`, `다른 사진 선택`            |
+| `unknown`                      | `사진으로 상태를 확인하기 어려워요` | `다시 촬영하기`, `다른 사진 선택`            |
+| `Bad`, `Rotten`                | `나눔 기준에 맞지 않아요`           | 현재 백엔드 label은 아니지만 방어적으로 차단 |
+| `not_food`, `non_food`         | `식재료 사진으로 확인되지 않았어요` | Post-MVP enum. 내려오면 차단                 |
+| `low_quality`                  | `사진으로 상태를 확인하기 어려워요` | Post-MVP enum. 내려오면 확인/재촬영 유도     |
+| low `confidenceScore` only     | `상태를 한 번 더 확인해주세요`      | 등록 차단 아님                               |
 
 ### 4.5 나눔 식재료 등록
 
@@ -323,12 +344,9 @@ Content-Type: application/x-www-form-urlencoded
 
 ```javascript
 const data = {
-  title: '사과 나눔합니다',
-  description: '신선한 사과 5개 나눔합니다.',
-  category: '과일',
   fridgeId: 1,
   expirationDate: '2026-04-30',
-  imageToken: generateResult.imageToken,   // ← generate에서 받은 토큰
+  imageToken: generateResult.imageToken, // ← generate에서 받은 토큰
 };
 
 // ⚠️ 이미지 파일은 보내지 않음! (이미 generate에서 서버에 저장됨)
@@ -336,7 +354,7 @@ const data = {
 const response = await fetch(`${BASE_URL}/api/v1/posts`, {
   method: 'POST',
   headers: {
-    'Authorization': `Bearer ${token}`,
+    Authorization: `Bearer ${token}`,
     'Content-Type': 'application/x-www-form-urlencoded',
   },
   body: `data=${encodeURIComponent(JSON.stringify(data))}`,
@@ -344,13 +362,22 @@ const response = await fetch(`${BASE_URL}/api/v1/posts`, {
 ```
 
 **등록 후 백엔드 자동 처리**:
+
 1. imageToken 검증 (존재 + 1시간 이내)
 2. 공유 냉장고 검증 (존재 + 활성)
 3. 검증된 이미지 → 최종 경로로 이동
-4. DB 저장 (`status = available`)
-5. 2km 내 사용자에게 FCM 알림 (비동기)
+4. `{imageToken}.json` sidecar에서 AI 메타데이터 복원
+5. DB 저장 (`status = available`, `detectedFruit`, `detectedFruitKo`, `freshnessLabel`, `confidenceScore`)
+6. 2km 내 사용자에게 FCM 알림 (비동기)
+
+`Stale` 판정 이미지는 generate 단계에서 임시 저장까지 도달하지 않으므로 `imageToken`이 없다. generate를 우회해 `POST /posts`를 직접 호출해도 유효한 토큰이 없으면 등록되지 않는다.
+
+> 프론트는 기존대로 `fridgeId`, `expirationDate`, `imageToken`만 보낸다. AI 메타데이터를 create payload에 다시 보낼 필요가 없다. 백엔드 우선순위는 서버 sidecar 값 > 프론트 전송 값이며, 프론트가 AI 필드를 보내더라도 서버 보관 값이 우선이다.
+>
+> 2026-05-06 live VM conflict: 공개 fresh fixture로 `generate -> create -> detail`을 실행했을 때 생성된 Post id `2`의 AI 필드가 모두 `null`이었다. 2026-05-08 백엔드 답변 기준 이 현상은 백엔드 버그로 확정됐고, `save_temp_image()`/`move_temp_to_final()` sidecar 저장/복원 방식으로 VM 재배포 완료됐다. 프론트는 기존 null 데이터 fallback을 MVP에서 유지한다.
 
 **에러**:
+
 - 만료/잘못된 토큰 → 400 "이미지가 만료되었거나 유효하지 않습니다. 다시 촬영해주세요."
 
 ### 4.6 근처 나눔 식재료 조회
@@ -374,14 +401,14 @@ Authorization: Bearer {token}
 ```json
 {
   "success": true,
-  "message": "게시글 상세 조회 성공",
+  "message": "나눔 식재료 상세 조회 성공",
   "data": {
     "id": 7,
     "authorId": 10,
     "fridgeId": 1,
-    "title": "[MVP 검증] 신선한 사과 나눔합니다",
-    "description": "MVP 시연/검증용 나눔 식재료입니다.",
-    "category": "기타",
+    "detectedFruitKo": "사과",
+    "freshnessLabel": "Fresh",
+    "confidenceScore": 0.92,
     "imageUrl": "/static/uploads/posts/10/85f9f3d4-e5ce-44ae-af5b-7aa5fe6260c9.png",
     "expirationDate": "2026-05-08",
     "status": "available",
@@ -398,24 +425,65 @@ Authorization: Bearer {token}
 > `status: "available"`은 현재 검증된 **나눔 상태**다. MVP 목표 상태 흐름은 `available -> requested`다. `requested`는 수요자의 나눔 신청이 접수된 상태이며 예약 확정이 아니다. `reserved`, `completed`, `cancelled`, `expired`는 후속 상태다.
 >
 > 작성자 여부 판단은 `authorId` 기준으로 처리한다. 구형 fixture의 `userId`는 호환용 fallback으로만 본다.
+>
+> 백엔드 Phase 1.5 이후 Post DB 컬럼에서 `title`, `description`, `category`는 제거됐고, `detectedFruit`, `detectedFruitKo`, `freshnessLabel`, `confidenceScore`가 추가됐다. 2026-05-08 수정 후 신규 생성 Post는 generate 단계의 서버 sidecar AI 메타데이터를 create 시점에 복원한다. 기존 null 데이터는 마이그레이션하지 않으므로 앱 fallback은 유지한다.
 
-### 4.8 나눔 신청하기 (MVP 목표, API 미확정)
+### 4.8 나눔 신청하기
 
-현재 앱의 상세 화면 CTA는 `나눔 신청하기 (준비중)` 상태이며, 검증된 신청 API는 아직 없다. 구현 시에는 아래 계약을 먼저 백엔드와 확정한다.
+상세 화면의 `나눔 신청하기` CTA는 이 API에 연결되어 있다. 백엔드는 구현 및 VM 검증이 완료됐고, 프론트는 API client, CTA, 성공/실패 상태, 홈 목록 갱신 신호를 코드에 반영했다. 실제 앱-VM 연결 QA는 별도로 수행한다.
 
-**필수 계약**
+```
+POST /api/v1/posts/{post_id}/requests
+Authorization: Bearer {token}
+```
 
-| 항목 | 기준 |
-| --- | --- |
-| 대상 | `status=available`인 나눔 식재료 |
-| 요청자 | 작성자가 아닌 인증 사용자 |
-| 성공 효과 | 첫 신청을 접수하고 나눔 상태를 `requested`로 변경 |
-| 성공 응답 | 갱신된 나눔 식재료 또는 신청 접수 객체 |
-| 중복/경합 | 이미 `requested`인 경우 400 또는 409 |
-| 사용자 문구 | `신청이 접수됐어요`, `공급자에게 신청 알림을 보냈어요` |
-| 금지 문구 | `예약 확정`, `수령 완료`, `결제 완료` |
+**계약**
 
-권장 endpoint 후보는 `POST /api/v1/posts/{post_id}/requests`다. 백엔드가 별도 `requests` 리소스를 선택하면 이 문서의 endpoint 목록, 타입, 상세 화면 흐름, 검증 문서를 함께 갱신한다.
+| 항목             | 기준                                                            |
+| ---------------- | --------------------------------------------------------------- |
+| 대상             | `status=available`인 나눔 식재료                                |
+| 요청자           | 작성자가 아닌 인증 사용자                                       |
+| 성공 효과        | 첫 신청을 접수하고 나눔 상태를 `requested`로 변경               |
+| 성공 응답        | 신청 접수 객체와 갱신된 나눔 식재료를 함께 반환                 |
+| 작성자 본인 신청 | 403                                                             |
+| 동시 경합        | 서버가 `SELECT ... FOR UPDATE` 행 잠금과 단일 트랜잭션으로 처리 |
+| 중복/경합        | 이미 `requested`인 경우 409                                     |
+| 사용자 문구      | `신청이 접수됐어요`, `공급자에게 신청 알림을 보냈어요`          |
+| 금지 문구        | `예약 확정`, `수령 완료`, `결제 완료`                           |
+
+**응답 (201)**:
+
+```json
+{
+  "success": true,
+  "data": {
+    "request": {
+      "id": 1,
+      "postId": 1,
+      "requesterId": 2,
+      "status": "requested",
+      "createdAt": "2026-05-06T12:00:00"
+    },
+    "post": {
+      "id": 1,
+      "authorId": 1,
+      "fridgeId": 1,
+      "detectedFruit": "apple",
+      "status": "requested",
+      "detectedFruitKo": "사과",
+      "freshnessLabel": "Fresh",
+      "confidenceScore": 0.92
+    }
+  },
+  "message": "나눔 신청이 완료되었습니다."
+}
+```
+
+프론트 처리 기준:
+
+- 201: 상세 CTA를 신청 접수 상태로 바꾸고 홈 `/posts/nearby` 재조회 또는 해당 항목 제거를 트리거한다.
+- 403: 작성자 본인 신청이다. 상세 화면에서는 애초에 신청 CTA를 숨기거나 비활성화하고, fallback으로 `내가 등록한 나눔 식재료예요` 계열 문구를 표시한다.
+- 409: 이미 다른 신청이 접수된 상태다. 동시 신청 경합에서 정상적으로 발생할 수 있으므로 `다른 사용자가 먼저 신청했어요` 또는 `이미 신청이 접수된 나눔이에요` 계열 문구를 표시하고 CTA를 비활성화한다.
 
 ### 4.9 나눔 식재료 삭제
 
@@ -440,6 +508,30 @@ GET /api/v1/fridges/available?latitude=35.1595&longitude=126.9136&radius_km=2.0
 Authorization: Bearer {token}
 ```
 
+### 4.12 냉장고별 나눔 식재료 조회
+
+```
+GET /api/v1/fridges/{fridge_id}/posts?status=available
+Authorization: Bearer {token}
+```
+
+지도/냉장고 상세에서 특정 공유 냉장고 안의 available 나눔 식재료를 보여주기 위한 API다. 프론트는 `getFridgePosts(fridgeId, 'available')` client를 통해 지도 냉장고 선택 시 이 목록을 조회한다. 목록 항목은 `PostDetail`로 이동하며, loading/error/empty 상태는 냉장고 목록 상태와 별도로 관리한다.
+
+응답 스키마는 `/posts/nearby`와 같은 `PostNearbyRead`이다. `GET /posts/{id}`의 `PostRead` 전체 필드셋과 동일하지 않다.
+
+| 필드 | `PostRead` | `PostNearbyRead` |
+| ---- | ---------- | ---------------- |
+| `detectedFruit` | ✅ | ✅ |
+| `detectedFruitKo` | ✅ | ✅ |
+| `freshnessLabel` | ✅ | ✅ |
+| `confidenceScore` | ✅ | ❌ |
+| `authorId` | ✅ | ❌ |
+| `latitude`/`longitude` | ✅ | ❌ |
+| `updatedAt` | ✅ | ❌ |
+| `fridgeName` | ❌ | ✅ |
+
+`status=available`은 정확히 `status == "available"`인 항목만 반환한다. `requested`, `completed`는 제외된다.
+
 ---
 
 ## 5. 이미지 URL 처리
@@ -450,50 +542,104 @@ Authorization: Bearer {token}
 const imageFullUrl = `${BASE_URL}${post.imageUrl}`;
 // → "http://10.0.2.2:8080/static/uploads/posts/1/abc123.jpg"
 
-<Image source={{ uri: imageFullUrl }} />
+<Image source={{ uri: imageFullUrl }} />;
 ```
 
 ---
 
 ## 6. FCM 푸시 알림
 
-현재 앱은 FCM 토큰을 받아 `/auth/me/location`에 등록하는 단계까지 구현되어 있다. 나눔 식재료 등록 완료 후 근처 사용자에게 알림을 보내는 것이 MVP 목표다. 아래 수신 처리 코드는 목표 흐름이며, foreground/background 수신 handler와 알림함 연동은 아직 구현되어 있지 않다.
+현재 앱은 FCM 토큰을 받아 `/auth/me/location`에 등록하고, `share_created`, `share_requested` 수신 기록을 알림함에 저장한다. 백엔드는 나눔 식재료 등록 시 `share_created`, 나눔 신청 시 `share_requested` 알림을 발송한다. FCM 제약상 `data` payload의 모든 값은 문자열이며, 키는 camelCase다. 읽음 상태 API, 서버 알림 목록 API, 디버그 테스트 발송 API는 아직 없다.
+
+발송 조건:
+
+- `share_created`: 냉장고 반경 2km 안에 FCM 토큰이 등록된 다른 사용자가 있어야 한다. 작성자 본인에게는 발송하지 않는다.
+- `share_requested`: 공급자(작성자)의 `fcmToken`이 `/auth/me/location`으로 등록되어 있어야 한다.
+- VM에 Firebase credentials가 없으면 실제 발송 대신 Mock FCM 로그가 남는다.
 
 ### 설정 순서
+
 1. Firebase 프로젝트: `foodlink-cf8e7`
 2. `@react-native-firebase/app` + `@react-native-firebase/messaging` 설치
 3. `google-services.json` (Android) / `GoogleService-Info.plist` (iOS) 배치
 
-### 토큰 등록
-```javascript
-import messaging from '@react-native-firebase/messaging';
+### 자격증명 경계
 
-const fcmToken = await messaging().getToken();
+- `android/app/google-services.json`: Android package `com.greennode`용 Firebase 클라이언트 설정 파일이다. 앱이 Firebase로 초기화되고 FCM token을 발급받기 위해 필요하다. 이 파일이 없으면 `android/app/build.gradle`은 Google Services plugin을 적용하지 않고 Firebase services를 비활성화한다.
+- `GoogleService-Info.plist`: iOS용 Firebase 클라이언트 설정 파일이다. 현재 MVP 실수신 QA는 Android 기준으로 진행한다.
+- Firebase Admin/service account credentials: 백엔드가 실제 FCM 메시지를 발송할 때 필요한 서버용 자격증명이다. 앱/프론트 repo에 넣지 않고 NHN Cloud VM 또는 백엔드 배포 환경의 secret으로 관리해야 한다.
+- `2026-GreenNode.pem`: NHN Cloud VM SSH 접속과 터널을 위한 키다. Firebase 앱 초기화, FCM token 발급, FCM 서버 발송 권한을 대신할 수 없다.
+
+FCM 실수신 QA를 하려면 클라이언트 설정 파일과 서버 발송 자격증명이 모두 필요하다. `google-services.json`만 있으면 앱 token 발급 경로를 확인할 수 있지만, `share_created`/`share_requested` 실제 수신까지 검증하려면 백엔드 VM이 Firebase Admin/service account credentials로 실제 발송해야 한다. VM에 credentials가 없으면 `[Mock FCM]` 계열 로그만 남을 수 있다.
+
+### 토큰 등록
+
+```javascript
+const fcmToken = await getFcmToken();
 // → PUT /api/v1/auth/me/location 으로 서버에 등록
 ```
 
-### 알림 수신
-```javascript
-messaging().onMessage(async msg => {
-  // 포그라운드 알림
-  const postId = msg.data?.post_id;
-  // 알림 배너 표시
-});
+앱 구현 기준:
 
-messaging().onNotificationOpenedApp(msg => {
-  // 백그라운드 알림 터치
-  navigation.navigate('PostDetail', { postId: msg.data?.post_id });
-});
+- 위치 설정 화면은 진입 즉시 알림 권한을 요청하지 않고 `나눔 알림 받기` CTA로 권한 요청을 시작한다.
+- Android 13 이상에서 `POST_NOTIFICATIONS`가 거부되면 Firebase permission/register/getToken을 호출하지 않고 `fcmToken` 없이 위치 등록을 계속한다.
+- Firebase 설정 파일이 없는 QA/release 빌드에서는 FCM 토큰 조회를 건너뛰고 앱 흐름을 유지한다.
+
+### 알림 수신
+
+```typescript
+type FoodLinkFcmPayload =
+  | {type: 'share_created'; postId: string; fruitName: string; fridgeName: string}
+  | {type: 'share_requested'; postId: string; requestId: string; fruitName: string; fridgeName: string};
 ```
 
+앱 구현 기준:
+
+- `index.js`에서 background handler를 등록한다.
+- `AppNavigator`에서 foreground, opened-app, initial-notification handler를 등록한다.
+- handler는 `data` payload가 문자열 + camelCase인지 검증하고, 유효한 이벤트만 로컬 알림함에 저장한다.
+- foreground 수신은 즉시 화면을 이동하지 않고 알림함 기록만 남긴다.
+- background/terminated 상태에서 알림을 열면 대상 화면으로 이동한다.
+
+수신 분기 기준:
+
+- `share_created`: 홈 또는 나눔 식재료 상세로 이동한다.
+- `share_requested`: 내 나눔 식재료 관리/신청 확인 흐름으로 이동한다. 현재 해당 화면이 없으므로 MVP에서는 나눔 식재료 상세로 fallback한다.
+
 ### 알림 데이터 형식
+
+등록 알림:
+
 ```json
 {
   "notification": {
     "title": "근처에 새 나눔 식재료가 등록됐어요",
-    "body": "사과 나눔합니다"
+    "body": "사과 나눔이 등록되었습니다"
   },
-  "data": { "post_id": "1" }
+  "data": {
+    "type": "share_created",
+    "postId": "1",
+    "fruitName": "사과",
+    "fridgeName": "전남대학교 공유냉장고"
+  }
+}
+```
+
+신청 알림:
+
+```json
+{
+  "notification": {
+    "title": "나눔 신청이 도착했어요",
+    "body": "사과 나눔에 신청이 접수되었습니다"
+  },
+  "data": {
+    "type": "share_requested",
+    "postId": "1",
+    "requestId": "1",
+    "fruitName": "사과",
+    "fridgeName": "전남대학교 공유냉장고"
+  }
 }
 ```
 
@@ -502,6 +648,7 @@ messaging().onNotificationOpenedApp(msg => {
 ## 7. 추천 앱 흐름
 
 ### 온보딩
+
 ```
 앱 실행 → 워크스루 슬라이드 → 로그인/회원가입
 → 위치 권한 요청 + FCM 토큰 획득
@@ -509,14 +656,16 @@ messaging().onNotificationOpenedApp(msg => {
 ```
 
 ### 홈 화면
+
 ```
 GET /posts/nearby → 근처 available 나눔 식재료
 지도 탭: GET /fridges/nearby → 근처 공유 냉장고 목록
-냉장고 내부 나눔 식재료 탐색 → API 추가 계약 필요
+냉장고 내부 나눔 식재료 탐색 → GET /fridges/{id}/posts?status=available
 냉장고 선택: GET /fridges/available → 등록 가능 공유 냉장고 목록
 ```
 
 ### 나눔 식재료 등록
+
 ```
 카메라 촬영 → POST /posts/generate (AI 분석)
 → 추천 결과 표시 → 사용자 수정 → 냉장고 선택
@@ -525,27 +674,35 @@ GET /posts/nearby → 근처 available 나눔 식재료
 ```
 
 ### 나눔 신청
+
 ```
 나눔 식재료 터치 → GET /posts/{id}
 → 이미지 + 상세 정보 + 보관 공유 냉장고 표시
-→ 나눔 신청하기 (API 미확정; 구현 전 § 4.8 계약 확정)
+→ 나눔 신청하기 (POST /posts/{id}/requests)
 → 성공 시 status: available -> requested
+→ 홈 목록에서는 requested가 자동 제외됨
 ```
 
 ---
 
 ## 8. 주의사항 체크리스트
 
+> 이 체크리스트의 빈 항목은 매 개발/QA 실행 때 확인할 조건이다. 구현 완료 여부는 2.2와 [VALIDATION_AND_BACKLOG.md](./VALIDATION_AND_BACKLOG.md)를 기준으로 본다.
+
 - [ ] SSH 터널 열어둔 상태에서 개발
 - [ ] 로그인 요청은 `application/x-www-form-urlencoded` (JSON 아님)
 - [ ] 로그인 필드명은 `username` (email 아님)
 - [ ] **나눔 식재료 등록 전 반드시 generate 호출** → imageToken 획득
 - [ ] **나눔 식재료 등록 시 이미지 파일 보내지 않음** → `application/x-www-form-urlencoded`의 `data=<JSON>`에 imageToken 포함
-- [ ] generate에서 400 수신 시 `message` 또는 `detail`을 Toast/Alert로 표시
+- [ ] generate에서 400 수신 시 FastAPI `detail`을 읽고 사용자-facing 안전 문구로 변환
 - [ ] imageToken은 1시간 내 사용 (만료 시 다시 촬영)
 - [ ] generate API Form 필드는 `image`, 선택 `user_hint`
 - [ ] 이미지 URL은 상대경로 → Base URL 붙여서 사용
 - [ ] JWT 토큰 만료 60분 → 401 수신 시 재로그인
-- [ ] 앱 실행 시 위치+FCM 토큰 반드시 서버에 등록
+- [ ] 앱 실행 시 위치는 갱신하고, FCM 토큰은 명시적 알림 권한 허용 또는 기존 저장 토큰이 있을 때만 서버에 등록
 - [ ] 나눔 식재료 상세 작성자 판단은 실제 응답의 `authorId` 기준으로 처리
-- [ ] 나눔 신청 API 구현 전 `available -> requested`, 중복 신청, 알림 payload 계약 확정
+- [ ] `POST /posts`에는 `imageToken + fridgeId + expirationDate`만 보내고 AI 메타데이터는 재전송하지 않는다
+- [x] `/fridges/{id}/posts`와 `/posts/nearby`는 `PostNearbyRead`라 `confidenceScore`가 없다
+- [x] 백엔드 Phase 1.5 Post 구조 반영: `title/description/category` 의존 제거, 카드 요약은 `PostNearbyRead` 필드 중심, 상세/등록은 `detectedFruitKo/freshnessLabel/confidenceScore/status` 사용
+- [x] 나눔 신청 API 연동: `POST /posts/{id}/requests`, 201/403/409 처리, 신청 후 상세/홈 상태 갱신
+- [x] FCM payload는 문자열 + camelCase `postId`, `requestId`, `fruitName`, `fridgeName`, `type` 사용

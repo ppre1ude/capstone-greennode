@@ -1,11 +1,12 @@
 import React from 'react';
 import ReactTestRenderer from 'react-test-renderer';
 import HomeScreen from '@/screens/home/HomeScreen';
-import {getNearbyPosts} from '@/api/posts';
-import {useAuthStore} from '@/store/authStore';
+import { getNearbyPosts } from '@/api/posts';
+import { useAuthStore } from '@/store/authStore';
+import { useFeedRefreshStore } from '@/store/feedRefreshStore';
 
 let mockRouteParams:
-  | {nearbyPostsRefreshToken?: number; completedPostId?: number}
+  | { nearbyPostsRefreshToken?: number; completedPostId?: number }
   | undefined;
 const mockNavigate = jest.fn();
 const mockParentNavigate = jest.fn();
@@ -18,15 +19,17 @@ jest.mock('@react-navigation/native', () => {
       ReactForMock.useEffect(callback, [callback]);
     }),
     useNavigation: jest.fn(() => ({
-      getParent: jest.fn(() => ({navigate: mockParentNavigate})),
+      getParent: jest.fn(() => ({ navigate: mockParentNavigate })),
       navigate: mockNavigate,
     })),
-    useRoute: jest.fn(() => ({params: mockRouteParams})),
+    useRoute: jest.fn(() => ({ params: mockRouteParams })),
   };
 });
 
 jest.mock('@/api/posts', () => ({
-  getImageUrl: jest.fn((relativeUrl: string) => `http://localhost${relativeUrl}`),
+  getImageUrl: jest.fn(
+    (relativeUrl: string) => `http://localhost${relativeUrl}`,
+  ),
   getNearbyPosts: jest.fn(),
 }));
 
@@ -61,6 +64,10 @@ describe('HomeScreen nearby post refresh', () => {
       isLoggedIn: true,
       hasLocation: true,
     });
+    useFeedRefreshStore.setState({
+      nearbyPostsRefreshToken: 0,
+      requestedPostId: null,
+    });
   });
 
   it('re-fetches /posts/nearby when post completion sends a refresh token', async () => {
@@ -84,6 +91,55 @@ describe('HomeScreen nearby post refresh', () => {
 
     expect(mockedGetNearbyPosts).toHaveBeenCalledTimes(2);
     expect(mockedGetNearbyPosts).toHaveBeenLastCalledWith(35.1595, 126.9132);
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
+  it('removes a requested post and re-fetches /posts/nearby when share request succeeds', async () => {
+    mockedGetNearbyPosts
+      .mockResolvedValueOnce({
+        success: true,
+        message: 'ok',
+        data: [
+          {
+            id: 10,
+            fridgeId: 1,
+            fridgeName: '전남대 공유 냉장고',
+            detectedFruit: 'apple',
+            detectedFruitKo: '사과',
+            freshnessLabel: 'Fresh',
+            imageUrl: '/static/posts/10.jpg',
+            expirationDate: '2026-05-08',
+            status: 'available',
+            createdAt: '2026-05-06T00:00:00Z',
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        message: 'ok',
+        data: [],
+      });
+
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(<HomeScreen />);
+    });
+
+    expect(
+      renderer?.root.findAllByProps({ children: '사과' }).length,
+    ).toBeGreaterThan(0);
+
+    await ReactTestRenderer.act(async () => {
+      useFeedRefreshStore.getState().requestNearbyPostsRefresh(10);
+      await Promise.resolve();
+    });
+
+    expect(mockedGetNearbyPosts).toHaveBeenCalledTimes(2);
+    expect(renderer?.root.findAllByProps({ children: '사과' })).toHaveLength(0);
 
     await ReactTestRenderer.act(async () => {
       renderer?.unmount();

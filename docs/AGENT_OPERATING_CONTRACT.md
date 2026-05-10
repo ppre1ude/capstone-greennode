@@ -25,6 +25,8 @@
 | Authority | Canonical document | Use when |
 | --- | --- | --- |
 | Agent workflow | [AGENT_OPERATING_CONTRACT.md](./AGENT_OPERATING_CONTRACT.md) | Choosing how Codex should approach a task |
+| GStack-style workflow | [GSTACK_WORKFLOW.md](./GSTACK_WORKFLOW.md) | Choosing CEO/eng review routing and MVP hold-scope policy |
+| Superpowers-style workflow | [SUPERPOWERS_WORKFLOW.md](./SUPERPOWERS_WORKFLOW.md) | Translating "use Superpowers" into FoodLink skill routing |
 | Domain language | [DOMAIN_MODEL.md](./DOMAIN_MODEL.md) | Naming concepts, resolving ambiguity, changing model language |
 | Product scope | [PRODUCT_BRIEF.md](./PRODUCT_BRIEF.md) | Deciding whether a behavior belongs in the MVP or later |
 | API/server contract | [API_INTEGRATION_CONTRACT.md](./API_INTEGRATION_CONTRACT.md) | Interpreting server responses, request shapes, auth, tunnel setup |
@@ -88,8 +90,11 @@ called out as stale.
 | Task type | Required docs | Preferred workflow | Required output |
 | --- | --- | --- | --- |
 | Small text or style fix | Relevant file only | Direct edit | Brief summary and any skipped verification |
+| "Use Superpowers" shorthand | `SUPERPOWERS_WORKFLOW.md`, relevant source-of-truth docs | Routed FoodLink equivalent | Plan/debug/TDD/verify output matched to the requested intent |
 | Domain term or concept change | `DOMAIN_MODEL.md` | `domain-model`, `ubiquitous-language` | Updated terms, relationships, ambiguity notes |
 | Product scope change | `PRODUCT_BRIEF.md`, `VALIDATION_AND_BACKLOG.md` | `grill-me`, `to-prd`, `to-issues` | Decision, rationale, backlog impact |
+| Scope, ambition, or MVP boundary review | `PRODUCT_BRIEF.md`, `VALIDATION_AND_BACKLOG.md`, `IMPLEMENTATION_STATUS.md` | `plan-ceo-review` | Scope mode, critical gaps, held scope, next slices |
+| Architecture or implementation plan review | Product/domain/API docs as applicable | `plan-eng-review` | Data flow, state machine, failure map, test matrix |
 | API integration change | `API_INTEGRATION_CONTRACT.md`, relevant code | `tdd`, `diagnose` | Contract update, tests or API evidence |
 | Bug or failing behavior | `VALIDATION_AND_BACKLOG.md`, `IMPLEMENTATION_STATUS.md` | `diagnose`, `triage-issue`, `tdd` | Repro, root cause, fix, regression check |
 | Mobile runtime QA | `VALIDATION_AND_BACKLOG.md`, relevant specialist doc | `qa`, Android QA workflow | Environment, steps, actual result, evidence |
@@ -122,9 +127,20 @@ Useful FoodLink mappings:
 - `triage-issue`: root-cause investigation that should become an issue.
 - `domain-model` and `ubiquitous-language`: domain terms and ambiguity cleanup.
 - `grill-me`: product/plan pressure testing before broad changes.
+- `plan-ceo-review`: gstack-style scope and strategy review. Default FoodLink
+  mode is `HOLD_SCOPE` until MVP evidence is clean.
+- `plan-eng-review`: gstack-style architecture, data flow, failure mode, and
+  test planning before broad implementation.
 - `to-issues`: converting validated backlog into issue-sized work.
 - `improve-codebase-architecture`: refactor discovery after current docs and
   code are understood.
+
+## Superpowers Shorthand
+
+When the user says "Superpowers" or names a Superpowers upstream workflow, read
+[SUPERPOWERS_WORKFLOW.md](./SUPERPOWERS_WORKFLOW.md) and route to the closest
+FoodLink-installed skill. This is a project shorthand, not proof that the
+upstream Superpowers plugin is installed in the current Codex session.
 
 ## Safety
 
