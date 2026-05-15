@@ -300,7 +300,7 @@
 | 검색 | 최소 구현 | 공유 냉장고 이름/주소 로컬 필터 | 나눔 식재료 검색/서버 검색 없음 |
 | 채팅 | 알림함으로 축소 | mock 채팅 제거됨 | WebSocket 채팅은 보류 |
 | 통계/탄소 절감 | 목업 제거/정리됨 | 준비 중 상태 | 실제 지표 API/계산식 없음 |
-| 냉장고 운영자 기능 | 미구현 | 검증 콘솔 프로토타입 | MVP 범위 밖, 후속 설계 필요 |
+| 냉장고 운영자 기능 | 프로토타입/임시 진입점 | 정적 HTML 프로토타입, 프로필 임시 진입점, Android 에뮬레이터 렌더링 QA | 실제 operator API/권한/상태 변경은 없음 |
 
 현재 검증 완료된 공유 냉장고 관련 흐름:
 
@@ -418,6 +418,7 @@
 
 - 냉장고별 available 나눔 식재료 목록 조회.
 - 냉장고 운영자 검증 콘솔 정적 프로토타입: `docs/prototypes/fridge-operator-console.html`.
+- 앱 프로필 탭의 임시 진입점에서 냉장고 운영자 콘솔 테스트 화면으로 이동.
 
 새로 정의할 inventory:
 
@@ -439,6 +440,15 @@
 - inventory는 나눔 식재료 목록의 단순 확장이 아니라 냉장고 운영자용 현장 점검 레이어다.
 - 바구니는 사용자-facing 신청 단위가 아니다. 채택하더라도 같은 등록/보관 흐름에서 나온 개별 나눔 식재료를 함께 찾고 점검하기 위한 grouping이다.
 - 바구니 상태는 별도 저장값보다 내부 나눔 식재료 상태에서 계산하는 방향을 우선 검토한다.
+
+2026-05-15 Android emulator 임시 콘솔 QA:
+
+- 환경: Android emulator `Medium_Phone_API_36.1` (`emulator-5554`), release APK, 로컬 mock API `localhost:8080`/emulator `10.0.2.2:8080`, QA 계정 `qa162158@example.com`.
+- 결과: 이메일 로그인 후 `내정보 -> 냉장고 운영자 콘솔` 임시 메뉴로 진입 가능.
+- 결과: `냉장고 상태`, `바구니 후보`, `개별 나눔 식재료 점검`, `상태 검증 규칙` 섹션 렌더링 확인.
+- 로그: QA 구간 logcat에서 `FATAL EXCEPTION`, `AndroidRuntime`, 앱 ANR 로그 없음.
+- 한계: 화면 데이터는 정적 fixture이며 operator 권한, 실제 inventory API, 상태 변경 저장, 바구니 채택 정책은 아직 연결되지 않음.
+- 증거: `temp/operator-console-profile-entry.png`, `temp/operator-console-screen.png`, `temp/operator-console-screen-lower.png`, `temp/operator-console-screen-rules.png`.
 
 DB/API 초안:
 
