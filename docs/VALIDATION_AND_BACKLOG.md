@@ -77,7 +77,7 @@
 - `requested`는 신청 접수이며 예약 확정이 아니다.
 - MVP에서 `requested` 이후 공급자 승인/거절 액션은 없다.
 - 첫 신청 이후 추가 신청은 막는다. 백엔드는 첫 신청 성공 시 `available -> requested`를 원자적으로 처리하고, 작성자 본인 신청은 403, 이미 `requested`인 나눔 식재료의 추가 신청은 409로 거절한다.
-- 관리자 화면은 제품 범위에는 포함하지만, 공유 냉장고/지도/신청 흐름이 안정화된 뒤 후순위로 제작한다. MVP 운영 제어는 수동 운영으로 시작한다.
+- 냉장고 운영자 화면은 제품 범위에는 포함하지만, 공유 냉장고/지도/신청 흐름이 안정화된 뒤 후순위로 제작한다. MVP 운영 제어는 수동 운영으로 시작한다.
 
 ### 홈과 지도 역할
 
@@ -300,7 +300,7 @@
 | 검색 | 최소 구현 | 공유 냉장고 이름/주소 로컬 필터 | 나눔 식재료 검색/서버 검색 없음 |
 | 채팅 | 알림함으로 축소 | mock 채팅 제거됨 | WebSocket 채팅은 보류 |
 | 통계/탄소 절감 | 목업 제거/정리됨 | 준비 중 상태 | 실제 지표 API/계산식 없음 |
-| 관리자/운영자 기능 | 미구현 | 없음 | MVP 범위 밖, 후속 설계 필요 |
+| 냉장고 운영자 기능 | 미구현 | 검증 콘솔 프로토타입 | MVP 범위 밖, 후속 설계 필요 |
 
 현재 검증 완료된 공유 냉장고 관련 흐름:
 
@@ -318,7 +318,7 @@
 
 현재 부족한 점:
 
-1. 공유 냉장고 자체 운영 기능은 아직 없다. 예: 냉장고 inventory 확인, 운영자 승인, 보관 확인, 관리자 조정.
+1. 공유 냉장고 자체 운영 기능은 아직 없다. 예: 냉장고 inventory 확인, 냉장고 운영자 확인, 보관 확인, 현장 조정.
 2. `주변에 공유 냉장고 없음` 상태와 거리/지역 edge case는 추가 검증이 필요하다.
 3. 공유 냉장고와 연결된 실제 알림 claim은 FCM 실수신 QA가 끝나야 완료로 볼 수 있다.
 
@@ -417,25 +417,46 @@
 현재 구현:
 
 - 냉장고별 available 나눔 식재료 목록 조회.
+- 냉장고 운영자 검증 콘솔 정적 프로토타입: `docs/prototypes/fridge-operator-console.html`.
 
 새로 정의할 inventory:
 
-- 실제 냉장고의 물리적 재고.
-- 칸/위치.
-- 수량.
-- 상태.
-- 운영자 관리.
+- 실제 공유 냉장고 안의 물리적 재고 상태.
+- 수요자-facing 목록이 아니라 **냉장고 운영자**가 점검하는 현장 운영 레이어.
+- 개별 나눔 식재료의 현장 상태, 권장 나눔 기한, 점검 필요 여부, 폐기/분실/수령 확인 이력.
+- 같은 촬영/보관 흐름에서 나온 여러 나눔 식재료를 묶어 보는 바구니 후보.
 
 이번 주 목표:
 
 - 바로 구현하지 않고 DB/도메인/화면 설계를 완료한다.
 - 현재 `GET /fridges/{id}/posts?status=available`와 별도 inventory 개념의 경계를 확정한다.
+- 바구니를 정식 도메인 개념으로 채택할지, 단순 추적용 메타데이터로 둘지 결정한다.
+- 냉장고 운영자가 상태를 변경할 수 있는 단위가 개별 나눔 식재료인지, 바구니인지, 둘 다인지 결정한다.
+
+현재 판단:
+
+- 사용자 등록/신청 단위는 계속 개별 **나눔 식재료**다.
+- inventory는 나눔 식재료 목록의 단순 확장이 아니라 냉장고 운영자용 현장 점검 레이어다.
+- 바구니는 사용자-facing 신청 단위가 아니다. 채택하더라도 같은 등록/보관 흐름에서 나온 개별 나눔 식재료를 함께 찾고 점검하기 위한 grouping이다.
+- 바구니 상태는 별도 저장값보다 내부 나눔 식재료 상태에서 계산하는 방향을 우선 검토한다.
+
+DB/API 초안:
+
+- `fridge_operators`: 냉장고 운영자와 관리 가능한 공유 냉장고 연결.
+- `inventory_baskets` 또는 `registration_batches`: 같은 촬영/보관 흐름에서 생성된 나눔 식재료 묶음. `fridgeId`, `createdBy`, `createdAt`, `sourceScanId` 정도만 최소 보관.
+- `posts` 또는 후속 `share_items`: 기존 개별 나눔 식재료에 `basketId`, `recommendedShareUntilAt`, `needsReview` 후보 필드 추가 검토.
+- `item_status_events`: 개별 나눔 식재료 상태 변경 이력. `itemId`, `fromStatus`, `toStatus`, `actorId`, `actorRole`, `reason`, `note`, `createdAt`.
+- `detections`: multi-object 감지 결과와 생성된 나눔 식재료 연결. `detectionId`, `boundingBox`, `detectedCropKo`, `freshnessLabel`, `confidenceScore`, `postId`.
+- 조회 후보: `GET /operator/fridges/{fridgeId}/inventory/summary`, `GET /operator/fridges/{fridgeId}/inventory/items`, `GET /operator/baskets/{basketId}`.
+- 변경 후보: `POST /operator/items/{postId}/status-events`로 `discarded`, `missing`, `completed`, `needsReview` 같은 운영자 처리 기록.
 
 완료 기준:
 
 - inventory가 나눔 식재료 목록의 확장인지, 운영자 재고 관리인지 정의한다.
+- 바구니 채택 여부와 `basketId`의 의미를 확정한다.
+- 냉장고 운영자가 직접 바꿀 수 있는 상태와 상태 변경 이력 필드를 확정한다.
 - 필요한 DB 테이블/필드/API 초안을 만든다.
-- 프론트 화면 진입점과 MVP 이후 운영자 기능과의 연결 방식을 정한다.
+- 프론트 화면 진입점과 MVP 이후 냉장고 운영자 기능과의 연결 방식을 정한다.
 
 ## 2026-05-08 subagent-driven Phase 1.5 QA 통합 결과
 
@@ -1542,7 +1563,7 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
 - WebSocket 기반 실시간 채팅: 서버 계약과 앱 구조가 없으므로 보류. `알림함` 또는 `나눔 신청하기`로 축소한다.
 - 소셜 로그인 전체 구현: 이메일 로그인 MVP가 동작하므로 우선순위 낮음. 버튼을 숨기거나 준비 중으로 명확히 둔다.
 - 이메일 verification 전체 예외 케이스: 인증 메일/OTP 서버 계약이 없어 보류.
-- 냉장고 내부 inventory: 별도 재고 관리 개념은 보류한다. 단, 백엔드가 냉장고별 available 나눔 식재료 조회 API를 구현했고, 프론트는 지도 선택 냉장고 내부 목록으로 연동했다. 별도 inventory/관리 기능은 후속 범위다.
+- 냉장고 내부 inventory: 별도 재고 관리 개념은 보류한다. 단, 백엔드가 냉장고별 available 나눔 식재료 조회 API를 구현했고, 프론트는 지도 선택 냉장고 내부 목록으로 연동했다. 별도 inventory/냉장고 운영자 기능은 후속 범위다.
 
 ### Codex 작업 지시 예시
 
