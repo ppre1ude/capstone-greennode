@@ -9,6 +9,12 @@ import {
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {RootStackParamList} from '@/navigation/types';
 import {colors} from '@/theme';
+import {
+  deriveBasketStatus,
+  getOperatorItemStatusTone,
+  type OperatorItemStatus,
+  type OperatorStatusTone,
+} from '@/utils/fridgeOperatorInventory';
 
 type Props = NativeStackScreenProps<
   RootStackParamList,
@@ -24,31 +30,50 @@ const summary = [
   {label: '폐기 후보', value: '1', note: '권장 기한 초과'},
 ];
 
-const basketCandidates = [
+type BasketCandidate = {
+  id: string;
+  source: string;
+  items: {name: string; status: OperatorItemStatus}[];
+  decision: string;
+};
+
+const basketCandidates: BasketCandidate[] = [
   {
     id: 'BASKET-CAND-001',
     source: '공급자 24',
-    items: ['바나나', '토마토', '상추'],
-    status: '3개 중 1개 확인 필요',
+    items: [
+      {name: '바나나', status: 'available'},
+      {name: '토마토', status: 'available'},
+      {name: '상추', status: 'needsReview'},
+    ],
     decision: '바구니로 묶으면 현장 점검이 쉬움',
   },
   {
     id: 'BASKET-CAND-002',
     source: '공급자 31',
-    items: ['사과', '감자'],
-    status: '2개 모두 신청 접수',
+    items: [
+      {name: '사과', status: 'requested'},
+      {name: '감자', status: 'requested'},
+    ],
     decision: '개별 항목 상태만으로도 충분할 수 있음',
   },
   {
     id: 'NO-BASKET',
     source: '기존 단일 등록',
-    items: ['오이'],
-    status: '권장 기한 초과',
+    items: [{name: '오이', status: 'discardCandidate'}],
     decision: '바구니 없이도 폐기 판단 가능',
   },
 ];
 
-const inspectionItems = [
+type InspectionItem = {
+  name: string;
+  postId: string;
+  ai: string;
+  recommendedUntil: string;
+  status: OperatorItemStatus;
+};
+
+const inspectionItems: InspectionItem[] = [
   {
     name: '토마토',
     postId: '108',
@@ -79,17 +104,24 @@ const validationRules = [
   '감지 영역과 생성된 나눔 식재료 연결이 끊김',
 ];
 
-const statusTone = (status: string) => {
-  if (status === 'available') {
+const statusTone = (tone: OperatorStatusTone) => {
+  if (tone === 'good') {
     return styles.goodPill;
   }
 
-  if (status === 'requested') {
+  if (tone === 'info') {
     return styles.infoPill;
+  }
+
+  if (tone === 'danger') {
+    return styles.dangerPill;
   }
 
   return styles.warningPill;
 };
+
+const itemStatusTone = (status: OperatorItemStatus) =>
+  statusTone(getOperatorItemStatusTone(status));
 
 const FridgeOperatorConsoleScreen = ({navigation}: Props) => (
   <View style={styles.container}>
@@ -123,23 +155,29 @@ const FridgeOperatorConsoleScreen = ({navigation}: Props) => (
         <Text style={styles.sectionNote}>
           정식 채택 전이며 같은 촬영/보관 흐름에서 나온 묶음 후보
         </Text>
-        {basketCandidates.map(candidate => (
-          <View key={candidate.id} style={styles.rowCard}>
-            <View style={styles.rowHeader}>
-              <Text style={styles.rowTitle}>{candidate.id}</Text>
-              <Text style={styles.rowMeta}>{candidate.source}</Text>
+        {basketCandidates.map(candidate => {
+          const candidateStatus = deriveBasketStatus(candidate.items);
+
+          return (
+            <View key={candidate.id} style={styles.rowCard}>
+              <View style={styles.rowHeader}>
+                <Text style={styles.rowTitle}>{candidate.id}</Text>
+                <Text style={styles.rowMeta}>{candidate.source}</Text>
+              </View>
+              <View style={styles.pillRow}>
+                {candidate.items.map(item => (
+                  <Text key={item.name} style={styles.neutralPill}>
+                    {item.name}
+                  </Text>
+                ))}
+              </View>
+              <Text style={[styles.statusPill, statusTone(candidateStatus.tone)]}>
+                {candidateStatus.label}
+              </Text>
+              <Text style={styles.rowText}>{candidate.decision}</Text>
             </View>
-            <View style={styles.pillRow}>
-              {candidate.items.map(item => (
-                <Text key={item} style={styles.neutralPill}>
-                  {item}
-                </Text>
-              ))}
-            </View>
-            <Text style={styles.rowText}>{candidate.status}</Text>
-            <Text style={styles.rowText}>{candidate.decision}</Text>
-          </View>
-        ))}
+          );
+        })}
       </View>
 
       <View style={styles.section}>
@@ -154,7 +192,7 @@ const FridgeOperatorConsoleScreen = ({navigation}: Props) => (
                 <Text style={styles.rowTitle}>{item.name}</Text>
                 <Text style={styles.rowMeta}>postId {item.postId}</Text>
               </View>
-              <Text style={[styles.statusPill, statusTone(item.status)]}>
+              <Text style={[styles.statusPill, itemStatusTone(item.status)]}>
                 {item.status}
               </Text>
             </View>
@@ -331,6 +369,10 @@ const styles = StyleSheet.create({
   warningPill: {
     backgroundColor: '#FEF3C7',
     color: '#92400E',
+  },
+  dangerPill: {
+    backgroundColor: '#FEE2E2',
+    color: '#991B1B',
   },
   ruleText: {
     marginTop: 8,
