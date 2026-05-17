@@ -166,6 +166,43 @@ export const isPostAuthoredByUser = (
 export const getPostDisplayName = (post: PostDisplayFields): string =>
   post.detectedFruitKo || post.detectedFruit || '나눔 식재료';
 
+export const getPostRelativeTimeLabel = (
+  createdAt?: string | null,
+  now: Date = new Date(),
+): string => {
+  if (!createdAt) {
+    return '등록일 확인 중';
+  }
+
+  const createdDate = new Date(createdAt);
+  const diffMs = now.getTime() - createdDate.getTime();
+
+  if (Number.isNaN(createdDate.getTime()) || Number.isNaN(diffMs)) {
+    return '등록일 확인 중';
+  }
+
+  if (diffMs < 60_000) {
+    return '방금 등록';
+  }
+
+  const minutes = Math.floor(diffMs / 60_000);
+  if (minutes < 60) {
+    return `${minutes}분 전`;
+  }
+
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) {
+    return `${hours}시간 전`;
+  }
+
+  const days = Math.floor(hours / 24);
+  if (days < 7) {
+    return `${days}일 전`;
+  }
+
+  return `${createdDate.getMonth() + 1}/${createdDate.getDate()} 등록`;
+};
+
 export const getPostStatusLabel = (status?: string | null): string => {
   switch (status) {
     case 'available':

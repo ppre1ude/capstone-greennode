@@ -58,7 +58,10 @@ describe('ProfileScreen operator console entry', () => {
     });
 
     await ReactTestRenderer.act(async () => {
-      findTouchableByText(renderer!, '냉장고 운영자 콘솔').props.onPress();
+      findTouchableByText(
+        renderer!,
+        '냉장고 운영자 콘솔 (실험)',
+      ).props.onPress();
     });
 
     expect(mockParentNavigate).toHaveBeenCalledWith('FridgeOperatorConsole');

@@ -131,6 +131,16 @@ describe('PostDetailScreen share request', () => {
     const requestButton = findButtonByText(renderer, '나눔 신청하기');
 
     expect(requestButton).toBeTruthy();
+    expect(
+      renderer.root.findAllByProps({
+        children: 'AI 참고 신호는 95%이며, 실제 상태는 수령 전 확인이 필요해요.',
+      }),
+    ).not.toHaveLength(0);
+    expect(
+      renderer.root.findAllByProps({
+        children: '신청 접수는 예약 확정이 아니에요.',
+      }),
+    ).not.toHaveLength(0);
 
     await ReactTestRenderer.act(async () => {
       requestButton?.props.onPress();
@@ -144,6 +154,11 @@ describe('PostDetailScreen share request', () => {
     );
     expect(useFeedRefreshStore.getState().requestedPostId).toBe(10);
     expect(findButtonByText(renderer, '신청 접수')).toBeTruthy();
+    expect(
+      renderer.root.findAllByProps({
+        children: '신청이 접수된 상태이며 예약 확정은 아니에요.',
+      }),
+    ).not.toHaveLength(0);
 
     await ReactTestRenderer.act(async () => {
       renderer.unmount();

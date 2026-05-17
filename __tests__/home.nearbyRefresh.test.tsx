@@ -1,4 +1,5 @@
 import React from 'react';
+import { Text, TouchableOpacity } from 'react-native';
 import ReactTestRenderer from 'react-test-renderer';
 import HomeScreen from '@/screens/home/HomeScreen';
 import { getNearbyPosts } from '@/api/posts';
@@ -36,6 +37,14 @@ jest.mock('@/api/posts', () => ({
 const mockedGetNearbyPosts = getNearbyPosts as jest.MockedFunction<
   typeof getNearbyPosts
 >;
+
+const findButtonByText = (
+  renderer: ReactTestRenderer.ReactTestRenderer,
+  label: string,
+) =>
+  renderer.root.findAllByType(TouchableOpacity).find(button =>
+    button.findAllByType(Text).some(textNode => textNode.props.children === label),
+  );
 
 describe('HomeScreen nearby post refresh', () => {
   beforeEach(() => {
@@ -140,6 +149,26 @@ describe('HomeScreen nearby post refresh', () => {
 
     expect(mockedGetNearbyPosts).toHaveBeenCalledTimes(2);
     expect(renderer?.root.findAllByProps({ children: '사과' })).toHaveLength(0);
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
+  it('uses the feed header action to open the map tab', async () => {
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(<HomeScreen />);
+    });
+
+    const mapButton = findButtonByText(renderer!, '지도에서 보기');
+
+    await ReactTestRenderer.act(async () => {
+      mapButton?.props.onPress();
+    });
+
+    expect(mockNavigate).toHaveBeenCalledWith('Map');
 
     await ReactTestRenderer.act(async () => {
       renderer?.unmount();

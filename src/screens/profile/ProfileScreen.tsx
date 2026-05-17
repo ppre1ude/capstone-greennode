@@ -23,7 +23,7 @@ import {colors} from '@/theme';
 
 const MENU_ITEMS = [
   {id: 'location', title: '동네 위치 재설정', icon: '📍'},
-  {id: 'operator-console', title: '냉장고 운영자 콘솔', icon: '🧪'},
+  {id: 'operator-console', title: '냉장고 운영자 콘솔 (실험)', icon: '🧪'},
   {id: 'my-posts', title: '내 나눔 내역', icon: '📝'},
   {id: 'bookmark', title: '관심 식재료', icon: '❤️'},
   {id: 'history', title: '받은 나눔 내역', icon: '🎁'},

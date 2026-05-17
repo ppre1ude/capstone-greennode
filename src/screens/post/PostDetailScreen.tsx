@@ -179,6 +179,12 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
     : canRequestShare
     ? '나눔 신청하기'
     : statusLabel;
+  const requestNotice =
+    post.status === 'available'
+      ? '신청 접수는 예약 확정이 아니에요.'
+      : post.status === 'requested'
+      ? '신청이 접수된 상태이며 예약 확정은 아니에요.'
+      : null;
   const daysLeft = Math.ceil(
     (new Date(post.expirationDate).getTime() - new Date().getTime()) /
       (1000 * 3600 * 24),
@@ -234,7 +240,7 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
               <View>
                 <Text style={styles.infoLabel}>남은 기한</Text>
                 <Text style={styles.infoValue}>
-                  {daysLeft > 0 ? `약 ${daysLeft}일` : '기한 만료'}
+                  {daysLeft > 0 ? `약 ${daysLeft}일` : '권장일 지남'}
                 </Text>
               </View>
             </View>
@@ -251,8 +257,8 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
           <Text style={styles.sectionTitle}>AI 분석 정보</Text>
           <Text style={styles.description}>
             {confidencePercent != null
-              ? `AI 신뢰도 ${confidencePercent}%로 ${quality.label} 상태로 확인됐어요.`
-              : `${quality.label} 상태로 확인됐어요.`}
+              ? `AI 참고 신호는 ${confidencePercent}%이며, 실제 상태는 수령 전 확인이 필요해요.`
+              : 'AI 분석은 참고용이며, 실제 상태는 수령 전 확인이 필요해요.'}
           </Text>
         </View>
       </ScrollView>
@@ -260,6 +266,9 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
       {/* 하단 CTA (내가 쓴 글이 아닐 경우 채팅하기 등) */}
       {!isMyPost && (
         <View style={styles.footer}>
+          {requestNotice && (
+            <Text style={styles.requestNotice}>{requestNotice}</Text>
+          )}
           <TouchableOpacity
             style={[
               styles.chatButton,

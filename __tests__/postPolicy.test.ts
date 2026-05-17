@@ -6,6 +6,7 @@ import {
   getGenerateResultQualityMeta,
   getPostAuthorId,
   getPostDisplayName,
+  getPostRelativeTimeLabel,
   getPostStatusLabel,
   getQualityMeta,
   isPostAuthoredByUser,
@@ -164,5 +165,23 @@ describe('post policy', () => {
   it('keeps a legacy userId fallback for older local fixtures only', () => {
     expect(getPostAuthorId({ userId: 7 })).toBe(7);
     expect(isPostAuthoredByUser({ userId: 7 }, 7)).toBe(true);
+  });
+
+  it('formats nearby post time from createdAt instead of a fixed placeholder', () => {
+    const now = new Date('2026-05-17T12:00:00Z');
+
+    expect(getPostRelativeTimeLabel('2026-05-17T11:59:40Z', now)).toBe(
+      '방금 등록',
+    );
+    expect(getPostRelativeTimeLabel('2026-05-17T11:35:00Z', now)).toBe(
+      '25분 전',
+    );
+    expect(getPostRelativeTimeLabel('2026-05-17T09:00:00Z', now)).toBe(
+      '3시간 전',
+    );
+    expect(getPostRelativeTimeLabel('2026-05-15T12:00:00Z', now)).toBe(
+      '2일 전',
+    );
+    expect(getPostRelativeTimeLabel(null, now)).toBe('등록일 확인 중');
   });
 });

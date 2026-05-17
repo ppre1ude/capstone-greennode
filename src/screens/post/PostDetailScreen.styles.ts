@@ -135,6 +135,12 @@ export const styles = StyleSheet.create({
     borderTopColor: colors.borderLight,
     backgroundColor: '#FFFFFF',
   },
+  requestNotice: {
+    marginBottom: 10,
+    fontSize: 12,
+    color: colors.textSecondary,
+    textAlign: 'center',
+  },
   chatButton: {
     height: 56,
     backgroundColor: colors.primary,

@@ -116,7 +116,7 @@ const PostCreateScreen = ({ route, navigation }: Props) => {
             </View>
             <View style={styles.analysisDivider} />
             <View style={styles.analysisItem}>
-              <Text style={styles.analysisLabel}>AI 신뢰도</Text>
+              <Text style={styles.analysisLabel}>AI 참고 신호</Text>
               <Text
                 style={[
                   styles.analysisValue,

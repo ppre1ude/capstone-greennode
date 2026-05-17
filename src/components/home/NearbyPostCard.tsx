@@ -11,6 +11,7 @@ import { getImageUrl } from '@/api/posts';
 import { colors } from '@/theme';
 import {
   getPostDisplayName,
+  getPostRelativeTimeLabel,
   getPostStatusLabel,
   getQualityMeta,
 } from '@/utils/postPolicy';
@@ -46,7 +47,9 @@ const NearbyPostCard = ({ post, onPress }: Props) => {
       <View style={styles.info}>
         <View style={styles.infoTop}>
           <Text style={styles.category}>{quality.label}</Text>
-          <Text style={styles.time}>방금 전</Text>
+          <Text style={styles.time}>
+            {getPostRelativeTimeLabel(post.createdAt)}
+          </Text>
         </View>
         <Text style={styles.title} numberOfLines={1}>
           {displayName}

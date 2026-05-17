@@ -136,6 +136,13 @@ const FridgeOperatorConsoleScreen = ({navigation}: Props) => (
     </View>
 
     <ScrollView contentContainerStyle={styles.content}>
+      <View style={styles.prototypeBanner}>
+        <Text style={styles.prototypeBadge}>읽기 전용 프로토타입</Text>
+        <Text style={styles.prototypeText}>
+          실제 inventory API와 상태 변경 저장은 아직 연결되지 않았어요.
+        </Text>
+      </View>
+
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>냉장고 상태</Text>
         <Text style={styles.sectionNote}>마지막 동기화 2026-05-15 14:20</Text>
@@ -262,6 +269,24 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 12,
     paddingBottom: 36,
+  },
+  prototypeBanner: {
+    backgroundColor: '#FFF7ED',
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#FED7AA',
+  },
+  prototypeBadge: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#9A3412',
+  },
+  prototypeText: {
+    marginTop: 4,
+    fontSize: 12,
+    color: '#9A3412',
+    lineHeight: 18,
   },
   section: {
     backgroundColor: '#FFFFFF',

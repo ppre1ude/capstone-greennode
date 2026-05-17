@@ -18,6 +18,15 @@ describe('FridgeOperatorConsoleScreen', () => {
     expect(
       renderer!.root.findAllByProps({children: '냉장고 운영자 콘솔'}),
     ).not.toHaveLength(0);
+    expect(
+      renderer!.root.findAllByProps({children: '읽기 전용 프로토타입'}),
+    ).not.toHaveLength(0);
+    expect(
+      renderer!.root.findAllByProps({
+        children:
+          '실제 inventory API와 상태 변경 저장은 아직 연결되지 않았어요.',
+      }),
+    ).not.toHaveLength(0);
     expect(renderer!.root.findAllByProps({children: '냉장고 상태'})).not.toHaveLength(
       0,
     );

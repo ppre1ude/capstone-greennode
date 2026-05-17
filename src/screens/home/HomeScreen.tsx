@@ -204,8 +204,8 @@ const HomeScreen = () => {
         <View style={styles.feedSection}>
           <View style={styles.feedHeader}>
             <Text style={styles.feedTitle}>내 주변 실시간 나눔</Text>
-            <TouchableOpacity>
-              <Text style={styles.feedMore}>전체보기</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Map')}>
+              <Text style={styles.feedMore}>지도에서 보기</Text>
             </TouchableOpacity>
           </View>
 
