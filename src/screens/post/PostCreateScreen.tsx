@@ -7,7 +7,7 @@
  *
  * @wireframe wireframe-foodlink/scanapply.html
  */
-import React, {useMemo, useState} from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -18,10 +18,10 @@ import {
   Image,
   Platform,
   KeyboardAvoidingView,
-  TextInput,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@/navigation/types';
+import { DSButton, DSCard, DSChip, DSTextField } from '@/design-system';
 import {
   getConfidencePercent,
   getGenerateResultQualityMeta,
@@ -151,14 +151,16 @@ const PostCreateScreen = ({ route, navigation }: Props) => {
         {/* 이미지 미리보기 */}
         <View style={styles.imagePreview}>
           <Image source={{ uri: imageUri }} style={styles.image} />
-          <View style={styles.aiBadge}>
-            <Text style={styles.aiBadgeIcon}>✨</Text>
-            <Text style={styles.aiBadgeText}>AI 분석 완료</Text>
-          </View>
+          <DSChip
+            label="AI 분석 완료"
+            tone="primary"
+            style={styles.aiBadge}
+            leading={<Text style={styles.aiBadgeIcon}>✨</Text>}
+          />
         </View>
 
         <View style={styles.form}>
-          <View style={styles.analysisCard}>
+          <DSCard padded={false} style={styles.analysisCard}>
             <View style={styles.analysisItem}>
               <Text style={styles.analysisLabel}>판별 농산물</Text>
               <Text style={styles.analysisValue}>{detectedCrop}</Text>
@@ -179,52 +181,46 @@ const PostCreateScreen = ({ route, navigation }: Props) => {
                 {confidencePercent != null ? `${confidencePercent}%` : '미제공'}
               </Text>
             </View>
-          </View>
+          </DSCard>
           {needsReview && (
             <Text style={styles.reviewNotice}>
-              AI가 나눔 가능으로 분석했지만 실제 상태를 직접 확인한 뒤 등록해주세요.
+              AI가 나눔 가능으로 분석했지만 실제 상태를 직접 확인한 뒤
+              등록해주세요.
             </Text>
           )}
 
-          <View style={styles.summaryCard}>
+          <DSCard variant="outlined" padded={false} style={styles.summaryCard}>
             <Text style={styles.summaryTitle}>등록될 나눔 식재료</Text>
             <Text style={styles.summaryName}>{detectedCrop}</Text>
             <Text style={styles.summaryDescription}>
               공유 냉장고를 선택하면 이 식재료가 나눔 가능 상태로 등록됩니다.
             </Text>
-          </View>
+          </DSCard>
 
           <View style={styles.field}>
-            <Text style={styles.label}>권장 수령일</Text>
-            <TextInput
-              style={styles.input}
+            <DSTextField
+              label="권장 수령일"
               value={expirationDate}
               onChangeText={setExpirationDate}
               placeholder="YYYY-MM-DD"
               keyboardType="numbers-and-punctuation"
               autoCapitalize="none"
+              caption="기본값은 3일 뒤이며, 실제 상태를 보고 오늘 이후 날짜로 조정해주세요."
+              inputContainerStyle={styles.input}
             />
-            <Text style={styles.fieldHelp}>
-              기본값은 3일 뒤이며, 실제 상태를 보고 오늘 이후 날짜로 조정해주세요.
-            </Text>
           </View>
         </View>
       </ScrollView>
 
       {/* 하단 버튼 */}
       <View style={styles.footer}>
-        <TouchableOpacity
-          style={[
-            styles.submitButton,
-            (!quality.canShare || !hasImageToken) &&
-              styles.submitButtonDisabled,
-          ]}
+        <DSButton
+          label={quality.canShare ? '다음 단계로' : '나눔 기준 미충족'}
           onPress={handleNext}
-          disabled={!quality.canShare || !hasImageToken}>
-          <Text style={styles.submitButtonText}>
-            {quality.canShare ? '다음 단계로' : '나눔 기준 미충족'}
-          </Text>
-        </TouchableOpacity>
+          disabled={!quality.canShare || !hasImageToken}
+          style={styles.submitButton}
+          textStyle={styles.submitButtonText}
+        />
       </View>
     </KeyboardAvoidingView>
   );

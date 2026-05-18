@@ -20,6 +20,7 @@ import {
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@/navigation/types';
+import { DSButton, DSCard, DSChip } from '@/design-system';
 import {
   getPostDetail,
   deletePost,
@@ -225,7 +226,12 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
         {/* 본문 영역 */}
         <View style={styles.body}>
           <View style={styles.titleRow}>
-            <Text style={styles.categoryBadge}>{statusLabel}</Text>
+            <DSChip
+              label={statusLabel}
+              tone="primary"
+              size="small"
+              style={styles.categoryBadge}
+            />
             <Text style={styles.timeText}>
               {new Date(post.createdAt).toLocaleDateString()} 등록
             </Text>
@@ -234,7 +240,7 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
           <Text style={styles.title}>{displayName}</Text>
 
           {/* 주요 정보 박스 */}
-          <View style={styles.infoBox}>
+          <DSCard variant="plain" padded={false} style={styles.infoBox}>
             <View style={styles.infoItem}>
               <Text style={styles.infoIcon}>⏱️</Text>
               <View>
@@ -252,7 +258,7 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
                 <Text style={styles.infoValue}>{quality.label}</Text>
               </View>
             </View>
-          </View>
+          </DSCard>
 
           <Text style={styles.sectionTitle}>AI 분석 정보</Text>
           <Text style={styles.description}>
@@ -269,15 +275,16 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
           {requestNotice && (
             <Text style={styles.requestNotice}>{requestNotice}</Text>
           )}
-          <TouchableOpacity
-            style={[
-              styles.chatButton,
-              (!canRequestShare || isRequesting) && styles.chatButtonDisabled,
-            ]}
+          <DSButton
+            label={isRequesting ? '' : requestButtonLabel}
+            accessibilityLabel={requestButtonLabel}
+            loading={isRequesting}
+            loadingLabel=""
             onPress={handleRequestShare}
-            disabled={!canRequestShare || isRequesting}>
-            <Text style={styles.chatButtonText}>{requestButtonLabel}</Text>
-          </TouchableOpacity>
+            disabled={!canRequestShare || isRequesting}
+            style={styles.chatButton}
+            textStyle={styles.chatButtonText}
+          />
         </View>
       )}
     </View>

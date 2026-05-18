@@ -1,0 +1,134 @@
+import React from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import {
+  DSButton,
+  DSCard,
+  DSChip,
+  DSListCell,
+  DSText,
+  DSTextField,
+} from '@/design-system/components';
+import { colors, spacing } from '@/theme';
+
+const swatches = [
+  { name: 'Primary', color: colors.primary },
+  { name: 'Success', color: colors.success },
+  { name: 'Warning', color: colors.warning },
+  { name: 'Error', color: colors.error },
+  { name: 'Surface', color: colors.surface },
+];
+
+export const DesignSystemCatalog = () => (
+  <ScrollView
+    contentContainerStyle={styles.container}
+    testID="design-system-catalog">
+    <DSText variant="heading3">Design System Catalog</DSText>
+
+    <DSCard variant="outlined" style={styles.section}>
+      <DSText variant="bodyBold">Buttons</DSText>
+      <View style={styles.row}>
+        <DSButton label="Primary" size="medium" />
+        <DSButton label="Outlined" variant="outlined" size="medium" />
+      </View>
+      <View style={styles.row}>
+        <DSButton label="Text" variant="text" size="small" />
+        <DSButton label="Loading" size="medium" loading />
+        <DSButton label="Disabled" size="medium" disabled />
+      </View>
+    </DSCard>
+
+    <DSCard variant="outlined" style={styles.section}>
+      <DSText variant="bodyBold">Chips</DSText>
+      <View style={styles.row}>
+        <DSChip label="Neutral" />
+        <DSChip label="Primary" tone="primary" />
+        <DSChip label="Success" tone="success" />
+      </View>
+      <View style={styles.row}>
+        <DSChip label="Warning" tone="warning" variant="outlined" />
+        <DSChip label="Error" tone="error" variant="outlined" />
+        <DSChip label="Selected" selected onPress={() => undefined} />
+      </View>
+    </DSCard>
+
+    <DSCard variant="outlined" style={styles.section}>
+      <DSText variant="bodyBold">Text Fields</DSText>
+      <DSTextField
+        label="Email"
+        placeholder="food@example.com"
+        keyboardType="email-address"
+      />
+      <DSTextField
+        label="Error"
+        value="bad-input"
+        status="error"
+        caption="확인해주세요"
+      />
+      <DSTextField label="Disabled" value="읽기 전용" disabled />
+    </DSCard>
+
+    <DSCard variant="outlined" style={styles.section}>
+      <DSText variant="bodyBold">List Cells</DSText>
+      <DSListCell
+        title="동네 위치 재설정"
+        caption="현재 동네를 바꿉니다"
+        chevron
+        divider
+      />
+      <DSListCell
+        title="선택된 항목"
+        caption="선택 상태와 primary 컬러"
+        selected
+      />
+    </DSCard>
+
+    <DSCard variant="outlined" style={styles.section}>
+      <DSText variant="bodyBold">Palette</DSText>
+      <View style={styles.swatchGrid}>
+        {swatches.map(swatch => (
+          <View key={swatch.name} style={styles.swatchItem}>
+            <View
+              accessibilityLabel={`${swatch.name} swatch`}
+              style={[styles.swatch, { backgroundColor: swatch.color }]}
+            />
+            <DSText variant="small" color="textSecondary">
+              {swatch.name}
+            </DSText>
+          </View>
+        ))}
+      </View>
+    </DSCard>
+  </ScrollView>
+);
+
+const styles = StyleSheet.create({
+  container: {
+    backgroundColor: colors.surface,
+    gap: spacing.lg,
+    padding: spacing.xl,
+  },
+  section: {
+    gap: spacing.md,
+  },
+  row: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  swatchGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+  },
+  swatchItem: {
+    gap: spacing.xs,
+  },
+  swatch: {
+    borderColor: colors.border,
+    borderRadius: 8,
+    borderWidth: 1,
+    height: 36,
+    width: 64,
+  },
+});
