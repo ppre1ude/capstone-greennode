@@ -85,6 +85,11 @@ const MapScreen = () => {
     setFridgePostsError(null);
   }, []);
 
+  const clearSelectedFridge = useCallback(() => {
+    setSelectedFridgeId(null);
+    resetFridgePosts();
+  }, [resetFridgePosts]);
+
   const fetchFridgePosts = useCallback(async (fridgeId: number) => {
     const requestId = fridgePostsRequestId.current + 1;
     fridgePostsRequestId.current = requestId;
@@ -239,9 +244,7 @@ const MapScreen = () => {
           <TouchableOpacity
             style={styles.detailButton}
             onPress={() => focusFridge(item)}>
-            <Text style={styles.detailButtonText}>
-              {isSelected ? '목록 확인 중' : '내부 보기'}
-            </Text>
+            <Text style={styles.detailButtonText}>내부 보기</Text>
           </TouchableOpacity>
         </View>
       </TouchableOpacity>
@@ -283,21 +286,39 @@ const MapScreen = () => {
     }
 
     return (
-      <View style={styles.fridgePostsPanel}>
-        <View style={styles.fridgePostsHeader}>
-          <View style={styles.fridgePostsHeaderText}>
-            <Text style={styles.fridgePostsTitle} numberOfLines={1}>
-              {selectedFridge.name}
-            </Text>
-            <Text style={styles.fridgePostsSubtitle}>
-              지금 가능한 나눔 식재료
-            </Text>
-          </View>
+      <View style={styles.selectedFridgeSheet}>
+        <View style={styles.selectedFridgeActionRow}>
+          <TouchableOpacity
+            style={styles.switchFridgeButton}
+            onPress={clearSelectedFridge}>
+            <Text style={styles.switchFridgeButtonText}>다른 냉장고 보기</Text>
+          </TouchableOpacity>
           <TouchableOpacity
             style={styles.panelRetryButton}
             onPress={() => fetchFridgePosts(selectedFridge.id)}>
             <Text style={styles.panelRetryButtonText}>새로고침</Text>
           </TouchableOpacity>
+        </View>
+
+        <View style={styles.selectedFridgeSummary}>
+          <Text style={styles.selectedFridgeName} numberOfLines={1}>
+            {selectedFridge.name}
+          </Text>
+          <Text style={styles.selectedFridgeAddress} numberOfLines={1}>
+            {selectedFridge.address}
+          </Text>
+          <View style={styles.selectedFridgeMetaRow}>
+            <Text style={styles.statusBadge}>운영중</Text>
+            <Text style={styles.selectedFridgeDistance}>
+              {selectedFridge.distance
+                ? `${selectedFridge.distance.toFixed(2)}km`
+                : '거리 확인 중'}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.fridgePostsHeader}>
+          <Text style={styles.fridgePostsTitle}>지금 가능한 나눔 식재료</Text>
         </View>
 
         {fridgePostsState === 'idle' || fridgePostsState === 'loading' ? (
@@ -423,7 +444,9 @@ const MapScreen = () => {
 
       {/* 하단 냉장고 리스트 캐러셀 */}
       <View style={styles.bottomCarousel}>
-        {fridgeState === 'loading' ? (
+        {selectedFridge ? (
+          renderSelectedFridgePosts()
+        ) : fridgeState === 'loading' ? (
           <View style={styles.emptyCard}>
             <ActivityIndicator color={colors.primary} />
             <Text style={styles.emptyTitle}>주변 냉장고를 불러오는 중입니다</Text>
@@ -471,7 +494,6 @@ const MapScreen = () => {
             ) : null}
           </View>
         )}
-        {renderSelectedFridgePosts()}
       </View>
     </View>
   );

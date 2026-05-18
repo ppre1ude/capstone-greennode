@@ -172,6 +172,12 @@ describe('MapScreen fridge posts', () => {
 
     expect(mockedGetFridgePosts).toHaveBeenCalledWith(7, 'available');
     expect(
+      renderer!.root.findAllByProps({children: '다른 냉장고 보기'}),
+    ).not.toHaveLength(0);
+    expect(
+      renderer!.root.findAllByProps({children: '목록 확인 중'}),
+    ).toHaveLength(0);
+    expect(
       renderer!.root.findAllByProps({children: '사과'}).length,
     ).toBeGreaterThan(0);
 

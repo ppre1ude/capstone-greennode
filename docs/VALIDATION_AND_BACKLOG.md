@@ -294,7 +294,7 @@
 | 나눔 식재료 등록 | 구현됨 | 실기기에서 `generate -> create -> home/detail/map` 검증 | 유통기한 수동 입력/OCR 등은 없음 |
 | 홈 주변 나눔 목록 | 구현됨 | 등록 후 홈 재조회, requested 제외 검증 | 서버 검색/추천/랭킹은 없음 |
 | 나눔 상세/신청 | 구현됨 | 201/403/409, `available -> requested`, 중복 신청 방어 검증 | `reserved/completed/cancelled/expired` 흐름 없음 |
-| 공유 냉장고 지도 | 구현됨 | 지도 마커, 냉장고 선택, 내부 available 목록, 상세 이동 검증 | 냉장고 없음 fixture/API 검증 추가 필요 |
+| 공유 냉장고 지도 | 구현됨 | 지도 마커, 냉장고 선택, 내부 available 목록, 상세 이동 검증. 2026-05-18 선택 카드와 내부 목록을 단일 bottom sheet로 정리 | 냉장고 없음 fixture/API 검증 추가 필요 |
 | 공유 냉장고별 나눔 목록 | 구현됨 | 신청 후 내부 목록에서 즉시 제거되는 것까지 실기기 재검증 | 냉장고 inventory 개념은 없음 |
 | FCM/알림함 | 프론트 구현됨 | payload parsing, fallback, 로컬 알림함 테스트됨 | 실제 FCM 수신 QA 미완료. 다음 스프린트 P0 |
 | 검색 | 최소 구현 | 공유 냉장고 이름/주소 로컬 필터 | 나눔 식재료 검색/서버 검색 없음 |
@@ -315,6 +315,15 @@
   -> requested 전환
   -> 홈/지도 목록에서 제외
 ```
+
+### 2026-05-18 백엔드 비의존 UX 후속 정리
+
+- 운영자 콘솔은 프로필 메뉴에서 `(실험)`으로 표시하고, 화면 상단에 읽기 전용 프로토타입 안내를 추가했다.
+- AI confidence, 알림, 신청 접수 copy는 실제 검증 범위보다 앞서가지 않도록 `AI 참고 신호`, `알림 준비`, `예약 확정 아님` 계열로 정리했다.
+- 홈 피드의 `전체보기`는 `지도에서 보기`로 바꾸고 Map 탭 이동을 연결했다.
+- 홈 피드 카드의 `방금 전` placeholder는 `createdAt` 기반 상대 시각으로 교체했다.
+- 지도 화면은 냉장고 선택 후 기존 캐러셀 카드와 내부 목록 패널이 동시에 떠 있지 않도록 단일 bottom sheet로 통합했다.
+- 검증: `map.fridgePosts`, `postDetail.requestShare`, `home.nearbyRefresh`, `postPolicy`, `analysisResult`, `postCreate`, `postComplete`, `fridgeOperatorConsole`, `profile.operatorConsole` 회귀 테스트와 `tsc`, `lint`, `diff --check`.
 
 현재 부족한 점:
 
