@@ -20,6 +20,13 @@
 
 이 문서는 초기 Phase 1~6 구현 리포트를 2026-05-05 MVP 검증 결과 기준으로 갱신한 것이다. 과거 문서의 일괄 완료 표현은 실제 서버/기기 검증 결과를 반영하지 못하므로, 현재는 `구현됨`, `부분 구현`, `목업`, `미구현`, `검증 필요`, `버그`로 분리한다.
 
+## 2026-05-19 Montage 기반 디자인 시스템 레이어
+
+- 상태 변경: GreenNode의 기존 컬러 팔레트와 `src/theme` 토큰을 유지하면서, Wanted Montage Android/iOS의 컴포넌트 API 패턴을 참고한 `src/design-system` 레이어를 추가했다.
+- 구현 범위: `DSText`, `DSButton`, `DSChip`, `DSTextField`, `DSCard`, `DSListCell`을 추가하고, 홈 주변 나눔 카드(`NearbyPostCard`)를 `DSCard`/`DSChip`/`DSText` 조합으로 마이그레이션했다.
+- 설계 기준: Montage는 팔레트 공급원이 아니라 `variant`, `tone`, `size`, `status`, `loading`, `disabled`, leading/trailing slot, 선택/비활성 상태 분리의 참조 모델로 사용한다.
+- 검증: `npx tsc --noEmit`, `npm test -- --runInBand`, `npm run lint`를 통과했다. lint는 기존 warning 9개가 남아 있지만 exit code는 0이다.
+
 ## 2026-05-06 백엔드 Phase 1.5 동기화
 
 백엔드가 `TEAM_FLOW_CHANGE_NOTICE_2026-05-06.md`를 반영해 VM 배포와 검증을 완료했다. 프론트 상태 문서에서는 이 답변을 다음 기준으로 해석한다.
@@ -109,6 +116,7 @@
 | 이메일 인증/로그인         | 구현됨                            | 이메일 회원가입, 로그인, JWT 저장, `/auth/me` 조회가 동작한다. 소셜 로그인과 이메일 verification은 미구현이다.                                                                                                                                                                                                                                                                                                             |
 | 최초 위치 등록             | 구현됨                            | 위치 없는 유저는 `LocationSetup`으로 이동하고 `/auth/me/location`에 좌표와 FCM 토큰을 저장한다. 홈/지도/나눔 등록 강제 진입도 위치 설정 CTA로 되돌린다. 위치 권한 거부/영구 거부/위치 탐색 실패 시 화면 안에서 재시도와 설정 열기 CTA를 제공하고, 좌표가 없으면 위치 저장을 비활성화한다.                                                                                                                           |
 | 위치 재설정                | 구현됨                            | 홈 위치 헤더와 프로필 `동네 위치 재설정` 메뉴에서 `LocationSetup`으로 재진입한다.                                                                                                                                                                                                                                                                                                                                          |
+| 디자인 시스템              | 컴포넌트 레이어 도입됨            | `src/theme`는 GreenNode 색상/타이포그래피/spacing/radius/layout 토큰의 source of truth로 유지한다. `src/design-system`은 Montage식 prop 계약을 React Native 프리미티브로 제공하며, 첫 적용 범위는 홈 주변 나눔 카드다. 앞으로 버튼, 칩/뱃지, 입력 필드, 카드, 리스트 셀, 반복 텍스트 패턴은 DS 프리미티브 우선으로 확장한다.                                                                                     |
 | AI 분석                    | 부분 구현, 실제 기기 촬영/갤러리 QA 통과 | mock 파이프라인은 제거됐고 실제 `/posts/generate` 호출이 동작한다. 백엔드 기준 label은 `Fresh/Mid/Stale/unknown`이며 `Mid`는 기존 `Normal` 그룹이다. `confidenceScore`는 Stage 2 신선도 분류 softmax max 확률이고 차단 기준이 아니다. 앱은 0.9 미만을 `확인 필요`로 표시하며, 낮은 confidence 안내는 실제 상태 직접 확인을 명시한다. 에뮬레이터와 실제 Android 기기에서 셔터 촬영, 파일 생성, API 호출, 결과 표시를 확인했다. 2026-05-08 실제 기기에서 카메라 촬영 generate 400 실패 Alert와 갤러리 fresh fixture 분석 성공을 모두 확인했다. 백엔드 답변 기준 screenshot/UI 통과는 MVP 허용이고, rejection reason enum은 Post-MVP다.                                                        |
 | 나눔 식재료 등록           | 부분 구현, 실제 기기 등록 QA 통과 | 실제 `generate -> imageToken -> createPost` 흐름으로 서버 등록이 확인됐다. 백엔드 Phase 1.5 구조에 맞춰 작성 화면은 제목/설명/카테고리 입력 대신 AI 판별 식재료명, 신선도, confidence를 확인하고 `fridgeId`, `expirationDate`, `imageToken`만 최종 등록 payload로 보낸다. `canShare=false` 또는 `imageToken` 누락은 분석 결과, 작성, 최종 등록 단계에서 차단한다. 2026-05-08 실제 기기 갤러리 fresh fixture로 Post id `8`을 생성했고, 홈 복귀 후 주변 목록 재조회, 상세 AI 메타데이터, 지도 냉장고 내부 목록을 확인했다. VM/API에서 백엔드 sidecar 저장/복원 수정 후 신규 Post 생성 응답의 AI 메타데이터 non-null도 확인했다. |
 | 나눔 식재료 상세/삭제/신청 | 부분 구현, 실제 기기 신청 QA 통과 | 실제 상세 응답의 `authorId` 기준으로 작성자 여부를 판단한다. 상세 화면은 구형 `title/description/category` 대신 `detectedFruitKo`, `freshnessLabel`, `confidenceScore`, `status`를 표시한다. `available` 나눔 식재료는 `requestShare(postId)`로 신청하고, 201/409 이후 `신청 접수` 상태로 CTA를 비활성화한다. 403은 작성자 본인 fallback 문구로 처리한다. 2026-05-08 VM/API에서 신규 Post 상세 AI 메타데이터 non-null과 `available -> requested` 전환을 재확인했고, 실제 Android 기기에서도 신청 완료 alert와 `신청 접수` disabled CTA를 확인했다.                                                                  |

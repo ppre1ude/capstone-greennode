@@ -335,6 +335,16 @@
 2. `주변에 공유 냉장고 없음` 상태와 거리/지역 edge case는 추가 검증이 필요하다.
 3. 공유 냉장고와 연결된 실제 알림 claim은 FCM 실수신 QA가 끝나야 완료로 볼 수 있다.
 
+### 2026-05-19 Montage 기반 디자인 시스템 컴포넌트 레이어
+
+- 환경/근거: `codex/montage-design-system-migration` 브랜치, Wanted Montage Android/iOS 소스 분석, React Native 로컬 회귀.
+- 현재 동작: GreenNode 팔레트와 `src/theme` 토큰은 유지하고, `src/design-system`에 `DSText`, `DSButton`, `DSChip`, `DSTextField`, `DSCard`, `DSListCell`을 추가했다. `NearbyPostCard`는 이 레이어의 첫 적용 사례다.
+- 검증:
+  - `npx tsc --noEmit` 통과.
+  - `npm test -- --runInBand` 통과: 27 suites / 111 tests.
+  - `npm run lint` 통과. 기존 warning 9개는 남아 있다.
+- 후속: 새 화면이나 기존 화면 수정 시 버튼, 칩/뱃지, 입력, 카드, 리스트 셀, 반복 텍스트 스타일은 `src/design-system` 우선으로 확장한다. 기존 화면을 한 번에 재작성하지 않고 반복 패턴부터 점진적으로 치환한다.
+
 ### 이번 주 목표
 
 - 지난 스프린트에서 MVP core flow는 대부분 해결 완료했다. 단, 제품 알림 claim은 2기기/2계정 FCM 실수신 QA까지 끝나야 완료로 본다.

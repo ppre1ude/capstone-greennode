@@ -4,7 +4,7 @@
 
 **Goal:** Add a React Native component layer inspired by Wanted Montage while preserving GreenNode's existing color palette.
 
-**Architecture:** Keep `src/theme` as the source of color, type, spacing, and radius tokens. Add `src/design-system` for reusable primitives whose public APIs mirror Montage concepts: `variant`, `color`, `size`, `status`, `disabled`, `loading`, leading/trailing content, and selected state. Migrate one real product surface first, then expand screen-by-screen after the component contracts stabilize.
+**Architecture:** Keep `src/theme` as the source of color, type, spacing, and radius tokens. Add `src/design-system` for reusable primitives whose public APIs mirror Montage concepts: `variant`, `color`, `tone`, `size`, `status`, `disabled`, `loading`, leading/trailing content, and selected state. Migrate one real product surface first, then expand screen-by-screen after the component contracts stabilize.
 
 **Tech Stack:** React Native 0.85, React 19, TypeScript, Jest/react-test-renderer.
 
@@ -58,7 +58,8 @@ Implement components using existing `colors`, `spacing`, `radius`, `layout`, and
 
 ```tsx
 <DSButton variant="solid" color="primary" size="large" loading disabled />
-<DSChip variant="solid" size="medium" selected leading={<Icon />} />
+<DSChip variant="solid" size="medium" tone="primary" leading={<Icon />} />
+<DSChip variant="outlined" size="medium" selected />
 <DSTextField label="이메일" status="error" caption="확인해주세요" />
 <DSListCell title="위치 재설정" caption="현재 동네를 바꿉니다" chevron />
 ```

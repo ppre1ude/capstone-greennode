@@ -2,6 +2,7 @@
 
 > **최종 수정일**: 2026-05-19
 > **코드 토큰 파일**: [`src/theme/`](../src/theme/) 디렉토리 참고
+> **컴포넌트 레이어**: [`src/design-system/`](../src/design-system/) 디렉토리 참고
 
 ---
 
@@ -180,6 +181,8 @@ white/90    → 글래스모피즘 뱃지
 
 ## 6. 컴포넌트 스타일 가이드
 
+이 섹션의 표는 시각 기준값이다. 새 화면이나 기존 화면 수정에서는 화면별 `StyleSheet`에 버튼/칩/입력/카드 스타일을 다시 만들기보다, 먼저 `src/design-system`의 DS 프리미티브를 사용한다. 화면별 스타일은 배치, 화면 고유 간격, 도메인 레이아웃에 한정한다.
+
 ### 버튼
 
 | 종류 | 배경 | 텍스트 | 높이 | radius |
@@ -224,7 +227,7 @@ Montage Android/iOS는 GreenNode의 색상 팔레트 대체재가 아니라 **�
 | 레이어 | 경로 | 역할 |
 |--------|------|------|
 | 토큰 | `src/theme/` | 기존 색상, 타이포그래피, 스페이싱, radius, layout source of truth |
-| 컴포넌트 | `src/design-system/` | Montage식 `variant`, `color`, `size`, `status`, `loading`, `disabled`, slot props를 RN 컴포넌트로 제공 |
+| 컴포넌트 | `src/design-system/` | Montage식 `variant`, `color`, `tone`, `size`, `status`, `loading`, `disabled`, slot props를 RN 컴포넌트로 제공 |
 | 제품 컴포넌트 | `src/components/` | 도메인 데이터를 디자인 시스템 컴포넌트 조합으로 표현 |
 
 ### 첫 프리미티브
@@ -232,14 +235,23 @@ Montage Android/iOS는 GreenNode의 색상 팔레트 대체재가 아니라 **�
 | 컴포넌트 | Montage 대응 | 주요 props | 사용처 |
 |----------|---------------|------------|--------|
 | `DSButton` | `Button`, `TextButton` | `variant`, `color`, `size`, `loading`, `disabled`, `leading`, `trailing`, `fullWidth` | CTA, 보조 액션, 텍스트 버튼 |
-| `DSChip` | `Chip`, `ContentBadge` | `variant`, `size`, `selected`, `disabled`, `leading`, `trailing` | 상태 뱃지, 필터, 작은 선택 UI |
+| `DSChip` | `Chip`, `ContentBadge` | `variant`, `size`, `tone`, `selected`, `disabled`, `leading`, `trailing` | 상태 뱃지, 필터, 작은 선택 UI |
 | `DSTextField` | `TextField` | `label`, `required`, `status`, `caption`, `leading`, `trailing` | 검색, 로그인/가입 입력 |
 | `DSCard` | `Card` | `variant`, `padded`, `onPress`, `disabled` | 피드 카드, 정보 카드 |
 | `DSListCell` | `ListCell` | `title`, `caption`, `leading`, `trailing`, `selected`, `chevron`, `divider` | 프로필 메뉴, 선택 목록 |
 | `DSText` | `Typography` | `variant`, `color`, `align` | 토큰 기반 텍스트 |
+
+### 현재 적용 범위
+
+- 홈의 `NearbyPostCard`는 `DSCard`, `DSChip`, `DSText` 조합으로 마이그레이션했다.
+- 카드의 이미지, 상대 시각, 냉장고명 fallback, 상태 라벨 정책은 기존 제품 로직을 유지한다.
+- 새 DS 레이어 적용은 화면 전체 재작성보다 반복되는 버튼/칩/텍스트/입력/카드 패턴을 점진적으로 치환하는 방식으로 진행한다.
 
 ### 마이그레이션 규칙
 
 - 새 화면이나 수정 화면에서 버튼, 칩/뱃지, 입력 필드, 카드, 리스트 셀, 반복 텍스트 스타일을 추가할 때는 먼저 `src/design-system` 프리미티브를 사용한다.
 - 기존 화면별 `StyleSheet`에 색상/폰트/간격을 직접 추가해야 한다면, 컴포넌트화하기 어려운 이유가 명확해야 한다.
 - Montage의 `semantic token`, `variant/size/status enum`, `slot-based API`, `loading/disabled/selected state`는 가져오되, Wanted의 blue/neutral 팔레트 값은 가져오지 않는다.
+- `DSChip.selected`는 필터/선택 UI처럼 실제 선택 상태일 때만 쓴다. 단순 상태 뱃지나 품질 라벨은 `tone="primary|success|warning|error|neutral"`로 시각 의도를 표현한다.
+- `DSChip`, `DSCard`, `DSListCell`은 `onPress`가 없으면 비상호작용 `View`로 렌더링한다. 동작하지 않는 요소에 `button` 접근성 역할을 노출하지 않는다.
+- `DSTextField`는 `label`을 기본 접근성 라벨로 사용하고, `status="error"`일 때 `caption`을 오류 힌트로 연결한다.

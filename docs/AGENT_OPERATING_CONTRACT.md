@@ -33,7 +33,7 @@
 | Validation and backlog | [VALIDATION_AND_BACKLOG.md](./VALIDATION_AND_BACKLOG.md) | Recording QA evidence, known bugs, next sprint candidates |
 | Implementation status | [IMPLEMENTATION_STATUS.md](./IMPLEMENTATION_STATUS.md) | Summarizing current shipped/partial/mock/blocked state |
 | AI/camera QA detail | [AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md](./AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md) | Running fixture, false-positive, or real-device camera checks |
-| UI system | [DESIGN_SYSTEM.md](./DESIGN_SYSTEM.md) | Changing visual tokens, components, spacing, typography, icons |
+| UI system | [DESIGN_SYSTEM.md](./DESIGN_SYSTEM.md) | Changing visual tokens, shared DS primitives, product components, spacing, typography, icons |
 
 If a source-of-truth document disagrees with code, actual verified runtime
 behavior wins for the immediate fix, and the stale document must be updated or
@@ -111,7 +111,7 @@ called out as stale.
 | `VALIDATION_AND_BACKLOG.md` | QA results and next work | Fixing bugs, validating flows, planning next sprint | Validation result, backlog priority, acceptance criteria changes | Environment, reproduction, actual/expected result, next action |
 | `IMPLEMENTATION_STATUS.md` | Current implementation state | Reporting done/partial/mock/blocked status | A feature state changes | Verification command or runtime evidence |
 | `AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md` | AI/camera evidence detail | Running AI fixture or real-device camera checks | Fixture set, false-positive policy, or camera evidence changes | Fixture id, device/API environment, screenshots/logs summary |
-| `DESIGN_SYSTEM.md` | UI tokens and component guidance | Changing shared UI style | Token/component/icon behavior changes | Affected token or component and expected usage |
+| `DESIGN_SYSTEM.md` | UI tokens, DS primitives, and component guidance | Changing shared UI style or reusable UI primitives | Token/DS primitive/icon behavior changes | Affected token or component, expected usage, and migration rule |
 
 ## Installed Skills
 
