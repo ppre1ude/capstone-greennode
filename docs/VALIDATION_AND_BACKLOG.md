@@ -292,12 +292,12 @@
 | 위치 등록/재설정 | 구현됨 | 권한 거부/재시도 단위 테스트, 일부 실기기 QA | 권한 영구 거부 등 추가 실기기 반복 검증 필요 |
 | AI 촬영/갤러리 분석 | 부분 구현, MVP 흐름 가능 | 실기기에서 `generate` 성공/실패 경로 검증 | false-positive는 서버/AI 계약 한계로 Post-MVP |
 | 나눔 식재료 등록 | 구현됨 | 실기기에서 `generate -> create -> home/detail/map` 검증. 2026-05-18 등록 화면에서 권장 수령일 확인/수정과 지난 날짜 차단 추가 | OCR, 최대 허용 기간 등 백엔드 날짜 정책은 없음 |
-| 홈 주변 나눔 목록 | 구현됨 | 등록 후 홈 재조회, requested 제외 검증 | 서버 검색/추천/랭킹은 없음 |
+| 홈 주변 나눔 목록 | 구현됨 | 등록 후 홈 재조회, requested 제외 검증. 2026-05-18 식재료명/냉장고명 로컬 검색 추가 | 서버 검색/추천/랭킹은 없음 |
 | 나눔 상세/신청 | 구현됨 | 201/403/409, `available -> requested`, 중복 신청 방어 검증 | `reserved/completed/cancelled/expired` 흐름 없음 |
 | 공유 냉장고 지도 | 구현됨 | 지도 마커, 냉장고 선택, 내부 available 목록, 상세 이동 검증. 2026-05-18 선택 카드와 내부 목록을 단일 bottom sheet로 정리 | 냉장고 없음 fixture/API 검증 추가 필요 |
 | 공유 냉장고별 나눔 목록 | 구현됨 | 신청 후 내부 목록에서 즉시 제거되는 것까지 실기기 재검증 | 냉장고 inventory 개념은 없음 |
 | FCM/알림함 | 프론트 구현됨 | payload parsing, fallback, 로컬 알림함 테스트됨 | 실제 FCM 수신 QA 미완료. 다음 스프린트 P0 |
-| 검색 | 최소 구현 | 공유 냉장고 이름/주소 로컬 필터 | 나눔 식재료 검색/서버 검색 없음 |
+| 검색 | 최소 구현 | 홈 나눔 식재료명/냉장고명 로컬 필터, 지도 공유 냉장고 이름/주소 로컬 필터 | 서버 검색 없음 |
 | 채팅 | 알림함으로 축소 | mock 채팅 제거됨 | WebSocket 채팅은 보류 |
 | 통계/탄소 절감 | 목업 제거/정리됨 | 준비 중 상태 | 실제 지표 API/계산식 없음 |
 | 냉장고 운영자 기능 | 프로토타입/임시 진입점 | 정적 HTML 프로토타입, 프로필 임시 진입점, Android 에뮬레이터 렌더링 QA | 실제 operator API/권한/상태 변경은 없음 |
@@ -326,6 +326,7 @@
 - 등록 화면은 기본 3일 뒤 권장 수령일을 표시하고, 사용자가 `YYYY-MM-DD` 형식으로 수정한 값을 기존 `expirationDate` payload에 담아 냉장고 선택 화면으로 넘긴다.
 - 오늘 이전 날짜나 형식이 맞지 않는 날짜는 프론트에서 차단한다. 최대 허용 기간, 만료 항목 제외 기준은 백엔드 정책 결정으로 남긴다.
 - 카메라 권한이 없을 때 권한 다시 요청, 설정 열기, 갤러리 선택 대체 경로를 제공한다.
+- 홈 주변 나눔 목록에서 현재 불러온 available 나눔 식재료를 식재료명 또는 냉장고명으로 로컬 검색할 수 있게 했다.
 - 검증: `cameraScan.fallback`, `map.fridgePosts`, `postDetail.requestShare`, `home.nearbyRefresh`, `postPolicy`, `analysisResult`, `postCreate`, `postComplete`, `fridgeOperatorConsole`, `profile.operatorConsole` 회귀 테스트와 `tsc`, `lint`, `diff --check`.
 
 현재 부족한 점:
@@ -391,12 +392,12 @@
 
 구현 후보:
 
-- 홈 검색 기능.
+- 홈 검색 기능. 2026-05-18 현재 불러온 nearby 목록에 대한 로컬 검색 구현 완료.
 - `오늘 가져가기 좋은 재료` 같은 규칙 기반 추천 섹션.
 
 결정 필요:
 
-- 검색을 프론트 로컬 필터로 먼저 할지, 서버 검색 API로 할지.
+- 검색을 프론트 로컬 필터로 먼저 할지, 서버 검색 API로 할지. 2026-05-18 MVP는 로컬 필터로 시작하는 것으로 정리.
 - 랭킹을 이번 주 구현 대상으로 볼지, 데이터 수집/설계만 할지.
 - 현재 조회/신청/관심 데이터가 부족하므로 `랭킹`은 실제 인기처럼 보이지 않도록 주의한다.
 
@@ -786,7 +787,7 @@ DB/API 초안:
 | 최초 로그인 직후 동네 위치 미설정          | 정상 동작                  | 검증 계정 생성 직후 서버 응답과 `/auth/me`에서 `latitude = null`, `longitude = null` 확인.                                                                                                                                                                  | `GET /api/v1/auth/me`                                                                                                                                               | 유지                                                         |
 | 동네 위치 미설정 상태의 홈 화면            | 수정됨                     | 정상 UI 흐름에서는 위치 없는 유저가 `LocationSetup`으로 이동한다. 강제 진입 시에도 홈은 `/posts/nearby`를 호출하지 않고 위치 설정 CTA를 보여준다.                                                                                                           | `src/screens/home/HomeScreen.tsx`, `src/utils/locationGuard.ts`, `__tests__/locationGuard.test.ts`                                                                  | 에뮬레이터 강제 진입 QA                                      |
 | 동네 위치 미설정 상태의 지도 화면          | 수정됨                     | 지도 탭 강제 진입 시 `MapView`를 렌더링하지 않는다. 광주 전남대 기본 좌표 fallback과 반경 원 표시를 제거하고 위치 설정 CTA만 보여준다.                                                                                                                      | `src/screens/map/MapScreen.tsx`, `src/screens/map/MapScreen.styles.ts`, `src/utils/locationGuard.ts`                                                                | 에뮬레이터 강제 진입 QA                                      |
-| 동네 위치 미설정 상태의 검색 화면          | 미구현                     | 독립 검색 화면이 없다. 홈 검색 아이콘과 지도 검색 입력 UI만 있고 검색 플로우는 연결되어 있지 않다.                                                                                                                                                          | `src/screens/home/HomeScreen.tsx`, `src/screens/map/MapScreen.tsx`                                                                                                  | 검색 기능은 5번 미구현 기능 점검에서 백로그화                |
+| 동네 위치 미설정 상태의 검색 화면          | 부분 구현                  | 독립 검색 화면은 없다. 홈 나눔 식재료 검색은 현재 불러온 nearby 목록이 있을 때만 표시되고, 지도 검색 입력은 공유 냉장고 이름/주소를 로컬 필터링한다. 위치가 없으면 기존 위치 설정 CTA를 우선한다.                                                              | `src/screens/home/HomeScreen.tsx`, `src/screens/map/MapScreen.tsx`                                                                                                  | 서버 검색/독립 검색 화면은 후속 범위로 둔다                  |
 | 동네 위치 미설정 상태의 나눔 식재료 등록   | 수정됨                     | 홈/중앙 AI 스캔 진입점은 위치가 없으면 `CameraScan` 대신 `LocationSetup`으로 보낸다. `FridgeSelect`에 직접 진입해도 냉장고 API를 호출하지 않고 위치 설정 CTA를 표시한다.                                                                                    | `src/navigation/MainTab.tsx`, `src/screens/home/HomeScreen.tsx`, `src/screens/post/FridgeSelectScreen.tsx`, `src/utils/locationGuard.ts`                            | 에뮬레이터 강제 진입 QA                                      |
 | 최초 위치 등록 화면 분기                   | 정상 동작                  | 위치 없는 계정으로 로그인 후 앱이 `동네 설정` 화면으로 자연스럽게 이동했다.                                                                                                                                                                                 | UI 검증, `src/screens/auth/LoginEmailScreen.tsx`, `src/navigation/AppNavigator.tsx`                                                                                 | 유지                                                         |
 | 위치 등록 후 홈/지도/나눔 식재료 등록 반영 | 정상 동작                  | `이 위치로 설정하기` 후 `/auth/me`에 좌표가 저장됐다. 홈은 `내 동네`로 표시되고, 지도와 냉장고 선택 화면은 실제 냉장고 목록을 조회했다.                                                                                                                     | `PUT /api/v1/auth/me/location`, `HomeScreen`, `MapScreen`, `FridgeSelectScreen`                                                                                     | 유지                                                         |
@@ -1220,8 +1221,8 @@ docs/VALIDATION_AND_BACKLOG.md의 "4. 한 장 촬영 UX와 multi-object 정책 �
 | 탄소 절감액               | 정리됨                         | 홈과 프로필의 고정 kg 값을 제거하고 `준비 중`으로 표시한다. 계산식/API는 없다.                                                                                                                                                                                       | 실제 지표를 넣으려면 계산식과 API 계약을 먼저 정의한다.                                                   |
 | 내 주변 실시간 나눔       | 부분 구현                      | `getNearbyPosts()`로 실제 주변 available 나눔 식재료를 가져와 카드로 표시한다. 백엔드 기준 `/posts/nearby`는 requested를 자동 제외한다. 실시간 구독, pagination, `전체보기` 동작은 없다.                                                                             | 신청 성공 후 requested 항목이 홈에서 사라지는지 프론트 연동/QA.                                           |
 | 홈 데이터 없음 상태       | 구현됨                         | 나눔 식재료가 없으면 `아직 근처에 나눔이 없어요` 빈 상태를 표시한다.                                                                                                                                                                                                 | API 실패와 진짜 빈 상태를 구분하는 에러 UI 추가.                                                          |
-| 검색 기능                 | 부분 구현                      | 홈 검색 아이콘은 지도 탭으로 이동하고, 지도 검색 입력은 공유 냉장고 이름/주소 로컬 필터로 동작한다. 서버 OpenAPI에는 검색 엔드포인트가 없다.                                                                                                                         | 나눔 식재료/동네 서버 검색은 후속 범위로 분리.                                                            |
-| 검색 결과 없음            | 구현됨                         | MVP 검색은 지도 공유 냉장고 이름/주소 로컬 필터로 제한했다. 결과 없음 상태와 검색 초기화가 있다.                                                                                                                                                                     | 나눔 식재료/동네 서버 검색은 후속 범위로 분리.                                                            |
+| 검색 기능                 | 부분 구현                      | 홈은 현재 불러온 주변 나눔 식재료를 식재료명/냉장고명으로 로컬 필터링한다. 홈 지도 아이콘은 지도 탭으로 이동하고, 지도 검색 입력은 공유 냉장고 이름/주소 로컬 필터로 동작한다. 서버 OpenAPI에는 검색 엔드포인트가 없다.                                                        | 서버 검색/독립 검색 화면은 후속 범위로 분리.                                                             |
+| 검색 결과 없음            | 구현됨                         | 홈 나눔 식재료 로컬 검색과 지도 공유 냉장고 로컬 검색 모두 결과 없음 상태와 검색 초기화를 제공한다.                                                                                                                                                                  | 서버 검색/독립 검색 화면은 후속 범위로 분리.                                                             |
 | 푸쉬 알림                 | 프론트 코드 연동 완료, 실제 수신 QA 필요 | Firebase Messaging 의존성, Android 알림 권한, FCM 토큰 등록이 있다. `share_created`, `share_requested` foreground/background/opened/initial handler를 구현했고, payload는 문자열 + camelCase(`type`, `postId`, `requestId`, `fruitName`, `fridgeName`)로 검증한다. Firebase 설정이 없는 QA/release 빌드에서는 알림 handler와 FCM 토큰 등록을 안전하게 건너뛴다. 알림함은 로컬 수신 기록/빈 상태 중심이며 읽음 상태 API는 없다. | 실제 기기에서 foreground/background/terminated 수신과 알림 탭 라우팅을 검증한다. |
 | 유저 프로필               | 부분 구현                      | 닉네임/이메일은 실제 유저 정보를 표시한다. 프로필 수정, 메뉴 이동, 내 나눔/관심/받은 나눔은 연결되어 있지 않다.                                                                                                                                                      | 프로필 수정 또는 내 나눔 내역 중 하나만 우선 연결.                                                        |
 | 유저 통계                 | 정리됨                         | 신선도 온도, 포인트, 탄소 절감량의 하드코딩 숫자를 제거하고 `준비 중` 상태로 표시한다.                                                                                                                                                                               | 실제 지표를 넣으려면 계산식과 API 계약을 먼저 정의.                                                       |
@@ -1520,13 +1521,13 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
 - 분류: 미구현
 - 우선순위: P2
 - 배경: 홈 검색 아이콘과 지도 검색 입력은 있지만 동작이 없다.
-- 현재 동작: 홈 검색 아이콘은 지도 탭으로 이동하고, 지도 검색 입력은 현재 불러온 공유 냉장고의 이름/주소를 로컬 필터링한다.
-- 기대 동작: MVP에서는 서버 검색 없이 공유 냉장고명/주소 로컬 필터를 제공한다. 나눔 식재료/동네 서버 검색은 후속 범위로 분리한다.
+- 현재 동작: 홈은 현재 불러온 주변 나눔 식재료를 식재료명/냉장고명으로 로컬 필터링한다. 홈 지도 아이콘은 지도 탭으로 이동하고, 지도 검색 입력은 현재 불러온 공유 냉장고의 이름/주소를 로컬 필터링한다.
+- 기대 동작: MVP에서는 서버 검색 없이 현재 로딩된 나눔 식재료와 공유 냉장고에 대한 로컬 필터를 제공한다. 동네/서버 검색은 후속 범위로 분리한다.
 - Acceptance Criteria:
-  - [x] 검색 대상은 MVP에서 공유 냉장고 이름/주소로 제한한다.
+  - [x] 검색 대상은 MVP에서 현재 불러온 나눔 식재료명/냉장고명과 공유 냉장고 이름/주소로 제한한다.
   - [x] 결과 없음 상태가 표시된다.
   - [x] 홈 검색 affordance는 지도 검색 진입점으로 연결한다.
-- 검증 방법: `filterFridges` 단위 테스트, 검색어 입력 QA, 결과 있음/없음 상태 확인
+- 검증 방법: `filterFridges` 단위 테스트, 홈 검색 회귀 테스트, 검색어 입력 QA, 결과 있음/없음 상태 확인
 - 관련 파일/화면/API: `HomeScreen`, `MapScreen`, `fridgeSearch`
 
 ## 목업 통계와 탄소 절감 표시 정리

@@ -9,13 +9,14 @@
  *
  * @wireframe wireframe-foodlink/homescreen.html + temp/screen-home.html
  */
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  TextInput,
   RefreshControl,
   StatusBar,
   ActivityIndicator,
@@ -44,6 +45,7 @@ import { colors } from '@/theme';
 
 const HomeScreen = () => {
   const [posts, setPosts] = useState<PostNearbyRead[]>([]);
+  const [feedQuery, setFeedQuery] = useState('');
   const [feedState, setFeedState] = useState<
     'loading' | 'ready' | 'empty' | 'error'
   >('loading');
@@ -58,6 +60,19 @@ const HomeScreen = () => {
   );
   const requestedPostId = useFeedRefreshStore(state => state.requestedPostId);
   const hasLocation = hasRegisteredLocation(user);
+  const normalizedFeedQuery = feedQuery.trim().toLowerCase();
+  const isFilteringFeed = normalizedFeedQuery.length > 0;
+  const filteredPosts = useMemo(() => {
+    if (!isFilteringFeed) {
+      return posts;
+    }
+
+    return posts.filter(post =>
+      [post.detectedFruitKo, post.detectedFruit, post.fridgeName].some(value =>
+        (value ?? '').toLowerCase().includes(normalizedFeedQuery),
+      ),
+    );
+  }, [isFilteringFeed, normalizedFeedQuery, posts]);
 
   const openLocationSetup = useCallback(() => {
     navigation.getParent()?.navigate('LocationSetup', { allowBack: true });
@@ -145,7 +160,7 @@ const HomeScreen = () => {
         </TouchableOpacity>
         <View style={styles.headerIcons}>
           <TouchableOpacity onPress={() => navigation.navigate('Map')}>
-            <Text style={styles.iconEmoji}>🔍</Text>
+            <Text style={styles.iconEmoji}>🗺️</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.bellWrapper}
@@ -208,6 +223,30 @@ const HomeScreen = () => {
               <Text style={styles.feedMore}>지도에서 보기</Text>
             </TouchableOpacity>
           </View>
+          {posts.length > 0 && feedState === 'ready' ? (
+            <View style={styles.feedSearchBox}>
+              <Text style={styles.feedSearchIcon}>🔍</Text>
+              <TextInput
+                style={styles.feedSearchInput}
+                value={feedQuery}
+                onChangeText={setFeedQuery}
+                placeholder="나눔 식재료 검색"
+                placeholderTextColor={colors.textPlaceholder}
+              />
+              {isFilteringFeed ? (
+                <TouchableOpacity
+                  style={styles.feedSearchClear}
+                  onPress={() => setFeedQuery('')}>
+                  <Text style={styles.feedSearchClearText}>×</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+          ) : null}
+          {isFilteringFeed && feedState === 'ready' ? (
+            <Text style={styles.feedSearchMeta}>
+              {`검색 결과 ${filteredPosts.length}건`}
+            </Text>
+          ) : null}
 
           {feedState === 'loading' ? (
             <View style={styles.emptyFeed}>
@@ -232,9 +271,9 @@ const HomeScreen = () => {
                 </Text>
               </TouchableOpacity>
             </View>
-          ) : posts.length > 0 ? (
+          ) : filteredPosts.length > 0 ? (
             <View style={styles.feedList}>
-              {posts.map(post => (
+              {filteredPosts.map(post => (
                 <NearbyPostCard
                   key={post.id}
                   post={post}
@@ -245,6 +284,18 @@ const HomeScreen = () => {
                   }
                 />
               ))}
+            </View>
+          ) : isFilteringFeed ? (
+            <View style={styles.emptyFeed}>
+              <Text style={styles.emptyTitle}>검색 결과가 없습니다</Text>
+              <Text style={styles.emptySubtitle}>
+                다른 식재료명이나 냉장고명으로 검색해보세요.
+              </Text>
+              <TouchableOpacity
+                style={styles.retryButton}
+                onPress={() => setFeedQuery('')}>
+                <Text style={styles.retryButtonText}>검색 초기화</Text>
+              </TouchableOpacity>
             </View>
           ) : (
             <View style={styles.emptyFeed}>
@@ -412,6 +463,46 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.secondary,
     fontWeight: '500',
+  },
+  feedSearchBox: {
+    height: 46,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    marginBottom: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    backgroundColor: '#FFFFFF',
+  },
+  feedSearchIcon: {
+    fontSize: 15,
+    marginRight: 8,
+  },
+  feedSearchInput: {
+    flex: 1,
+    height: '100%',
+    fontSize: 14,
+    color: colors.textPrimary,
+    paddingVertical: 0,
+  },
+  feedSearchClear: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+  },
+  feedSearchClearText: {
+    fontSize: 18,
+    lineHeight: 20,
+    color: colors.textSecondary,
+  },
+  feedSearchMeta: {
+    marginBottom: 10,
+    fontSize: 12,
+    color: colors.textSecondary,
   },
   feedList: {
     gap: 12,

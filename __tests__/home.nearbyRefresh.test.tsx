@@ -174,4 +174,71 @@ describe('HomeScreen nearby post refresh', () => {
       renderer?.unmount();
     });
   });
+
+  it('filters nearby posts locally by crop or fridge name', async () => {
+    mockedGetNearbyPosts.mockResolvedValue({
+      success: true,
+      message: 'ok',
+      data: [
+        {
+          id: 10,
+          fridgeId: 1,
+          fridgeName: '전남대 공유 냉장고',
+          detectedFruit: 'apple',
+          detectedFruitKo: '사과',
+          freshnessLabel: 'Fresh',
+          imageUrl: '/static/posts/10.jpg',
+          expirationDate: '2026-05-08',
+          status: 'available',
+          createdAt: '2026-05-06T00:00:00Z',
+        },
+        {
+          id: 11,
+          fridgeId: 2,
+          fridgeName: '충장로 공유 냉장고',
+          detectedFruit: 'banana',
+          detectedFruitKo: '바나나',
+          freshnessLabel: 'Mid',
+          imageUrl: '/static/posts/11.jpg',
+          expirationDate: '2026-05-08',
+          status: 'available',
+          createdAt: '2026-05-06T00:00:00Z',
+        },
+      ],
+    });
+
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(<HomeScreen />);
+    });
+
+    const searchInput = renderer!.root.findByProps({
+      placeholder: '나눔 식재료 검색',
+    });
+
+    await ReactTestRenderer.act(async () => {
+      searchInput.props.onChangeText('바나나');
+    });
+
+    expect(renderer!.root.findAllByProps({children: '바나나'})).not.toHaveLength(
+      0,
+    );
+    expect(renderer!.root.findAllByProps({children: '사과'})).toHaveLength(0);
+    expect(
+      renderer!.root.findAllByProps({children: '검색 결과 1건'}),
+    ).not.toHaveLength(0);
+
+    await ReactTestRenderer.act(async () => {
+      searchInput.props.onChangeText('없는재료');
+    });
+
+    expect(
+      renderer!.root.findAllByProps({children: '검색 결과가 없습니다'}),
+    ).not.toHaveLength(0);
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
 });
