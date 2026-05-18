@@ -1,6 +1,6 @@
 # FoodLink 디자인 시스템
 
-> **최종 수정일**: 2026-05-06
+> **최종 수정일**: 2026-05-19
 > **코드 토큰 파일**: [`src/theme/`](../src/theme/) 디렉토리 참고
 
 ---
@@ -212,3 +212,34 @@ white/90    → 글래스모피즘 뱃지
 | 비활성 탭 색 | `textTertiary` |
 | 레이블 크기 | `tiny` (10px) |
 | 중앙 FAB | `primary`, 56px 원형, white 테두리 4px |
+
+---
+
+## 7. Montage 기반 컴포넌트 레이어
+
+Montage Android/iOS는 GreenNode의 색상 팔레트 대체재가 아니라 **컴포넌트 API와 상태 체계의 참조 모델**로 사용한다. 색상 값은 계속 `src/theme/colors.ts`의 FoodLink/GreenNode 팔레트를 사용한다.
+
+### 코드 위치
+
+| 레이어 | 경로 | 역할 |
+|--------|------|------|
+| 토큰 | `src/theme/` | 기존 색상, 타이포그래피, 스페이싱, radius, layout source of truth |
+| 컴포넌트 | `src/design-system/` | Montage식 `variant`, `color`, `size`, `status`, `loading`, `disabled`, slot props를 RN 컴포넌트로 제공 |
+| 제품 컴포넌트 | `src/components/` | 도메인 데이터를 디자인 시스템 컴포넌트 조합으로 표현 |
+
+### 첫 프리미티브
+
+| 컴포넌트 | Montage 대응 | 주요 props | 사용처 |
+|----------|---------------|------------|--------|
+| `DSButton` | `Button`, `TextButton` | `variant`, `color`, `size`, `loading`, `disabled`, `leading`, `trailing`, `fullWidth` | CTA, 보조 액션, 텍스트 버튼 |
+| `DSChip` | `Chip`, `ContentBadge` | `variant`, `size`, `selected`, `disabled`, `leading`, `trailing` | 상태 뱃지, 필터, 작은 선택 UI |
+| `DSTextField` | `TextField` | `label`, `required`, `status`, `caption`, `leading`, `trailing` | 검색, 로그인/가입 입력 |
+| `DSCard` | `Card` | `variant`, `padded`, `onPress`, `disabled` | 피드 카드, 정보 카드 |
+| `DSListCell` | `ListCell` | `title`, `caption`, `leading`, `trailing`, `selected`, `chevron`, `divider` | 프로필 메뉴, 선택 목록 |
+| `DSText` | `Typography` | `variant`, `color`, `align` | 토큰 기반 텍스트 |
+
+### 마이그레이션 규칙
+
+- 새 화면이나 수정 화면에서 버튼, 칩/뱃지, 입력 필드, 카드, 리스트 셀, 반복 텍스트 스타일을 추가할 때는 먼저 `src/design-system` 프리미티브를 사용한다.
+- 기존 화면별 `StyleSheet`에 색상/폰트/간격을 직접 추가해야 한다면, 컴포넌트화하기 어려운 이유가 명확해야 한다.
+- Montage의 `semantic token`, `variant/size/status enum`, `slot-based API`, `loading/disabled/selected state`는 가져오되, Wanted의 blue/neutral 팔레트 값은 가져오지 않는다.
