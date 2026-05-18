@@ -325,7 +325,8 @@
 - 지도 화면은 냉장고 선택 후 기존 캐러셀 카드와 내부 목록 패널이 동시에 떠 있지 않도록 단일 bottom sheet로 통합했다.
 - 등록 화면은 기본 3일 뒤 권장 수령일을 표시하고, 사용자가 `YYYY-MM-DD` 형식으로 수정한 값을 기존 `expirationDate` payload에 담아 냉장고 선택 화면으로 넘긴다.
 - 오늘 이전 날짜나 형식이 맞지 않는 날짜는 프론트에서 차단한다. 최대 허용 기간, 만료 항목 제외 기준은 백엔드 정책 결정으로 남긴다.
-- 검증: `map.fridgePosts`, `postDetail.requestShare`, `home.nearbyRefresh`, `postPolicy`, `analysisResult`, `postCreate`, `postComplete`, `fridgeOperatorConsole`, `profile.operatorConsole` 회귀 테스트와 `tsc`, `lint`, `diff --check`.
+- 카메라 권한이 없을 때 권한 다시 요청, 설정 열기, 갤러리 선택 대체 경로를 제공한다.
+- 검증: `cameraScan.fallback`, `map.fridgePosts`, `postDetail.requestShare`, `home.nearbyRefresh`, `postPolicy`, `analysisResult`, `postCreate`, `postComplete`, `fridgeOperatorConsole`, `profile.operatorConsole` 회귀 테스트와 `tsc`, `lint`, `diff --check`.
 
 현재 부족한 점:
 
@@ -874,7 +875,7 @@ MVP가 성공 케이스만 동작하는 상태인지, 실패 상황에서도 앱
 | 네트워크 끊김                   | 미흡                             | 공통 offline 상태가 없고, 화면별로 Alert 또는 로그만 남긴다. 홈/지도는 실패가 빈 상태처럼 보일 수 있다.                                                                                               | 공통 네트워크 에러 문구와 retry 패턴을 정한다.                                                    |
 | 중복 등록 방지                  | 부분 구현                        | `FridgeSelectScreen`은 `isSubmitting`과 ref 기반 re-entry guard로 같은 화면의 빠른 중복 제출을 막는다. 서버 idempotency는 아직 없다.                                                                  | 서버에도 idempotency key 또는 중복 방지 기준을 검토한다.                                          |
 | 큰 이미지 업로드                | 부분 구현                        | 갤러리 선택은 2048px 리사이즈, `quality: 0.8`, 8MB 초과 업로드 전 차단을 적용한다. 업로드 진행률은 아직 없다.                                                                                         | 실제 대용량 fixture로 차단 문구와 앱 멈춤 여부를 검증한다.                                        |
-| 카메라 권한 거부                | 미흡                             | 권한이 없으면 `카메라 권한이 필요합니다.` 문구만 보인다. 권한 재요청, 설정 이동, 갤러리 대체 버튼이 없다. 카메라 장치가 없을 때만 갤러리 fallback이 있다.                                             | 권한 거부 화면에 다시 요청/설정 열기/갤러리 선택을 제공한다.                                      |
+| 카메라 권한 거부                | 구현됨, 실기기 반복 검증 필요    | 2026-05-18 권한 없음 화면에 `권한 다시 요청`, `설정 열기`, `갤러리에서 선택하기`를 제공하도록 보강했다. 카메라 장치가 없을 때도 갤러리 fallback을 유지한다.                                             | 실제 Android 권한 거부/영구 거부 상태에서 재요청과 설정 이동 동작을 반복 검증한다.                 |
 | 위치 권한 거부                  | 구현됨                           | 2026-05-07 보강 후 권한 거부/영구 거부/위치 탐색 실패를 화면 상태로 분리했다. `설정 열기`, `다시 확인`, 좌표 없음 저장 비활성화를 제공한다.                                                         | 실제 기기/에뮬레이터 회귀 시나리오 유지                                                           |
 | 주변 냉장고 없음                | 구현됨, 실제 좌표 추가 검증 필요 | `FridgeSelectScreen`과 `MapScreen`에 빈 상태 문구가 있다. 실제 냉장고가 없는 좌표를 넣은 에뮬레이터 검증은 아직 하지 않았다.                                                                          | 테스트용 no-fridge 좌표 또는 fixture로 빈 상태를 재현한다.                                        |
 | 나눔 식재료 없음                | 구현됨                           | 1번 검증에서 홈 화면이 `아직 근처에 나눔이 없어요` 빈 상태를 표시했다.                                                                                                                                | 없음.                                                                                             |

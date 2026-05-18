@@ -16,6 +16,7 @@ import {
   ActivityIndicator,
   Animated,
   Alert,
+  Linking,
 } from 'react-native';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {RootStackParamList} from '@/navigation/types';
@@ -100,6 +101,20 @@ const CameraScanScreen = ({navigation}: Props) => {
     }
   };
 
+  const handleRequestCameraPermission = async () => {
+    const granted = await requestPermission();
+    if (!granted) {
+      Alert.alert(
+        '카메라 권한 필요',
+        '설정에서 카메라 권한을 허용하거나 갤러리에서 사진을 선택해주세요.',
+        [
+          {text: '취소', style: 'cancel'},
+          {text: '설정 열기', onPress: () => Linking.openSettings()},
+        ],
+      );
+    }
+  };
+
   const handleCapture = async () => {
     if (!camera.current) {
       Alert.alert(
@@ -174,6 +189,16 @@ const CameraScanScreen = ({navigation}: Props) => {
     return (
       <View style={styles.centerContainer}>
         <Text style={styles.permissionText}>카메라 권한이 필요합니다.</Text>
+        <TouchableOpacity
+          style={styles.galleryFallbackButton}
+          onPress={handleRequestCameraPermission}>
+          <Text style={styles.galleryFallbackText}>권한 다시 요청</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.secondaryFallbackButton}
+          onPress={() => Linking.openSettings()}>
+          <Text style={styles.secondaryFallbackText}>설정 열기</Text>
+        </TouchableOpacity>
         <TouchableOpacity style={styles.galleryFallbackButton} onPress={handleGallery}>
           <Text style={styles.galleryFallbackText}>갤러리에서 선택하기</Text>
         </TouchableOpacity>

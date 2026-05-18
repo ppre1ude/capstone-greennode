@@ -1,5 +1,5 @@
 import React from 'react';
-import {Alert, Text, TouchableOpacity} from 'react-native';
+import {Alert, Linking, Text, TouchableOpacity} from 'react-native';
 import {launchImageLibrary} from 'react-native-image-picker';
 import ReactTestRenderer from 'react-test-renderer';
 import CameraScanScreen from '@/screens/camera/CameraScanScreen';
@@ -8,6 +8,9 @@ import {generatePost} from '@/api/posts';
 jest.mock('@/api/posts', () => ({
   generatePost: jest.fn(),
 }));
+
+let mockHasCameraPermission = true;
+const mockRequestCameraPermission = jest.fn();
 
 jest.mock('react-native-vision-camera', () => {
   const ReactForMock = require('react');
@@ -19,8 +22,8 @@ jest.mock('react-native-vision-camera', () => {
     ),
     useCameraDevice: jest.fn(() => null),
     useCameraPermission: jest.fn(() => ({
-      hasPermission: true,
-      requestPermission: jest.fn(),
+      hasPermission: mockHasCameraPermission,
+      requestPermission: mockRequestCameraPermission,
     })),
     usePhotoOutput: jest.fn(() => ({
       capturePhotoToFile: jest.fn(),
@@ -71,16 +74,52 @@ const findButtonByText = (
 
 describe('CameraScanScreen fallback QA', () => {
   const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
+  const openSettingsSpy = jest
+    .spyOn(Linking, 'openSettings')
+    .mockImplementation(jest.fn());
   const warnSpy = jest.spyOn(console, 'warn').mockImplementation(jest.fn());
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockHasCameraPermission = true;
+    mockRequestCameraPermission.mockResolvedValue(false);
     alertSpy.mockClear();
   });
 
   afterAll(() => {
     alertSpy.mockRestore();
+    openSettingsSpy.mockRestore();
     warnSpy.mockRestore();
+  });
+
+  it('offers permission recovery actions when camera permission is missing', async () => {
+    mockHasCameraPermission = false;
+
+    const {renderer} = await createScreen();
+
+    expect(findButtonByText(renderer, '권한 다시 요청')).toBeTruthy();
+    expect(findButtonByText(renderer, '설정 열기')).toBeTruthy();
+    expect(findButtonByText(renderer, '갤러리에서 선택하기')).toBeTruthy();
+
+    mockRequestCameraPermission.mockClear();
+
+    await ReactTestRenderer.act(async () => {
+      findButtonByText(renderer, '권한 다시 요청')?.props.onPress();
+      await Promise.resolve();
+    });
+
+    expect(mockRequestCameraPermission).toHaveBeenCalledTimes(1);
+
+    await ReactTestRenderer.act(async () => {
+      findButtonByText(renderer, '설정 열기')?.props.onPress();
+      await Promise.resolve();
+    });
+
+    expect(openSettingsSpy).toHaveBeenCalledTimes(1);
+
+    await ReactTestRenderer.act(async () => {
+      renderer.unmount();
+    });
   });
 
   it('uses the gallery fallback when no camera device is available and opens analysis result', async () => {

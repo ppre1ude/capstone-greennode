@@ -22,8 +22,21 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 8,
+    marginTop: 10,
   },
   galleryFallbackText: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+  },
+  secondaryFallbackButton: {
+    marginTop: 10,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.35)',
+  },
+  secondaryFallbackText: {
     color: '#FFFFFF',
     fontWeight: 'bold',
   },
