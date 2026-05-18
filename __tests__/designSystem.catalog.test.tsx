@@ -20,7 +20,10 @@ describe('DesignSystemCatalog', () => {
       renderer!.root.findAllByProps({ children: 'Icon Slots' }).length,
     ).toBeGreaterThan(0);
     expect(
-      renderer!.root.findAllByProps({ children: '↻' }).length,
+      renderer!.root.findAllByProps({ name: 'rotate-right' }).length,
+    ).toBeGreaterThan(0);
+    expect(
+      renderer!.root.findAllByProps({ name: 'magnifying-glass' }).length,
     ).toBeGreaterThan(0);
     expect(
       renderer!.root.findAllByProps({ children: 'Chips' }).length,

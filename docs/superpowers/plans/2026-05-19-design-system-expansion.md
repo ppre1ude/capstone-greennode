@@ -54,7 +54,7 @@
 - Modify: `docs/VALIDATION_AND_BACKLOG.md`
 - Modify: `docs/superpowers/plans/2026-05-19-design-system-expansion.md`
 
-- [x] Document DS icon rules: prefer the established icon library when wired, otherwise slot emoji/text icons remain local screen decoration; DS components own tint/spacing, callers own icon identity.
+- [x] Document DS icon rules: use `DSIcon`/FontAwesome6 for action, navigation, input, and button slot icons; avoid system emoji for Android/iOS portability.
 - [x] Document the catalog and the second migration slice.
 - [x] Mark this plan's task checkboxes complete as work lands.
 

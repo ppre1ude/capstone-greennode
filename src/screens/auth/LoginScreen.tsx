@@ -10,7 +10,7 @@ import React from 'react';
 import { View, StyleSheet, StatusBar, Alert } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AuthStackParamList } from '@/navigation/types';
-import { DSButton, DSText } from '@/design-system';
+import { DSButton, DSIcon, DSText } from '@/design-system';
 import { colors } from '@/theme';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
@@ -40,7 +40,14 @@ const LoginScreen = ({ navigation }: Props) => {
         <DSButton
           label="카카오로 계속하기"
           color="kakao"
-          leading={<DSText style={styles.kakaoIcon}>💬</DSText>}
+          leading={
+            <DSIcon
+              name="comment"
+              variant="regular"
+              size="medium"
+              color="kakaoText"
+            />
+          }
           style={styles.kakaoButton}
           contentStyle={styles.buttonContent}
           textStyle={styles.kakaoText}
@@ -51,9 +58,12 @@ const LoginScreen = ({ navigation }: Props) => {
         <DSButton
           label="Apple로 계속하기"
           leading={
-            <DSText color="textOnPrimary" style={styles.appleIcon}>
-              🍎
-            </DSText>
+            <DSIcon
+              name="apple"
+              variant="brand"
+              size="medium"
+              color="textOnPrimary"
+            />
           }
           style={styles.appleButton}
           contentStyle={styles.buttonContent}
@@ -66,7 +76,14 @@ const LoginScreen = ({ navigation }: Props) => {
           label="구글로 계속하기"
           variant="outlined"
           color="assistive"
-          leading={<DSText style={styles.googleIcon}>G</DSText>}
+          leading={
+            <DSIcon
+              name="google"
+              variant="brand"
+              size="medium"
+              color="#4285F4"
+            />
+          }
           style={styles.googleButton}
           contentStyle={styles.buttonContent}
           textStyle={styles.googleText}
@@ -78,7 +95,14 @@ const LoginScreen = ({ navigation }: Props) => {
           label="이메일로 계속하기"
           variant="outlined"
           color="assistive"
-          leading={<DSText style={styles.emailIcon}>✉️</DSText>}
+          leading={
+            <DSIcon
+              name="envelope"
+              variant="regular"
+              size="small"
+              color="textSecondary"
+            />
+          }
           style={styles.emailButton}
           contentStyle={styles.buttonContent}
           textStyle={styles.emailText}
@@ -90,7 +114,7 @@ const LoginScreen = ({ navigation }: Props) => {
       <View style={styles.termsSection}>
         <View style={styles.termsRow}>
           <View style={styles.checkbox}>
-            <DSText style={styles.checkIcon}>✓</DSText>
+            <DSIcon name="check" size="xsmall" color="#CBD5E1" />
           </View>
           <DSText
             variant="caption"
@@ -153,7 +177,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 12,
   },
-  kakaoIcon: { fontSize: 18 },
   kakaoText: {
     fontSize: 16,
     fontWeight: '700',
@@ -170,7 +193,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 12,
   },
-  appleIcon: { fontSize: 20 },
   appleText: {
     fontSize: 16,
     fontWeight: '700',
@@ -187,11 +209,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 12,
-  },
-  googleIcon: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#4285F4',
   },
   googleText: {
     fontSize: 16,
@@ -210,7 +227,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 12,
   },
-  emailIcon: { fontSize: 16 },
   emailText: {
     fontSize: 16,
     fontWeight: '700',
@@ -236,10 +252,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 2,
-  },
-  checkIcon: {
-    fontSize: 10,
-    color: '#CBD5E1',
   },
   termsText: {
     flex: 1,

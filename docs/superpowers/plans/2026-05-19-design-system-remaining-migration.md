@@ -22,7 +22,7 @@
 - [x] Replace repeated login/onboarding/profile CTAs with `DSButton`, preserving labels, disabled/loading behavior, accessibility labels, and existing `onPress` behavior.
 - [x] Replace repeated profile rows/cards with `DSCard`, `DSListCell`, and `DSChip` where the DS primitive expresses the same user-facing state.
 - [x] Replace high-value headings, descriptions, helper text, and empty states with `DSText` while keeping the current visual hierarchy and copy.
-- [x] Keep decorative brand/product illustration glyphs local if they are not action icons; use DS leading/trailing slots for button/list icons.
+- [x] Keep legacy decorative glyphs local only as migration debt; use `DSIcon` in DS leading/trailing slots for button/list icons.
 - [x] Run `npx tsc --noEmit` and the narrowest relevant Jest tests available after the change.
 
 ### Task 2: Post, Fridge, Camera, And Analysis DS Adoption
@@ -56,7 +56,7 @@
 - Test: `__tests__/map.fridgePosts.test.tsx`, `__tests__/designSystem.catalog.test.tsx`
 
 - [x] Replace repeated map search, retry, refresh, detail, and sheet actions with DS primitives where doing so does not alter map behavior.
-- [x] Apply the documented icon rule in code by using DS `leading`/`trailing` slots for action icons and keeping purely illustrative glyphs out of shared primitives.
+- [x] Apply the documented icon rule in code by using `DSIcon` inside DS `leading`/`trailing` slots and keeping system emoji out of shared primitives.
 - [x] Extend the catalog to cover the icon slot and selected-list/card patterns used by the migrated screens.
 - [x] Update core docs so they describe the current DS adoption state, remaining QA gap, and the no-real-device-QA constraint for this pass.
 - [x] Run `npm test -- --runInBand __tests__/map.fridgePosts.test.tsx __tests__/designSystem.catalog.test.tsx`.

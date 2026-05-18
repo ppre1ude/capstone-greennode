@@ -4,6 +4,7 @@ import {
   DSButton,
   DSCard,
   DSChip,
+  DSIcon,
   DSListCell,
   DSText,
   DSTextField,
@@ -43,23 +44,27 @@ export const DesignSystemCatalog = () => (
         <DSButton
           label="Refresh"
           size="small"
-          leading={<DSText color="textOnPrimary">↻</DSText>}
+          leading={
+            <DSIcon name="rotate-right" size="small" color="textOnPrimary" />
+          }
         />
         <DSButton
           label="Open"
           variant="outlined"
           size="small"
-          trailing={<DSText color="primary">›</DSText>}
+          trailing={<DSIcon name="angle-right" size="small" color="primary" />}
         />
         <DSChip
           label="Available"
           tone="success"
           size="small"
-          leading={<DSText color="success">•</DSText>}
+          leading={<DSIcon name="circle" size="xsmall" color="success" />}
         />
       </View>
       <DSTextField
-        leading={<DSText color="textTertiary">🔍</DSText>}
+        leading={
+          <DSIcon name="magnifying-glass" size="small" color="textTertiary" />
+        }
         placeholder="Search with leading slot"
       />
     </DSCard>
@@ -148,7 +153,7 @@ export const DesignSystemCatalog = () => (
           title="Selected fridge list row"
           caption="Opens the detail list"
           selected
-          trailing={<DSText color="primary">›</DSText>}
+          trailing={<DSIcon name="angle-right" size="small" color="primary" />}
           style={styles.sampleListCell}
           onPress={() => undefined}
         />

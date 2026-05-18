@@ -1,16 +1,34 @@
 import React from 'react';
-import {Text, TextInput, TouchableOpacity, View} from 'react-native';
+import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 import ReactTestRenderer from 'react-test-renderer';
 import {
   DSButton,
   DSCard,
   DSChip,
+  DSIcon,
   DSListCell,
   DSText,
   DSTextField,
 } from '@/design-system';
+import { colors } from '@/theme';
 
 describe('design system components', () => {
+  it('renders vector icons through design-system size and color tokens', async () => {
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(
+        <DSIcon name="bell" size="large" color="primary" />,
+      );
+    });
+
+    const icon = renderer!.root.findByType(Text);
+
+    expect(icon.props.size).toBe(24);
+    expect(icon.props.color).toBe(colors.primary);
+    expect(icon.props.children).toBe('bell');
+  });
+
   it('renders button states and blocks presses while loading', async () => {
     const onPress = jest.fn();
     let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
@@ -24,10 +42,10 @@ describe('design system components', () => {
     const button = renderer!.root.findByType(TouchableOpacity);
 
     expect(
-      renderer!.root.findAllByProps({children: '저장'}).length,
+      renderer!.root.findAllByProps({ children: '저장' }).length,
     ).toBeGreaterThan(0);
     expect(
-      renderer!.root.findAllByProps({children: '처리 중'}).length,
+      renderer!.root.findAllByProps({ children: '처리 중' }).length,
     ).toBeGreaterThan(0);
     expect(button.props.accessibilityState).toMatchObject({
       busy: true,
@@ -57,12 +75,12 @@ describe('design system components', () => {
 
     const chip = renderer!.root.findByType(TouchableOpacity);
 
-    expect(chip.props.accessibilityState).toMatchObject({selected: true});
+    expect(chip.props.accessibilityState).toMatchObject({ selected: true });
     expect(
-      renderer!.root.findAllByProps({children: '신선'}).length,
+      renderer!.root.findAllByProps({ children: '신선' }).length,
     ).toBeGreaterThan(0);
     expect(
-      renderer!.root.findAllByProps({children: '✓'}).length,
+      renderer!.root.findAllByProps({ children: '✓' }).length,
     ).toBeGreaterThan(0);
   });
 
@@ -70,12 +88,14 @@ describe('design system components', () => {
     let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
 
     await ReactTestRenderer.act(async () => {
-      renderer = ReactTestRenderer.create(<DSChip label="표시용" tone="primary" />);
+      renderer = ReactTestRenderer.create(
+        <DSChip label="표시용" tone="primary" />,
+      );
     });
 
     expect(renderer!.root.findAllByType(TouchableOpacity)).toHaveLength(0);
     expect(
-      renderer!.root.findAllByProps({children: '표시용'}).length,
+      renderer!.root.findAllByProps({ children: '표시용' }).length,
     ).toBeGreaterThan(0);
   });
 
@@ -100,19 +120,20 @@ describe('design system components', () => {
     const input = renderer!.root.findByType(TextInput);
 
     expect(
-      renderer!.root.findAllByProps({children: '이메일'}).length,
+      renderer!.root.findAllByProps({ children: '이메일' }).length,
     ).toBeGreaterThan(0);
     expect(
-      renderer!.root.findAllByProps({children: '*'}).length,
+      renderer!.root.findAllByProps({ children: '*' }).length,
     ).toBeGreaterThan(0);
     expect(
-      renderer!.root.findAllByProps({children: '올바른 이메일을 입력해주세요'})
-        .length,
+      renderer!.root.findAllByProps({
+        children: '올바른 이메일을 입력해주세요',
+      }).length,
     ).toBeGreaterThan(0);
     expect(input.props.value).toBe('food@example.com');
     expect(input.props.accessibilityLabel).toBe('이메일');
     expect(input.props.accessibilityHint).toBe('올바른 이메일을 입력해주세요');
-    expect(input.props.accessibilityState).toMatchObject({disabled: false});
+    expect(input.props.accessibilityState).toMatchObject({ disabled: false });
 
     await ReactTestRenderer.act(async () => {
       input.props.onChangeText('next@example.com');
@@ -141,22 +162,21 @@ describe('design system components', () => {
     });
 
     expect(
-      renderer!
-        .root
+      renderer!.root
         .findAllByType(View)
         .some(node => node.props.testID === 'card'),
     ).toBe(true);
     expect(
-      renderer!.root.findAllByProps({children: '근처 나눔'}).length,
+      renderer!.root.findAllByProps({ children: '근처 나눔' }).length,
     ).toBeGreaterThan(0);
     expect(
-      renderer!.root.findAllByProps({children: '전남대 공유 냉장고'}).length,
+      renderer!.root.findAllByProps({ children: '전남대 공유 냉장고' }).length,
     ).toBeGreaterThan(0);
     expect(
-      renderer!.root.findAllByProps({children: '도보 4분'}).length,
+      renderer!.root.findAllByProps({ children: '도보 4분' }).length,
     ).toBeGreaterThan(0);
     expect(
-      renderer!.root.findAllByProps({children: '›'}).length,
+      renderer!.root.findAllByProps({ children: '›' }).length,
     ).toBeGreaterThan(0);
 
     const cell = renderer!.root.findAllByType(TouchableOpacity)[0];

@@ -155,9 +155,9 @@ white/90    → 글래스모피즘 뱃지
 
 ## 5. 아이콘
 
-| 라이브러리                       | 버전  |
-| -------------------------------- | ----- |
-| Font Awesome 6 (Solid + Regular) | 6.7.2 |
+| 라이브러리                                                       | 버전   |
+| ---------------------------------------------------------------- | ------ |
+| react-native-vector-icons FontAwesome6 (Solid + Regular + Brand) | 10.3.0 |
 
 ### 주요 아이콘 매핑
 
@@ -236,6 +236,7 @@ Montage Android/iOS는 GreenNode의 색상 팔레트 대체재가 아니라 **�
 | ------------- | ---------------------- | ------------------------------------------------------------------------------------- | ----------------------------- |
 | `DSButton`    | `Button`, `TextButton` | `variant`, `color`, `size`, `loading`, `disabled`, `leading`, `trailing`, `fullWidth` | CTA, 보조 액션, 텍스트 버튼   |
 | `DSChip`      | `Chip`, `ContentBadge` | `variant`, `size`, `tone`, `selected`, `disabled`, `leading`, `trailing`              | 상태 뱃지, 필터, 작은 선택 UI |
+| `DSIcon`      | `Icon`                 | `name`, `size`, `color`, `variant`                                                    | 탭, 버튼 slot, 액션 아이콘    |
 | `DSTextField` | `TextField`            | `label`, `required`, `status`, `caption`, `leading`, `trailing`                       | 검색, 로그인/가입 입력        |
 | `DSCard`      | `Card`                 | `variant`, `padded`, `onPress`, `disabled`                                            | 피드 카드, 정보 카드          |
 | `DSListCell`  | `ListCell`             | `title`, `caption`, `leading`, `trailing`, `selected`, `chevron`, `divider`           | 프로필 메뉴, 선택 목록        |
@@ -255,7 +256,9 @@ Montage Android/iOS는 GreenNode의 색상 팔레트 대체재가 아니라 **�
 ### 아이콘 규칙
 
 - DS 컴포넌트는 `leading`/`trailing` slot의 간격, 정렬, disabled opacity 같은 배치 규칙을 담당한다.
-- 아이콘의 의미와 실제 glyph 선택은 호출 화면이 소유한다. Font Awesome 연결이 필요한 화면에서는 기존 프로젝트 아이콘 규칙을 우선하고, 아직 emoji/text icon을 쓰는 화면은 화면 고유 장식으로 남긴다.
+- 아이콘의 의미와 실제 glyph 선택은 호출 화면이 소유하되, 실제 렌더링은 `DSIcon`과 FontAwesome6 기반 vector icon을 우선한다.
+- Android/iOS 이식성을 위해 액션, 내비게이션, 입력, 버튼 slot에는 시스템 emoji를 쓰지 않는다. 화면 고유 일러스트레이션도 새로 추가할 때는 vector icon 또는 asset을 우선한다.
+- `DSIcon`이 시스템 fallback glyph로 보이지 않도록 Android는 `android/app/build.gradle`의 `react-native-vector-icons/fonts.gradle`, iOS는 `ios/greennode/Info.plist`의 `UIAppFonts`에 FontAwesome6 폰트를 등록한다.
 - slot에 들어가는 아이콘 색은 가능한 DS 컴포넌트의 텍스트/상태 색을 따르게 만든다. 독립 색상이 꼭 필요하면 해당 화면의 도메인 의미를 주석이나 문서에 남긴다.
 
 ### 마이그레이션 규칙
@@ -270,5 +273,5 @@ Montage Android/iOS는 GreenNode의 색상 팔레트 대체재가 아니라 **�
 ### 2026-05-19 지도 화면 적용 메모
 
 - 지도 화면의 검색 입력, 냉장고 카드/시트, retry/refresh/detail/sheet 액션은 `DSTextField`, `DSCard`, `DSChip`, `DSButton`, `DSListCell` 조합으로 치환했다.
-- 액션 아이콘은 `leading`/`trailing` slot에 넣고, 지도 마커와 현재 위치 버튼처럼 MapView 상호작용에 직접 연결된 화면 고유 glyph는 화면 내부에 남긴다.
+- 액션 아이콘은 `DSIcon`을 `leading`/`trailing` slot에 넣고, 지도 마커와 현재 위치 버튼처럼 MapView 상호작용에 직접 연결된 화면 고유 glyph도 후속 마이그레이션에서 vector icon 또는 asset으로 치환한다.
 - `DSChip.selected`는 실제 선택 UI에만 사용하고, 지도 냉장고의 `운영중` 표시는 static status라 `tone="primary"`를 사용한다.
