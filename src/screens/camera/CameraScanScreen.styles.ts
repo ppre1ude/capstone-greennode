@@ -1,5 +1,5 @@
-import {StyleSheet, Platform} from 'react-native';
-import {colors} from '@/theme';
+import { StyleSheet, Platform } from 'react-native';
+import { colors } from '@/theme';
 
 export const styles = StyleSheet.create({
   container: {
@@ -65,12 +65,12 @@ export const styles = StyleSheet.create({
   },
   statusBadge: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: 'rgba(255,255,255,0.92)',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: 'rgba(255,255,255,0.35)',
     alignItems: 'center',
   },
   statusSpinner: {
@@ -138,7 +138,7 @@ export const styles = StyleSheet.create({
     height: 2,
     backgroundColor: colors.success,
     shadowColor: colors.success,
-    shadowOffset: {width: 0, height: 0},
+    shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.8,
     shadowRadius: 10,
     elevation: 5,

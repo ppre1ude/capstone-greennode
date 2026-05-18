@@ -1703,3 +1703,9 @@ GET /api/v1/fridges/available?latitude=35.1595&longitude=126.9136&radius_km=2.0
 - 한 장 촬영 흐름은 유지할 것인가, 조건부 추가 확인을 붙일 것인가?
 - multi-object detection은 다음 스프린트의 구현 대상인가, 연구/검증 대상인가?
 - 채팅, 푸쉬, 통계, 소셜 로그인은 다음 스프린트에 넣을 만큼 중요한가?
+
+## 2026-05-19 지도 디자인 시스템 마이그레이션 검증 메모
+
+- 범위: `MapScreen`의 검색 입력, retry/refresh/detail/sheet 액션, 냉장고 카드/선택 시트, 냉장고 내부 목록 item을 DS primitive로 치환했다. API 호출, 필터링, 선택, navigation target은 변경하지 않는다.
+- 자동 검증: `npm test -- --runInBand __tests__/map.fridgePosts.test.tsx __tests__/designSystem.catalog.test.tsx`.
+- 남은 QA: 이번 pass에서는 실제 Android 기기 또는 에뮬레이터 시각 QA를 수행하지 않는다. 지도 overlay 위치, 하단 sheet 높이, 실제 Google Map 위 터치 영역은 Task 4의 adb/emulator 가능 여부 확인 또는 별도 실기기 QA에서 검증한다.

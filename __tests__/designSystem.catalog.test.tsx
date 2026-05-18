@@ -17,6 +17,12 @@ describe('DesignSystemCatalog', () => {
       renderer!.root.findAllByProps({ children: 'Buttons' }).length,
     ).toBeGreaterThan(0);
     expect(
+      renderer!.root.findAllByProps({ children: 'Icon Slots' }).length,
+    ).toBeGreaterThan(0);
+    expect(
+      renderer!.root.findAllByProps({ children: '↻' }).length,
+    ).toBeGreaterThan(0);
+    expect(
       renderer!.root.findAllByProps({ children: 'Chips' }).length,
     ).toBeGreaterThan(0);
     expect(
@@ -24,6 +30,16 @@ describe('DesignSystemCatalog', () => {
     ).toBeGreaterThan(0);
     expect(
       renderer!.root.findAllByProps({ children: 'List Cells' }).length,
+    ).toBeGreaterThan(0);
+    expect(
+      renderer!.root.findAllByProps({ children: 'Selected Cards' }).length,
+    ).toBeGreaterThan(0);
+    expect(
+      renderer!.root.findAllByProps({ children: 'Map card selected' }).length,
+    ).toBeGreaterThan(0);
+    expect(
+      renderer!.root.findAllByProps({ children: 'Selected fridge list row' })
+        .length,
     ).toBeGreaterThan(0);
     expect(
       renderer!.root.findAllByProps({ children: 'Palette' }).length,

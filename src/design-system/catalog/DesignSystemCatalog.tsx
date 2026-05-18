@@ -38,6 +38,33 @@ export const DesignSystemCatalog = () => (
     </DSCard>
 
     <DSCard variant="outlined" style={styles.section}>
+      <DSText variant="bodyBold">Icon Slots</DSText>
+      <View style={styles.row}>
+        <DSButton
+          label="Refresh"
+          size="small"
+          leading={<DSText color="textOnPrimary">↻</DSText>}
+        />
+        <DSButton
+          label="Open"
+          variant="outlined"
+          size="small"
+          trailing={<DSText color="primary">›</DSText>}
+        />
+        <DSChip
+          label="Available"
+          tone="success"
+          size="small"
+          leading={<DSText color="success">•</DSText>}
+        />
+      </View>
+      <DSTextField
+        leading={<DSText color="textTertiary">🔍</DSText>}
+        placeholder="Search with leading slot"
+      />
+    </DSCard>
+
+    <DSCard variant="outlined" style={styles.section}>
       <DSText variant="bodyBold">Chips</DSText>
       <View style={styles.row}>
         <DSChip label="Neutral" />
@@ -77,9 +104,55 @@ export const DesignSystemCatalog = () => (
       />
       <DSListCell
         title="선택된 항목"
-        caption="선택 상태와 primary 컬러"
+        caption="선택 상태는 primary 컬러"
         selected
       />
+    </DSCard>
+
+    <DSCard variant="outlined" style={styles.section}>
+      <DSText variant="bodyBold">Selected Cards</DSText>
+      <View style={styles.cardRow}>
+        <DSCard
+          variant="outlined"
+          onPress={() => undefined}
+          style={styles.sampleCard}>
+          <View style={styles.cardTitleRow}>
+            <DSText variant="bodyBold">Map card default</DSText>
+            <DSChip label="운영중" tone="primary" size="xsmall" />
+          </View>
+          <DSText variant="small" color="textSecondary">
+            Selectable map card pattern
+          </DSText>
+        </DSCard>
+        <DSCard
+          variant="plain"
+          onPress={() => undefined}
+          style={[styles.sampleCard, styles.sampleSelectedCard]}>
+          <View style={styles.cardTitleRow}>
+            <DSText
+              variant="bodyBold"
+              color="textOnPrimary"
+              style={styles.selectedCardText}>
+              Map card selected
+            </DSText>
+            <DSChip label="운영중" tone="primary" size="xsmall" />
+          </View>
+          <DSText
+            variant="small"
+            color="textOnPrimary"
+            style={styles.selectedCardText}>
+            Primary-filled selected state
+          </DSText>
+        </DSCard>
+        <DSListCell
+          title="Selected fridge list row"
+          caption="Opens the detail list"
+          selected
+          trailing={<DSText color="primary">›</DSText>}
+          style={styles.sampleListCell}
+          onPress={() => undefined}
+        />
+      </View>
     </DSCard>
 
     <DSCard variant="outlined" style={styles.section}>
@@ -115,6 +188,31 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.sm,
+  },
+  cardRow: {
+    gap: spacing.sm,
+  },
+  cardTitleRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.sm,
+    justifyContent: 'space-between',
+  },
+  sampleCard: {
+    gap: spacing.sm,
+  },
+  sampleSelectedCard: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  selectedCardText: {
+    color: colors.textOnPrimary,
+  },
+  sampleListCell: {
+    borderColor: colors.primary,
+    borderRadius: 8,
+    borderWidth: 1,
+    paddingHorizontal: spacing.md,
   },
   swatchGrid: {
     flexDirection: 'row',

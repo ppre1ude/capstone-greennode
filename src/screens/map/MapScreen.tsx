@@ -1,40 +1,53 @@
 /**
- * MapScreen — 지도 탭 (Phase 5)
+ * MapScreen - 지도 화면 (Phase 5)
  *
- * 내 반경 2km 이내의 공유 냉장고 위치를 지도에 마커로 표시.
- * 하단에 냉장고 리스트를 캐러셀(가로 스크롤)로 제공하여 마커와 연동.
+ * 사용자 반경 2km 이내의 공유 냉장고 위치를 지도에 마커로 표시.
+ * 하단에 냉장고 리스트를 캐러셀로 제공하여 마커와 연동.
  *
  * @wireframe wireframe-foodlink/map.html
  */
-import React, {useState, useEffect, useRef, useCallback, useMemo} from 'react';
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from 'react';
 import {
   View,
-  Text,
+  Text as RNText,
   StyleSheet,
   TouchableOpacity,
-  TextInput,
   FlatList,
   StatusBar,
   ActivityIndicator,
   Image,
 } from 'react-native';
-import {useNavigation} from '@react-navigation/native';
-import MapView, {Marker, Circle, PROVIDER_DEFAULT} from 'react-native-maps';
-import {getFridgePosts, getNearbyFridges} from '@/api/fridges';
-import {getImageUrl} from '@/api/posts';
-import {useAuthStore} from '@/store/authStore';
-import {useFeedRefreshStore} from '@/store/feedRefreshStore';
-import type {Fridge, PostNearbyRead} from '@/types';
-import {filterFridges} from '@/utils/fridgeSearch';
+import { useNavigation } from '@react-navigation/native';
+import MapView, { Marker, Circle, PROVIDER_DEFAULT } from 'react-native-maps';
+import { getFridgePosts, getNearbyFridges } from '@/api/fridges';
+import { getImageUrl } from '@/api/posts';
+import { useAuthStore } from '@/store/authStore';
+import { useFeedRefreshStore } from '@/store/feedRefreshStore';
+import type { Fridge, PostNearbyRead } from '@/types';
+import { filterFridges } from '@/utils/fridgeSearch';
 import {
   getRegisteredLocation,
   LOCATION_REQUIRED_CTA,
   LOCATION_REQUIRED_MESSAGE,
   LOCATION_REQUIRED_TITLE,
 } from '@/utils/locationGuard';
-import {getPostDisplayName, getQualityMeta} from '@/utils/postPolicy';
-import {colors} from '@/theme';
-import {styles} from './MapScreen.styles';
+import { getPostDisplayName, getQualityMeta } from '@/utils/postPolicy';
+import { colors } from '@/theme';
+import {
+  DSButton,
+  DSCard,
+  DSChip,
+  DSListCell,
+  DSText,
+  DSTextField,
+} from '@/design-system/components';
+import { styles } from './MapScreen.styles';
 
 const MapScreen = () => {
   const user = useAuthStore(state => state.user);
@@ -75,7 +88,7 @@ const MapScreen = () => {
     : null;
 
   const openLocationSetup = useCallback(() => {
-    navigation.getParent()?.navigate('LocationSetup', {allowBack: true});
+    navigation.getParent()?.navigate('LocationSetup', { allowBack: true });
   }, [navigation]);
 
   const resetFridgePosts = useCallback(() => {
@@ -154,7 +167,9 @@ const MapScreen = () => {
         setSelectedFridgeId(null);
         resetFridgePosts();
         setFridgeState('error');
-        setFridgeError(response.message || '주변 냉장고를 불러오지 못했습니다.');
+        setFridgeError(
+          response.message || '주변 냉장고를 불러오지 못했습니다.',
+        );
       }
     } catch (error) {
       console.warn('Map: Failed to fetch fridges', error);
@@ -205,7 +220,7 @@ const MapScreen = () => {
   const focusFridge = (fridge: Fridge, index?: number) => {
     setSelectedFridgeId(fridge.id);
     if (index != null) {
-      flatListRef.current?.scrollToIndex?.({index, animated: true});
+      flatListRef.current?.scrollToIndex?.({ index, animated: true });
     }
     mapRef.current?.animateToRegion?.(
       {
@@ -222,61 +237,70 @@ const MapScreen = () => {
     focusFridge(fridge, index);
   };
 
-  const renderFridgeCard = ({item}: {item: Fridge}) => {
+  const renderFridgeCard = ({ item }: { item: Fridge }) => {
     const isSelected = selectedFridgeId === item.id;
     return (
-      <TouchableOpacity
+      <DSCard
         style={[styles.card, isSelected && styles.cardSelected]}
         onPress={() => focusFridge(item)}>
         <View style={styles.cardHeader}>
-          <Text style={[styles.cardTitle, isSelected && styles.textSelected]}>
+          <DSText
+            variant="bodyBold"
+            style={[styles.cardTitle, isSelected && styles.textSelected]}>
             {item.name}
-          </Text>
-          <Text style={styles.statusBadge}>운영중</Text>
+          </DSText>
+          <DSChip label="운영중" tone="primary" size="xsmall" />
         </View>
-        <Text style={[styles.cardAddress, isSelected && styles.textSelected]}>
+        <DSText
+          variant="caption"
+          style={[styles.cardAddress, isSelected && styles.textSelected]}>
           {item.address}
-        </Text>
+        </DSText>
         <View style={styles.cardFooter}>
-          <Text style={[styles.cardDistance, isSelected && styles.textSelected]}>
+          <DSText
+            variant="caption"
+            style={[styles.cardDistance, isSelected && styles.textSelected]}>
             {item.distance ? `${item.distance.toFixed(2)}km` : ''}
-          </Text>
-          <TouchableOpacity
+          </DSText>
+          <DSButton
+            label="내부 보기"
+            variant="solid"
+            color="assistive"
+            size="small"
             style={styles.detailButton}
-            onPress={() => focusFridge(item)}>
-            <Text style={styles.detailButtonText}>내부 보기</Text>
-          </TouchableOpacity>
+            textStyle={styles.detailButtonText}
+            trailing={<DSText style={styles.actionIcon}>›</DSText>}
+            onPress={() => focusFridge(item)}
+          />
         </View>
-      </TouchableOpacity>
+      </DSCard>
     );
   };
 
-  const renderFridgePostItem = ({item}: {item: PostNearbyRead}) => {
+  const renderFridgePostItem = ({ item }: { item: PostNearbyRead }) => {
     const displayName = getPostDisplayName(item);
     const quality = getQualityMeta(item.freshnessLabel);
 
     return (
-      <TouchableOpacity
+      <DSListCell
+        title={displayName}
+        caption={quality.label}
+        titleNumberOfLines={1}
+        captionNumberOfLines={1}
+        verticalPadding="small"
         style={styles.fridgePostItem}
-        activeOpacity={0.8}
+        leading={
+          <Image
+            source={{ uri: getImageUrl(item.imageUrl) }}
+            style={styles.fridgePostImage}
+            resizeMode="cover"
+          />
+        }
+        trailing={<DSText style={styles.fridgePostChevron}>›</DSText>}
         onPress={() =>
-          navigation.getParent()?.navigate('PostDetail', {postId: item.id})
-        }>
-        <Image
-          source={{uri: getImageUrl(item.imageUrl)}}
-          style={styles.fridgePostImage}
-          resizeMode="cover"
-        />
-        <View style={styles.fridgePostInfo}>
-          <Text style={styles.fridgePostTitle} numberOfLines={1}>
-            {displayName}
-          </Text>
-          <Text style={styles.fridgePostMeta} numberOfLines={1}>
-            {quality.label}
-          </Text>
-        </View>
-        <Text style={styles.fridgePostChevron}>›</Text>
-      </TouchableOpacity>
+          navigation.getParent()?.navigate('PostDetail', { postId: item.id })
+        }
+      />
     );
   };
 
@@ -286,63 +310,92 @@ const MapScreen = () => {
     }
 
     return (
-      <View style={styles.selectedFridgeSheet}>
+      <DSCard style={styles.selectedFridgeSheet}>
         <View style={styles.selectedFridgeActionRow}>
-          <TouchableOpacity
+          <DSButton
+            label="다른 냉장고 보기"
+            variant="solid"
+            color="assistive"
+            size="small"
             style={styles.switchFridgeButton}
-            onPress={clearSelectedFridge}>
-            <Text style={styles.switchFridgeButtonText}>다른 냉장고 보기</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
+            textStyle={styles.switchFridgeButtonText}
+            leading={<DSText style={styles.actionIcon}>‹</DSText>}
+            onPress={clearSelectedFridge}
+          />
+          <DSButton
+            label="새로고침"
+            variant="solid"
+            size="small"
             style={styles.panelRetryButton}
-            onPress={() => fetchFridgePosts(selectedFridge.id)}>
-            <Text style={styles.panelRetryButtonText}>새로고침</Text>
-          </TouchableOpacity>
+            textStyle={styles.panelRetryButtonText}
+            leading={<DSText style={styles.refreshIcon}>↻</DSText>}
+            onPress={() => fetchFridgePosts(selectedFridge.id)}
+          />
         </View>
 
         <View style={styles.selectedFridgeSummary}>
-          <Text style={styles.selectedFridgeName} numberOfLines={1}>
+          <DSText
+            variant="bodyBold"
+            style={styles.selectedFridgeName}
+            numberOfLines={1}>
             {selectedFridge.name}
-          </Text>
-          <Text style={styles.selectedFridgeAddress} numberOfLines={1}>
+          </DSText>
+          <DSText
+            variant="caption"
+            color="textSecondary"
+            style={styles.selectedFridgeAddress}
+            numberOfLines={1}>
             {selectedFridge.address}
-          </Text>
+          </DSText>
           <View style={styles.selectedFridgeMetaRow}>
-            <Text style={styles.statusBadge}>운영중</Text>
-            <Text style={styles.selectedFridgeDistance}>
+            <DSChip label="운영중" tone="primary" size="xsmall" />
+            <DSText variant="small" style={styles.selectedFridgeDistance}>
               {selectedFridge.distance
                 ? `${selectedFridge.distance.toFixed(2)}km`
                 : '거리 확인 중'}
-            </Text>
+            </DSText>
           </View>
         </View>
 
         <View style={styles.fridgePostsHeader}>
-          <Text style={styles.fridgePostsTitle}>지금 가능한 나눔 식재료</Text>
+          <DSText variant="bodyBold" style={styles.fridgePostsTitle}>
+            지금 가능한 나눔 식재료
+          </DSText>
         </View>
 
         {fridgePostsState === 'idle' || fridgePostsState === 'loading' ? (
           <View style={styles.fridgePostsStateBox}>
             <ActivityIndicator color={colors.primary} />
-            <Text style={styles.fridgePostsStateText}>
+            <DSText
+              variant="caption"
+              color="textSecondary"
+              style={styles.fridgePostsStateText}>
               냉장고 안 나눔을 불러오는 중입니다
-            </Text>
+            </DSText>
           </View>
         ) : fridgePostsState === 'error' ? (
           <View style={styles.fridgePostsStateBox}>
-            <Text style={styles.fridgePostsStateTitle}>
+            <DSText variant="caption" style={styles.fridgePostsStateTitle}>
               내부 목록을 불러오지 못했습니다
-            </Text>
-            <Text style={styles.fridgePostsStateText}>{fridgePostsError}</Text>
+            </DSText>
+            <DSText
+              variant="caption"
+              color="textSecondary"
+              style={styles.fridgePostsStateText}>
+              {fridgePostsError}
+            </DSText>
           </View>
         ) : fridgePostsState === 'empty' ? (
           <View style={styles.fridgePostsStateBox}>
-            <Text style={styles.fridgePostsStateTitle}>
+            <DSText variant="caption" style={styles.fridgePostsStateTitle}>
               지금 가능한 나눔 식재료가 없습니다
-            </Text>
-            <Text style={styles.fridgePostsStateText}>
+            </DSText>
+            <DSText
+              variant="caption"
+              color="textSecondary"
+              style={styles.fridgePostsStateText}>
               다른 냉장고를 선택하거나 잠시 후 다시 확인해주세요.
-            </Text>
+            </DSText>
           </View>
         ) : (
           <FlatList
@@ -354,7 +407,7 @@ const MapScreen = () => {
             nestedScrollEnabled
           />
         )}
-      </View>
+      </DSCard>
     );
   };
 
@@ -367,13 +420,23 @@ const MapScreen = () => {
           translucent={false}
         />
         <View style={styles.locationRequiredContainer}>
-          <Text style={styles.locationRequiredTitle}>{LOCATION_REQUIRED_TITLE}</Text>
-          <Text style={styles.locationRequiredText}>{LOCATION_REQUIRED_MESSAGE}</Text>
-          <TouchableOpacity
+          <DSText variant="bodyBold" style={styles.locationRequiredTitle}>
+            {LOCATION_REQUIRED_TITLE}
+          </DSText>
+          <DSText
+            variant="body"
+            color="textSecondary"
+            style={styles.locationRequiredText}>
+            {LOCATION_REQUIRED_MESSAGE}
+          </DSText>
+          <DSButton
+            label={LOCATION_REQUIRED_CTA}
+            size="medium"
             style={styles.retryButton}
-            onPress={openLocationSetup}>
-            <Text style={styles.retryButtonText}>{LOCATION_REQUIRED_CTA}</Text>
-          </TouchableOpacity>
+            textStyle={styles.retryButtonText}
+            leading={<DSText style={styles.actionIconLight}>📍</DSText>}
+            onPress={openLocationSetup}
+          />
         </View>
       </View>
     );
@@ -381,20 +444,23 @@ const MapScreen = () => {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor="transparent"
+        translucent
+      />
 
       {/* 헤더 검색창 (오버레이) */}
       <View style={styles.header}>
-        <View style={styles.searchBar}>
-          <Text style={styles.searchIcon}>🔍</Text>
-          <TextInput
-            style={styles.searchInput}
-            placeholder="동네 이름이나 냉장고 이름 검색"
-            placeholderTextColor={colors.textPlaceholder}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-        </View>
+        <DSTextField
+          leading={<DSText style={styles.searchIcon}>🔍</DSText>}
+          containerStyle={styles.searchFieldContainer}
+          inputContainerStyle={styles.searchBar}
+          inputStyle={styles.searchInput}
+          placeholder="동네 이름이나 냉장고 이름 검색"
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
       </View>
 
       {/* 지도 영역 */}
@@ -427,7 +493,7 @@ const MapScreen = () => {
                 styles.markerWrapper,
                 selectedFridgeId === fridge.id && styles.markerWrapperSelected,
               ]}>
-              <Text style={styles.markerEmoji}>🏢</Text>
+              <RNText style={styles.markerEmoji}>🏢</RNText>
             </View>
           </Marker>
         ))}
@@ -439,7 +505,7 @@ const MapScreen = () => {
         onPress={() => {
           mapRef.current?.animateToRegion(initialRegion, 500);
         }}>
-        <Text style={styles.myLocationIcon}>📍</Text>
+        <RNText style={styles.myLocationIcon}>📍</RNText>
       </TouchableOpacity>
 
       {/* 하단 냉장고 리스트 캐러셀 */}
@@ -447,22 +513,34 @@ const MapScreen = () => {
         {selectedFridge ? (
           renderSelectedFridgePosts()
         ) : fridgeState === 'loading' ? (
-          <View style={styles.emptyCard}>
+          <DSCard style={styles.emptyCard}>
             <ActivityIndicator color={colors.primary} />
-            <Text style={styles.emptyTitle}>주변 냉장고를 불러오는 중입니다</Text>
-          </View>
+            <DSText variant="caption" style={styles.emptyTitle}>
+              주변 냉장고를 불러오는 중입니다
+            </DSText>
+          </DSCard>
         ) : fridgeState === 'error' ? (
-          <View style={styles.emptyCard}>
-            <Text style={styles.emptyTitle}>냉장고를 불러오지 못했습니다</Text>
-            <Text style={styles.emptyText}>{fridgeError}</Text>
-            <TouchableOpacity
+          <DSCard style={styles.emptyCard}>
+            <DSText variant="caption" style={styles.emptyTitle}>
+              냉장고를 불러오지 못했습니다
+            </DSText>
+            <DSText
+              variant="body"
+              color="textSecondary"
+              style={styles.emptyText}>
+              {fridgeError}
+            </DSText>
+            <DSButton
+              label="다시 시도"
+              size="small"
               style={styles.retryButton}
+              textStyle={styles.retryButtonText}
+              leading={<DSText style={styles.actionIconLight}>↻</DSText>}
               onPress={() => {
                 fetchFridges();
-              }}>
-              <Text style={styles.retryButtonText}>다시 시도</Text>
-            </TouchableOpacity>
-          </View>
+              }}
+            />
+          </DSCard>
         ) : displayedFridges.length > 0 ? (
           <FlatList
             ref={flatListRef}
@@ -476,23 +554,31 @@ const MapScreen = () => {
             decelerationRate="fast"
           />
         ) : (
-          <View style={styles.emptyCard}>
-            <Text style={styles.emptyTitle}>
-              {fridges.length > 0 ? '검색 결과가 없습니다' : '근처에 냉장고가 없습니다'}
-            </Text>
-            <Text style={styles.emptyText}>
+          <DSCard style={styles.emptyCard}>
+            <DSText variant="caption" style={styles.emptyTitle}>
+              {fridges.length > 0
+                ? '검색 결과가 없습니다'
+                : '근처에 냉장고가 없습니다'}
+            </DSText>
+            <DSText
+              variant="body"
+              color="textSecondary"
+              style={styles.emptyText}>
               {fridges.length > 0
                 ? '다른 동네 이름이나 냉장고 이름으로 검색해보세요.'
                 : '동네 위치를 다시 설정하거나 잠시 후 다시 확인해주세요.'}
-            </Text>
+            </DSText>
             {searchQuery ? (
-              <TouchableOpacity
+              <DSButton
+                label="검색 초기화"
+                size="small"
                 style={styles.retryButton}
-                onPress={() => setSearchQuery('')}>
-                <Text style={styles.retryButtonText}>검색 초기화</Text>
-              </TouchableOpacity>
+                textStyle={styles.retryButtonText}
+                leading={<DSText style={styles.actionIconLight}>×</DSText>}
+                onPress={() => setSearchQuery('')}
+              />
             ) : null}
-          </View>
+          </DSCard>
         )}
       </View>
     </View>

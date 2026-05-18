@@ -266,3 +266,9 @@ Montage Android/iOS는 GreenNode의 색상 팔레트 대체재가 아니라 **�
 - `DSChip.selected`는 필터/선택 UI처럼 실제 선택 상태일 때만 쓴다. 단순 상태 뱃지나 품질 라벨은 `tone="primary|success|warning|error|neutral"`로 시각 의도를 표현한다.
 - `DSChip`, `DSCard`, `DSListCell`은 `onPress`가 없으면 비상호작용 `View`로 렌더링한다. 동작하지 않는 요소에 `button` 접근성 역할을 노출하지 않는다.
 - `DSTextField`는 `label`을 기본 접근성 라벨로 사용하고, `status="error"`일 때 `caption`을 오류 힌트로 연결한다.
+
+### 2026-05-19 지도 화면 적용 메모
+
+- 지도 화면의 검색 입력, 냉장고 카드/시트, retry/refresh/detail/sheet 액션은 `DSTextField`, `DSCard`, `DSChip`, `DSButton`, `DSListCell` 조합으로 치환했다.
+- 액션 아이콘은 `leading`/`trailing` slot에 넣고, 지도 마커와 현재 위치 버튼처럼 MapView 상호작용에 직접 연결된 화면 고유 glyph는 화면 내부에 남긴다.
+- `DSChip.selected`는 실제 선택 UI에만 사용하고, 지도 냉장고의 `운영중` 표시는 static status라 `tone="primary"`를 사용한다.

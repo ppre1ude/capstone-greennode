@@ -1,3 +1,9 @@
+## 2026-05-19 지도 디자인 시스템 마이그레이션 업데이트
+
+- 지도 화면은 기존 MapView/Marker/Circle, API 호출, 냉장고 선택, refresh, 상세 이동 로직을 유지하면서 검색 필드와 반복 카드/시트/액션을 DS primitive로 치환했다.
+- DS 카탈로그는 `leading`/`trailing` icon slot, 선택된 list/card 패턴, static status chip 예시를 포함한다.
+- 검증 범위는 Jest 회귀 테스트 기준이다. 이 pass에서는 실제 Android 기기 QA를 수행하지 않았고, 남은 시각/실기기 QA는 Task 4 또는 별도 QA에서 확인한다.
+
 # FoodLink Implementation Status
 
 > **작성일**: 2026-05-06

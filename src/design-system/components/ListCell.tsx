@@ -8,8 +8,8 @@ import {
   View,
   ViewStyle,
 } from 'react-native';
-import {colors, spacing} from '@/theme';
-import {DSText} from './Text';
+import { colors, spacing } from '@/theme';
+import { DSText } from './Text';
 
 export type DSListCellPadding = 'none' | 'small' | 'medium' | 'large';
 
@@ -24,6 +24,8 @@ export interface DSListCellProps
   disabled?: boolean;
   divider?: boolean;
   verticalPadding?: DSListCellPadding;
+  titleNumberOfLines?: number;
+  captionNumberOfLines?: number;
   style?: StyleProp<ViewStyle>;
 }
 
@@ -44,6 +46,8 @@ export const DSListCell = ({
   disabled = false,
   divider = false,
   verticalPadding: padding = 'medium',
+  titleNumberOfLines = 2,
+  captionNumberOfLines = 2,
   onPress,
   style,
   accessibilityLabel,
@@ -63,11 +67,14 @@ export const DSListCell = ({
         <DSText
           variant="body"
           color={selected ? 'primary' : 'textPrimary'}
-          numberOfLines={2}>
+          numberOfLines={titleNumberOfLines}>
           {title}
         </DSText>
         {caption ? (
-          <DSText variant="small" color="textSecondary" numberOfLines={2}>
+          <DSText
+            variant="small"
+            color="textSecondary"
+            numberOfLines={captionNumberOfLines}>
             {caption}
           </DSText>
         ) : null}
@@ -85,7 +92,7 @@ export const DSListCell = ({
     styles.container,
     divider ? styles.divider : null,
     disabled ? styles.disabled : null,
-    {paddingVertical: verticalPadding[padding]},
+    { paddingVertical: verticalPadding[padding] },
     style,
   ];
 
@@ -98,7 +105,7 @@ export const DSListCell = ({
       {...props}
       accessibilityLabel={accessibilityLabel ?? title}
       accessibilityRole="button"
-      accessibilityState={{selected, disabled}}
+      accessibilityState={{ selected, disabled }}
       activeOpacity={0.86}
       disabled={disabled}
       onPress={handlePress}
