@@ -7,7 +7,7 @@
  *
  * @wireframe wireframe-foodlink/scanapply.html
  */
-import React from 'react';
+import React, {useMemo, useState} from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,7 @@ import {
   Image,
   Platform,
   KeyboardAvoidingView,
+  TextInput,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@/navigation/types';
@@ -30,10 +31,59 @@ import { styles } from './PostCreateScreen.styles';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PostCreate'>;
 
-const formatDateOnly = (date: Date) => date.toISOString().slice(0, 10);
+const formatDateOnly = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
+};
+
+const getDefaultExpirationDate = () => {
+  const date = new Date();
+  date.setDate(date.getDate() + 3);
+  return formatDateOnly(date);
+};
+
+const parseDateOnly = (value: string): Date | null => {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) {
+    return null;
+  }
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const parsedDate = new Date(year, month - 1, day);
+
+  if (
+    parsedDate.getFullYear() !== year ||
+    parsedDate.getMonth() !== month - 1 ||
+    parsedDate.getDate() !== day
+  ) {
+    return null;
+  }
+
+  parsedDate.setHours(0, 0, 0, 0);
+  return parsedDate;
+};
+
+const isValidExpirationDate = (value: string) => {
+  const selectedDate = parseDateOnly(value);
+  if (!selectedDate) {
+    return false;
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  return selectedDate >= today;
+};
 
 const PostCreateScreen = ({ route, navigation }: Props) => {
   const { result, imageUri } = route.params;
+  const defaultExpirationDate = useMemo(() => getDefaultExpirationDate(), []);
+  const [expirationDate, setExpirationDate] = useState(defaultExpirationDate);
   const detectedCrop =
     result.detectedFruitKo ||
     result.aiAnalysis?.detectedFruitKo ||
@@ -61,14 +111,18 @@ const PostCreateScreen = ({ route, navigation }: Props) => {
       return;
     }
 
-    // 유효기간은 MVP 상 기본 3일 후로 설정
-    const expDate = new Date();
-    expDate.setDate(expDate.getDate() + 3);
+    if (!isValidExpirationDate(expirationDate)) {
+      Alert.alert(
+        '날짜 확인 필요',
+        '오늘 이후 날짜를 YYYY-MM-DD 형식으로 입력해주세요.',
+      );
+      return;
+    }
 
     navigation.navigate('FridgeSelect', {
       postData: {
         imageToken: result.imageToken as string,
-        expirationDate: formatDateOnly(expDate),
+        expirationDate,
       },
       qualityCategory:
         result.aiAnalysis?.category ?? result.freshnessLabel ?? undefined,
@@ -137,6 +191,21 @@ const PostCreateScreen = ({ route, navigation }: Props) => {
             <Text style={styles.summaryName}>{detectedCrop}</Text>
             <Text style={styles.summaryDescription}>
               공유 냉장고를 선택하면 이 식재료가 나눔 가능 상태로 등록됩니다.
+            </Text>
+          </View>
+
+          <View style={styles.field}>
+            <Text style={styles.label}>권장 수령일</Text>
+            <TextInput
+              style={styles.input}
+              value={expirationDate}
+              onChangeText={setExpirationDate}
+              placeholder="YYYY-MM-DD"
+              keyboardType="numbers-and-punctuation"
+              autoCapitalize="none"
+            />
+            <Text style={styles.fieldHelp}>
+              기본값은 3일 뒤이며, 실제 상태를 보고 오늘 이후 날짜로 조정해주세요.
             </Text>
           </View>
         </View>

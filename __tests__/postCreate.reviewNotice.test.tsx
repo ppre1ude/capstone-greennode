@@ -1,4 +1,5 @@
 import React from 'react';
+import {Alert, Text, TextInput, TouchableOpacity} from 'react-native';
 import ReactTestRenderer from 'react-test-renderer';
 import PostCreateScreen from '@/screens/post/PostCreateScreen';
 import type {GenerateResult} from '@/types';
@@ -21,7 +22,37 @@ const lowConfidenceResult: GenerateResult = {
   imageToken: 'image-token',
 };
 
+const findButtonByText = (
+  renderer: ReactTestRenderer.ReactTestRenderer,
+  label: string,
+) =>
+  renderer.root.findAllByType(TouchableOpacity).find(button =>
+    button.findAllByType(Text).some(textNode => {
+      const children = textNode.props.children;
+      return Array.isArray(children)
+        ? children.join('') === label
+        : children === label;
+    }),
+  );
+
 describe('PostCreateScreen review notice', () => {
+  const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-05-18T12:00:00Z'));
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+    alertSpy.mockClear();
+  });
+
+  afterAll(() => {
+    alertSpy.mockRestore();
+  });
+
   it('keeps low confidence shareable but asks the user to verify the real item state', async () => {
     const navigation = {
       goBack: jest.fn(),
@@ -56,6 +87,99 @@ describe('PostCreateScreen review notice', () => {
     expect(
       renderer!.root.findAllByProps({children: '다음 단계로'}),
     ).not.toHaveLength(0);
+
+    await ReactTestRenderer.act(async () => {
+      renderer!.unmount();
+    });
+  });
+
+  it('lets the user confirm and edit the recommended pickup date before fridge selection', async () => {
+    const navigation = {
+      goBack: jest.fn(),
+      navigate: jest.fn(),
+    };
+
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(
+        <PostCreateScreen
+          navigation={navigation as never}
+          route={{
+            params: {
+              result: lowConfidenceResult,
+              imageUri: 'file:///banana.jpg',
+            },
+          } as never}
+        />,
+      );
+    });
+
+    const dateInput = renderer!.root.findByProps({
+      placeholder: 'YYYY-MM-DD',
+    }) as ReactTestRenderer.ReactTestInstance;
+
+    expect(dateInput.props.value).toBe('2026-05-21');
+
+    await ReactTestRenderer.act(async () => {
+      dateInput.props.onChangeText('2026-05-24');
+    });
+
+    await ReactTestRenderer.act(async () => {
+      findButtonByText(renderer!, '다음 단계로')?.props.onPress();
+    });
+
+    expect(navigation.navigate).toHaveBeenCalledWith('FridgeSelect', {
+      postData: {
+        imageToken: 'image-token',
+        expirationDate: '2026-05-24',
+      },
+      qualityCategory: 'Fresh',
+      qualityCanShare: true,
+    });
+
+    await ReactTestRenderer.act(async () => {
+      renderer!.unmount();
+    });
+  });
+
+  it('blocks fridge selection when the recommended pickup date is before today', async () => {
+    const navigation = {
+      goBack: jest.fn(),
+      navigate: jest.fn(),
+    };
+
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(
+        <PostCreateScreen
+          navigation={navigation as never}
+          route={{
+            params: {
+              result: lowConfidenceResult,
+              imageUri: 'file:///banana.jpg',
+            },
+          } as never}
+        />,
+      );
+    });
+
+    const dateInput = renderer!.root.findByType(TextInput);
+
+    await ReactTestRenderer.act(async () => {
+      dateInput.props.onChangeText('2026-05-17');
+    });
+
+    await ReactTestRenderer.act(async () => {
+      findButtonByText(renderer!, '다음 단계로')?.props.onPress();
+    });
+
+    expect(alertSpy).toHaveBeenCalledWith(
+      '날짜 확인 필요',
+      '오늘 이후 날짜를 YYYY-MM-DD 형식으로 입력해주세요.',
+    );
+    expect(navigation.navigate).not.toHaveBeenCalled();
 
     await ReactTestRenderer.act(async () => {
       renderer!.unmount();

@@ -291,7 +291,7 @@
 | 이메일 회원가입/로그인 | 구현됨 | 앱/API 흐름 검증됨 | 소셜 로그인, 이메일 인증 없음 |
 | 위치 등록/재설정 | 구현됨 | 권한 거부/재시도 단위 테스트, 일부 실기기 QA | 권한 영구 거부 등 추가 실기기 반복 검증 필요 |
 | AI 촬영/갤러리 분석 | 부분 구현, MVP 흐름 가능 | 실기기에서 `generate` 성공/실패 경로 검증 | false-positive는 서버/AI 계약 한계로 Post-MVP |
-| 나눔 식재료 등록 | 구현됨 | 실기기에서 `generate -> create -> home/detail/map` 검증 | 유통기한 수동 입력/OCR 등은 없음 |
+| 나눔 식재료 등록 | 구현됨 | 실기기에서 `generate -> create -> home/detail/map` 검증. 2026-05-18 등록 화면에서 권장 수령일 확인/수정과 지난 날짜 차단 추가 | OCR, 최대 허용 기간 등 백엔드 날짜 정책은 없음 |
 | 홈 주변 나눔 목록 | 구현됨 | 등록 후 홈 재조회, requested 제외 검증 | 서버 검색/추천/랭킹은 없음 |
 | 나눔 상세/신청 | 구현됨 | 201/403/409, `available -> requested`, 중복 신청 방어 검증 | `reserved/completed/cancelled/expired` 흐름 없음 |
 | 공유 냉장고 지도 | 구현됨 | 지도 마커, 냉장고 선택, 내부 available 목록, 상세 이동 검증. 2026-05-18 선택 카드와 내부 목록을 단일 bottom sheet로 정리 | 냉장고 없음 fixture/API 검증 추가 필요 |
@@ -323,6 +323,8 @@
 - 홈 피드의 `전체보기`는 `지도에서 보기`로 바꾸고 Map 탭 이동을 연결했다.
 - 홈 피드 카드의 `방금 전` placeholder는 `createdAt` 기반 상대 시각으로 교체했다.
 - 지도 화면은 냉장고 선택 후 기존 캐러셀 카드와 내부 목록 패널이 동시에 떠 있지 않도록 단일 bottom sheet로 통합했다.
+- 등록 화면은 기본 3일 뒤 권장 수령일을 표시하고, 사용자가 `YYYY-MM-DD` 형식으로 수정한 값을 기존 `expirationDate` payload에 담아 냉장고 선택 화면으로 넘긴다.
+- 오늘 이전 날짜나 형식이 맞지 않는 날짜는 프론트에서 차단한다. 최대 허용 기간, 만료 항목 제외 기준은 백엔드 정책 결정으로 남긴다.
 - 검증: `map.fridgePosts`, `postDetail.requestShare`, `home.nearbyRefresh`, `postPolicy`, `analysisResult`, `postCreate`, `postComplete`, `fridgeOperatorConsole`, `profile.operatorConsole` 회귀 테스트와 `tsc`, `lint`, `diff --check`.
 
 현재 부족한 점:
@@ -362,8 +364,8 @@
 
 구현 후보:
 
-- 유통기한 수동 입력.
-- 기본값 정책 결정: 현재 기본 3일 유지 여부.
+- 권장 수령일 수동 입력. 2026-05-18 프론트 구현 완료.
+- 기본값 정책 결정: 현재 기본 3일 유지 여부. 2026-05-18 기준 기본값은 유지.
 - 날짜 validation.
 - 홈/상세 화면의 유통기한 표시 정리.
 
@@ -1097,7 +1099,7 @@ docs/VALIDATION_AND_BACKLOG.md의 "3. AI 파이프라인 데이터 흐름 검증
 | 한 장 촬영 기본 흐름                    | 정상 동작                         | 현재 앱은 사진 1장을 `POST /api/v1/posts/generate`에 보내고, 결과 1개를 분석 결과/나눔 식재료 작성 화면으로 넘긴다. 홈 화면 문구도 `사진 한 장으로 나눔 가능 여부 확인`이다. | `CameraScanScreen.processImage()`, `generatePost()`, `HomeScreen` UI     | MVP 기본 흐름은 한 장 촬영으로 유지                              |
 | 한 장으로 충분한 케이스                 | 정책 결정 필요                    | 외관이 잘 보이는 단일 과일/채소, 포장 밖에서 상태를 충분히 볼 수 있는 식재료는 한 장 촬영으로 처리 가능하다. 현재 실제 검증도 단일 대표 객체 응답을 전제로 통과했다.         | `GenerateResult.detectedFruit`, `aiAnalysis.category`                    | 데모/검증 이미지는 단일 객체 중심으로 준비                       |
 | 한 장으로 어려운 케이스                 | 정책 결정 필요                    | 유통기한 라벨, 포장 내부 상태, 절단면, 냄새/촉감, 캔/불투명 포장, 어두움/흔들림/가림, 여러 음식이 섞인 사진은 한 장만으로 신뢰하기 어렵다.                                   | 현재 UI에는 보조 질문/추가 촬영 단계 없음                                | 낮은 confidence 또는 불확실 상태에서 재촬영/수동 수정으로 보낸다 |
-| 라벨/유통기한/내부 상태                 | 미구현                            | 앱은 유통기한을 이미지에서 읽지 않고 나눔 식재료 생성 시 기본 3일 후로 설정한다. 라벨 OCR, 포장 내부 상태 확인, 유통기한 수동 입력 필드는 없다.                              | `PostCreateScreen`의 `expDate + 3일`                                     | 유통기한 수동 입력 또는 라벨 사진/OCR은 다음 스프린트 후보       |
+| 라벨/유통기한/내부 상태                 | 부분 구현                         | 앱은 유통기한을 이미지에서 읽지 않는다. 2026-05-18부터 등록 화면에서 기본 3일 뒤 권장 수령일을 사용자가 확인/수정할 수 있고, 지난 날짜는 차단한다. 라벨 OCR, 포장 내부 상태 확인은 없다. | `PostCreateScreen`의 권장 수령일 입력 필드                                | 라벨 사진/OCR, 최대 허용 기간, 만료 제외 기준은 후속 계약 후보  |
 | 잘못 찍은 사진 재촬영 UI                | 부분 구현                         | 분석 결과 화면에는 `다시 촬영` 버튼이 있다. 촬영 실패 Alert는 갤러리 선택 대안을 제공한다. 분석 실패 Alert는 아직 서버 오류 문구 중심이다.                                   | `AnalysisResultScreen` footer, `CameraScanScreen` catch Alert            | 분석 실패 Alert를 재촬영/갤러리/수동 입력 액션형 대안으로 변경   |
 | AI confidence 표시/활용                 | 부분 구현                         | `confidenceScore`는 분석 결과/작성 화면에 표시되고 낮은 confidence는 `확인 필요`로 분기한다. 다만 재촬영 강제나 수동 입력 전용 CTA는 없다.                                   | `AiAnalysis.confidenceScore`, `AnalysisResultScreen`, `PostCreateScreen` | 낮은 confidence fixture로 실제 UX 검증                           |
 | confidence 낮을 때 등록 차단            | 정책 결정 완료                    | 낮은 confidence는 단독 등록 차단 사유로 보지 않고 `확인 필요`로 표시한다. 나눔 기준 미충족 신선도 등급만 `canShare=false`로 등록을 차단한다.                                 | `AnalysisResultScreen`, `postPolicy.needsAnalysisReview()`               | 확인 필요 상태에서 사용자 확인/수동 수정 UX 보강                 |
@@ -1124,7 +1126,7 @@ docs/VALIDATION_AND_BACKLOG.md의 "3. AI 파이프라인 데이터 흐름 검증
 1. 나눔 기준 미충족(`canShare=false`) 등록 차단을 `Stale` fixture로 회귀 검증한다.
 2. 낮은 confidence fixture로 `확인 필요` 상태와 작성 화면 표시를 검증한다.
 3. 분석 실패/촬영 실패 Alert를 `다시 촬영`, `갤러리에서 선택`, `수동 입력` 액션으로 바꾼다.
-4. 유통기한 기본 3일 자동값 대신 수동 입력 필드를 추가하거나, 최소한 작성 화면에서 수정 가능하게 만든다.
+4. 유통기한 기본 3일 자동값은 유지하되, 작성 화면에서 권장 수령일을 수정 가능하게 만들었다. 최대 허용 기간과 OCR은 후속으로 둔다.
 5. multi-object 검증용 이미지 세트를 준비한다: 단일 객체, 여러 객체, 흐림/어두움, 라벨/유통기한 포함, 포장 내부 미노출, 나눔 기준 미충족.
 6. API 초안에 `detections[]` 응답 계약을 추가하고, 대표 객체 1개 처리와 객체별 분리 등록 중 어느 UX가 맞는지 별도 검증한다.
 7. 완료: 에뮬레이터 셔터의 `Capture error TypeError: undefined is not a function`는 `usePhotoOutput().capturePhotoToFile()` 적용 후 사라졌고, 촬영 파일이 API로 전달됐다.
