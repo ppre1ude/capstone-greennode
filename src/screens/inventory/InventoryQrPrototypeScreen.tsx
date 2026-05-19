@@ -13,6 +13,7 @@ import {
   InventoryLabelInstructionCard,
   InventoryProgressStepper,
   createInventoryHoldExpiresAt,
+  resolveStoragePolicy,
   type InventoryDisplayStatus,
 } from '@/features/inventory';
 import {
@@ -35,13 +36,17 @@ const SELECTED_FRIDGE = {
 const LABEL_SAMPLE = {
   labelCode: '#0042',
   itemName: '토마토',
-  storageZone: '일반 구역',
-  deadlineLabel: '오늘 18:30',
+  quality: 'normal' as const,
 };
 
 const PROTOTYPE_NOW = new Date('2026-05-19T00:10:00.000Z');
 const HOLD_STARTED_AT = new Date('2026-05-19T00:00:00.000Z');
 const HOLD_EXPIRES_AT = createInventoryHoldExpiresAt(HOLD_STARTED_AT);
+const SAMPLE_STORAGE_POLICY = resolveStoragePolicy({
+  itemName: LABEL_SAMPLE.itemName,
+  quality: LABEL_SAMPLE.quality,
+  storedAt: HOLD_STARTED_AT,
+});
 
 const storeQrPayload = `foodlink://fridges/${SELECTED_FRIDGE.publicCode}/verify`;
 const pickupQrPayload = buildFridgeQrVerificationUrl(
@@ -215,13 +220,26 @@ const InventoryQrPrototypeScreen = ({navigation}: Props) => {
         </View>
 
         {storeConfirmed ? (
-          <InventoryLabelInstructionCard
-            deadlineLabel={LABEL_SAMPLE.deadlineLabel}
-            itemName={LABEL_SAMPLE.itemName}
-            labelCode={LABEL_SAMPLE.labelCode}
-            storageZone={LABEL_SAMPLE.storageZone}
-            testID="inventory-qr-label"
-          />
+          <>
+            <InventoryLabelInstructionCard
+              deadlineLabel={SAMPLE_STORAGE_POLICY.deadlineLabel}
+              itemName={LABEL_SAMPLE.itemName}
+              labelCode={LABEL_SAMPLE.labelCode}
+              storageZone={SAMPLE_STORAGE_POLICY.zoneLabel}
+              testID="inventory-qr-label"
+            />
+            <View style={styles.policyPanel}>
+              <Text style={styles.policyTitle}>보관 정책 안내</Text>
+              <Text style={styles.policyText}>
+                {SAMPLE_STORAGE_POLICY.guidance}
+              </Text>
+              {SAMPLE_STORAGE_POLICY.needsReview ? (
+                <Text style={styles.policyReviewText}>
+                  운영자 확인 대상입니다. 이 기준은 서비스 노출과 회수 판단용입니다.
+                </Text>
+              ) : null}
+            </View>
+          </>
         ) : (
           <View style={styles.emptyLabelPanel}>
             <Text style={styles.emptyLabelTitle}>라벨은 보관 인증 후 표시</Text>
@@ -484,6 +502,30 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 19,
     color: colors.textSecondary,
+  },
+  policyPanel: {
+    backgroundColor: colors.background,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    padding: 16,
+  },
+  policyTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: colors.textPrimary,
+  },
+  policyText: {
+    marginTop: 6,
+    fontSize: 13,
+    lineHeight: 19,
+    color: colors.textSecondary,
+  },
+  policyReviewText: {
+    marginTop: 8,
+    fontSize: 12,
+    lineHeight: 18,
+    color: '#92400E',
   },
 });
 

@@ -82,6 +82,13 @@ describe('InventoryQrPrototypeScreen', () => {
     expect(textContent).toContain('#0042');
     expect(textContent).toContain('토마토');
     expect(textContent).toContain('일반 구역');
+    expect(textContent).toContain('보관 정책 안내');
+    expect(textContent).toContain(
+      '품질과 상태에 따라 보관 가능 기간 차이가 커서 보수적인 회수 기준을 씁니다.',
+    );
+    expect(textContent).toContain(
+      '운영자 확인 대상입니다. 이 기준은 서비스 노출과 회수 판단용입니다.',
+    );
 
     await ReactTestRenderer.act(async () => {
       renderer?.unmount();
