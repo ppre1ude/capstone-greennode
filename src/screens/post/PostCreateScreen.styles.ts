@@ -150,6 +150,12 @@ export const styles = StyleSheet.create({
     color: colors.textPrimary,
     backgroundColor: colors.surface,
   },
+  fieldHelp: {
+    marginLeft: 4,
+    fontSize: 12,
+    lineHeight: 18,
+    color: colors.textTertiary,
+  },
   textArea: {
     height: 120,
     borderWidth: 1,

@@ -184,8 +184,8 @@ npm run mock:api
 - Post-MVP AI rejection reason 계약 정리
 - 주변 공유 냉장고 없음 상태를 위한 백엔드 필터 또는 fixture 검증
 - 실제 환경 성취 지표 API와 계산식 정의
-- `requested` 이후 `reserved`, `completed`, `cancelled`, `expired` 흐름 설계
-- 관리자 화면과 운영자 조정 기능 설계
+- Inventory/QR PRD v0 기반 `pending_store`, 30분 임시 선점, QR 보관/수령 확인 설계
+- 냉장고 운영자 화면과 운영자 조정 기능 설계
 
 ## 문서 지도
 
@@ -196,6 +196,7 @@ npm run mock:api
 | [docs/API_INTEGRATION_CONTRACT.md](./docs/API_INTEGRATION_CONTRACT.md) | API 접속, 요청/응답 계약, FCM 계약 |
 | [docs/VALIDATION_AND_BACKLOG.md](./docs/VALIDATION_AND_BACKLOG.md) | 실제 검증 결과와 다음 백로그 |
 | [docs/IMPLEMENTATION_STATUS.md](./docs/IMPLEMENTATION_STATUS.md) | 구현 상태 요약 |
+| [docs/INVENTORY_QR_PRD_V0.md](./docs/INVENTORY_QR_PRD_V0.md) | Post-MVP QR 인증, 30분 임시 선점, 냉장고 재고 운영 PRD |
 | [docs/DESIGN_SYSTEM.md](./docs/DESIGN_SYSTEM.md) | 디자인 토큰과 UI 가이드 |
 | [docs/AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md](./docs/AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md) | AI fixture와 카메라 QA 체크리스트 |
 

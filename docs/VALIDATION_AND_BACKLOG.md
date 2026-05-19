@@ -77,7 +77,7 @@
 - `requested`는 신청 접수이며 예약 확정이 아니다.
 - MVP에서 `requested` 이후 공급자 승인/거절 액션은 없다.
 - 첫 신청 이후 추가 신청은 막는다. 백엔드는 첫 신청 성공 시 `available -> requested`를 원자적으로 처리하고, 작성자 본인 신청은 403, 이미 `requested`인 나눔 식재료의 추가 신청은 409로 거절한다.
-- 관리자 화면은 제품 범위에는 포함하지만, 공유 냉장고/지도/신청 흐름이 안정화된 뒤 후순위로 제작한다. MVP 운영 제어는 수동 운영으로 시작한다.
+- 냉장고 운영자 화면은 제품 범위에는 포함하지만, 공유 냉장고/지도/신청 흐름이 안정화된 뒤 후순위로 제작한다. MVP 운영 제어는 수동 운영으로 시작한다.
 
 ### 홈과 지도 역할
 
@@ -291,16 +291,16 @@
 | 이메일 회원가입/로그인 | 구현됨 | 앱/API 흐름 검증됨 | 소셜 로그인, 이메일 인증 없음 |
 | 위치 등록/재설정 | 구현됨 | 권한 거부/재시도 단위 테스트, 일부 실기기 QA | 권한 영구 거부 등 추가 실기기 반복 검증 필요 |
 | AI 촬영/갤러리 분석 | 부분 구현, MVP 흐름 가능 | 실기기에서 `generate` 성공/실패 경로 검증 | false-positive는 서버/AI 계약 한계로 Post-MVP |
-| 나눔 식재료 등록 | 구현됨 | 실기기에서 `generate -> create -> home/detail/map` 검증 | 유통기한 수동 입력/OCR 등은 없음 |
-| 홈 주변 나눔 목록 | 구현됨 | 등록 후 홈 재조회, requested 제외 검증 | 서버 검색/추천/랭킹은 없음 |
+| 나눔 식재료 등록 | 구현됨 | 실기기에서 `generate -> create -> home/detail/map` 검증. 2026-05-18 등록 화면에서 권장 수령일 확인/수정과 지난 날짜 차단 추가 | OCR, 최대 허용 기간 등 백엔드 날짜 정책은 없음 |
+| 홈 주변 나눔 목록 | 구현됨 | 등록 후 홈 재조회, requested 제외 검증. 2026-05-18 식재료명/냉장고명 로컬 검색 추가 | 서버 검색/추천/랭킹은 없음 |
 | 나눔 상세/신청 | 구현됨 | 201/403/409, `available -> requested`, 중복 신청 방어 검증 | `reserved/completed/cancelled/expired` 흐름 없음 |
-| 공유 냉장고 지도 | 구현됨 | 지도 마커, 냉장고 선택, 내부 available 목록, 상세 이동 검증 | 냉장고 없음 fixture/API 검증 추가 필요 |
+| 공유 냉장고 지도 | 구현됨 | 지도 마커, 냉장고 선택, 내부 available 목록, 상세 이동 검증. 2026-05-18 선택 카드와 내부 목록을 단일 bottom sheet로 정리 | 냉장고 없음 fixture/API 검증 추가 필요 |
 | 공유 냉장고별 나눔 목록 | 구현됨 | 신청 후 내부 목록에서 즉시 제거되는 것까지 실기기 재검증 | 냉장고 inventory 개념은 없음 |
 | FCM/알림함 | 프론트 구현됨 | payload parsing, fallback, 로컬 알림함 테스트됨 | 실제 FCM 수신 QA 미완료. 다음 스프린트 P0 |
-| 검색 | 최소 구현 | 공유 냉장고 이름/주소 로컬 필터 | 나눔 식재료 검색/서버 검색 없음 |
+| 검색 | 최소 구현 | 홈 나눔 식재료명/냉장고명 로컬 필터, 지도 공유 냉장고 이름/주소 로컬 필터 | 서버 검색 없음 |
 | 채팅 | 알림함으로 축소 | mock 채팅 제거됨 | WebSocket 채팅은 보류 |
 | 통계/탄소 절감 | 목업 제거/정리됨 | 준비 중 상태 | 실제 지표 API/계산식 없음 |
-| 관리자/운영자 기능 | 미구현 | 없음 | MVP 범위 밖, 후속 설계 필요 |
+| 냉장고 운영자 기능 | 프로토타입/임시 진입점 | 정적 HTML 프로토타입, 프로필 임시 진입점, Android 에뮬레이터 렌더링 QA | 실제 operator API/권한/상태 변경은 없음 |
 
 현재 검증 완료된 공유 냉장고 관련 흐름:
 
@@ -316,9 +316,22 @@
   -> 홈/지도 목록에서 제외
 ```
 
+### 2026-05-18 백엔드 비의존 UX 후속 정리
+
+- 운영자 콘솔은 프로필 메뉴에서 `(실험)`으로 표시하고, 화면 상단에 읽기 전용 프로토타입 안내를 추가했다.
+- AI confidence, 알림, 신청 접수 copy는 실제 검증 범위보다 앞서가지 않도록 `AI 참고 신호`, `알림 준비`, `예약 확정 아님` 계열로 정리했다.
+- 홈 피드의 `전체보기`는 `지도에서 보기`로 바꾸고 Map 탭 이동을 연결했다.
+- 홈 피드 카드의 `방금 전` placeholder는 `createdAt` 기반 상대 시각으로 교체했다.
+- 지도 화면은 냉장고 선택 후 기존 캐러셀 카드와 내부 목록 패널이 동시에 떠 있지 않도록 단일 bottom sheet로 통합했다.
+- 등록 화면은 기본 3일 뒤 권장 수령일을 표시하고, 사용자가 `YYYY-MM-DD` 형식으로 수정한 값을 기존 `expirationDate` payload에 담아 냉장고 선택 화면으로 넘긴다.
+- 오늘 이전 날짜나 형식이 맞지 않는 날짜는 프론트에서 차단한다. 최대 허용 기간, 만료 항목 제외 기준은 백엔드 정책 결정으로 남긴다.
+- 카메라 권한이 없을 때 권한 다시 요청, 설정 열기, 갤러리 선택 대체 경로를 제공한다.
+- 홈 주변 나눔 목록에서 현재 불러온 available 나눔 식재료를 식재료명 또는 냉장고명으로 로컬 검색할 수 있게 했다.
+- 검증: `cameraScan.fallback`, `map.fridgePosts`, `postDetail.requestShare`, `home.nearbyRefresh`, `postPolicy`, `analysisResult`, `postCreate`, `postComplete`, `fridgeOperatorConsole`, `profile.operatorConsole` 회귀 테스트와 `tsc`, `lint`, `diff --check`.
+
 현재 부족한 점:
 
-1. 공유 냉장고 자체 운영 기능은 아직 없다. 예: 냉장고 inventory 확인, 운영자 승인, 보관 확인, 관리자 조정.
+1. 공유 냉장고 자체 운영 기능은 아직 없다. 예: 냉장고 inventory 확인, 냉장고 운영자 확인, 보관 확인, 현장 조정.
 2. `주변에 공유 냉장고 없음` 상태와 거리/지역 edge case는 추가 검증이 필요하다.
 3. 공유 냉장고와 연결된 실제 알림 claim은 FCM 실수신 QA가 끝나야 완료로 볼 수 있다.
 
@@ -353,8 +366,8 @@
 
 구현 후보:
 
-- 유통기한 수동 입력.
-- 기본값 정책 결정: 현재 기본 3일 유지 여부.
+- 권장 수령일 수동 입력. 2026-05-18 프론트 구현 완료.
+- 기본값 정책 결정: 현재 기본 3일 유지 여부. 2026-05-18 기준 기본값은 유지.
 - 날짜 validation.
 - 홈/상세 화면의 유통기한 표시 정리.
 
@@ -379,12 +392,12 @@
 
 구현 후보:
 
-- 홈 검색 기능.
+- 홈 검색 기능. 2026-05-18 현재 불러온 nearby 목록에 대한 로컬 검색 구현 완료.
 - `오늘 가져가기 좋은 재료` 같은 규칙 기반 추천 섹션.
 
 결정 필요:
 
-- 검색을 프론트 로컬 필터로 먼저 할지, 서버 검색 API로 할지.
+- 검색을 프론트 로컬 필터로 먼저 할지, 서버 검색 API로 할지. 2026-05-18 MVP는 로컬 필터로 시작하는 것으로 정리.
 - 랭킹을 이번 주 구현 대상으로 볼지, 데이터 수집/설계만 할지.
 - 현재 조회/신청/관심 데이터가 부족하므로 `랭킹`은 실제 인기처럼 보이지 않도록 주의한다.
 
@@ -417,25 +430,74 @@
 현재 구현:
 
 - 냉장고별 available 나눔 식재료 목록 조회.
+- 냉장고 운영자 검증 콘솔 정적 프로토타입: `docs/prototypes/fridge-operator-console.html`.
+- 앱 프로필 탭의 임시 진입점에서 냉장고 운영자 콘솔 테스트 화면으로 이동.
+- 바구니 후보 상태를 내부 개별 나눔 식재료 상태에서 계산하는 helper와 회귀 테스트.
+
+2026-05-19 제품 결정:
+
+- QR 인증, 냉장고 운영자 역할, 30분 임시 선점을 Post-MVP 방향으로 채택한다.
+- QR 인증의 상세 PRD는 [INVENTORY_QR_PRD_V0.md](./INVENTORY_QR_PRD_V0.md)를 기준으로 한다.
+- 냉장고 QR은 사용자의 action마다 새로 만드는 QR이 아니라 공유 냉장고마다 고정으로 붙는 QR이다.
+- QR 자체는 비밀 인증키가 아니며, 서버가 JWT, pending action, fridgeId, action별 제한 시간을 검증해 보관/수령 확인을 처리한다. 입고 대기는 10분, 수령 임시 선점은 30분이다.
+- QR 도입 후 공급자 등록은 `pending_store -> available`로 바뀐다. QR 보관 인증 전에는 홈/지도/냉장고 available 목록에 노출하지 않는다.
+- QR 도입 후 수요자 `requested`는 30분 임시 선점이 된다. 수령 QR 인증이 없고 30분이 지나면 available로 복원한다.
+- 라벨 스티커는 강하게 권장한다. 최소 라벨은 `라벨 코드`, 식재료명, 보관 구역, 만료/회수 기준 시각이다. 개인정보는 넣지 않는다.
+- 에틸렌 분리 구역은 MVP 블로커는 아니지만, 데이터 모델에는 `GENERAL` / `ETHYLENE_SEPARATED` 수준으로 포함한다.
 
 새로 정의할 inventory:
 
-- 실제 냉장고의 물리적 재고.
-- 칸/위치.
-- 수량.
-- 상태.
-- 운영자 관리.
+- 실제 공유 냉장고 안의 물리적 재고 상태.
+- 수요자-facing 목록이 아니라 **냉장고 운영자**가 점검하는 현장 운영 레이어.
+- 개별 나눔 식재료의 현장 상태, 권장 나눔 기한, 점검 필요 여부, 폐기/분실/수령 확인 이력.
+- 같은 촬영/보관 흐름에서 나온 여러 나눔 식재료를 묶어 보는 바구니 후보.
 
 이번 주 목표:
 
-- 바로 구현하지 않고 DB/도메인/화면 설계를 완료한다.
+- 바로 구현하지 않고 DB/도메인/API/화면 설계를 완료한다.
 - 현재 `GET /fridges/{id}/posts?status=available`와 별도 inventory 개념의 경계를 확정한다.
+- 보관 배치/바구니를 사용자-facing 신청 단위가 아니라 운영자-facing 물리 추적 묶음으로 설계한다.
+- 냉장고 운영자가 바꿀 수 있는 상태는 폐기, 분실/확인 필요, 수동 복원, 수동 조정처럼 운영 이벤트로 제한한다.
+- QR 스캐너/파서/검증 API를 프론트 독립 모듈로 분리하는 설계를 준비한다.
+
+현재 판단:
+
+- 사용자 등록/신청 단위는 계속 개별 **나눔 식재료**다.
+- inventory는 나눔 식재료 목록의 단순 확장이 아니라 냉장고 운영자용 현장 점검 레이어다.
+- 바구니 또는 보관 배치는 사용자-facing 신청 단위가 아니다. 채택하더라도 같은 등록/보관 흐름에서 나온 개별 나눔 식재료를 함께 찾고 점검하기 위한 grouping이다.
+- 바구니 상태는 별도 저장값보다 내부 나눔 식재료 상태에서 계산하는 방향으로 프론트 prototype helper에 반영했다.
+- QR 도입 후 `requested`의 사용자 문구는 `30분 동안 임시로 잡아뒀어요` 계열로 바꾸고, `예약 확정`은 계속 금지한다.
+
+2026-05-15 Android emulator 임시 콘솔 QA:
+
+- 환경: Android emulator `Medium_Phone_API_36.1` (`emulator-5554`), release APK, 로컬 mock API `localhost:8080`/emulator `10.0.2.2:8080`, QA 계정 `qa162158@example.com`.
+- 결과: 이메일 로그인 후 `내정보 -> 냉장고 운영자 콘솔` 임시 메뉴로 진입 가능.
+- 결과: `냉장고 상태`, `바구니 후보`, `개별 나눔 식재료 점검`, `상태 검증 규칙` 섹션 렌더링 확인.
+- 로그: QA 구간 logcat에서 `FATAL EXCEPTION`, `AndroidRuntime`, 앱 ANR 로그 없음.
+- 한계: 화면 데이터는 정적 fixture이며 operator 권한, 실제 inventory API, 상태 변경 저장, 바구니 채택 정책은 아직 연결되지 않음.
+- 증거: `temp/operator-console-profile-entry.png`, `temp/operator-console-screen.png`, `temp/operator-console-screen-lower.png`, `temp/operator-console-screen-rules.png`.
+
+DB/API 초안:
+
+- `fridge_operators`: 냉장고 운영자와 관리 가능한 공유 냉장고 연결.
+- `SharedFridge.publicCode`: 공유 냉장고별 고정 QR public code. MVP에서는 별도 회전 테이블을 두지 않는다.
+- `inventory_batches` 또는 `registration_batches`: 같은 촬영/보관 흐름에서 생성된 나눔 식재료 묶음. `fridgeId`, `createdBy`, `createdAt`, `sourceScanId` 정도만 최소 보관.
+- `posts` 또는 후속 `share_items`: 기존 개별 나눔 식재료에 `batchId`, `labelCode`, `storageZone`, `storeExpiresAt`, `requestExpiresAt`, `storageDeadlineAt`, `needsReview` 후보 필드 추가 검토.
+- `item_status_events`: 개별 나눔 식재료 상태 변경 이력. `itemId`, `fromStatus`, `toStatus`, `actorId`, `actorRole`, `reason`, `note`, `createdAt`.
+- `storage_policy_rules`: 품목/상태별 보관 구역과 서비스 노출/회수 기준.
+- `detections`: multi-object 감지 결과와 생성된 나눔 식재료 연결. `detectionId`, `boundingBox`, `detectedCropKo`, `freshnessLabel`, `confidenceScore`, `postId`.
+- 조회 후보: `GET /operator/fridges/{fridgeId}/inventory/summary`, `GET /operator/fridges/{fridgeId}/inventory/items`, `GET /operator/baskets/{basketId}`.
+- 변경 후보: `POST /operator/items/{postId}/status-events`로 `discarded`, `missing`, `completed`, `needsReview` 같은 운영자 처리 기록.
+- QR 후보: `POST /inventory/confirm-store`, `POST /inventory/confirm-pickup`.
 
 완료 기준:
 
 - inventory가 나눔 식재료 목록의 확장인지, 운영자 재고 관리인지 정의한다.
+- 보관 배치 채택 여부와 `batchId`의 의미를 확정한다.
+- 냉장고 운영자가 직접 바꿀 수 있는 상태와 상태 변경 이력 필드를 확정한다.
 - 필요한 DB 테이블/필드/API 초안을 만든다.
-- 프론트 화면 진입점과 MVP 이후 운영자 기능과의 연결 방식을 정한다.
+- 프론트 화면 진입점과 MVP 이후 냉장고 운영자 기능과의 연결 방식을 정한다.
+- QR 도입 시 현재 `POST /posts`가 바로 `available`을 만드는 계약을 바꿀지, 별도 vNext inventory endpoint로 분리할지 결정한다.
 
 ## 2026-05-08 subagent-driven Phase 1.5 QA 통합 결과
 
@@ -742,7 +804,7 @@
 | 최초 로그인 직후 동네 위치 미설정          | 정상 동작                  | 검증 계정 생성 직후 서버 응답과 `/auth/me`에서 `latitude = null`, `longitude = null` 확인.                                                                                                                                                                  | `GET /api/v1/auth/me`                                                                                                                                               | 유지                                                         |
 | 동네 위치 미설정 상태의 홈 화면            | 수정됨                     | 정상 UI 흐름에서는 위치 없는 유저가 `LocationSetup`으로 이동한다. 강제 진입 시에도 홈은 `/posts/nearby`를 호출하지 않고 위치 설정 CTA를 보여준다.                                                                                                           | `src/screens/home/HomeScreen.tsx`, `src/utils/locationGuard.ts`, `__tests__/locationGuard.test.ts`                                                                  | 에뮬레이터 강제 진입 QA                                      |
 | 동네 위치 미설정 상태의 지도 화면          | 수정됨                     | 지도 탭 강제 진입 시 `MapView`를 렌더링하지 않는다. 광주 전남대 기본 좌표 fallback과 반경 원 표시를 제거하고 위치 설정 CTA만 보여준다.                                                                                                                      | `src/screens/map/MapScreen.tsx`, `src/screens/map/MapScreen.styles.ts`, `src/utils/locationGuard.ts`                                                                | 에뮬레이터 강제 진입 QA                                      |
-| 동네 위치 미설정 상태의 검색 화면          | 미구현                     | 독립 검색 화면이 없다. 홈 검색 아이콘과 지도 검색 입력 UI만 있고 검색 플로우는 연결되어 있지 않다.                                                                                                                                                          | `src/screens/home/HomeScreen.tsx`, `src/screens/map/MapScreen.tsx`                                                                                                  | 검색 기능은 5번 미구현 기능 점검에서 백로그화                |
+| 동네 위치 미설정 상태의 검색 화면          | 부분 구현                  | 독립 검색 화면은 없다. 홈 나눔 식재료 검색은 현재 불러온 nearby 목록이 있을 때만 표시되고, 지도 검색 입력은 공유 냉장고 이름/주소를 로컬 필터링한다. 위치가 없으면 기존 위치 설정 CTA를 우선한다.                                                              | `src/screens/home/HomeScreen.tsx`, `src/screens/map/MapScreen.tsx`                                                                                                  | 서버 검색/독립 검색 화면은 후속 범위로 둔다                  |
 | 동네 위치 미설정 상태의 나눔 식재료 등록   | 수정됨                     | 홈/중앙 AI 스캔 진입점은 위치가 없으면 `CameraScan` 대신 `LocationSetup`으로 보낸다. `FridgeSelect`에 직접 진입해도 냉장고 API를 호출하지 않고 위치 설정 CTA를 표시한다.                                                                                    | `src/navigation/MainTab.tsx`, `src/screens/home/HomeScreen.tsx`, `src/screens/post/FridgeSelectScreen.tsx`, `src/utils/locationGuard.ts`                            | 에뮬레이터 강제 진입 QA                                      |
 | 최초 위치 등록 화면 분기                   | 정상 동작                  | 위치 없는 계정으로 로그인 후 앱이 `동네 설정` 화면으로 자연스럽게 이동했다.                                                                                                                                                                                 | UI 검증, `src/screens/auth/LoginEmailScreen.tsx`, `src/navigation/AppNavigator.tsx`                                                                                 | 유지                                                         |
 | 위치 등록 후 홈/지도/나눔 식재료 등록 반영 | 정상 동작                  | `이 위치로 설정하기` 후 `/auth/me`에 좌표가 저장됐다. 홈은 `내 동네`로 표시되고, 지도와 냉장고 선택 화면은 실제 냉장고 목록을 조회했다.                                                                                                                     | `PUT /api/v1/auth/me/location`, `HomeScreen`, `MapScreen`, `FridgeSelectScreen`                                                                                     | 유지                                                         |
@@ -831,7 +893,7 @@ MVP가 성공 케이스만 동작하는 상태인지, 실패 상황에서도 앱
 | 네트워크 끊김                   | 미흡                             | 공통 offline 상태가 없고, 화면별로 Alert 또는 로그만 남긴다. 홈/지도는 실패가 빈 상태처럼 보일 수 있다.                                                                                               | 공통 네트워크 에러 문구와 retry 패턴을 정한다.                                                    |
 | 중복 등록 방지                  | 부분 구현                        | `FridgeSelectScreen`은 `isSubmitting`과 ref 기반 re-entry guard로 같은 화면의 빠른 중복 제출을 막는다. 서버 idempotency는 아직 없다.                                                                  | 서버에도 idempotency key 또는 중복 방지 기준을 검토한다.                                          |
 | 큰 이미지 업로드                | 부분 구현                        | 갤러리 선택은 2048px 리사이즈, `quality: 0.8`, 8MB 초과 업로드 전 차단을 적용한다. 업로드 진행률은 아직 없다.                                                                                         | 실제 대용량 fixture로 차단 문구와 앱 멈춤 여부를 검증한다.                                        |
-| 카메라 권한 거부                | 미흡                             | 권한이 없으면 `카메라 권한이 필요합니다.` 문구만 보인다. 권한 재요청, 설정 이동, 갤러리 대체 버튼이 없다. 카메라 장치가 없을 때만 갤러리 fallback이 있다.                                             | 권한 거부 화면에 다시 요청/설정 열기/갤러리 선택을 제공한다.                                      |
+| 카메라 권한 거부                | 구현됨, 실기기 반복 검증 필요    | 2026-05-18 권한 없음 화면에 `권한 다시 요청`, `설정 열기`, `갤러리에서 선택하기`를 제공하도록 보강했다. 카메라 장치가 없을 때도 갤러리 fallback을 유지한다.                                             | 실제 Android 권한 거부/영구 거부 상태에서 재요청과 설정 이동 동작을 반복 검증한다.                 |
 | 위치 권한 거부                  | 구현됨                           | 2026-05-07 보강 후 권한 거부/영구 거부/위치 탐색 실패를 화면 상태로 분리했다. `설정 열기`, `다시 확인`, 좌표 없음 저장 비활성화를 제공한다.                                                         | 실제 기기/에뮬레이터 회귀 시나리오 유지                                                           |
 | 주변 냉장고 없음                | 구현됨, 실제 좌표 추가 검증 필요 | `FridgeSelectScreen`과 `MapScreen`에 빈 상태 문구가 있다. 실제 냉장고가 없는 좌표를 넣은 에뮬레이터 검증은 아직 하지 않았다.                                                                          | 테스트용 no-fridge 좌표 또는 fixture로 빈 상태를 재현한다.                                        |
 | 나눔 식재료 없음                | 구현됨                           | 1번 검증에서 홈 화면이 `아직 근처에 나눔이 없어요` 빈 상태를 표시했다.                                                                                                                                | 없음.                                                                                             |
@@ -1056,7 +1118,7 @@ docs/VALIDATION_AND_BACKLOG.md의 "3. AI 파이프라인 데이터 흐름 검증
 | 한 장 촬영 기본 흐름                    | 정상 동작                         | 현재 앱은 사진 1장을 `POST /api/v1/posts/generate`에 보내고, 결과 1개를 분석 결과/나눔 식재료 작성 화면으로 넘긴다. 홈 화면 문구도 `사진 한 장으로 나눔 가능 여부 확인`이다. | `CameraScanScreen.processImage()`, `generatePost()`, `HomeScreen` UI     | MVP 기본 흐름은 한 장 촬영으로 유지                              |
 | 한 장으로 충분한 케이스                 | 정책 결정 필요                    | 외관이 잘 보이는 단일 과일/채소, 포장 밖에서 상태를 충분히 볼 수 있는 식재료는 한 장 촬영으로 처리 가능하다. 현재 실제 검증도 단일 대표 객체 응답을 전제로 통과했다.         | `GenerateResult.detectedFruit`, `aiAnalysis.category`                    | 데모/검증 이미지는 단일 객체 중심으로 준비                       |
 | 한 장으로 어려운 케이스                 | 정책 결정 필요                    | 유통기한 라벨, 포장 내부 상태, 절단면, 냄새/촉감, 캔/불투명 포장, 어두움/흔들림/가림, 여러 음식이 섞인 사진은 한 장만으로 신뢰하기 어렵다.                                   | 현재 UI에는 보조 질문/추가 촬영 단계 없음                                | 낮은 confidence 또는 불확실 상태에서 재촬영/수동 수정으로 보낸다 |
-| 라벨/유통기한/내부 상태                 | 미구현                            | 앱은 유통기한을 이미지에서 읽지 않고 나눔 식재료 생성 시 기본 3일 후로 설정한다. 라벨 OCR, 포장 내부 상태 확인, 유통기한 수동 입력 필드는 없다.                              | `PostCreateScreen`의 `expDate + 3일`                                     | 유통기한 수동 입력 또는 라벨 사진/OCR은 다음 스프린트 후보       |
+| 라벨/유통기한/내부 상태                 | 부분 구현                         | 앱은 유통기한을 이미지에서 읽지 않는다. 2026-05-18부터 등록 화면에서 기본 3일 뒤 권장 수령일을 사용자가 확인/수정할 수 있고, 지난 날짜는 차단한다. 라벨 OCR, 포장 내부 상태 확인은 없다. | `PostCreateScreen`의 권장 수령일 입력 필드                                | 라벨 사진/OCR, 최대 허용 기간, 만료 제외 기준은 후속 계약 후보  |
 | 잘못 찍은 사진 재촬영 UI                | 부분 구현                         | 분석 결과 화면에는 `다시 촬영` 버튼이 있다. 촬영 실패 Alert는 갤러리 선택 대안을 제공한다. 분석 실패 Alert는 아직 서버 오류 문구 중심이다.                                   | `AnalysisResultScreen` footer, `CameraScanScreen` catch Alert            | 분석 실패 Alert를 재촬영/갤러리/수동 입력 액션형 대안으로 변경   |
 | AI confidence 표시/활용                 | 부분 구현                         | `confidenceScore`는 분석 결과/작성 화면에 표시되고 낮은 confidence는 `확인 필요`로 분기한다. 다만 재촬영 강제나 수동 입력 전용 CTA는 없다.                                   | `AiAnalysis.confidenceScore`, `AnalysisResultScreen`, `PostCreateScreen` | 낮은 confidence fixture로 실제 UX 검증                           |
 | confidence 낮을 때 등록 차단            | 정책 결정 완료                    | 낮은 confidence는 단독 등록 차단 사유로 보지 않고 `확인 필요`로 표시한다. 나눔 기준 미충족 신선도 등급만 `canShare=false`로 등록을 차단한다.                                 | `AnalysisResultScreen`, `postPolicy.needsAnalysisReview()`               | 확인 필요 상태에서 사용자 확인/수동 수정 UX 보강                 |
@@ -1083,7 +1145,7 @@ docs/VALIDATION_AND_BACKLOG.md의 "3. AI 파이프라인 데이터 흐름 검증
 1. 나눔 기준 미충족(`canShare=false`) 등록 차단을 `Stale` fixture로 회귀 검증한다.
 2. 낮은 confidence fixture로 `확인 필요` 상태와 작성 화면 표시를 검증한다.
 3. 분석 실패/촬영 실패 Alert를 `다시 촬영`, `갤러리에서 선택`, `수동 입력` 액션으로 바꾼다.
-4. 유통기한 기본 3일 자동값 대신 수동 입력 필드를 추가하거나, 최소한 작성 화면에서 수정 가능하게 만든다.
+4. 유통기한 기본 3일 자동값은 유지하되, 작성 화면에서 권장 수령일을 수정 가능하게 만들었다. 최대 허용 기간과 OCR은 후속으로 둔다.
 5. multi-object 검증용 이미지 세트를 준비한다: 단일 객체, 여러 객체, 흐림/어두움, 라벨/유통기한 포함, 포장 내부 미노출, 나눔 기준 미충족.
 6. API 초안에 `detections[]` 응답 계약을 추가하고, 대표 객체 1개 처리와 객체별 분리 등록 중 어느 UX가 맞는지 별도 검증한다.
 7. 완료: 에뮬레이터 셔터의 `Capture error TypeError: undefined is not a function`는 `usePhotoOutput().capturePhotoToFile()` 적용 후 사라졌고, 촬영 파일이 API로 전달됐다.
@@ -1176,8 +1238,8 @@ docs/VALIDATION_AND_BACKLOG.md의 "4. 한 장 촬영 UX와 multi-object 정책 �
 | 탄소 절감액               | 정리됨                         | 홈과 프로필의 고정 kg 값을 제거하고 `준비 중`으로 표시한다. 계산식/API는 없다.                                                                                                                                                                                       | 실제 지표를 넣으려면 계산식과 API 계약을 먼저 정의한다.                                                   |
 | 내 주변 실시간 나눔       | 부분 구현                      | `getNearbyPosts()`로 실제 주변 available 나눔 식재료를 가져와 카드로 표시한다. 백엔드 기준 `/posts/nearby`는 requested를 자동 제외한다. 실시간 구독, pagination, `전체보기` 동작은 없다.                                                                             | 신청 성공 후 requested 항목이 홈에서 사라지는지 프론트 연동/QA.                                           |
 | 홈 데이터 없음 상태       | 구현됨                         | 나눔 식재료가 없으면 `아직 근처에 나눔이 없어요` 빈 상태를 표시한다.                                                                                                                                                                                                 | API 실패와 진짜 빈 상태를 구분하는 에러 UI 추가.                                                          |
-| 검색 기능                 | 부분 구현                      | 홈 검색 아이콘은 지도 탭으로 이동하고, 지도 검색 입력은 공유 냉장고 이름/주소 로컬 필터로 동작한다. 서버 OpenAPI에는 검색 엔드포인트가 없다.                                                                                                                         | 나눔 식재료/동네 서버 검색은 후속 범위로 분리.                                                            |
-| 검색 결과 없음            | 구현됨                         | MVP 검색은 지도 공유 냉장고 이름/주소 로컬 필터로 제한했다. 결과 없음 상태와 검색 초기화가 있다.                                                                                                                                                                     | 나눔 식재료/동네 서버 검색은 후속 범위로 분리.                                                            |
+| 검색 기능                 | 부분 구현                      | 홈은 현재 불러온 주변 나눔 식재료를 식재료명/냉장고명으로 로컬 필터링한다. 홈 지도 아이콘은 지도 탭으로 이동하고, 지도 검색 입력은 공유 냉장고 이름/주소 로컬 필터로 동작한다. 서버 OpenAPI에는 검색 엔드포인트가 없다.                                                        | 서버 검색/독립 검색 화면은 후속 범위로 분리.                                                             |
+| 검색 결과 없음            | 구현됨                         | 홈 나눔 식재료 로컬 검색과 지도 공유 냉장고 로컬 검색 모두 결과 없음 상태와 검색 초기화를 제공한다.                                                                                                                                                                  | 서버 검색/독립 검색 화면은 후속 범위로 분리.                                                             |
 | 푸쉬 알림                 | 프론트 코드 연동 완료, 실제 수신 QA 필요 | Firebase Messaging 의존성, Android 알림 권한, FCM 토큰 등록이 있다. `share_created`, `share_requested` foreground/background/opened/initial handler를 구현했고, payload는 문자열 + camelCase(`type`, `postId`, `requestId`, `fruitName`, `fridgeName`)로 검증한다. Firebase 설정이 없는 QA/release 빌드에서는 알림 handler와 FCM 토큰 등록을 안전하게 건너뛴다. 알림함은 로컬 수신 기록/빈 상태 중심이며 읽음 상태 API는 없다. | 실제 기기에서 foreground/background/terminated 수신과 알림 탭 라우팅을 검증한다. |
 | 유저 프로필               | 부분 구현                      | 닉네임/이메일은 실제 유저 정보를 표시한다. 프로필 수정, 메뉴 이동, 내 나눔/관심/받은 나눔은 연결되어 있지 않다.                                                                                                                                                      | 프로필 수정 또는 내 나눔 내역 중 하나만 우선 연결.                                                        |
 | 유저 통계                 | 정리됨                         | 신선도 온도, 포인트, 탄소 절감량의 하드코딩 숫자를 제거하고 `준비 중` 상태로 표시한다.                                                                                                                                                                               | 실제 지표를 넣으려면 계산식과 API 계약을 먼저 정의.                                                       |
@@ -1476,13 +1538,13 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
 - 분류: 미구현
 - 우선순위: P2
 - 배경: 홈 검색 아이콘과 지도 검색 입력은 있지만 동작이 없다.
-- 현재 동작: 홈 검색 아이콘은 지도 탭으로 이동하고, 지도 검색 입력은 현재 불러온 공유 냉장고의 이름/주소를 로컬 필터링한다.
-- 기대 동작: MVP에서는 서버 검색 없이 공유 냉장고명/주소 로컬 필터를 제공한다. 나눔 식재료/동네 서버 검색은 후속 범위로 분리한다.
+- 현재 동작: 홈은 현재 불러온 주변 나눔 식재료를 식재료명/냉장고명으로 로컬 필터링한다. 홈 지도 아이콘은 지도 탭으로 이동하고, 지도 검색 입력은 현재 불러온 공유 냉장고의 이름/주소를 로컬 필터링한다.
+- 기대 동작: MVP에서는 서버 검색 없이 현재 로딩된 나눔 식재료와 공유 냉장고에 대한 로컬 필터를 제공한다. 동네/서버 검색은 후속 범위로 분리한다.
 - Acceptance Criteria:
-  - [x] 검색 대상은 MVP에서 공유 냉장고 이름/주소로 제한한다.
+  - [x] 검색 대상은 MVP에서 현재 불러온 나눔 식재료명/냉장고명과 공유 냉장고 이름/주소로 제한한다.
   - [x] 결과 없음 상태가 표시된다.
   - [x] 홈 검색 affordance는 지도 검색 진입점으로 연결한다.
-- 검증 방법: `filterFridges` 단위 테스트, 검색어 입력 QA, 결과 있음/없음 상태 확인
+- 검증 방법: `filterFridges` 단위 테스트, 홈 검색 회귀 테스트, 검색어 입력 QA, 결과 있음/없음 상태 확인
 - 관련 파일/화면/API: `HomeScreen`, `MapScreen`, `fridgeSearch`
 
 ## 목업 통계와 탄소 절감 표시 정리
@@ -1542,7 +1604,7 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
 - WebSocket 기반 실시간 채팅: 서버 계약과 앱 구조가 없으므로 보류. `알림함` 또는 `나눔 신청하기`로 축소한다.
 - 소셜 로그인 전체 구현: 이메일 로그인 MVP가 동작하므로 우선순위 낮음. 버튼을 숨기거나 준비 중으로 명확히 둔다.
 - 이메일 verification 전체 예외 케이스: 인증 메일/OTP 서버 계약이 없어 보류.
-- 냉장고 내부 inventory: 별도 재고 관리 개념은 보류한다. 단, 백엔드가 냉장고별 available 나눔 식재료 조회 API를 구현했고, 프론트는 지도 선택 냉장고 내부 목록으로 연동했다. 별도 inventory/관리 기능은 후속 범위다.
+- 냉장고 내부 inventory: 별도 재고 관리 개념은 보류한다. 단, 백엔드가 냉장고별 available 나눔 식재료 조회 API를 구현했고, 프론트는 지도 선택 냉장고 내부 목록으로 연동했다. 별도 inventory/냉장고 운영자 기능은 후속 범위다.
 
 ### Codex 작업 지시 예시
 

@@ -31,6 +31,11 @@ import { useFeedRefreshStore } from '@/store/feedRefreshStore';
 import type { Post } from '@/types';
 import { getApiErrorMessage } from '@/utils/apiError';
 import {
+  formatInventoryHoldRemaining,
+  getInventoryHoldRemainingMs,
+  isInventoryHoldExpired,
+} from '@/features/inventory/holdPolicy';
+import {
   getConfidencePercent,
   getPostDisplayName,
   getPostStatusLabel,
@@ -51,6 +56,9 @@ const getErrorStatus = (error: unknown): number | null => {
   return typeof response?.status === 'number' ? response.status : null;
 };
 
+const isValidDateInput = (value?: string | null): value is string =>
+  Boolean(value && Number.isFinite(new Date(value).getTime()));
+
 const PostDetailScreen = ({ route, navigation }: Props) => {
   const { postId } = route.params;
   const user = useAuthStore(state => state.user);
@@ -62,6 +70,7 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isRequesting, setIsRequesting] = useState(false);
+  const [currentTimeMs, setCurrentTimeMs] = useState(() => Date.now());
 
   const fetchPostDetail = useCallback(async () => {
     try {
@@ -87,6 +96,19 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
   useEffect(() => {
     fetchPostDetail();
   }, [fetchPostDetail]);
+
+  useEffect(() => {
+    if (post?.status !== 'requested' || !post.requestExpiresAt) {
+      return;
+    }
+
+    setCurrentTimeMs(Date.now());
+    const timerId = setInterval(() => {
+      setCurrentTimeMs(Date.now());
+    }, 1000);
+
+    return () => clearInterval(timerId);
+  }, [post?.requestExpiresAt, post?.status]);
 
   const handleDelete = () => {
     Alert.alert('나눔 취소', '정말로 이 나눔을 취소(삭제)하시겠습니까?', [
@@ -174,11 +196,33 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
   const confidencePercent = getConfidencePercent(post.confidenceScore);
   const statusLabel = getPostStatusLabel(post.status);
   const canRequestShare = !isMyPost && post.status === 'available';
+  const canConfirmPickup = !isMyPost && post.status === 'requested';
   const requestButtonLabel = isRequesting
     ? '신청 중...'
     : canRequestShare
     ? '나눔 신청하기'
     : statusLabel;
+  const requestNotice =
+    post.status === 'available'
+      ? '신청 접수는 예약 확정이 아니에요.'
+      : post.status === 'requested'
+      ? '신청이 접수된 상태이며 예약 확정은 아니에요.'
+      : null;
+  const requestExpiresAt =
+    post.status === 'requested' && isValidDateInput(post.requestExpiresAt)
+      ? post.requestExpiresAt
+      : null;
+  const isRequestHoldExpired = requestExpiresAt
+    ? isInventoryHoldExpired(requestExpiresAt, currentTimeMs)
+    : false;
+  const requestHoldNotice =
+    requestExpiresAt
+      ? isRequestHoldExpired
+        ? '수령 제한 시간이 지났어요. 목록을 새로고침하면 상태가 갱신됩니다.'
+        : `수령까지 남은 시간 ${formatInventoryHoldRemaining(
+            getInventoryHoldRemainingMs(requestExpiresAt, currentTimeMs),
+          )}`
+      : null;
   const daysLeft = Math.ceil(
     (new Date(post.expirationDate).getTime() - new Date().getTime()) /
       (1000 * 3600 * 24),
@@ -234,7 +278,7 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
               <View>
                 <Text style={styles.infoLabel}>남은 기한</Text>
                 <Text style={styles.infoValue}>
-                  {daysLeft > 0 ? `약 ${daysLeft}일` : '기한 만료'}
+                  {daysLeft > 0 ? `약 ${daysLeft}일` : '권장일 지남'}
                 </Text>
               </View>
             </View>
@@ -251,8 +295,8 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
           <Text style={styles.sectionTitle}>AI 분석 정보</Text>
           <Text style={styles.description}>
             {confidencePercent != null
-              ? `AI 신뢰도 ${confidencePercent}%로 ${quality.label} 상태로 확인됐어요.`
-              : `${quality.label} 상태로 확인됐어요.`}
+              ? `AI 참고 신호는 ${confidencePercent}%이며, 실제 상태는 수령 전 확인이 필요해요.`
+              : 'AI 분석은 참고용이며, 실제 상태는 수령 전 확인이 필요해요.'}
           </Text>
         </View>
       </ScrollView>
@@ -260,6 +304,18 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
       {/* 하단 CTA (내가 쓴 글이 아닐 경우 채팅하기 등) */}
       {!isMyPost && (
         <View style={styles.footer}>
+          {requestNotice && (
+            <Text style={styles.requestNotice}>{requestNotice}</Text>
+          )}
+          {requestHoldNotice && (
+            <Text
+              style={[
+                styles.requestHoldNotice,
+                isRequestHoldExpired && styles.requestHoldNoticeExpired,
+              ]}>
+              {requestHoldNotice}
+            </Text>
+          )}
           <TouchableOpacity
             style={[
               styles.chatButton,
@@ -269,6 +325,18 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
             disabled={!canRequestShare || isRequesting}>
             <Text style={styles.chatButtonText}>{requestButtonLabel}</Text>
           </TouchableOpacity>
+          {canConfirmPickup && (
+            <TouchableOpacity
+              style={styles.pickupQrButton}
+              onPress={() =>
+                navigation.navigate('InventoryQrPrototype', {
+                  mode: 'pickup',
+                  postId: post.id,
+                })
+              }>
+              <Text style={styles.pickupQrButtonText}>수령 QR 인증</Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
     </View>

@@ -38,6 +38,16 @@ export type RootStackParamList = {
   PostCreate: {result: GenerateResult; imageUri: string};
   PostComplete: {postId: number};
   PostDetail: {postId: number};
+  FridgeOperatorConsole: undefined;
+  InventoryQrPrototype:
+    | {
+        mode?: 'store' | 'pickup';
+        postId?: number;
+        fridgePublicCode?: string;
+        fridgeName?: string;
+        fridgeLocation?: string;
+      }
+    | undefined;
   FridgeSelect: {
     postData?: Omit<PostCreateData, 'fridgeId'>;
     qualityCategory?: string;

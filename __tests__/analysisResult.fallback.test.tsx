@@ -115,6 +115,9 @@ describe('AnalysisResultScreen fallback QA', () => {
       renderer.root.findAllByProps({children: '확인 필요'}),
     ).not.toHaveLength(0);
     expect(
+      renderer.root.findAllByProps({children: 'AI 참고 신호'}),
+    ).not.toHaveLength(0);
+    expect(
       renderer.root.findAllByProps({
         children:
           'AI가 나눔 가능으로 분석했지만 실제 상태를 직접 확인한 뒤 등록해주세요.',

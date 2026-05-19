@@ -80,7 +80,7 @@ const PostCompleteScreen = ({route, navigation}: Props) => {
           style={[styles.resultContent, {opacity: opacityAnim}]}>
           <Text style={styles.title}>나눔 등록 완료!</Text>
           <Text style={styles.subtitle}>
-            선택하신 냉장고 주변 이웃들에게{'\n'}나눔 알림(푸시)이 전송되었습니다.
+            선택하신 냉장고 주변 이웃들에게{'\n'}나눔 알림을 보낼 준비를 했어요.
           </Text>
 
           {/* 알림 카드 */}
@@ -88,7 +88,7 @@ const PostCompleteScreen = ({route, navigation}: Props) => {
             <View style={styles.pushHeader}>
               <Text style={styles.pushIcon}>🔔</Text>
               <Text style={styles.pushAppName}>FoodLink</Text>
-              <Text style={styles.pushTime}>방금 전</Text>
+              <Text style={styles.pushTime}>등록 직후</Text>
             </View>
             <Text style={styles.pushTitle}>새로운 나눔이 등록되었어요!</Text>
             <Text style={styles.pushBody}>근처 공유 냉장고에 나눔 식재료가 등록되었습니다.</Text>
@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     marginBottom: 48,
   },
-  // 푸시 알림 모의 UI
+  // 알림 안내 미리보기 UI
   pushCard: {
     backgroundColor: 'rgba(255,255,255,0.95)',
     borderRadius: 16,

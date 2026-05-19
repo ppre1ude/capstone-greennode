@@ -135,6 +135,22 @@ export const styles = StyleSheet.create({
     borderTopColor: colors.borderLight,
     backgroundColor: '#FFFFFF',
   },
+  requestNotice: {
+    marginBottom: 10,
+    fontSize: 12,
+    color: colors.textSecondary,
+    textAlign: 'center',
+  },
+  requestHoldNotice: {
+    marginBottom: 12,
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.primary,
+    textAlign: 'center',
+  },
+  requestHoldNoticeExpired: {
+    color: colors.error,
+  },
   chatButton: {
     height: 56,
     backgroundColor: colors.primary,
@@ -149,5 +165,20 @@ export const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
+  },
+  pickupQrButton: {
+    height: 48,
+    marginTop: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+  },
+  pickupQrButtonText: {
+    color: colors.primary,
+    fontSize: 15,
+    fontWeight: '800',
   },
 });

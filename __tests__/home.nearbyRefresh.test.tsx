@@ -1,4 +1,5 @@
 import React from 'react';
+import { Text, TouchableOpacity } from 'react-native';
 import ReactTestRenderer from 'react-test-renderer';
 import HomeScreen from '@/screens/home/HomeScreen';
 import { getNearbyPosts } from '@/api/posts';
@@ -36,6 +37,14 @@ jest.mock('@/api/posts', () => ({
 const mockedGetNearbyPosts = getNearbyPosts as jest.MockedFunction<
   typeof getNearbyPosts
 >;
+
+const findButtonByText = (
+  renderer: ReactTestRenderer.ReactTestRenderer,
+  label: string,
+) =>
+  renderer.root.findAllByType(TouchableOpacity).find(button =>
+    button.findAllByType(Text).some(textNode => textNode.props.children === label),
+  );
 
 describe('HomeScreen nearby post refresh', () => {
   beforeEach(() => {
@@ -140,6 +149,93 @@ describe('HomeScreen nearby post refresh', () => {
 
     expect(mockedGetNearbyPosts).toHaveBeenCalledTimes(2);
     expect(renderer?.root.findAllByProps({ children: '사과' })).toHaveLength(0);
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
+  it('uses the feed header action to open the map tab', async () => {
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(<HomeScreen />);
+    });
+
+    const mapButton = findButtonByText(renderer!, '지도에서 보기');
+
+    await ReactTestRenderer.act(async () => {
+      mapButton?.props.onPress();
+    });
+
+    expect(mockNavigate).toHaveBeenCalledWith('Map');
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
+  it('filters nearby posts locally by crop or fridge name', async () => {
+    mockedGetNearbyPosts.mockResolvedValue({
+      success: true,
+      message: 'ok',
+      data: [
+        {
+          id: 10,
+          fridgeId: 1,
+          fridgeName: '전남대 공유 냉장고',
+          detectedFruit: 'apple',
+          detectedFruitKo: '사과',
+          freshnessLabel: 'Fresh',
+          imageUrl: '/static/posts/10.jpg',
+          expirationDate: '2026-05-08',
+          status: 'available',
+          createdAt: '2026-05-06T00:00:00Z',
+        },
+        {
+          id: 11,
+          fridgeId: 2,
+          fridgeName: '충장로 공유 냉장고',
+          detectedFruit: 'banana',
+          detectedFruitKo: '바나나',
+          freshnessLabel: 'Mid',
+          imageUrl: '/static/posts/11.jpg',
+          expirationDate: '2026-05-08',
+          status: 'available',
+          createdAt: '2026-05-06T00:00:00Z',
+        },
+      ],
+    });
+
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(<HomeScreen />);
+    });
+
+    const searchInput = renderer!.root.findByProps({
+      placeholder: '나눔 식재료 검색',
+    });
+
+    await ReactTestRenderer.act(async () => {
+      searchInput.props.onChangeText('바나나');
+    });
+
+    expect(renderer!.root.findAllByProps({children: '바나나'})).not.toHaveLength(
+      0,
+    );
+    expect(renderer!.root.findAllByProps({children: '사과'})).toHaveLength(0);
+    expect(
+      renderer!.root.findAllByProps({children: '검색 결과 1건'}),
+    ).not.toHaveLength(0);
+
+    await ReactTestRenderer.act(async () => {
+      searchInput.props.onChangeText('없는재료');
+    });
+
+    expect(
+      renderer!.root.findAllByProps({children: '검색 결과가 없습니다'}),
+    ).not.toHaveLength(0);
 
     await ReactTestRenderer.act(async () => {
       renderer?.unmount();

@@ -126,7 +126,7 @@ const AnalysisResultScreen = ({ route, navigation }: Props) => {
           </View>
 
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>AI 신뢰도</Text>
+            <Text style={styles.infoLabel}>AI 참고 신호</Text>
             <Text style={styles.infoValue}>
               {confidencePercent != null ? `${confidencePercent}%` : '미제공'}
             </Text>

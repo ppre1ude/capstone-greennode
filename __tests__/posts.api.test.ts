@@ -201,6 +201,43 @@ describe('posts API contract', () => {
     expect(response.data?.id).toBe(10);
   });
 
+  it('passes fridge QR flow through post creation without changing the endpoint', async () => {
+    const postData = {
+      fridgeId: 1,
+      expirationDate: '2026-05-08',
+      imageToken: 'image-token-1',
+      flow: 'fridge_qr' as const,
+    };
+
+    testGlobal.fetch.mockResolvedValue({
+      ok: true,
+      status: 201,
+      json: async () => ({
+        success: true,
+        message: 'pending store created',
+        data: {
+          id: 11,
+          fridgeId: 1,
+          authorId: 1,
+          imageUrl: '/static/posts/11.jpg',
+          expirationDate: '2026-05-08',
+          status: 'pending_store',
+          createdAt: '2026-05-06T00:00:00Z',
+          updatedAt: '2026-05-06T00:00:00Z',
+        },
+      }),
+    } satisfies MockFetchResponse);
+
+    const response = await createPost(postData);
+    const [, init] = testGlobal.fetch.mock.calls[0];
+    const body = init.body as string;
+
+    expect(JSON.parse(decodeURIComponent(body.slice('data='.length)))).toEqual(
+      postData,
+    );
+    expect(response.data?.status).toBe('pending_store');
+  });
+
   it('preserves server error status and message when post creation fails', async () => {
     const errorBody = {
       success: false,
@@ -249,6 +286,7 @@ describe('posts API contract', () => {
             imageUrl: '/static/posts/10.jpg',
             expirationDate: '2026-05-08',
             status: 'requested',
+            requestExpiresAt: '2026-05-19T14:00:00Z',
             createdAt: '2026-05-06T00:00:00Z',
             updatedAt: '2026-05-06T00:00:00Z',
           },
@@ -263,6 +301,9 @@ describe('posts API contract', () => {
     );
     expect(response.data?.request.id).toBe(1);
     expect(response.data?.post.status).toBe('requested');
+    expect(response.data?.post.requestExpiresAt).toBe(
+      '2026-05-19T14:00:00Z',
+    );
   });
 
   it('builds absolute image URLs from server relative paths', () => {
