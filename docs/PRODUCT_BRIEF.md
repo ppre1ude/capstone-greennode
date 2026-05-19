@@ -56,7 +56,7 @@ FoodLink의 핵심 가치는 남는 식재료 처리의 귀찮음과 죄책감�
 
 아래 항목은 제품 범위에는 포함되지만 MVP 구현 범위에서는 제외한다.
 
-- QR 코드, 비밀번호 토큰, 보관 사진, 냉장고 운영자 확인 기반 실제 보관 검증
+- QR 코드, 비밀번호 토큰, 보관 사진, 냉장고 운영자 확인 기반 실제 보관 검증. QR 기반 보관/수령 검증은 [INVENTORY_QR_PRD_V0.md](./INVENTORY_QR_PRD_V0.md)에서 Post-MVP 방향으로 채택했다.
 - `reserved`, `completed`, `cancelled`, `expired`의 전체 앱 플로우
 - 냉장고 운영자 화면. 초기 운영 제어는 수동 운영으로 시작하고, 공유 냉장고/지도/신청 흐름이 안정화된 뒤 현장 점검 콘솔로 설계한다.
 - WebSocket 기반 실시간 채팅
@@ -76,6 +76,21 @@ FoodLink의 핵심 가치는 남는 식재료 처리의 귀찮음과 죄책감�
 
 `나눔 신청`의 첫 신청 잠금 정책은 현재 제품 가정이다. 기존 회의에서 최종 확정이 보류된 항목이므로, 기획자가 다른 결정을 내리면 이 문서와 [VALIDATION_AND_BACKLOG.md](./VALIDATION_AND_BACKLOG.md)에 충돌 기준과 변경 이유를 함께 남긴다.
 백엔드 Phase 1.5는 이 제품 가정에 맞춰 첫 신청 접수 후 `requested`로 전환하고, 작성자 본인 신청은 403, 중복/경합 신청은 409로 거절하도록 구현했다.
+
+## Post-MVP Inventory And QR Direction
+
+2026-05-19 기획 결정으로 공유 냉장고의 QR 인증, 냉장고 운영자 역할, 30분 임시 선점 흐름을 Post-MVP 방향으로 채택했다. 현재 MVP의 `available -> requested` 계약은 유지하지만, QR 흐름이 도입되면 `requested`는 단순 신청 접수가 아니라 30분 동안 다른 사용자의 신청을 막는 임시 선점 상태가 된다.
+
+핵심 방향:
+
+- 공급자는 AI 분석과 냉장고 선택 후 바로 public `available`을 만들지 않고 `pending_store` 상태에서 시작한다.
+- 공급자가 선택한 공유 냉장고의 QR을 10분 안에 스캔하면 실제 보관 확인이 끝나고, 그때부터 나눔 식재료가 available 목록에 노출된다.
+- 수요자가 나눔 신청을 하면 30분 임시 선점이 걸리고, 수요자는 냉장고 앞에서 QR을 스캔해 수령 확인을 완료한다.
+- QR은 냉장고를 식별하는 고정 QR이며, 실제 인증은 서버가 JWT, pending action, fridgeId, action별 제한 시간을 검증해서 처리한다.
+- 라벨 스티커는 강하게 권장한다. QR은 냉장고 앞 인증이고, 라벨은 냉장고 안에서 물건을 찾고 운영자가 점검하기 위한 장치다.
+- 에틸렌 분리 구역은 MVP 블로커는 아니지만, `GENERAL` / `ETHYLENE_SEPARATED` 수준의 보관 구역 정책을 데이터 모델에 포함한다.
+
+상세 PRD는 [INVENTORY_QR_PRD_V0.md](./INVENTORY_QR_PRD_V0.md)를 기준으로 한다.
 
 ## Product Loops
 
@@ -218,3 +233,4 @@ MVP에서 공급자는 `requested` 이후 별도 승인 행동을 하지 않는�
 | API 연동 계약 | [API_INTEGRATION_CONTRACT.md](./API_INTEGRATION_CONTRACT.md) | 백엔드 API 명세 및 연동 방법      |
 | 검증/백로그   | [VALIDATION_AND_BACKLOG.md](./VALIDATION_AND_BACKLOG.md)     | MVP 검증 결과와 다음 작업         |
 | 디자인 시스템 | [DESIGN_SYSTEM.md](./DESIGN_SYSTEM.md)                       | 컬러/타이포그래피 토큰, DS 컴포넌트 레이어, UI 마이그레이션 규칙 |
+| Inventory/QR PRD | [INVENTORY_QR_PRD_V0.md](./INVENTORY_QR_PRD_V0.md)         | QR 인증, 30분 임시 선점, 냉장고 재고 운영 v0 |

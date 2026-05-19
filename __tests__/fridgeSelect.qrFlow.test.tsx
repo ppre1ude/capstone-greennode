@@ -1,0 +1,147 @@
+import React from 'react';
+import {Text, TouchableOpacity} from 'react-native';
+import ReactTestRenderer from 'react-test-renderer';
+import {getAvailableFridges} from '@/api/fridges';
+import {createPost} from '@/api/posts';
+import FridgeSelectScreen from '@/screens/post/FridgeSelectScreen';
+import {useAuthStore} from '@/store/authStore';
+import type {Fridge, Post} from '@/types';
+
+jest.mock('@/api/fridges', () => ({
+  getAvailableFridges: jest.fn(),
+}));
+
+jest.mock('@/api/posts', () => ({
+  createPost: jest.fn(),
+}));
+
+const mockedGetAvailableFridges = getAvailableFridges as jest.MockedFunction<
+  typeof getAvailableFridges
+>;
+const mockedCreatePost = createPost as jest.MockedFunction<typeof createPost>;
+
+const findButtonByText = (
+  renderer: ReactTestRenderer.ReactTestRenderer,
+  label: string,
+) =>
+  renderer.root.findAllByType(TouchableOpacity).find(button =>
+    button.findAllByType(Text).some(textNode => {
+      const children = textNode.props.children;
+      return Array.isArray(children)
+        ? children.join('') === label
+        : children === label;
+    }),
+  );
+
+const fridge: Fridge = {
+  id: 1,
+  name: '광주역 앞 공유냉장고',
+  address: '광주 북구 중흥동',
+  publicCode: 'GJ-STATION-001',
+  latitude: 35.1601,
+  longitude: 126.9123,
+  isActive: true,
+  distance: 0.42,
+};
+
+const createdPost: Post = {
+  id: 55,
+  fridgeId: 1,
+  authorId: 2,
+  detectedFruit: 'banana',
+  detectedFruitKo: '바나나',
+  freshnessLabel: 'Fresh',
+  confidenceScore: 0.92,
+  imageUrl: '/static/posts/55.jpg',
+  expirationDate: '2026-05-24',
+  status: 'pending_store',
+  createdAt: '2026-05-20T00:00:00Z',
+  updatedAt: '2026-05-20T00:00:00Z',
+};
+
+describe('FridgeSelectScreen QR flow', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    useAuthStore.setState({
+      user: {
+        id: 2,
+        email: 'supplier@example.com',
+        nickname: '공급자',
+        profileImageUrl: null,
+        latitude: 35.1595,
+        longitude: 126.9132,
+        fcmToken: null,
+        isActive: true,
+        createdAt: '2026-05-20T00:00:00Z',
+        updatedAt: '2026-05-20T00:00:00Z',
+      },
+      isLoggedIn: true,
+      hasLocation: true,
+    });
+    mockedGetAvailableFridges.mockResolvedValue({
+      success: true,
+      message: 'ok',
+      data: [fridge],
+    });
+    mockedCreatePost.mockResolvedValue({
+      success: true,
+      message: 'ok',
+      data: createdPost,
+    });
+  });
+
+  it('creates a pending-store post and opens store QR confirmation', async () => {
+    const navigation = {
+      goBack: jest.fn(),
+      navigate: jest.fn(),
+      replace: jest.fn(),
+    };
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(
+        <FridgeSelectScreen
+          navigation={navigation as never}
+          route={{
+            params: {
+              postData: {
+                imageToken: 'image-token',
+                expirationDate: '2026-05-24',
+              },
+              qualityCategory: 'Fresh',
+              qualityCanShare: true,
+            },
+          } as never}
+        />,
+      );
+      await Promise.resolve();
+    });
+
+    await ReactTestRenderer.act(async () => {
+      findButtonByText(renderer!, '광주역 앞 공유냉장고')?.props.onPress();
+    });
+
+    await ReactTestRenderer.act(async () => {
+      findButtonByText(renderer!, 'QR 입고로 등록하기')?.props.onPress();
+      await Promise.resolve();
+    });
+
+    expect(mockedCreatePost).toHaveBeenCalledWith({
+      imageToken: 'image-token',
+      expirationDate: '2026-05-24',
+      fridgeId: 1,
+      flow: 'fridge_qr',
+    });
+    expect(navigation.replace).toHaveBeenCalledWith('InventoryQrPrototype', {
+      mode: 'store',
+      postId: 55,
+      fridgePublicCode: 'GJ-STATION-001',
+      fridgeName: '광주역 앞 공유냉장고',
+      fridgeLocation: '광주 북구 중흥동',
+    });
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+});

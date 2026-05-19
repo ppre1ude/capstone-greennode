@@ -205,12 +205,20 @@ export const getPostRelativeTimeLabel = (
 
 export const getPostStatusLabel = (status?: string | null): string => {
   switch (status) {
+    case 'pending_store':
+      return '입고 대기';
     case 'available':
       return '나눔 가능';
     case 'requested':
       return '신청 접수';
     case 'completed':
       return '나눔 완료';
+    case 'expired':
+      return '보관 만료';
+    case 'disposed':
+      return '폐기 완료';
+    case 'cancelled':
+      return '등록 취소';
     default:
       return '상태 확인 중';
   }

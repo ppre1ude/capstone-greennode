@@ -32,6 +32,11 @@ import { useFeedRefreshStore } from '@/store/feedRefreshStore';
 import type { Post } from '@/types';
 import { getApiErrorMessage } from '@/utils/apiError';
 import {
+  formatInventoryHoldRemaining,
+  getInventoryHoldRemainingMs,
+  isInventoryHoldExpired,
+} from '@/features/inventory/holdPolicy';
+import {
   getConfidencePercent,
   getPostDisplayName,
   getPostStatusLabel,
@@ -52,6 +57,9 @@ const getErrorStatus = (error: unknown): number | null => {
   return typeof response?.status === 'number' ? response.status : null;
 };
 
+const isValidDateInput = (value?: string | null): value is string =>
+  Boolean(value && Number.isFinite(new Date(value).getTime()));
+
 const PostDetailScreen = ({ route, navigation }: Props) => {
   const { postId } = route.params;
   const user = useAuthStore(state => state.user);
@@ -63,6 +71,7 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isRequesting, setIsRequesting] = useState(false);
+  const [currentTimeMs, setCurrentTimeMs] = useState(() => Date.now());
 
   const fetchPostDetail = useCallback(async () => {
     try {
@@ -88,6 +97,19 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
   useEffect(() => {
     fetchPostDetail();
   }, [fetchPostDetail]);
+
+  useEffect(() => {
+    if (post?.status !== 'requested' || !post.requestExpiresAt) {
+      return;
+    }
+
+    setCurrentTimeMs(Date.now());
+    const timerId = setInterval(() => {
+      setCurrentTimeMs(Date.now());
+    }, 1000);
+
+    return () => clearInterval(timerId);
+  }, [post?.requestExpiresAt, post?.status]);
 
   const handleDelete = () => {
     Alert.alert('나눔 취소', '정말로 이 나눔을 취소(삭제)하시겠습니까?', [
@@ -175,6 +197,7 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
   const confidencePercent = getConfidencePercent(post.confidenceScore);
   const statusLabel = getPostStatusLabel(post.status);
   const canRequestShare = !isMyPost && post.status === 'available';
+  const canConfirmPickup = !isMyPost && post.status === 'requested';
   const requestButtonLabel = isRequesting
     ? '신청 중...'
     : canRequestShare
@@ -185,6 +208,21 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
       ? '신청 접수는 예약 확정이 아니에요.'
       : post.status === 'requested'
       ? '신청이 접수된 상태이며 예약 확정은 아니에요.'
+      : null;
+  const requestExpiresAt =
+    post.status === 'requested' && isValidDateInput(post.requestExpiresAt)
+      ? post.requestExpiresAt
+      : null;
+  const isRequestHoldExpired = requestExpiresAt
+    ? isInventoryHoldExpired(requestExpiresAt, currentTimeMs)
+    : false;
+  const requestHoldNotice =
+    requestExpiresAt
+      ? isRequestHoldExpired
+        ? '수령 제한 시간이 지났어요. 목록을 새로고침하면 상태가 갱신됩니다.'
+        : `수령까지 남은 시간 ${formatInventoryHoldRemaining(
+            getInventoryHoldRemainingMs(requestExpiresAt, currentTimeMs),
+          )}`
       : null;
   const daysLeft = Math.ceil(
     (new Date(post.expirationDate).getTime() - new Date().getTime()) /
@@ -275,16 +313,44 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
           {requestNotice && (
             <Text style={styles.requestNotice}>{requestNotice}</Text>
           )}
-          <DSButton
-            label={isRequesting ? '' : requestButtonLabel}
-            accessibilityLabel={requestButtonLabel}
-            loading={isRequesting}
-            loadingLabel=""
-            onPress={handleRequestShare}
-            disabled={!canRequestShare || isRequesting}
-            style={styles.chatButton}
-            textStyle={styles.chatButtonText}
-          />
+          {requestHoldNotice ? (
+  <DSText
+    variant="caption"
+    color={isRequestHoldExpired ? 'error' : 'textSecondary'}
+    style={[
+      styles.requestHoldNotice,
+      isRequestHoldExpired && styles.requestHoldNoticeExpired,
+    ]}>
+    {requestHoldNotice}
+  </DSText>
+) : null}
+
+<DSButton
+  label={isRequesting ? '' : requestButtonLabel}
+  accessibilityLabel={requestButtonLabel}
+  loading={isRequesting}
+  loadingLabel="처리 중"
+  onPress={handleRequestShare}
+  disabled={!canRequestShare || isRequesting}
+  style={styles.chatButton}
+  textStyle={styles.chatButtonText}
+/>
+
+{canConfirmPickup ? (
+  <DSButton
+    label="수령 QR 인증"
+    variant="outlined"
+    fullWidth
+    onPress={() =>
+      navigation.navigate('InventoryQrPrototype', {
+        mode: 'pickup',
+        postId: post.id,
+      })
+    }
+    style={styles.pickupQrButton}
+    textStyle={styles.pickupQrButtonText}
+  />
+) : null}
         </View>
       )}
     </View>

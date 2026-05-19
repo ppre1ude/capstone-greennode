@@ -450,6 +450,17 @@
 - 앱 프로필 탭의 임시 진입점에서 냉장고 운영자 콘솔 테스트 화면으로 이동.
 - 바구니 후보 상태를 내부 개별 나눔 식재료 상태에서 계산하는 helper와 회귀 테스트.
 
+2026-05-19 제품 결정:
+
+- QR 인증, 냉장고 운영자 역할, 30분 임시 선점을 Post-MVP 방향으로 채택한다.
+- QR 인증의 상세 PRD는 [INVENTORY_QR_PRD_V0.md](./INVENTORY_QR_PRD_V0.md)를 기준으로 한다.
+- 냉장고 QR은 사용자의 action마다 새로 만드는 QR이 아니라 공유 냉장고마다 고정으로 붙는 QR이다.
+- QR 자체는 비밀 인증키가 아니며, 서버가 JWT, pending action, fridgeId, action별 제한 시간을 검증해 보관/수령 확인을 처리한다. 입고 대기는 10분, 수령 임시 선점은 30분이다.
+- QR 도입 후 공급자 등록은 `pending_store -> available`로 바뀐다. QR 보관 인증 전에는 홈/지도/냉장고 available 목록에 노출하지 않는다.
+- QR 도입 후 수요자 `requested`는 30분 임시 선점이 된다. 수령 QR 인증이 없고 30분이 지나면 available로 복원한다.
+- 라벨 스티커는 강하게 권장한다. 최소 라벨은 `라벨 코드`, 식재료명, 보관 구역, 만료/회수 기준 시각이다. 개인정보는 넣지 않는다.
+- 에틸렌 분리 구역은 MVP 블로커는 아니지만, 데이터 모델에는 `GENERAL` / `ETHYLENE_SEPARATED` 수준으로 포함한다.
+
 새로 정의할 inventory:
 
 - 실제 공유 냉장고 안의 물리적 재고 상태.
@@ -459,17 +470,19 @@
 
 이번 주 목표:
 
-- 바로 구현하지 않고 DB/도메인/화면 설계를 완료한다.
+- 바로 구현하지 않고 DB/도메인/API/화면 설계를 완료한다.
 - 현재 `GET /fridges/{id}/posts?status=available`와 별도 inventory 개념의 경계를 확정한다.
-- 바구니를 정식 도메인 개념으로 채택할지, 단순 추적용 메타데이터로 둘지 결정한다.
-- 냉장고 운영자가 상태를 변경할 수 있는 단위가 개별 나눔 식재료인지, 바구니인지, 둘 다인지 결정한다.
+- 보관 배치/바구니를 사용자-facing 신청 단위가 아니라 운영자-facing 물리 추적 묶음으로 설계한다.
+- 냉장고 운영자가 바꿀 수 있는 상태는 폐기, 분실/확인 필요, 수동 복원, 수동 조정처럼 운영 이벤트로 제한한다.
+- QR 스캐너/파서/검증 API를 프론트 독립 모듈로 분리하는 설계를 준비한다.
 
 현재 판단:
 
 - 사용자 등록/신청 단위는 계속 개별 **나눔 식재료**다.
 - inventory는 나눔 식재료 목록의 단순 확장이 아니라 냉장고 운영자용 현장 점검 레이어다.
-- 바구니는 사용자-facing 신청 단위가 아니다. 채택하더라도 같은 등록/보관 흐름에서 나온 개별 나눔 식재료를 함께 찾고 점검하기 위한 grouping이다.
+- 바구니 또는 보관 배치는 사용자-facing 신청 단위가 아니다. 채택하더라도 같은 등록/보관 흐름에서 나온 개별 나눔 식재료를 함께 찾고 점검하기 위한 grouping이다.
 - 바구니 상태는 별도 저장값보다 내부 나눔 식재료 상태에서 계산하는 방향으로 프론트 prototype helper에 반영했다.
+- QR 도입 후 `requested`의 사용자 문구는 `30분 동안 임시로 잡아뒀어요` 계열로 바꾸고, `예약 확정`은 계속 금지한다.
 
 2026-05-15 Android emulator 임시 콘솔 QA:
 
@@ -483,20 +496,24 @@
 DB/API 초안:
 
 - `fridge_operators`: 냉장고 운영자와 관리 가능한 공유 냉장고 연결.
-- `inventory_baskets` 또는 `registration_batches`: 같은 촬영/보관 흐름에서 생성된 나눔 식재료 묶음. `fridgeId`, `createdBy`, `createdAt`, `sourceScanId` 정도만 최소 보관.
-- `posts` 또는 후속 `share_items`: 기존 개별 나눔 식재료에 `basketId`, `recommendedShareUntilAt`, `needsReview` 후보 필드 추가 검토.
+- `SharedFridge.publicCode`: 공유 냉장고별 고정 QR public code. MVP에서는 별도 회전 테이블을 두지 않는다.
+- `inventory_batches` 또는 `registration_batches`: 같은 촬영/보관 흐름에서 생성된 나눔 식재료 묶음. `fridgeId`, `createdBy`, `createdAt`, `sourceScanId` 정도만 최소 보관.
+- `posts` 또는 후속 `share_items`: 기존 개별 나눔 식재료에 `batchId`, `labelCode`, `storageZone`, `storeExpiresAt`, `requestExpiresAt`, `storageDeadlineAt`, `needsReview` 후보 필드 추가 검토.
 - `item_status_events`: 개별 나눔 식재료 상태 변경 이력. `itemId`, `fromStatus`, `toStatus`, `actorId`, `actorRole`, `reason`, `note`, `createdAt`.
+- `storage_policy_rules`: 품목/상태별 보관 구역과 서비스 노출/회수 기준.
 - `detections`: multi-object 감지 결과와 생성된 나눔 식재료 연결. `detectionId`, `boundingBox`, `detectedCropKo`, `freshnessLabel`, `confidenceScore`, `postId`.
 - 조회 후보: `GET /operator/fridges/{fridgeId}/inventory/summary`, `GET /operator/fridges/{fridgeId}/inventory/items`, `GET /operator/baskets/{basketId}`.
 - 변경 후보: `POST /operator/items/{postId}/status-events`로 `discarded`, `missing`, `completed`, `needsReview` 같은 운영자 처리 기록.
+- QR 후보: `POST /inventory/confirm-store`, `POST /inventory/confirm-pickup`.
 
 완료 기준:
 
 - inventory가 나눔 식재료 목록의 확장인지, 운영자 재고 관리인지 정의한다.
-- 바구니 채택 여부와 `basketId`의 의미를 확정한다.
+- 보관 배치 채택 여부와 `batchId`의 의미를 확정한다.
 - 냉장고 운영자가 직접 바꿀 수 있는 상태와 상태 변경 이력 필드를 확정한다.
 - 필요한 DB 테이블/필드/API 초안을 만든다.
 - 프론트 화면 진입점과 MVP 이후 냉장고 운영자 기능과의 연결 방식을 정한다.
+- QR 도입 시 현재 `POST /posts`가 바로 `available`을 만드는 계약을 바꿀지, 별도 vNext inventory endpoint로 분리할지 결정한다.
 
 ## 2026-05-08 subagent-driven Phase 1.5 QA 통합 결과
 

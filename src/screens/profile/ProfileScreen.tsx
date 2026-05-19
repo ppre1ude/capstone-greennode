@@ -21,13 +21,14 @@ import { DSButton, DSCard, DSChip, DSListCell, DSText } from '@/design-system';
 import { colors } from '@/theme';
 
 const MENU_ITEMS = [
-  { id: 'location', title: '동네 위치 재설정', icon: '📍' },
-  { id: 'operator-console', title: '냉장고 운영자 콘솔 (실험)', icon: '🧪' },
-  { id: 'my-posts', title: '내 나눔 내역', icon: '📝' },
-  { id: 'bookmark', title: '관심 식재료', icon: '❤️' },
-  { id: 'history', title: '받은 나눔 내역', icon: '🎁' },
-  { id: 'settings', title: '설정', icon: '⚙️' },
-  { id: 'help', title: '고객센터', icon: '🎧' },
+  {id: 'location', title: '동네 위치 재설정', icon: '📍'},
+  {id: 'operator-console', title: '냉장고 운영자 콘솔 (실험)', icon: '🧪'},
+  {id: 'inventory-qr-prototype', title: '냉장고 QR 흐름 테스트', icon: '▣'},
+  {id: 'my-posts', title: '내 나눔 내역', icon: '📝'},
+  {id: 'bookmark', title: '관심 식재료', icon: '❤️'},
+  {id: 'history', title: '받은 나눔 내역', icon: '🎁'},
+  {id: 'settings', title: '설정', icon: '⚙️'},
+  {id: 'help', title: '고객센터', icon: '🎧'},
 ];
 
 const ProfileScreen = () => {
@@ -56,6 +57,11 @@ const ProfileScreen = () => {
 
     if (id === 'operator-console') {
       navigation.getParent()?.navigate('FridgeOperatorConsole');
+      return;
+    }
+
+    if (id === 'inventory-qr-prototype') {
+      navigation.getParent()?.navigate('InventoryQrPrototype');
       return;
     }
 

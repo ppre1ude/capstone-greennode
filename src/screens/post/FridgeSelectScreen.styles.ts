@@ -141,4 +141,34 @@ export const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.borderLight,
   },
+  submitButton: {
+    height: 56,
+    backgroundColor: colors.primary,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  submitDisabled: {
+    opacity: 0.5,
+  },
+  submitButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  qrSubmitButton: {
+    height: 52,
+    marginTop: 10,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  qrSubmitButtonText: {
+    color: colors.primary,
+    fontSize: 15,
+    fontWeight: '800',
+  },
 });

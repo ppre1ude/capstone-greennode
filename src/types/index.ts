@@ -8,6 +8,8 @@ export type {
 export type {
   Post,
   PostNearbyRead,
+  PostCreateFlow,
+  PostStorageZone,
   PostStatus,
   AiAnalysis,
   GenerateResult,

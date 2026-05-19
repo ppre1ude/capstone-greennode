@@ -135,6 +135,16 @@ export const styles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: 'center',
   },
+  requestHoldNotice: {
+    marginBottom: 12,
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.primary,
+    textAlign: 'center',
+  },
+  requestHoldNoticeExpired: {
+    color: colors.error,
+  },
   chatButton: {
     minHeight: 56,
     borderRadius: 12,
@@ -142,5 +152,20 @@ export const styles = StyleSheet.create({
   chatButtonText: {
     fontSize: 16,
     fontWeight: '700',
+  },
+  pickupQrButton: {
+    height: 48,
+    marginTop: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+  },
+  pickupQrButtonText: {
+    color: colors.primary,
+    fontSize: 15,
+    fontWeight: '800',
   },
 });

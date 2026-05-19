@@ -2,7 +2,18 @@
  * Post / AI / Fridge 타입 정의
  */
 
-export type PostStatus = 'available' | 'requested' | 'completed';
+export type PostStatus =
+  | 'pending_store'
+  | 'available'
+  | 'requested'
+  | 'completed'
+  | 'expired'
+  | 'disposed'
+  | 'cancelled';
+
+export type PostCreateFlow = 'direct' | 'fridge_qr';
+
+export type PostStorageZone = 'GENERAL' | 'ETHYLENE_SEPARATED';
 
 export type FreshnessLabel = 'Fresh' | 'Mid' | 'Stale' | 'unknown';
 
@@ -18,6 +29,12 @@ export interface Post {
   fridgeId: number;
   authorId: number;
   userId?: number;
+  requestExpiresAt?: string | null;
+  pickedUpAt?: string | null;
+  labelCode?: string | null;
+  storageZone?: PostStorageZone | string | null;
+  storageDeadlineAt?: string | null;
+  storedAt?: string | null;
   latitude?: number | null;
   longitude?: number | null;
   createdAt: string;
@@ -34,6 +51,12 @@ export interface PostNearbyRead {
   status: PostStatus;
   fridgeId: number;
   fridgeName: string;
+  requestExpiresAt?: never;
+  pickedUpAt?: never;
+  labelCode?: never;
+  storageZone?: never;
+  storageDeadlineAt?: never;
+  storedAt?: never;
   createdAt: string;
   confidenceScore?: never;
   authorId?: never;
@@ -70,6 +93,7 @@ export interface PostCreateData {
   fridgeId: number;
   expirationDate: string;
   imageToken: string;
+  flow?: PostCreateFlow;
 }
 
 export type ShareRequestStatus = 'requested';
@@ -91,6 +115,7 @@ export interface Fridge {
   id: number;
   name: string;
   address: string;
+  publicCode?: string;
   latitude: number;
   longitude: number;
   isActive: boolean;
