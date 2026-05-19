@@ -35,6 +35,30 @@ describe('parseFoodLinkQrPayload', () => {
     });
   });
 
+  it('accepts backend JSON QR payloads', () => {
+    expect(
+      parseFoodLinkQrPayload('{"fridgePublicCode":"GJ-STATION-001"}'),
+    ).toEqual({
+      valid: true,
+      target: {
+        type: 'fridge-verification',
+        fridgePublicCode: 'GJ-STATION-001',
+        source: 'json',
+      },
+    });
+  });
+
+  it('accepts a plain fridge public code payload', () => {
+    expect(parseFoodLinkQrPayload('  GJ-STATION-001  ')).toEqual({
+      valid: true,
+      target: {
+        type: 'fridge-verification',
+        fridgePublicCode: 'GJ-STATION-001',
+        source: 'plain-code',
+      },
+    });
+  });
+
   it('rejects empty, unrelated, and invalid public code payloads', () => {
     expect(parseFoodLinkQrPayload('   ')).toEqual({
       valid: false,
@@ -45,6 +69,14 @@ describe('parseFoodLinkQrPayload', () => {
     ).toEqual({
       valid: false,
       reason: 'unsupported-url',
+    });
+    expect(parseFoodLinkQrPayload('not a FoodLink QR')).toEqual({
+      valid: false,
+      reason: 'unsupported-url',
+    });
+    expect(parseFoodLinkQrPayload('{"fridgePublicCode":"bad code"}')).toEqual({
+      valid: false,
+      reason: 'invalid-public-code',
     });
     expect(
       parseFoodLinkQrPayload('foodlink://fridges/bad code/verify'),

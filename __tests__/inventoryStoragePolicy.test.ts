@@ -10,7 +10,7 @@ describe('inventory storage policy', () => {
   it('maps apples to the ethylene separated zone with conservative deadlines', () => {
     const policy = resolveStoragePolicy({
       itemName: '사과',
-      quality: 'normal',
+      quality: 'Mid',
       storedAt,
     });
 
@@ -24,10 +24,10 @@ describe('inventory storage policy', () => {
     expect(policy.deadlineLabel).toBe('06-03 09:00');
   });
 
-  it('keeps tomatoes in the general zone and shortens blemished items', () => {
+  it('keeps tomatoes in the general zone and uses backend Fresh/Mid days', () => {
     const policy = resolveStoragePolicy({
       itemName: '방울 토마토',
-      quality: 'blemished',
+      quality: 'Fresh',
       storedAt,
     });
 
@@ -35,26 +35,25 @@ describe('inventory storage policy', () => {
       ruleKey: 'tomato',
       zone: 'GENERAL',
       zoneLabel: '일반 구역',
-      serviceExposureDays: 3,
-      needsReview: true,
+      serviceExposureDays: 23,
+      needsReview: false,
     });
-    expect(policy.deadlineLabel).toBe('05-22 09:00');
+    expect(policy.deadlineLabel).toBe('06-11 09:00');
   });
 
-  it('flags best bananas because cold storage is not the preferred policy', () => {
+  it('maps bananas to the backend 3 day storage policy', () => {
     const policy = resolveStoragePolicy({
       itemName: '바나나',
-      quality: 'best',
+      quality: 'Fresh',
       storedAt,
     });
 
     expect(policy).toMatchObject({
       ruleKey: 'banana',
       zone: 'GENERAL',
-      serviceExposureDays: null,
-      serviceExposureUntilAt: null,
-      deadlineLabel: '운영자 확인 필요',
-      needsReview: true,
+      serviceExposureDays: 3,
+      deadlineLabel: '05-22 09:00',
+      needsReview: false,
     });
   });
 

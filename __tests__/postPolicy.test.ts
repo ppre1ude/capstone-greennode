@@ -146,9 +146,13 @@ describe('post policy', () => {
     expect(getPostDisplayName({ detectedFruitKo: '사과' })).toBe('사과');
     expect(getPostDisplayName({ detectedFruit: 'apple' })).toBe('apple');
     expect(getPostDisplayName({})).toBe('나눔 식재료');
+    expect(getPostStatusLabel('pending_store')).toBe('입고 대기');
     expect(getPostStatusLabel('available')).toBe('나눔 가능');
     expect(getPostStatusLabel('requested')).toBe('신청 접수');
     expect(getPostStatusLabel('completed')).toBe('나눔 완료');
+    expect(getPostStatusLabel('expired')).toBe('보관 만료');
+    expect(getPostStatusLabel('disposed')).toBe('폐기 완료');
+    expect(getPostStatusLabel('cancelled')).toBe('등록 취소');
   });
 
   it('normalizes confidence scores and flags confidence below 90% for review', () => {

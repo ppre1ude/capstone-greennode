@@ -1,6 +1,10 @@
 import {
   INVENTORY_HOLD_DURATION_MS,
+  PENDING_STORE_TIMEOUT_MS,
+  REQUEST_HOLD_DURATION_MS,
   createInventoryHoldExpiresAt,
+  createPendingStoreExpiresAt,
+  createRequestHoldExpiresAt,
   formatInventoryHoldRemaining,
   getInventoryHoldRemainingMs,
   isInventoryHoldExpired,
@@ -9,12 +13,24 @@ import {
 describe('inventory hold policy', () => {
   const heldAt = new Date('2026-05-19T00:00:00.000Z');
 
-  it('creates a 30 minute hold expiry from the hold start time', () => {
+  it('keeps request holds at 30 minutes for pickup countdowns', () => {
     const expiresAt = createInventoryHoldExpiresAt(heldAt);
+    const requestExpiresAt = createRequestHoldExpiresAt(heldAt);
 
     expect(INVENTORY_HOLD_DURATION_MS).toBe(30 * 60 * 1000);
+    expect(REQUEST_HOLD_DURATION_MS).toBe(30 * 60 * 1000);
     expect(expiresAt.getTime()).toBe(
-      heldAt.getTime() + INVENTORY_HOLD_DURATION_MS,
+      heldAt.getTime() + REQUEST_HOLD_DURATION_MS,
+    );
+    expect(requestExpiresAt.getTime()).toBe(expiresAt.getTime());
+  });
+
+  it('creates a 10 minute pending-store expiry for QR intake', () => {
+    const expiresAt = createPendingStoreExpiresAt(heldAt);
+
+    expect(PENDING_STORE_TIMEOUT_MS).toBe(10 * 60 * 1000);
+    expect(expiresAt.getTime()).toBe(
+      heldAt.getTime() + PENDING_STORE_TIMEOUT_MS,
     );
   });
 

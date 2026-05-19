@@ -37,6 +37,30 @@ const makeTarget = (
 const pathSegments = (pathname: string): string[] =>
   pathname.split('/').filter(Boolean);
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const parseJsonPayload = (payload: string): QrPayloadParseResult | null => {
+  if (!payload.startsWith('{')) {
+    return null;
+  }
+
+  try {
+    const parsedPayload = JSON.parse(payload);
+
+    if (
+      isRecord(parsedPayload) &&
+      typeof parsedPayload.fridgePublicCode === 'string'
+    ) {
+      return makeTarget(parsedPayload.fridgePublicCode, 'json');
+    }
+
+    return { valid: false, reason: 'unsupported-payload' };
+  } catch {
+    return { valid: false, reason: 'unsupported-payload' };
+  }
+};
+
 export const parseFoodLinkQrPayload = (
   payload: string,
 ): QrPayloadParseResult => {
@@ -44,6 +68,15 @@ export const parseFoodLinkQrPayload = (
 
   if (!normalizedPayload) {
     return { valid: false, reason: 'empty' };
+  }
+
+  const jsonPayload = parseJsonPayload(normalizedPayload);
+  if (jsonPayload) {
+    return jsonPayload;
+  }
+
+  if (isValidFridgePublicCode(normalizedPayload)) {
+    return makeTarget(normalizedPayload, 'plain-code');
   }
 
   let parsedUrl: URL;

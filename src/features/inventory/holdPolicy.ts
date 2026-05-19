@@ -1,4 +1,6 @@
-export const INVENTORY_HOLD_DURATION_MS = 30 * 60 * 1000;
+export const PENDING_STORE_TIMEOUT_MS = 10 * 60 * 1000;
+export const REQUEST_HOLD_DURATION_MS = 30 * 60 * 1000;
+export const INVENTORY_HOLD_DURATION_MS = REQUEST_HOLD_DURATION_MS;
 
 export type InventoryDateInput = Date | number | string;
 
@@ -14,9 +16,15 @@ const toTimestampMs = (value: InventoryDateInput): number => {
   return value;
 };
 
-export const createInventoryHoldExpiresAt = (
+export const createPendingStoreExpiresAt = (
   heldAt: InventoryDateInput,
-): Date => new Date(toTimestampMs(heldAt) + INVENTORY_HOLD_DURATION_MS);
+): Date => new Date(toTimestampMs(heldAt) + PENDING_STORE_TIMEOUT_MS);
+
+export const createRequestHoldExpiresAt = (
+  heldAt: InventoryDateInput,
+): Date => new Date(toTimestampMs(heldAt) + REQUEST_HOLD_DURATION_MS);
+
+export const createInventoryHoldExpiresAt = createRequestHoldExpiresAt;
 
 export const getInventoryHoldRemainingMs = (
   expiresAt: InventoryDateInput,

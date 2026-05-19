@@ -1,4 +1,4 @@
-export type QrPayloadSource = 'deep-link' | 'https';
+export type QrPayloadSource = 'deep-link' | 'https' | 'json' | 'plain-code';
 
 export type FridgeQrVerificationTarget = {
   type: 'fridge-verification';
@@ -13,5 +13,9 @@ export type QrPayloadParseResult =
     }
   | {
       valid: false;
-      reason: 'empty' | 'unsupported-url' | 'invalid-public-code';
+      reason:
+        | 'empty'
+        | 'unsupported-payload'
+        | 'unsupported-url'
+        | 'invalid-public-code';
     };

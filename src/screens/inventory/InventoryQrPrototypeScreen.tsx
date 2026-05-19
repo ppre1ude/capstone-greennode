@@ -12,7 +12,7 @@ import {
   InventoryCountdownBadge,
   InventoryLabelInstructionCard,
   InventoryProgressStepper,
-  createInventoryHoldExpiresAt,
+  createPendingStoreExpiresAt,
   resolveStoragePolicy,
   type InventoryDisplayStatus,
 } from '@/features/inventory';
@@ -36,12 +36,12 @@ const SELECTED_FRIDGE = {
 const LABEL_SAMPLE = {
   labelCode: '#0042',
   itemName: '토마토',
-  quality: 'normal' as const,
+  quality: 'Mid' as const,
 };
 
-const PROTOTYPE_NOW = new Date('2026-05-19T00:10:00.000Z');
+const PROTOTYPE_NOW = new Date('2026-05-19T00:05:00.000Z');
 const HOLD_STARTED_AT = new Date('2026-05-19T00:00:00.000Z');
-const HOLD_EXPIRES_AT = createInventoryHoldExpiresAt(HOLD_STARTED_AT);
+const HOLD_EXPIRES_AT = createPendingStoreExpiresAt(HOLD_STARTED_AT);
 const SAMPLE_STORAGE_POLICY = resolveStoragePolicy({
   itemName: LABEL_SAMPLE.itemName,
   quality: LABEL_SAMPLE.quality,

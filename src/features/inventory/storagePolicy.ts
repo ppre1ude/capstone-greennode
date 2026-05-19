@@ -2,7 +2,14 @@ import type {InventoryDateInput} from './holdPolicy';
 
 export type StorageZone = 'GENERAL' | 'ETHYLENE_SEPARATED';
 
-export type StoragePolicyQuality = 'best' | 'normal' | 'blemished' | 'unknown';
+export type StoragePolicyQuality =
+  | 'Fresh'
+  | 'Mid'
+  | 'fresh'
+  | 'mid'
+  | 'best'
+  | 'normal'
+  | 'unknown';
 
 export type StoragePolicyInput = {
   itemName: string;
@@ -26,8 +33,8 @@ type StoragePolicyRule = {
   key: StoragePolicyResult['ruleKey'];
   keywords: string[];
   zone: StorageZone;
-  exposureDaysByQuality: Partial<Record<StoragePolicyQuality, number | null>>;
-  fallbackExposureDays: number | null;
+  exposureDaysByQuality: Record<'Fresh' | 'Mid', number>;
+  fallbackQuality: 'Fresh' | 'Mid';
   needsReview?: boolean;
   guidance: string;
 };
@@ -45,49 +52,50 @@ const STORAGE_POLICY_RULES: StoragePolicyRule[] = [
     keywords: ['사과', 'apple'],
     zone: 'ETHYLENE_SEPARATED',
     exposureDaysByQuality: {
-      best: 30,
-      normal: 15,
-      blemished: 7,
-      unknown: 15,
+      Fresh: 30,
+      Mid: 15,
     },
-    fallbackExposureDays: 15,
+    fallbackQuality: 'Mid',
     guidance:
-      '에틸렌 발생량이 높은 품목이라 분리 구역 우선 배치를 안내합니다.',
+      '에틸렌 발생량이 높은 품목이라 분리 구역 배치를 안내합니다.',
   },
   {
     key: 'tomato',
     keywords: ['토마토', 'tomato'],
     zone: 'GENERAL',
     exposureDaysByQuality: {
-      best: 23,
-      normal: 10,
-      blemished: 3,
-      unknown: 10,
+      Fresh: 23,
+      Mid: 10,
     },
-    fallbackExposureDays: 10,
-    needsReview: true,
+    fallbackQuality: 'Mid',
     guidance:
-      '품질과 상태에 따라 보관 가능 기간 차이가 커서 보수적인 회수 기준을 씁니다.',
+      '일반 구역에 배치하고 서버의 품질 판정에 따른 회수 기준을 씁니다.',
   },
   {
     key: 'banana',
     keywords: ['바나나', 'banana'],
     zone: 'GENERAL',
     exposureDaysByQuality: {
-      best: null,
-      normal: 3,
-      blemished: 3,
-      unknown: 3,
+      Fresh: 3,
+      Mid: 3,
     },
-    fallbackExposureDays: 3,
-    needsReview: true,
-    guidance:
-      '최상 품질 바나나는 냉장 보관을 권장하지 않고, 검은 반점이 있으면 짧은 기준을 씁니다.',
+    fallbackQuality: 'Mid',
+    guidance: '일반 구역에 배치하고 짧은 3일 회수 기준을 씁니다.',
   },
 ];
 
 const normalizeItemName = (itemName: string): string =>
   itemName.trim().toLowerCase().replace(/\s+/g, '');
+
+const normalizeQuality = (
+  quality: StoragePolicyQuality,
+): 'Fresh' | 'Mid' => {
+  if (quality === 'Fresh' || quality === 'fresh' || quality === 'best') {
+    return 'Fresh';
+  }
+
+  return 'Mid';
+};
 
 const toTimestampMs = (value: InventoryDateInput): number => {
   if (value instanceof Date) {
@@ -113,8 +121,8 @@ const findStoragePolicyRule = (itemName: string): StoragePolicyRule => {
       key: 'default',
       keywords: [],
       zone: 'GENERAL',
-      exposureDaysByQuality: {},
-      fallbackExposureDays: 3,
+      exposureDaysByQuality: {Fresh: 3, Mid: 3},
+      fallbackQuality: 'Mid',
       needsReview: true,
       guidance:
         '품목별 정책이 아직 없어 운영자 확인이 필요한 기본 회수 기준을 씁니다.',
@@ -144,17 +152,12 @@ export const resolveStoragePolicy = ({
   storedAt,
 }: StoragePolicyInput): StoragePolicyResult => {
   const rule = findStoragePolicyRule(itemName);
-  const hasQualityPolicy = Object.prototype.hasOwnProperty.call(
-    rule.exposureDaysByQuality,
-    quality,
+  const normalizedQuality =
+    quality === 'unknown' ? rule.fallbackQuality : normalizeQuality(quality);
+  const serviceExposureDays = rule.exposureDaysByQuality[normalizedQuality];
+  const serviceExposureUntilAt = new Date(
+    toTimestampMs(storedAt) + serviceExposureDays * DAY_MS,
   );
-  const serviceExposureDays = hasQualityPolicy
-    ? rule.exposureDaysByQuality[quality] ?? null
-    : rule.fallbackExposureDays;
-  const serviceExposureUntilAt =
-    serviceExposureDays === null
-      ? null
-      : new Date(toTimestampMs(storedAt) + serviceExposureDays * DAY_MS);
 
   return {
     itemName,
@@ -164,7 +167,7 @@ export const resolveStoragePolicy = ({
     serviceExposureDays,
     serviceExposureUntilAt,
     deadlineLabel: formatStorageDeadlineLabel(serviceExposureUntilAt),
-    needsReview: Boolean(rule.needsReview || serviceExposureDays === null),
+    needsReview: Boolean(rule.needsReview),
     guidance: rule.guidance,
   };
 };

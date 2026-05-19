@@ -50,7 +50,7 @@ describe('InventoryQrPrototypeScreen', () => {
 
     expect(textContent).toContain('냉장고 QR 흐름 테스트');
     expect(textContent).toContain('광주역 앞 공유냉장고');
-    expect(textContent).toContain('20:00');
+    expect(textContent).toContain('05:00');
     expect(textContent).toContain('등록 대기');
     expect(textContent).toContain('라벨은 보관 인증 후 표시');
 
@@ -84,10 +84,7 @@ describe('InventoryQrPrototypeScreen', () => {
     expect(textContent).toContain('일반 구역');
     expect(textContent).toContain('보관 정책 안내');
     expect(textContent).toContain(
-      '품질과 상태에 따라 보관 가능 기간 차이가 커서 보수적인 회수 기준을 씁니다.',
-    );
-    expect(textContent).toContain(
-      '운영자 확인 대상입니다. 이 기준은 서비스 노출과 회수 판단용입니다.',
+      '일반 구역에 배치하고 서버의 품질 판정에 따른 회수 기준을 씁니다.',
     );
 
     await ReactTestRenderer.act(async () => {

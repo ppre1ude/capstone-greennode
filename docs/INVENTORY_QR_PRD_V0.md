@@ -22,7 +22,7 @@ FoodLink MVP는 AI 분석부터 `available -> requested`까지의 디지털 루�
 
 Post-MVP 방향으로 inventory와 QR 인증 레이어를 채택한다.
 
-공유 냉장고마다 고정 QR을 붙인다. 사용자가 QR을 스캔하면 앱은 “이 사용자가 이 냉장고 앞에서 특정 행동을 완료하려 한다”는 신호를 서버에 보낸다. QR 자체는 비밀 인증키가 아니다. 서버가 JWT, pending action, fridgeId, 30분 제한, 현재 상태를 검증해서 실제 상태 전환을 수행한다.
+공유 냉장고마다 고정 QR을 붙인다. 사용자가 QR을 스캔하면 앱은 “이 사용자가 이 냉장고 앞에서 특정 행동을 완료하려 한다”는 신호를 서버에 보낸다. QR 자체는 비밀 인증키가 아니다. 서버가 JWT, pending action, fridgeId, action별 제한 시간, 현재 상태를 검증해서 실제 상태 전환을 수행한다.
 
 공급자 흐름은 즉시 public 등록이 아니라 보관 확인 흐름으로 바뀐다.
 
@@ -30,7 +30,7 @@ Post-MVP 방향으로 inventory와 QR 인증 레이어를 채택한다.
 AI 분석
   -> 등록 대기 생성
   -> 선택한 공유 냉장고 방문
-  -> 30분 안에 냉장고 QR 스캔
+  -> 10분 안에 냉장고 QR 스캔
   -> 라벨 부착
   -> available 노출
 ```
@@ -53,7 +53,7 @@ AI 분석
 1. QR 인증은 Post-MVP inventory 레이어로 채택한다.
 2. 냉장고 운영자는 정식 운영 역할로 채택한다.
 3. QR 도입 후 `requested`는 30분 임시 선점 상태로 확장한다.
-4. 공급자 보관 인증과 수요자 수령 인증 제한 시간은 모두 30분으로 고정한다.
+4. 공급자 보관 인증 제한은 10분, 수요자 수령 인증 제한은 30분으로 확정한다.
 5. QR은 사용자 action마다 새로 만들지 않고 공유 냉장고마다 고정으로 붙인다.
 6. QR은 냉장고 식별자이며, 실제 인증과 상태 전환은 서버 검증으로 처리한다.
 7. 라벨 스티커는 강하게 권장한다. QR은 냉장고 앞 인증이고, 라벨은 냉장고 안에서 식재료를 찾고 운영자가 점검하기 위한 장치다.
@@ -85,7 +85,7 @@ AI 분석
 2. 공급자는 앱이 어느 공유 냉장고로 가야 하는지 알려주길 원한다. 그래야 잘못된 냉장고에 넣지 않는다.
 3. 공급자는 냉장고 앞에서 QR을 스캔하고 싶다. 그래야 실제 보관 위치가 확인된다.
 4. 공급자는 QR 인증 후 짧은 라벨 코드를 받고 싶다. 그래야 실제 식재료에 식별표를 붙일 수 있다.
-5. 공급자는 30분 제한 시간을 명확히 보고 싶다. 그래야 언제 등록 대기가 취소되는지 알 수 있다.
+5. 공급자는 10분 제한 시간을 명확히 보고 싶다. 그래야 언제 등록 대기가 취소되는지 알 수 있다.
 6. 공급자는 보관 인증을 끝내지 못한 등록이 자동 취소되길 원한다. 그래야 넣지 않은 식재료가 앱에 노출되지 않는다.
 7. 수요자는 나눔 신청 후 30분 동안 해당 식재료가 잠시 잡혀 있길 원한다. 그래야 냉장고로 이동하는 동안 다른 사용자가 가져가지 않는다.
 8. 수요자는 남은 선점 시간을 보고 싶다. 그래야 언제까지 수령해야 하는지 알 수 있다.
@@ -98,7 +98,7 @@ AI 분석
 15. 냉장고 운영자는 만료 항목을 폐기 완료 처리하고 싶다. 그래야 앱이 더 이상 해당 항목을 available로 취급하지 않는다.
 16. 냉장고 운영자는 라벨 코드와 보관 구역을 보고 싶다. 그래야 앱 기록과 실제 식재료를 매칭할 수 있다.
 17. 냉장고 운영자는 에틸렌 분리 대상 항목을 확인하고 싶다. 그래야 물리 냉장고가 지원할 때 품질 보존에 맞게 분리할 수 있다.
-18. 시스템은 등록 대기를 30분 뒤 만료시키고 싶다. 그래야 미완료 등록이 쌓이지 않는다.
+18. 시스템은 등록 대기를 10분 뒤 만료시키고 싶다. 그래야 미완료 등록이 쌓이지 않는다.
 19. 시스템은 임시 선점을 30분 뒤 해제하고 싶다. 그래야 수령되지 않은 식재료가 다시 available로 돌아갈 수 있다.
 20. 시스템은 QR 스캔이 선택한 냉장고와 일치하는지 검증해야 한다. 그래야 아무 냉장고 QR로 완료 처리할 수 없다.
 21. 시스템은 상태 변경을 이벤트로 기록해야 한다. 그래야 분쟁과 운영자 처리를 추적할 수 있다.
@@ -143,9 +143,9 @@ generated
 
 - QR 흐름이 켜진 경우 `POST /posts` 또는 vNext 대체 endpoint는 public `available`이 아니라 `pending_store`를 만든다.
 - `pending_store`는 홈, 지도, 냉장고 available 목록에 노출하지 않는다.
-- 공급자는 선택한 공유 냉장고 QR을 30분 안에 스캔해야 한다.
+- 공급자는 선택한 공유 냉장고 QR을 10분 안에 스캔해야 한다.
 - 보관 인증이 성공하면 `available`로 전환하고 라벨 코드를 만든다.
-- 30분이 지나면 `pending_store`는 `cancelled` 또는 이에 해당하는 비노출 종료 상태가 된다.
+- 10분이 지나면 `pending_store`는 `cancelled` 또는 이에 해당하는 비노출 종료 상태가 된다.
 
 ### 수요자 수령 흐름
 
@@ -180,13 +180,23 @@ available or requested
 
 ## QR Verification
 
-권장 QR payload:
+백엔드 확정 QR payload:
+
+```json
+{"fridgePublicCode":"GJ-STATION-001"}
+```
+
+단순 문자열 public code도 허용한다.
+
+```text
+GJ-STATION-001
+```
+
+프론트 parser는 기존 딥링크/HTTPS 형식도 계속 허용한다.
 
 ```text
 foodlink://fridges/{publicCode}/verify
 ```
-
-권장 HTTPS fallback:
 
 ```text
 https://foodlink.app/q/fridges/{publicCode}
@@ -197,7 +207,7 @@ https://foodlink.app/q/fridges/{publicCode}
 - 사용자가 로그인되어 있다.
 - QR `publicCode`가 활성 공유 냉장고로 해석된다.
 - 사용자에게 진행 중인 pending action이 있다.
-- pending action이 30분 제한 안에 있다.
+- pending action이 action별 제한 시간 안에 있다. `pending_store`는 10분, `requested`는 30분이다.
 - pending action의 `fridgeId`와 QR의 fridge가 일치한다.
 - 이미 완료, 만료, 취소된 action이 아니다.
 - 후속 권장: 기기 위치가 해당 냉장고와 충분히 가깝다.
@@ -207,7 +217,7 @@ https://foodlink.app/q/fridges/{publicCode}
 - QR은 식별자이지 비밀번호가 아니다.
 - QR이 유출되어도 다른 사람의 action을 완료할 수 없어야 한다.
 - 인증은 서버가 로그인 사용자와 pending action 상태로 판단한다.
-- 물리 QR 교체나 악용에 대비해 fridge public code는 회전 가능해야 한다.
+- 백엔드 MVP에서는 `SharedFridge.publicCode`를 고정 코드로 사용하고 별도 회전은 두지 않는다.
 
 ## Label Policy
 
@@ -254,9 +264,9 @@ Notion 캡처 기반 seed 예시:
 
 앱은 이 기한을 식품 안전 보증처럼 말하면 안 된다. 이는 서비스 노출과 운영자 회수 기준이다.
 
-## API Candidates
+## API Contract
 
-아래는 PRD 후보이며 현재 검증된 API 계약이 아니다.
+아래는 2026-05-19 백엔드 회신 기준 확정 계약이다.
 
 ### Store
 
@@ -264,17 +274,13 @@ Notion 캡처 기반 seed 예시:
 POST /api/v1/posts
 ```
 
-QR 도입 후 동작 후보:
+QR 도입 후 동작:
 
 - `pending_store`를 생성한다.
 - `postId`, `fridgeId`, `storeExpiresAt`, QR 안내를 반환한다.
 - nearby/fridge available 목록에는 노출하지 않는다.
-
-현재 `POST /posts` 계약 변경이 위험하면 별도 endpoint를 둔다.
-
-```text
-POST /api/v1/inventory/pending-stores
-```
+- 기존 MVP 흐름은 `flow` 미전송 또는 `"direct"`로 유지한다.
+- QR 흐름은 `flow: "fridge_qr"`를 전송한다.
 
 ### Confirm Store
 
@@ -287,7 +293,7 @@ POST /api/v1/inventory/confirm-store
 ```json
 {
   "postId": 123,
-  "fridgeQrCode": "FRIDGE_PUBLIC_CODE"
+  "fridgePublicCode": "FRIDGE_PUBLIC_CODE"
 }
 ```
 
@@ -314,15 +320,15 @@ QR 도입 후 동작 후보:
 ### Confirm Pickup
 
 ```text
-POST /api/v1/inventory/confirm-pick
+POST /api/v1/inventory/confirm-pickup
 ```
 
 요청:
 
 ```json
 {
-  "requestId": 456,
-  "fridgeQrCode": "FRIDGE_PUBLIC_CODE"
+  "postId": 123,
+  "fridgePublicCode": "FRIDGE_PUBLIC_CODE"
 }
 ```
 
@@ -352,12 +358,12 @@ POST /api/v1/operator/items/{postId}/status-events
 
 | Data | Purpose |
 | --- | --- |
-| `fridge_public_codes` | 공유 냉장고별 회전 가능한 QR public code |
+| `SharedFridge.publicCode` | 공유 냉장고별 고정 QR public code |
 | `fridge_operators` | 운영자와 관리 가능한 공유 냉장고 연결 |
 | `inventory_batches` or `registration_batches` | 한 번의 보관 인증에서 생긴 물리 묶음 |
 | `labelCode` | 물리 라벨과 운영자 조회용 짧은 코드 |
 | `storageZone` | `GENERAL` 또는 `ETHYLENE_SEPARATED` |
-| `storeExpiresAt` | 공급자 보관 QR 인증 30분 제한 |
+| `storeExpiresAt` | 공급자 보관 QR 인증 10분 제한 |
 | `requestExpiresAt` | 수요자 수령 QR 인증 30분 제한 |
 | `storageDeadlineAt` | 서비스 노출/운영자 회수 기준 |
 | `item_status_events` | 상태 변경과 운영자 처리 이력 |
@@ -403,7 +409,7 @@ src/features/inventory/
 AI 분석 완료 -> 냉장고 선택 -> QR 인증 -> 등록 완료
 ```
 
-- 등록 대기 생성 후 30분 countdown을 보여준다.
+- 등록 대기 생성 후 10분 countdown을 보여준다.
 - 재시도와 취소 action을 제공한다.
 - QR 인증 후 라벨 부착 안내를 보여준다.
 - QR 인증 전에는 홈/지도/냉장고 available 목록에 노출하지 않는다.
@@ -434,7 +440,7 @@ AI 분석 완료 -> 냉장고 선택 -> QR 인증 -> 등록 완료
 - QR parser가 FoodLink deep link와 HTTPS fallback URL을 허용한다.
 - QR parser가 무관한 QR payload를 거절한다.
 - 보관 인증은 냉장고가 다르면 실패한다.
-- 보관 인증은 30분이 지나면 실패한다.
+- 보관 인증은 10분이 지나면 실패한다.
 - 보관 인증 성공 후 항목이 hidden에서 available로 바뀐다.
 - 나눔 신청은 `requestExpiresAt`을 설정하고 available 목록에서 숨긴다.
 - 수령 인증은 냉장고가 다르면 실패한다.
@@ -457,7 +463,7 @@ AI 분석 완료 -> 냉장고 선택 -> QR 인증 -> 등록 완료
 2. Inventory/QR 도메인 모델과 백엔드 schema를 feature flag 또는 vNext API path 뒤에 추가한다.
 3. QR parser와 scanner module을 먼저 만들고 로컬 테스트를 붙인다.
 4. 공급자 `pending_store` 흐름을 구현한다.
-5. 수요자 30분 임시 선점과 confirm-pick 흐름을 구현한다.
+5. 수요자 30분 임시 선점과 confirm-pickup 흐름을 구현한다.
 6. timeout job 또는 lazy-expire 로직을 구현한다.
 7. 최소 냉장고 운영자 inventory 화면을 구현한다.
 8. API 계약 QA, Android emulator QA, 실제 기기 QR/FCM QA 순서로 검증한다.
@@ -475,7 +481,7 @@ AI 분석 완료 -> 냉장고 선택 -> QR 인증 -> 등록 완료
 ## Acceptance Criteria
 
 - 공급자가 만든 항목은 냉장고 QR 인증 전까지 public 목록에 보이지 않는다.
-- 공급자는 정확히 30분 안에 보관 QR 인증을 완료해야 한다.
+- 공급자는 정확히 10분 안에 보관 QR 인증을 완료해야 한다.
 - 수요자 신청은 30분 임시 선점을 만들고 다른 신청을 막는다.
 - 수요자 임시 선점은 30분 안에 수령 인증이 없으면 자동 해제된다.
 - QR 인증은 잘못된 냉장고에서 완료될 수 없다.
