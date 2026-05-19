@@ -38,13 +38,17 @@ const basePost: Post = {
   updatedAt: '2026-05-06T00:00:00Z',
 };
 
-const createScreen = async () => {
+const createScreen = async (
+  navigation: {goBack: jest.Mock; navigate?: jest.Mock} = {
+    goBack: jest.fn(),
+  },
+) => {
   let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
 
   await ReactTestRenderer.act(async () => {
     renderer = ReactTestRenderer.create(
       <PostDetailScreen
-        navigation={{ goBack: jest.fn() } as any}
+        navigation={navigation as any}
         route={{ params: { postId: 10 } } as any}
       />,
     );
@@ -288,6 +292,40 @@ describe('PostDetailScreen share request', () => {
         children: '수령까지 남은 시간 NaN:NaN',
       }),
     ).toHaveLength(0);
+
+    await ReactTestRenderer.act(async () => {
+      renderer.unmount();
+    });
+  });
+
+  it('opens the pickup QR flow for a requested post', async () => {
+    const navigation = {
+      goBack: jest.fn(),
+      navigate: jest.fn(),
+    };
+    mockedGetPostDetail.mockResolvedValue({
+      success: true,
+      message: 'ok',
+      data: {
+        ...basePost,
+        status: 'requested',
+        requestExpiresAt: '2026-05-06T00:30:00Z',
+      },
+    });
+
+    const renderer = await createScreen(navigation);
+    const pickupButton = findButtonByText(renderer, '수령 QR 인증');
+
+    expect(pickupButton).toBeTruthy();
+
+    await ReactTestRenderer.act(async () => {
+      pickupButton?.props.onPress();
+    });
+
+    expect(navigation.navigate).toHaveBeenCalledWith('InventoryQrPrototype', {
+      mode: 'pickup',
+      postId: 10,
+    });
 
     await ReactTestRenderer.act(async () => {
       renderer.unmount();

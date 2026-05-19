@@ -166,4 +166,19 @@ export const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
   },
+  pickupQrButton: {
+    height: 48,
+    marginTop: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+  },
+  pickupQrButtonText: {
+    color: colors.primary,
+    fontSize: 15,
+    fontWeight: '800',
+  },
 });

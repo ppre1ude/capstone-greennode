@@ -1,5 +1,7 @@
 import React, {useCallback, useMemo, useRef, useState} from 'react';
 import {
+  ActivityIndicator,
+  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -19,8 +21,14 @@ import {
 import {
   QrScannerShell,
   buildFridgeQrVerificationUrl,
+  getQrVerificationErrorMessage,
   type FridgeQrVerificationTarget,
 } from '@/features/qr';
+import {confirmPickup, confirmStore} from '@/api/inventory';
+import type {
+  ConfirmPickupResult,
+  ConfirmStoreResult,
+} from '@/api/inventory';
 import {colors} from '@/theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'InventoryQrPrototype'>;
@@ -48,11 +56,6 @@ const SAMPLE_STORAGE_POLICY = resolveStoragePolicy({
   storedAt: HOLD_STARTED_AT,
 });
 
-const storeQrPayload = `foodlink://fridges/${SELECTED_FRIDGE.publicCode}/verify`;
-const pickupQrPayload = buildFridgeQrVerificationUrl(
-  'https://foodlink.app',
-  SELECTED_FRIDGE.publicCode,
-);
 const wrongFridgePayload = 'foodlink://fridges/GJ-WRONG-999/verify';
 
 const addScanNonce = (payload: string, nonce: number): string => {
@@ -61,14 +64,37 @@ const addScanNonce = (payload: string, nonce: number): string => {
   return `${payload}${separator}scan=${nonce}`;
 };
 
-const InventoryQrPrototypeScreen = ({navigation}: Props) => {
+const getErrorStatus = (error: unknown): number | null => {
+  if (typeof error !== 'object' || error === null) {
+    return null;
+  }
+
+  const response = (error as {response?: {status?: unknown}}).response;
+  return typeof response?.status === 'number' ? response.status : null;
+};
+
+const InventoryQrPrototypeScreen = ({navigation, route}: Props) => {
+  const params = route.params;
+  const expectedFridgePublicCode =
+    params?.fridgePublicCode ?? SELECTED_FRIDGE.publicCode;
+  const postId = params?.postId;
+  const isApiBacked = typeof postId === 'number';
+  const fridgeName = params?.fridgeName ?? SELECTED_FRIDGE.name;
+  const fridgeLocation = params?.fridgeLocation ?? SELECTED_FRIDGE.location;
   const scanSerial = useRef(0);
-  const [scanMode, setScanMode] = useState<ScanMode>('store');
+  const [scanMode, setScanMode] = useState<ScanMode>(params?.mode ?? 'store');
   const [lastScannedValue, setLastScannedValue] = useState<string | null>(null);
   const [storeConfirmed, setStoreConfirmed] = useState(false);
   const [pickupConfirmed, setPickupConfirmed] = useState(false);
+  const [isConfirming, setIsConfirming] = useState(false);
+  const [confirmedStoreResult, setConfirmedStoreResult] =
+    useState<ConfirmStoreResult | null>(null);
+  const [confirmedPickupResult, setConfirmedPickupResult] =
+    useState<ConfirmPickupResult | null>(null);
   const [scanMessage, setScanMessage] = useState(
-    '냉장고 QR을 스캔하면 이 화면에서 보관/수령 흐름을 확인할 수 있어요.',
+    isApiBacked
+      ? '냉장고 QR을 스캔하면 실제 인증 API를 호출합니다.'
+      : '냉장고 QR을 스캔하면 이 화면에서 보관/수령 흐름을 확인할 수 있어요.',
   );
 
   const inventoryStatus: InventoryDisplayStatus = useMemo(() => {
@@ -93,28 +119,87 @@ const InventoryQrPrototypeScreen = ({navigation}: Props) => {
   }, []);
 
   const handleValidScan = useCallback(
-    (target: FridgeQrVerificationTarget) => {
-      if (target.fridgePublicCode !== SELECTED_FRIDGE.publicCode) {
+    async (target: FridgeQrVerificationTarget) => {
+      if (
+        expectedFridgePublicCode &&
+        target.fridgePublicCode !== expectedFridgePublicCode
+      ) {
         setScanMessage('선택한 냉장고 QR이 아닙니다. 다시 확인해주세요.');
         return;
       }
 
       if (scanMode === 'store') {
+        if (isApiBacked) {
+          setIsConfirming(true);
+          try {
+            const response = await confirmStore({
+              postId,
+              fridgePublicCode: target.fridgePublicCode,
+            });
+
+            if (response.success && response.data) {
+              setConfirmedStoreResult(response.data);
+              setStoreConfirmed(true);
+              setPickupConfirmed(false);
+              setScanMessage(
+                response.message ||
+                  '입고 인증 완료. 라벨 코드를 식재료에 붙여주세요.',
+              );
+              return;
+            }
+
+            setScanMessage(response.message || '입고 인증에 실패했습니다.');
+          } catch (error) {
+            const message = getQrVerificationErrorMessage(getErrorStatus(error));
+            setScanMessage(message);
+            Alert.alert('QR 인증 실패', message);
+          } finally {
+            setIsConfirming(false);
+          }
+          return;
+        }
+
         setStoreConfirmed(true);
         setPickupConfirmed(false);
         setScanMessage('보관 인증 완료. 라벨 코드를 식재료에 붙여주세요.');
         return;
       }
 
-      if (!storeConfirmed) {
+      if (!storeConfirmed && !isApiBacked) {
         setScanMessage('수령 테스트 전에 보관 인증을 먼저 완료해주세요.');
+        return;
+      }
+
+      if (isApiBacked) {
+        setIsConfirming(true);
+        try {
+          const response = await confirmPickup({
+            postId,
+            fridgePublicCode: target.fridgePublicCode,
+          });
+
+          if (response.success && response.data) {
+            setConfirmedPickupResult(response.data);
+            setPickupConfirmed(true);
+            setScanMessage(response.message || '수령 인증이 완료되었습니다.');
+            return;
+          }
+
+          setScanMessage(response.message || '수령 인증에 실패했습니다.');
+        } catch (error) {
+          const message = getQrVerificationErrorMessage(getErrorStatus(error));
+          setScanMessage(message);
+          Alert.alert('QR 인증 실패', message);
+        } finally {
+          setIsConfirming(false);
+        }
         return;
       }
 
       setPickupConfirmed(true);
       setScanMessage('수령 인증 완료. 임시 선점이 종료됐습니다.');
     },
-    [scanMode, storeConfirmed],
+    [expectedFridgePublicCode, isApiBacked, postId, scanMode, storeConfirmed],
   );
 
   const resetPrototype = () => {
@@ -122,10 +207,27 @@ const InventoryQrPrototypeScreen = ({navigation}: Props) => {
     setLastScannedValue(null);
     setStoreConfirmed(false);
     setPickupConfirmed(false);
+    setConfirmedStoreResult(null);
+    setConfirmedPickupResult(null);
     setScanMessage(
-      '냉장고 QR을 스캔하면 이 화면에서 보관/수령 흐름을 확인할 수 있어요.',
+      isApiBacked
+        ? '냉장고 QR을 스캔하면 실제 인증 API를 호출합니다.'
+        : '냉장고 QR을 스캔하면 이 화면에서 보관/수령 흐름을 확인할 수 있어요.',
     );
   };
+
+  const labelCode =
+    confirmedStoreResult?.labelCode ??
+    confirmedPickupResult?.labelCode ??
+    LABEL_SAMPLE.labelCode;
+  const storageZoneLabel =
+    confirmedStoreResult?.storageZone === 'ETHYLENE_SEPARATED' ||
+    confirmedPickupResult?.storageZone === 'ETHYLENE_SEPARATED'
+      ? '에틸렌 분리 구역'
+      : SAMPLE_STORAGE_POLICY.zoneLabel;
+  const deadlineLabel = confirmedStoreResult?.storageDeadlineAt
+    ? new Date(confirmedStoreResult.storageDeadlineAt).toLocaleString()
+    : SAMPLE_STORAGE_POLICY.deadlineLabel;
 
   return (
     <View style={styles.container} testID="inventory-qr-prototype-screen">
@@ -143,19 +245,22 @@ const InventoryQrPrototypeScreen = ({navigation}: Props) => {
 
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.notice}>
-          <Text style={styles.noticeTitle}>프로토타입</Text>
+          <Text style={styles.noticeTitle}>
+            {isApiBacked ? '실제 API 연결' : '프로토타입'}
+          </Text>
           <Text style={styles.noticeText}>
-            실제 상태 저장이나 API 호출 없이 QR 파서, 30분 선점, 라벨 안내 UI만
-            연결합니다.
+            {isApiBacked
+              ? 'QR 스캔 성공 시 백엔드 인증 API를 호출합니다. API가 아직 배포되지 않았다면 실패 Alert가 표시됩니다.'
+              : '실제 상태 저장이나 API 호출 없이 QR 파서, 30분 선점, 라벨 안내 UI만 연결합니다.'}
           </Text>
         </View>
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>{SELECTED_FRIDGE.name}</Text>
-            <Text style={styles.fridgeCode}>{SELECTED_FRIDGE.publicCode}</Text>
+            <Text style={styles.sectionTitle}>{fridgeName}</Text>
+            <Text style={styles.fridgeCode}>{expectedFridgePublicCode}</Text>
           </View>
-          <Text style={styles.sectionNote}>{SELECTED_FRIDGE.location}</Text>
+          <Text style={styles.sectionNote}>{fridgeLocation}</Text>
           <InventoryCountdownBadge
             expiresAt={HOLD_EXPIRES_AT}
             now={PROTOTYPE_NOW}
@@ -190,20 +295,36 @@ const InventoryQrPrototypeScreen = ({navigation}: Props) => {
           />
 
           <Text style={styles.scanMessage}>{scanMessage}</Text>
+          {isConfirming ? (
+            <View style={styles.confirmingRow}>
+              <ActivityIndicator color={colors.primary} />
+              <Text style={styles.confirmingText}>QR 인증 요청 중...</Text>
+            </View>
+          ) : null}
 
           <View style={styles.actionGrid}>
             <ActionButton
               label="보관 QR 테스트"
               onPress={() => {
                 setScanMode('store');
-                simulateScan(storeQrPayload);
+                simulateScan(
+                  buildFridgeQrVerificationUrl(
+                    'https://foodlink.app',
+                    expectedFridgePublicCode,
+                  ),
+                );
               }}
             />
             <ActionButton
               label="수령 QR 테스트"
               onPress={() => {
                 setScanMode('pickup');
-                simulateScan(pickupQrPayload);
+                simulateScan(
+                  buildFridgeQrVerificationUrl(
+                    'https://foodlink.app',
+                    expectedFridgePublicCode,
+                  ),
+                );
               }}
             />
             <ActionButton
@@ -222,10 +343,10 @@ const InventoryQrPrototypeScreen = ({navigation}: Props) => {
         {storeConfirmed ? (
           <>
             <InventoryLabelInstructionCard
-              deadlineLabel={SAMPLE_STORAGE_POLICY.deadlineLabel}
+              deadlineLabel={deadlineLabel}
               itemName={LABEL_SAMPLE.itemName}
-              labelCode={LABEL_SAMPLE.labelCode}
-              storageZone={SAMPLE_STORAGE_POLICY.zoneLabel}
+              labelCode={labelCode}
+              storageZone={storageZoneLabel}
               testID="inventory-qr-label"
             />
             <View style={styles.policyPanel}>
@@ -442,6 +563,17 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 19,
     color: colors.textPrimary,
+  },
+  confirmingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 10,
+  },
+  confirmingText: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    fontWeight: '700',
   },
   actionGrid: {
     flexDirection: 'row',

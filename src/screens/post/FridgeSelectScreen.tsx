@@ -19,7 +19,7 @@ import type { RootStackParamList } from '@/navigation/types';
 import { getAvailableFridges } from '@/api/fridges';
 import { createPost } from '@/api/posts';
 import { useAuthStore } from '@/store/authStore';
-import type { Fridge } from '@/types';
+import type { Fridge, PostCreateFlow } from '@/types';
 import { getApiErrorMessage } from '@/utils/apiError';
 import {
   getRegisteredLocation,
@@ -44,6 +44,7 @@ const FridgeSelectScreen = ({ route, navigation }: Props) => {
   const [fridgeError, setFridgeError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSubmittingRef = useRef(false);
+  const selectedFridge = fridges.find(fridge => fridge.id === selectedFridgeId);
 
   const fetchFridges = useCallback(async (lat: number, lng: number) => {
     setIsLoading(true);
@@ -83,7 +84,7 @@ const FridgeSelectScreen = ({ route, navigation }: Props) => {
     fetchFridges(registeredLocation.latitude, registeredLocation.longitude);
   }, [fetchFridges, user]);
 
-  const handleComplete = async () => {
+  const handleComplete = async (flow: PostCreateFlow = 'direct') => {
     if (!selectedFridgeId || !postData) {
       return;
     }
@@ -105,9 +106,21 @@ const FridgeSelectScreen = ({ route, navigation }: Props) => {
       const response = await createPost({
         ...postData,
         fridgeId: selectedFridgeId,
+        ...(flow === 'fridge_qr' ? {flow} : {}),
       });
 
       if (response.success && response.data) {
+        if (flow === 'fridge_qr') {
+          navigation.replace('InventoryQrPrototype', {
+            mode: 'store',
+            postId: response.data.id,
+            fridgePublicCode: selectedFridge?.publicCode,
+            fridgeName: selectedFridge?.name,
+            fridgeLocation: selectedFridge?.address,
+          });
+          return;
+        }
+
         navigation.replace('PostComplete', { postId: response.data.id });
       } else {
         Alert.alert(
@@ -232,13 +245,23 @@ const FridgeSelectScreen = ({ route, navigation }: Props) => {
               (!selectedFridgeId || !postData || isSubmitting) &&
                 styles.submitDisabled,
             ]}
-            onPress={handleComplete}
+            onPress={() => handleComplete('direct')}
             disabled={!selectedFridgeId || !postData || isSubmitting}>
             {isSubmitting ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
               <Text style={styles.submitButtonText}>나눔 완료하기</Text>
             )}
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.qrSubmitButton,
+              (!selectedFridgeId || !postData || isSubmitting) &&
+                styles.submitDisabled,
+            ]}
+            onPress={() => handleComplete('fridge_qr')}
+            disabled={!selectedFridgeId || !postData || isSubmitting}>
+            <Text style={styles.qrSubmitButtonText}>QR 입고로 등록하기</Text>
           </TouchableOpacity>
         </View>
       ) : null}

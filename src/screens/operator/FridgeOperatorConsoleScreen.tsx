@@ -1,5 +1,6 @@
-import React from 'react';
+import React, {useState} from 'react';
 import {
+  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -7,8 +8,10 @@ import {
   View,
 } from 'react-native';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
+import {disposeOperatorItem} from '@/api/operator';
 import type {RootStackParamList} from '@/navigation/types';
 import {colors} from '@/theme';
+import {getApiErrorMessage} from '@/utils/apiError';
 import {
   deriveBasketStatus,
   getOperatorItemStatusTone,
@@ -73,7 +76,7 @@ type InspectionItem = {
   status: OperatorItemStatus;
 };
 
-const inspectionItems: InspectionItem[] = [
+const initialInspectionItems: InspectionItem[] = [
   {
     name: '토마토',
     postId: '108',
@@ -94,6 +97,13 @@ const inspectionItems: InspectionItem[] = [
     ai: 'Fresh, 0.98',
     recommendedUntil: '2026-05-18 09:00',
     status: 'requested',
+  },
+  {
+    name: '오이',
+    postId: '111',
+    ai: 'Mid, 0.61',
+    recommendedUntil: '2026-05-15 09:00',
+    status: 'discardCandidate',
   },
 ];
 
@@ -123,105 +133,169 @@ const statusTone = (tone: OperatorStatusTone) => {
 const itemStatusTone = (status: OperatorItemStatus) =>
   statusTone(getOperatorItemStatusTone(status));
 
-const FridgeOperatorConsoleScreen = ({navigation}: Props) => (
-  <View style={styles.container}>
-    <View style={styles.header}>
-      <TouchableOpacity style={styles.backButton} onPress={navigation.goBack}>
-        <Text style={styles.backButtonText}>‹</Text>
-      </TouchableOpacity>
-      <View style={styles.headerText}>
-        <Text style={styles.title}>냉장고 운영자 콘솔</Text>
-        <Text style={styles.subtitle}>전남대학교 공유냉장고 현장 점검</Text>
-      </View>
-    </View>
+const FridgeOperatorConsoleScreen = ({navigation}: Props) => {
+  const [inspectionItems, setInspectionItems] = useState(initialInspectionItems);
+  const [disposingPostId, setDisposingPostId] = useState<string | null>(null);
 
-    <ScrollView contentContainerStyle={styles.content}>
-      <View style={styles.prototypeBanner}>
-        <Text style={styles.prototypeBadge}>읽기 전용 프로토타입</Text>
-        <Text style={styles.prototypeText}>
-          실제 inventory API와 상태 변경 저장은 아직 연결되지 않았어요.
-        </Text>
-      </View>
+  const handleDispose = async (item: InspectionItem) => {
+    const postId = Number(item.postId);
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>냉장고 상태</Text>
-        <Text style={styles.sectionNote}>마지막 동기화 2026-05-15 14:20</Text>
-        <View style={styles.summaryGrid}>
-          {summary.map(item => (
-            <View key={item.label} style={styles.summaryCell}>
-              <Text style={styles.summaryLabel}>{item.label}</Text>
-              <Text style={styles.summaryValue}>{item.value}</Text>
-              <Text style={styles.summaryNote}>{item.note}</Text>
-            </View>
-          ))}
+    if (!Number.isFinite(postId)) {
+      Alert.alert('폐기 요청 실패', '식재료 번호를 확인할 수 없습니다.');
+      return;
+    }
+
+    setDisposingPostId(item.postId);
+
+    try {
+      const response = await disposeOperatorItem(postId);
+
+      if (response.success) {
+        setInspectionItems(currentItems =>
+          currentItems.map(currentItem =>
+            currentItem.postId === item.postId
+              ? {...currentItem, status: 'discarded'}
+              : currentItem,
+          ),
+        );
+        Alert.alert(
+          '폐기 처분 완료',
+          response.message || '운영자 폐기 처분이 완료되었습니다.',
+        );
+        return;
+      }
+
+      Alert.alert(
+        '폐기 요청 실패',
+        response.message || '폐기 처분 요청에 실패했습니다.',
+      );
+    } catch (error) {
+      Alert.alert(
+        '폐기 요청 실패',
+        getApiErrorMessage(error, '폐기 처분 요청에 실패했습니다.'),
+      );
+    } finally {
+      setDisposingPostId(null);
+    }
+  };
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.backButton} onPress={navigation.goBack}>
+          <Text style={styles.backButtonText}>‹</Text>
+        </TouchableOpacity>
+        <View style={styles.headerText}>
+          <Text style={styles.title}>냉장고 운영자 콘솔</Text>
+          <Text style={styles.subtitle}>전남대학교 공유냉장고 현장 점검</Text>
         </View>
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>바구니 후보</Text>
-        <Text style={styles.sectionNote}>
-          정식 채택 전이며 같은 촬영/보관 흐름에서 나온 묶음 후보
-        </Text>
-        {basketCandidates.map(candidate => {
-          const candidateStatus = deriveBasketStatus(candidate.items);
-
-          return (
-            <View key={candidate.id} style={styles.rowCard}>
-              <View style={styles.rowHeader}>
-                <Text style={styles.rowTitle}>{candidate.id}</Text>
-                <Text style={styles.rowMeta}>{candidate.source}</Text>
-              </View>
-              <View style={styles.pillRow}>
-                {candidate.items.map(item => (
-                  <Text key={item.name} style={styles.neutralPill}>
-                    {item.name}
-                  </Text>
-                ))}
-              </View>
-              <Text style={[styles.statusPill, statusTone(candidateStatus.tone)]}>
-                {candidateStatus.label}
-              </Text>
-              <Text style={styles.rowText}>{candidate.decision}</Text>
-            </View>
-          );
-        })}
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>개별 나눔 식재료 점검</Text>
-        <Text style={styles.sectionNote}>
-          사용자 등록/신청 단위는 개별 나눔 식재료로 유지
-        </Text>
-        {inspectionItems.map(item => (
-          <View key={item.postId} style={styles.rowCard}>
-            <View style={styles.rowHeader}>
-              <View>
-                <Text style={styles.rowTitle}>{item.name}</Text>
-                <Text style={styles.rowMeta}>postId {item.postId}</Text>
-              </View>
-              <Text style={[styles.statusPill, itemStatusTone(item.status)]}>
-                {item.status}
-              </Text>
-            </View>
-            <Text style={styles.rowText}>AI 상태: {item.ai}</Text>
-            <Text style={styles.rowText}>
-              권장 나눔 기한: {item.recommendedUntil}
-            </Text>
-          </View>
-        ))}
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>상태 검증 규칙</Text>
-        {validationRules.map(rule => (
-          <Text key={rule} style={styles.ruleText}>
-            - {rule}
+      <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.prototypeBanner}>
+          <Text style={styles.prototypeBadge}>실제 운영자 API 연결</Text>
+          <Text style={styles.prototypeText}>
+            폐기 후보 항목은 운영자 API로 바로 처분 요청을 보냅니다. 백엔드가 아직 배포되지 않았다면 실패 메시지가 표시됩니다.
           </Text>
-        ))}
-      </View>
-    </ScrollView>
-  </View>
-);
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>냉장고 상태</Text>
+          <Text style={styles.sectionNote}>마지막 동기화 2026-05-15 14:20</Text>
+          <View style={styles.summaryGrid}>
+            {summary.map(item => (
+              <View key={item.label} style={styles.summaryCell}>
+                <Text style={styles.summaryLabel}>{item.label}</Text>
+                <Text style={styles.summaryValue}>{item.value}</Text>
+                <Text style={styles.summaryNote}>{item.note}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>바구니 후보</Text>
+          <Text style={styles.sectionNote}>
+            정식 채택 전이며 같은 촬영/보관 흐름에서 나온 묶음 후보
+          </Text>
+          {basketCandidates.map(candidate => {
+            const candidateStatus = deriveBasketStatus(candidate.items);
+
+            return (
+              <View key={candidate.id} style={styles.rowCard}>
+                <View style={styles.rowHeader}>
+                  <Text style={styles.rowTitle}>{candidate.id}</Text>
+                  <Text style={styles.rowMeta}>{candidate.source}</Text>
+                </View>
+                <View style={styles.pillRow}>
+                  {candidate.items.map(item => (
+                    <Text key={item.name} style={styles.neutralPill}>
+                      {item.name}
+                    </Text>
+                  ))}
+                </View>
+                <Text
+                  style={[styles.statusPill, statusTone(candidateStatus.tone)]}>
+                  {candidateStatus.label}
+                </Text>
+                <Text style={styles.rowText}>{candidate.decision}</Text>
+              </View>
+            );
+          })}
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>개별 나눔 식재료 점검</Text>
+          <Text style={styles.sectionNote}>
+            사용자 등록/신청 단위는 개별 나눔 식재료로 유지
+          </Text>
+          {inspectionItems.map(item => (
+            <View key={item.postId} style={styles.rowCard}>
+              <View style={styles.rowHeader}>
+                <View>
+                  <Text style={styles.rowTitle}>{item.name}</Text>
+                  <Text style={styles.rowMeta}>postId {item.postId}</Text>
+                </View>
+                <Text style={[styles.statusPill, itemStatusTone(item.status)]}>
+                  {item.status}
+                </Text>
+              </View>
+              <Text style={styles.rowText}>AI 상태: {item.ai}</Text>
+              <Text style={styles.rowText}>
+                권장 나눔 기한: {item.recommendedUntil}
+              </Text>
+              {item.status === 'discardCandidate' ? (
+                <TouchableOpacity
+                  disabled={disposingPostId === item.postId}
+                  onPress={() => handleDispose(item)}
+                  style={[
+                    styles.disposeButton,
+                    disposingPostId === item.postId &&
+                      styles.disposeButtonDisabled,
+                  ]}>
+                  <Text style={styles.disposeButtonText}>
+                    {disposingPostId === item.postId
+                      ? '폐기 요청 중'
+                      : '폐기 처분 완료'}
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+          ))}
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>상태 검증 규칙</Text>
+          {validationRules.map(rule => (
+            <Text key={rule} style={styles.ruleText}>
+              - {rule}
+            </Text>
+          ))}
+        </View>
+      </ScrollView>
+    </View>
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -398,6 +472,23 @@ const styles = StyleSheet.create({
   dangerPill: {
     backgroundColor: '#FEE2E2',
     color: '#991B1B',
+  },
+  disposeButton: {
+    alignSelf: 'flex-start',
+    marginTop: 12,
+    minHeight: 42,
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: '#DC2626',
+  },
+  disposeButtonDisabled: {
+    opacity: 0.55,
+  },
+  disposeButtonText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '800',
   },
   ruleText: {
     marginTop: 8,

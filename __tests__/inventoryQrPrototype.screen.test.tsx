@@ -1,7 +1,17 @@
 import React from 'react';
 import {Text, TouchableOpacity} from 'react-native';
 import ReactTestRenderer from 'react-test-renderer';
+import {confirmStore} from '@/api/inventory';
 import InventoryQrPrototypeScreen from '@/screens/inventory/InventoryQrPrototypeScreen';
+
+jest.mock('@/api/inventory', () => ({
+  confirmPickup: jest.fn(),
+  confirmStore: jest.fn(),
+}));
+
+const mockedConfirmStore = confirmStore as jest.MockedFunction<
+  typeof confirmStore
+>;
 
 const flattenText = (value: unknown): string => {
   if (Array.isArray(value)) {
@@ -34,6 +44,10 @@ const findTouchableByText = (
 };
 
 describe('InventoryQrPrototypeScreen', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
   it('renders the QR and inventory prototype surface', async () => {
     let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
 
@@ -112,6 +126,57 @@ describe('InventoryQrPrototypeScreen', () => {
     expect(getTextContent(renderer!)).toContain(
       '선택한 냉장고 QR이 아닙니다. 다시 확인해주세요.',
     );
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
+  it('calls confirm-store when a post-backed store QR scan succeeds', async () => {
+    mockedConfirmStore.mockResolvedValue({
+      success: true,
+      message: '입고 인증이 완료되었습니다. 등록번호 #03을 라벨에 적어주세요.',
+      data: {
+        postId: 10,
+        status: 'available',
+        labelCode: '#03',
+        storageZone: 'ETHYLENE_SEPARATED',
+        storageDeadlineAt: '2026-06-18T05:30:00Z',
+        storedAt: '2026-05-19T05:30:00Z',
+      },
+    });
+
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(
+        <InventoryQrPrototypeScreen
+          navigation={{goBack: jest.fn()} as any}
+          route={{
+            params: {
+              mode: 'store',
+              postId: 10,
+              fridgePublicCode: 'GJ-STATION-001',
+              fridgeName: '광주역 앞 공유냉장고',
+              fridgeLocation: '광주 북구 중흥동',
+            },
+          } as any}
+        />,
+      );
+    });
+
+    await ReactTestRenderer.act(async () => {
+      findTouchableByText(renderer!, '보관 QR 테스트').props.onPress();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(mockedConfirmStore).toHaveBeenCalledWith({
+      postId: 10,
+      fridgePublicCode: 'GJ-STATION-001',
+    });
+    expect(getTextContent(renderer!)).toContain('#03');
+    expect(getTextContent(renderer!)).toContain('에틸렌 분리 구역');
 
     await ReactTestRenderer.act(async () => {
       renderer?.unmount();

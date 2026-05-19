@@ -196,6 +196,7 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
   const confidencePercent = getConfidencePercent(post.confidenceScore);
   const statusLabel = getPostStatusLabel(post.status);
   const canRequestShare = !isMyPost && post.status === 'available';
+  const canConfirmPickup = !isMyPost && post.status === 'requested';
   const requestButtonLabel = isRequesting
     ? '신청 중...'
     : canRequestShare
@@ -324,6 +325,18 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
             disabled={!canRequestShare || isRequesting}>
             <Text style={styles.chatButtonText}>{requestButtonLabel}</Text>
           </TouchableOpacity>
+          {canConfirmPickup && (
+            <TouchableOpacity
+              style={styles.pickupQrButton}
+              onPress={() =>
+                navigation.navigate('InventoryQrPrototype', {
+                  mode: 'pickup',
+                  postId: post.id,
+                })
+              }>
+              <Text style={styles.pickupQrButtonText}>수령 QR 인증</Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
     </View>
