@@ -343,10 +343,16 @@ POST /api/v1/inventory/confirm-pickup
 ```text
 GET /api/v1/operator/fridges/{fridgeId}/inventory/summary
 GET /api/v1/operator/fridges/{fridgeId}/inventory/items
-POST /api/v1/operator/items/{postId}/status-events
+PATCH /api/v1/operator/items/{postId}/dispose
 ```
 
-운영자 상태 이벤트 후보:
+MVP 운영자 처리:
+
+- summary/items는 냉장고 운영자 콘솔의 요약 카드와 점검 목록을 채운다.
+- `dispose`는 만료/폐기 대상 항목을 `disposed`로 직접 전환한다.
+- 백엔드 미배포 또는 권한 불일치 시 프론트는 실패 메시지를 표시하고 샘플 fallback을 유지한다.
+
+Post-MVP 운영자 상태 이벤트 후보:
 
 - `disposed`
 - `missing`
@@ -462,10 +468,10 @@ AI 분석 완료 -> 냉장고 선택 -> QR 인증 -> 등록 완료
 1. 실제 FCM 기기 QA가 닫힐 때까지 현재 MVP `available -> requested` 구현은 유지한다.
 2. Inventory/QR 도메인 모델과 백엔드 schema를 feature flag 또는 vNext API path 뒤에 추가한다.
 3. QR parser와 scanner module을 먼저 만들고 로컬 테스트를 붙인다.
-4. 공급자 `pending_store` 흐름을 구현한다.
-5. 수요자 30분 임시 선점과 confirm-pickup 흐름을 구현한다.
+4. 공급자 `pending_store` 흐름을 구현한다. 프론트는 `flow: "fridge_qr"` 등록과 confirm-store 호출을 선행 구현했다.
+5. 수요자 30분 임시 선점과 confirm-pickup 흐름을 구현한다. 프론트는 `requestExpiresAt` countdown과 confirm-pickup 호출을 선행 구현했다.
 6. timeout job 또는 lazy-expire 로직을 구현한다.
-7. 최소 냉장고 운영자 inventory 화면을 구현한다.
+7. 최소 냉장고 운영자 inventory 화면을 구현한다. 프론트는 summary/items 조회와 dispose 호출을 선행 구현했다.
 8. API 계약 QA, Android emulator QA, 실제 기기 QR/FCM QA 순서로 검증한다.
 
 ## Open Questions

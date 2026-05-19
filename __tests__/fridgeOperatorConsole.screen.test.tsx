@@ -1,16 +1,30 @@
 import React from 'react';
 import {TouchableOpacity} from 'react-native';
 import ReactTestRenderer from 'react-test-renderer';
-import {disposeOperatorItem} from '@/api/operator';
+import {
+  disposeOperatorItem,
+  getOperatorInventoryItems,
+  getOperatorInventorySummary,
+} from '@/api/operator';
 import FridgeOperatorConsoleScreen from '@/screens/operator/FridgeOperatorConsoleScreen';
 
 jest.mock('@/api/operator', () => ({
   disposeOperatorItem: jest.fn(),
+  getOperatorInventoryItems: jest.fn(),
+  getOperatorInventorySummary: jest.fn(),
 }));
 
 const mockedDisposeOperatorItem = disposeOperatorItem as jest.MockedFunction<
   typeof disposeOperatorItem
 >;
+const mockedGetOperatorInventoryItems =
+  getOperatorInventoryItems as jest.MockedFunction<
+    typeof getOperatorInventoryItems
+  >;
+const mockedGetOperatorInventorySummary =
+  getOperatorInventorySummary as jest.MockedFunction<
+    typeof getOperatorInventorySummary
+  >;
 
 const findTouchableByText = (
   renderer: ReactTestRenderer.ReactTestRenderer,
@@ -32,6 +46,36 @@ const findTouchableByText = (
 describe('FridgeOperatorConsoleScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockedGetOperatorInventorySummary.mockResolvedValue({
+      success: true,
+      message: 'ok',
+      data: {
+        totalItems: 2,
+        availableItems: 1,
+        requestedItems: 0,
+        expiringSoonItems: 1,
+        expiredItems: 1,
+        needsReviewItems: 0,
+        ethyleneSeparatedItems: 1,
+        lastSyncedAt: '2026-05-20T00:00:00Z',
+      },
+    });
+    mockedGetOperatorInventoryItems.mockResolvedValue({
+      success: true,
+      message: 'ok',
+      data: [
+        {
+          postId: 120,
+          labelCode: '#07',
+          itemName: '사과',
+          status: 'expired',
+          freshnessLabel: 'Mid',
+          confidenceScore: 0.88,
+          storageZone: 'ETHYLENE_SEPARATED',
+          storageDeadlineAt: '2026-05-19T00:00:00Z',
+        },
+      ],
+    });
   });
 
   it('renders the temporary fridge operator verification sections', async () => {
@@ -44,8 +88,11 @@ describe('FridgeOperatorConsoleScreen', () => {
           route={{params: undefined} as any}
         />,
       );
+      await Promise.resolve();
     });
 
+    expect(mockedGetOperatorInventorySummary).toHaveBeenCalledWith(1);
+    expect(mockedGetOperatorInventoryItems).toHaveBeenCalledWith(1);
     expect(
       renderer!.root.findAllByProps({children: '냉장고 운영자 콘솔'}),
     ).not.toHaveLength(0);
@@ -70,6 +117,11 @@ describe('FridgeOperatorConsoleScreen', () => {
     expect(renderer!.root.findAllByProps({children: '상태 검증 규칙'})).not.toHaveLength(
       0,
     );
+    expect(renderer!.root.findAllByProps({children: '#07'})).not.toHaveLength(0);
+    expect(renderer!.root.findAllByProps({children: '사과'})).not.toHaveLength(0);
+    expect(
+      renderer!.root.findAllByProps({children: '에틸렌 분리 구역'}),
+    ).not.toHaveLength(0);
 
     await ReactTestRenderer.act(async () => {
       renderer?.unmount();
@@ -81,7 +133,7 @@ describe('FridgeOperatorConsoleScreen', () => {
       success: true,
       message: '폐기 처분 완료',
       data: {
-        postId: 111,
+        postId: 120,
         status: 'disposed',
         disposedAt: '2026-05-20T09:00:00Z',
       },
@@ -96,6 +148,7 @@ describe('FridgeOperatorConsoleScreen', () => {
           route={{params: undefined} as any}
         />,
       );
+      await Promise.resolve();
     });
 
     await ReactTestRenderer.act(async () => {
@@ -103,7 +156,7 @@ describe('FridgeOperatorConsoleScreen', () => {
       await Promise.resolve();
     });
 
-    expect(mockedDisposeOperatorItem).toHaveBeenCalledWith(111);
+    expect(mockedDisposeOperatorItem).toHaveBeenCalledWith(120);
     expect(renderer!.root.findAllByProps({children: 'discarded'})).not.toHaveLength(
       0,
     );

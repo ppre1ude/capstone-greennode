@@ -8,6 +8,7 @@ export type {
 export type {
   Post,
   PostNearbyRead,
+  FreshnessLabel,
   PostCreateFlow,
   PostStorageZone,
   PostStatus,

@@ -100,6 +100,12 @@
 - FCM payload는 문자열 + camelCase로 확정했고, `share_created`는 반경 2km 내 FCM 토큰이 등록된 다른 사용자에게, `share_requested`는 공급자 FCM 토큰이 있을 때 발송된다.
 - 스프린트 종료 판정: `camera/gallery -> generate -> create -> home/detail/map -> request -> requested available 제외` core flow와 FCM 프론트 구현은 닫았다. 실제 FCM 수신 QA는 `android/app/google-services.json`, NHN Cloud VM Firebase Admin/service account credentials, 2 Android client/2계정/2 FCM token 환경이 필요하므로 다음 스프린트 P0로 이월한다. `2026-GreenNode.pem`은 SSH 터널용 키라 Firebase 자격증명을 대체하지 않는다.
 
+### 2026-05-20 Inventory/QR 프론트 선행 구현 업데이트
+
+- QR/inventory 계약 확정 후 프론트는 `flow: "fridge_qr"` 등록, 보관 QR 인증, 수령 QR 인증, 운영자 폐기 요청을 실제 API 호출 경로로 연결했다. 백엔드 미배포/불일치 시 Alert 또는 fallback 메시지를 표시한다.
+- 운영자 콘솔은 `GET /operator/fridges/{fridgeId}/inventory/summary`, `GET /operator/fridges/{fridgeId}/inventory/items`, `PATCH /operator/items/{postId}/dispose` 계약으로 선행 구현했다. summary/items 실패 시 기존 샘플 데이터를 fallback으로 표시한다.
+- 검증: `operator.api`, `fridgeOperatorConsole.screen`, `fridgeSelect.qrFlow`, `inventoryQrPrototype.screen`, `postDetail.requestShare` 테스트와 전체 Jest/TypeScript 검증으로 프론트 계약을 고정했다. 실제 QR 스캔 기기 QA와 백엔드 런타임 QA는 백엔드 배포 후 필요하다.
+
 ---
 
 ## 1. 현재 상태 요약
@@ -240,8 +246,8 @@
 - WebSocket 기반 실시간 채팅
 - 소셜 로그인 전체 구현
 - 이메일 verification 전체 예외 케이스
-- 냉장고 내부 inventory. 단, 냉장고별 available 나눔 식재료 조회 API는 구현됐으므로 지도/냉장고 상세 탐색과 구분한다.
-- 냉장고 운영자 화면. 제품 범위에는 포함하지만 MVP 구현 범위에서는 제외
+- 냉장고 내부 inventory 백엔드 런타임 QA. 프론트는 QR/inventory API 계약을 선행 구현했지만, 실제 서버 배포 후 보관/수령/운영자 목록/폐기 end-to-end 검증이 필요하다.
+- 운영자 권한/역할 관리 화면. 운영자 콘솔 진입점과 inventory 점검 화면은 있으나, operator role 부여/관리 UI는 후속이다.
 
 ---
 
