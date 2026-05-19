@@ -43,6 +43,7 @@ import {
   DSButton,
   DSCard,
   DSChip,
+  DSIcon,
   DSListCell,
   DSText,
   DSTextField,
@@ -269,7 +270,9 @@ const MapScreen = () => {
             size="small"
             style={styles.detailButton}
             textStyle={styles.detailButtonText}
-            trailing={<DSText style={styles.actionIcon}>›</DSText>}
+            trailing={
+              <DSIcon name="angle-right" size="small" color="textPrimary" />
+            }
             onPress={() => focusFridge(item)}
           />
         </View>
@@ -296,7 +299,9 @@ const MapScreen = () => {
             resizeMode="cover"
           />
         }
-        trailing={<DSText style={styles.fridgePostChevron}>›</DSText>}
+        trailing={
+          <DSIcon name="angle-right" size="small" color="textTertiary" />
+        }
         onPress={() =>
           navigation.getParent()?.navigate('PostDetail', { postId: item.id })
         }
@@ -319,7 +324,9 @@ const MapScreen = () => {
             size="small"
             style={styles.switchFridgeButton}
             textStyle={styles.switchFridgeButtonText}
-            leading={<DSText style={styles.actionIcon}>‹</DSText>}
+            leading={
+              <DSIcon name="angle-left" size="small" color="textPrimary" />
+            }
             onPress={clearSelectedFridge}
           />
           <DSButton
@@ -328,7 +335,9 @@ const MapScreen = () => {
             size="small"
             style={styles.panelRetryButton}
             textStyle={styles.panelRetryButtonText}
-            leading={<DSText style={styles.refreshIcon}>↻</DSText>}
+            leading={
+              <DSIcon name="rotate-right" size="small" color="primary" />
+            }
             onPress={() => fetchFridgePosts(selectedFridge.id)}
           />
         </View>
@@ -434,7 +443,13 @@ const MapScreen = () => {
             size="medium"
             style={styles.retryButton}
             textStyle={styles.retryButtonText}
-            leading={<DSText style={styles.actionIconLight}>📍</DSText>}
+            leading={
+              <DSIcon
+                name="map-location-dot"
+                size="small"
+                color="textOnPrimary"
+              />
+            }
             onPress={openLocationSetup}
           />
         </View>
@@ -453,7 +468,14 @@ const MapScreen = () => {
       {/* 헤더 검색창 (오버레이) */}
       <View style={styles.header}>
         <DSTextField
-          leading={<DSText style={styles.searchIcon}>🔍</DSText>}
+          leading={
+            <DSIcon
+              name="magnifying-glass"
+              size="small"
+              color="textTertiary"
+              style={styles.searchIcon}
+            />
+          }
           containerStyle={styles.searchFieldContainer}
           inputContainerStyle={styles.searchBar}
           inputStyle={styles.searchInput}
@@ -535,7 +557,13 @@ const MapScreen = () => {
               size="small"
               style={styles.retryButton}
               textStyle={styles.retryButtonText}
-              leading={<DSText style={styles.actionIconLight}>↻</DSText>}
+              leading={
+                <DSIcon
+                  name="rotate-right"
+                  size="small"
+                  color="textOnPrimary"
+                />
+              }
               onPress={() => {
                 fetchFridges();
               }}
@@ -574,7 +602,9 @@ const MapScreen = () => {
                 size="small"
                 style={styles.retryButton}
                 textStyle={styles.retryButtonText}
-                leading={<DSText style={styles.actionIconLight}>×</DSText>}
+                leading={
+                  <DSIcon name="xmark" size="small" color="textOnPrimary" />
+                }
                 onPress={() => setSearchQuery('')}
               />
             ) : null}

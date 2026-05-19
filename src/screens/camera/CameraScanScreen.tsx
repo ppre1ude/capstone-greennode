@@ -29,6 +29,7 @@ import {
 } from 'react-native-vision-camera';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { DSButton, DSChip, DSText } from '@/design-system';
+import { colors } from '@/theme';
 import { styles } from './CameraScanScreen.styles';
 import { generatePost } from '@/api/posts';
 import { getApiErrorMessage } from '@/utils/apiError';
@@ -262,7 +263,7 @@ const CameraScanScreen = ({ navigation }: Props) => {
             leading={
               <ActivityIndicator
                 size="small"
-                color="#1A1A1A"
+                color={colors.textPrimary}
                 style={styles.statusSpinner}
               />
             }

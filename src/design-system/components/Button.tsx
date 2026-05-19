@@ -9,8 +9,8 @@ import {
   View,
   ViewStyle,
 } from 'react-native';
-import {colors, layout, radius, spacing} from '@/theme';
-import {DSText} from './Text';
+import { colors, layout, radius, spacing } from '@/theme';
+import { DSText } from './Text';
 
 export type DSButtonVariant = 'solid' | 'outlined' | 'text';
 export type DSButtonColor = 'primary' | 'assistive' | 'danger' | 'kakao';
@@ -106,7 +106,8 @@ const outlinedTone = (color: DSButtonColor, disabled: boolean): ButtonTone => {
     backgroundColor: 'transparent',
     borderColor: color === 'assistive' ? colors.border : colors.primary,
     contentColor: color === 'assistive' ? 'textSecondary' : 'primary',
-    indicatorColor: color === 'assistive' ? colors.textSecondary : colors.primary,
+    indicatorColor:
+      color === 'assistive' ? colors.textSecondary : colors.primary,
   };
 };
 
@@ -160,7 +161,7 @@ export const DSButton = ({
   size = 'large',
   disabled = false,
   loading = false,
-  loadingLabel = '처리 중',
+  loadingLabel = '',
   leading,
   trailing,
   fullWidth = false,
@@ -186,7 +187,7 @@ export const DSButton = ({
       {...props}
       accessibilityLabel={accessibilityLabel ?? label}
       accessibilityRole="button"
-      accessibilityState={{disabled: isDisabled, busy: loading}}
+      accessibilityState={{ disabled: isDisabled, busy: loading }}
       activeOpacity={0.82}
       disabled={isDisabled}
       onPress={handlePress}
@@ -217,9 +218,14 @@ export const DSButton = ({
           {label}
         </DSText>
         {loading ? (
-          <DSText variant="small" color={tone.contentColor} style={styles.loading}>
-            {loadingLabel}
-          </DSText>
+          loadingLabel ? (
+            <DSText
+              variant="small"
+              color={tone.contentColor}
+              style={styles.loading}>
+              {loadingLabel}
+            </DSText>
+          ) : null
         ) : (
           trailing && <View style={styles.trailing}>{trailing}</View>
         )}

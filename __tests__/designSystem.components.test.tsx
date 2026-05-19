@@ -35,7 +35,12 @@ describe('design system components', () => {
 
     await ReactTestRenderer.act(async () => {
       renderer = ReactTestRenderer.create(
-        <DSButton label="저장" loading onPress={onPress} />,
+        <DSButton
+          label="저장"
+          loading
+          loadingLabel="Saving"
+          onPress={onPress}
+        />,
       );
     });
 
@@ -45,7 +50,7 @@ describe('design system components', () => {
       renderer!.root.findAllByProps({ children: '저장' }).length,
     ).toBeGreaterThan(0);
     expect(
-      renderer!.root.findAllByProps({ children: '처리 중' }).length,
+      renderer!.root.findAllByProps({ children: 'Saving' }).length,
     ).toBeGreaterThan(0);
     expect(button.props.accessibilityState).toMatchObject({
       busy: true,
@@ -176,7 +181,7 @@ describe('design system components', () => {
       renderer!.root.findAllByProps({ children: '도보 4분' }).length,
     ).toBeGreaterThan(0);
     expect(
-      renderer!.root.findAllByProps({ children: '›' }).length,
+      renderer!.root.findAllByProps({ name: 'angle-right' }).length,
     ).toBeGreaterThan(0);
 
     const cell = renderer!.root.findAllByType(TouchableOpacity)[0];

@@ -7,6 +7,7 @@ import { colors } from '@/theme';
 import type { ColorToken } from '@/theme';
 
 export type DSIconName =
+  | 'angle-left'
   | 'angle-right'
   | 'apple'
   | 'bell'

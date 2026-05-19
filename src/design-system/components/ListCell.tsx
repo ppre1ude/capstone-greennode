@@ -9,6 +9,7 @@ import {
   ViewStyle,
 } from 'react-native';
 import { colors, spacing } from '@/theme';
+import { DSIcon } from './Icon';
 import { DSText } from './Text';
 
 export type DSListCellPadding = 'none' | 'small' | 'medium' | 'large';
@@ -81,9 +82,12 @@ export const DSListCell = ({
       </View>
       {trailing && <View style={styles.trailing}>{trailing}</View>}
       {chevron && (
-        <DSText variant="heading3" color="textTertiary" style={styles.chevron}>
-          ›
-        </DSText>
+        <DSIcon
+          name="angle-right"
+          size="small"
+          color="textTertiary"
+          style={styles.chevron}
+        />
       )}
     </>
   );

@@ -31,7 +31,6 @@ export const styles = StyleSheet.create({
     elevation: 8,
   },
   searchIcon: {
-    fontSize: 18,
     marginRight: 8,
   },
   searchInput: {
@@ -167,21 +166,6 @@ export const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: colors.textPrimary,
-  },
-  actionIcon: {
-    color: colors.textPrimary,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  actionIconLight: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  refreshIcon: {
-    color: colors.primary,
-    fontSize: 14,
-    fontWeight: '700',
   },
   textSelected: {
     color: '#FFFFFF',
@@ -326,10 +310,6 @@ export const styles = StyleSheet.create({
     height: 44,
     borderRadius: 8,
     backgroundColor: colors.surface,
-  },
-  fridgePostChevron: {
-    fontSize: 22,
-    color: colors.textTertiary,
   },
   fridgePostsStateBox: {
     borderTopWidth: 1,
