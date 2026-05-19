@@ -39,6 +39,7 @@ export type RootStackParamList = {
   PostComplete: {postId: number};
   PostDetail: {postId: number};
   FridgeOperatorConsole: undefined;
+  InventoryQrPrototype: undefined;
   FridgeSelect: {
     postData?: Omit<PostCreateData, 'fridgeId'>;
     qualityCategory?: string;

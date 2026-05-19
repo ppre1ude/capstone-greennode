@@ -70,4 +70,25 @@ describe('ProfileScreen operator console entry', () => {
       renderer?.unmount();
     });
   });
+
+  it('opens the inventory QR prototype from profile', async () => {
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(<ProfileScreen />);
+    });
+
+    await ReactTestRenderer.act(async () => {
+      findTouchableByText(
+        renderer!,
+        '냉장고 QR 흐름 테스트',
+      ).props.onPress();
+    });
+
+    expect(mockParentNavigate).toHaveBeenCalledWith('InventoryQrPrototype');
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
 });
