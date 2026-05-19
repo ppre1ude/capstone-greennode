@@ -2,6 +2,16 @@ apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 
+project.ext.vectoricons = [
+    iconFontNames: [
+        "FontAwesome6_Brands.ttf",
+        "FontAwesome6_Regular.ttf",
+        "FontAwesome6_Solid.ttf",
+    ]
+]
+
+apply from: file("../../node_modules/react-native-vector-icons/fonts.gradle")
+
 def localProperties = new Properties()
 def localPropertiesFile = rootProject.file("local.properties")
 if (localPropertiesFile.exists()) {

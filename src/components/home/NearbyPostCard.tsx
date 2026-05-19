@@ -5,10 +5,11 @@
  * 이미지 + 상태 뱃지 + 제목 + 위치 + 시간
  */
 import React from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
+import {View, StyleSheet, Image} from 'react-native';
 import type { PostNearbyRead } from '@/types';
 import { getImageUrl } from '@/api/posts';
 import { colors } from '@/theme';
+import {DSCard, DSChip, DSText} from '@/design-system';
 import {
   getPostDisplayName,
   getPostRelativeTimeLabel,
@@ -26,7 +27,11 @@ const NearbyPostCard = ({ post, onPress }: Props) => {
   const quality = getQualityMeta(post.freshnessLabel);
 
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>
+    <DSCard
+      variant="outlined"
+      padded={false}
+      onPress={onPress}
+      style={styles.card}>
       {/* 이미지 */}
       <View style={styles.imageContainer}>
         <Image
@@ -35,42 +40,45 @@ const NearbyPostCard = ({ post, onPress }: Props) => {
           resizeMode="cover"
         />
         {/* 상태 뱃지 */}
-        <View style={styles.freshBadge}>
-          <View style={styles.freshDot} />
-          <Text style={styles.freshText}>
-            {getPostStatusLabel(post.status)}
-          </Text>
-        </View>
+        <DSChip
+          label={getPostStatusLabel(post.status)}
+          size="xsmall"
+          variant="solid"
+          leading={<View style={styles.freshDot} />}
+          style={styles.freshBadge}
+        />
       </View>
 
       {/* 텍스트 정보 */}
       <View style={styles.info}>
         <View style={styles.infoTop}>
-          <Text style={styles.category}>{quality.label}</Text>
-          <Text style={styles.time}>
+          <DSChip
+            label={quality.label}
+            size="xsmall"
+            variant="outlined"
+            tone="primary"
+            style={styles.category}
+          />
+          <DSText variant="small" color="textTertiary">
             {getPostRelativeTimeLabel(post.createdAt)}
-          </Text>
+          </DSText>
         </View>
-        <Text style={styles.title} numberOfLines={1}>
+        <DSText variant="bodyBold" color="textPrimary" numberOfLines={1}>
           {displayName}
-        </Text>
-        <Text style={styles.location} numberOfLines={1}>
+        </DSText>
+        <DSText variant="small" color="textTertiary" numberOfLines={1}>
           {post.fridgeName || '근처 공유 냉장고'}
-        </Text>
+        </DSText>
       </View>
-    </TouchableOpacity>
+    </DSCard>
   );
 };
 
 const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
     padding: 12,
     gap: 12,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
   },
   imageContainer: {
     width: 96,
@@ -87,24 +95,14 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 6,
     left: 6,
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
+    backgroundColor: colors.glassBg,
+    borderColor: 'transparent',
   },
   freshDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
     backgroundColor: colors.success,
-  },
-  freshText: {
-    fontSize: 9,
-    fontWeight: '700',
-    color: colors.primary,
   },
   info: {
     flex: 1,
@@ -117,28 +115,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   category: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: colors.primary,
-    backgroundColor: '#E8F5E9',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
     borderRadius: 6,
-    overflow: 'hidden',
-  },
-  time: {
-    fontSize: 11,
-    color: colors.textTertiary,
-  },
-  title: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    lineHeight: 20,
-  },
-  location: {
-    fontSize: 12,
-    color: colors.textTertiary,
   },
 });
 

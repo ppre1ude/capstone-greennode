@@ -21,6 +21,7 @@ import {
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@/navigation/types';
+import { DSButton, DSCard, DSChip, DSText } from '@/design-system';
 import { colors } from '@/theme';
 import {
   getConfidencePercent,
@@ -70,7 +71,12 @@ const AnalysisResultScreen = ({ route, navigation }: Props) => {
           style={styles.headerButton}>
           <Text style={styles.headerIcon}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>분석 결과</Text>
+        <DSText
+          variant="bodyBold"
+          color="textPrimary"
+          style={styles.headerTitle}>
+          분석 결과
+        </DSText>
         <View style={styles.headerSpacer} />
       </View>
 
@@ -80,83 +86,146 @@ const AnalysisResultScreen = ({ route, navigation }: Props) => {
           <Image source={{ uri: imageUri }} style={styles.scannedImage} />
           {/* AI result badge */}
           <View style={styles.resultBadgeContainer}>
-            <View
-              style={[
-                styles.resultBadge,
-                needsReview && styles.resultBadgeWarning,
-                !quality.canShare && styles.resultBadgeError,
-              ]}>
-              <Text style={styles.resultBadgeIcon}>
-                {quality.canShare && !needsReview ? 'OK' : '!'}
-              </Text>
-              <Text style={styles.resultBadgeText}>{statusLabel}</Text>
-            </View>
+            <DSChip
+              label={statusLabel}
+              tone={
+                !quality.canShare
+                  ? 'error'
+                  : needsReview
+                  ? 'warning'
+                  : 'primary'
+              }
+              size="large"
+              leading={
+                <Text style={styles.resultBadgeIcon}>
+                  {quality.canShare && !needsReview ? 'OK' : '!'}
+                </Text>
+              }
+              style={styles.resultBadge}
+            />
           </View>
         </View>
 
         {/* analysis content */}
-        <View style={styles.analysisCard}>
+        <DSCard variant="elevated" padded={false} style={styles.analysisCard}>
           <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>AI 분석 결과</Text>
-            <View
+            <DSText
+              variant="bodyBold"
+              color="textPrimary"
+              style={styles.cardTitle}>
+              AI 분석 결과
+            </DSText>
+            <DSChip
+              label={needsReview ? '확인 필요' : quality.label}
+              tone={needsReview ? 'warning' : 'primary'}
+              variant="outlined"
+              size="large"
               style={[
                 styles.qualityPill,
                 needsReview && styles.qualityPillWarning,
-              ]}>
-              <Text
-                style={[
-                  styles.qualityPillText,
-                  needsReview && styles.qualityPillWarningText,
-                ]}>
-                {needsReview ? '확인 필요' : quality.label}
-              </Text>
-            </View>
+              ]}
+            />
           </View>
 
           <View style={styles.divider} />
 
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>판별 농산물</Text>
-            <Text style={styles.infoValue}>{detectedCrop}</Text>
+            <DSText
+              variant="caption"
+              color="textSecondary"
+              style={styles.infoLabel}>
+              판별 농산물
+            </DSText>
+            <DSText
+              variant="bodyBold"
+              color="textPrimary"
+              style={styles.infoValue}>
+              {detectedCrop}
+            </DSText>
           </View>
 
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>상태 안내</Text>
-            <Text style={styles.infoValue}>{quality.label}</Text>
+            <DSText
+              variant="caption"
+              color="textSecondary"
+              style={styles.infoLabel}>
+              상태 안내
+            </DSText>
+            <DSText
+              variant="bodyBold"
+              color="textPrimary"
+              style={styles.infoValue}>
+              {quality.label}
+            </DSText>
           </View>
 
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>AI 참고 신호</Text>
-            <Text style={styles.infoValue}>
+            <DSText
+              variant="caption"
+              color="textSecondary"
+              style={styles.infoLabel}>
+              AI 참고 신호
+            </DSText>
+            <DSText
+              variant="bodyBold"
+              color="textPrimary"
+              style={styles.infoValue}>
               {confidencePercent != null ? `${confidencePercent}%` : '미제공'}
-            </Text>
+            </DSText>
           </View>
 
           {needsReview && (
-            <View style={[styles.summaryBox, styles.reviewBox]}>
-              <Text style={styles.reviewTitle}>확인 필요</Text>
-              <Text style={styles.summaryText}>
-                AI가 나눔 가능으로 분석했지만 실제 상태를 직접 확인한 뒤 등록해주세요.
-              </Text>
-            </View>
+            <DSCard
+              variant="plain"
+              padded={false}
+              style={[styles.summaryBox, styles.reviewBox]}>
+              <DSText
+                variant="caption"
+                color="warning"
+                style={styles.reviewTitle}>
+                확인 필요
+              </DSText>
+              <DSText
+                variant="caption"
+                color="textSecondary"
+                style={styles.summaryText}>
+                AI가 나눔 가능으로 분석했지만 실제 상태를 직접 확인한 뒤
+                등록해주세요.
+              </DSText>
+            </DSCard>
           )}
 
-          <View style={styles.summaryBox}>
-            <Text style={styles.summaryTitle}>분석 메모</Text>
-            <Text style={styles.summaryText}>{analysisMessage}</Text>
-          </View>
-        </View>
+          <DSCard variant="plain" padded={false} style={styles.summaryBox}>
+            <DSText
+              variant="caption"
+              color="primary"
+              style={styles.summaryTitle}>
+              분석 메모
+            </DSText>
+            <DSText
+              variant="caption"
+              color="textSecondary"
+              style={styles.summaryText}>
+              {analysisMessage}
+            </DSText>
+          </DSCard>
+        </DSCard>
       </ScrollView>
 
       {/* CTA (하단 고정) */}
       <View style={styles.footer}>
-        <TouchableOpacity
+        <DSButton
+          label="다시 촬영"
+          variant="outlined"
+          color="assistive"
+          fullWidth
           style={styles.retakeButton}
-          onPress={() => navigation.goBack()}>
-          <Text style={styles.retakeText}>다시 촬영</Text>
-        </TouchableOpacity>
+          onPress={() => navigation.goBack()}
+        />
 
-        <TouchableOpacity
+        <DSButton
+          label={canProceed ? '이대로 나눔하기' : '나눔 기준 미충족'}
+          fullWidth
           style={[styles.nextButton, !canProceed && styles.nextButtonDisabled]}
           disabled={!canProceed}
           onPress={() => {
@@ -164,11 +233,8 @@ const AnalysisResultScreen = ({ route, navigation }: Props) => {
               result,
               imageUri,
             });
-          }}>
-          <Text style={styles.nextText}>
-            {canProceed ? '이대로 나눔하기' : '나눔 기준 미충족'}
-          </Text>
-        </TouchableOpacity>
+          }}
+        />
       </View>
     </View>
   );
@@ -233,17 +299,10 @@ const styles = StyleSheet.create({
   resultBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.primary,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 24,
     gap: 8,
-  },
-  resultBadgeError: {
-    backgroundColor: colors.error,
-  },
-  resultBadgeWarning: {
-    backgroundColor: colors.warning,
   },
   resultBadgeIcon: {
     fontSize: 18,

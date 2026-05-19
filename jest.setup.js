@@ -31,15 +31,33 @@ jest.mock('react-native-image-picker', () => ({
   launchImageLibrary: jest.fn(),
 }));
 
+jest.mock('react-native-vector-icons/FontAwesome6', () => {
+  const React = require('react');
+  const { Text } = require('react-native');
+
+  const MockIcon = props => React.createElement(Text, props, props.name);
+  MockIcon.hasIcon = jest.fn(() => true);
+  MockIcon.loadFont = jest.fn(() => Promise.resolve());
+  MockIcon.getImageSource = jest.fn(() =>
+    Promise.resolve({ uri: 'mock-icon' }),
+  );
+  MockIcon.getImageSourceSync = jest.fn(() => ({ uri: 'mock-icon' }));
+
+  return {
+    __esModule: true,
+    default: MockIcon,
+  };
+});
+
 jest.mock('react-native-vision-camera', () => {
   const React = require('react');
-  const {View} = require('react-native');
+  const { View } = require('react-native');
 
   return {
     Camera: React.forwardRef((props, ref) =>
-      React.createElement(View, {...props, ref}),
+      React.createElement(View, { ...props, ref }),
     ),
-    useCameraDevice: jest.fn(() => ({id: 'back-camera'})),
+    useCameraDevice: jest.fn(() => ({ id: 'back-camera' })),
     useCameraPermission: jest.fn(() => ({
       hasPermission: true,
       requestPermission: jest.fn(),
@@ -49,9 +67,9 @@ jest.mock('react-native-vision-camera', () => {
 
 jest.mock('react-native-maps', () => {
   const React = require('react');
-  const {View} = require('react-native');
+  const { View } = require('react-native');
   const MockMapView = React.forwardRef((props, ref) =>
-    React.createElement(View, {...props, ref}),
+    React.createElement(View, { ...props, ref }),
   );
 
   return {

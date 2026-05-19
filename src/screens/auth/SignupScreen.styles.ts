@@ -1,5 +1,5 @@
-import {StyleSheet, Platform} from 'react-native';
-import {colors} from '@/theme';
+import { StyleSheet, Platform } from 'react-native';
+import { colors } from '@/theme';
 
 export const styles = StyleSheet.create({
   container: {
@@ -34,7 +34,7 @@ export const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.textPrimary,
   },
-  headerSpacer: {width: 40},
+  headerSpacer: { width: 40 },
   // 인트로
   intro: {
     marginTop: 32,
@@ -53,53 +53,20 @@ export const styles = StyleSheet.create({
   form: {
     gap: 24,
   },
-  fieldGroup: {
-    gap: 8,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#4B5563',
-    marginLeft: 4,
-  },
+  fieldGroup: {},
   input: {
-    height: 56,
+    minHeight: 56,
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    paddingHorizontal: 16,
-    fontSize: 15,
-    color: colors.textPrimary,
-  },
-  inputError: {
-    borderColor: colors.error,
-  },
-  passwordWrapper: {
-    position: 'relative',
-  },
-  passwordInput: {
-    paddingRight: 50,
   },
   eyeButton: {
-    position: 'absolute',
-    right: 16,
-    top: 0,
-    bottom: 0,
+    minHeight: 40,
+    minWidth: 32,
     justifyContent: 'center',
+    alignItems: 'center',
   },
   eyeIcon: {
     fontSize: 18,
-  },
-  errorText: {
-    fontSize: 12,
-    color: colors.error,
-    marginLeft: 4,
-  },
-  hintText: {
-    fontSize: 12,
-    color: colors.secondary,
-    marginLeft: 4,
   },
   // 약관
   termsRow: {
@@ -133,23 +100,16 @@ export const styles = StyleSheet.create({
   },
   // CTA
   submitButton: {
-    height: 60,
-    backgroundColor: colors.primary,
+    minHeight: 60,
     borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
     marginTop: 32,
     shadowColor: colors.primary,
-    shadowOffset: {width: 0, height: 4},
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 12,
     elevation: 6,
   },
-  submitButtonDisabled: {
-    opacity: 0.7,
-  },
   submitButtonText: {
-    color: '#FFFFFF',
     fontSize: 18,
     fontWeight: '700',
   },

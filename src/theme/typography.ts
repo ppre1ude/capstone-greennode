@@ -33,7 +33,7 @@ export const lineHeight = {
   relaxed: 1.6,
 } as const;
 
-export const textStyles: Record<string, TextStyle> = {
+export const textStyles = {
   heading1: {
     fontFamily: fontFamily.bold,
     fontSize: fontSize.heading1,
@@ -74,4 +74,6 @@ export const textStyles: Record<string, TextStyle> = {
     fontSize: fontSize.tiny,
     lineHeight: fontSize.tiny * lineHeight.normal,
   },
-};
+} satisfies Record<string, TextStyle>;
+
+export type TextStyleToken = keyof typeof textStyles;

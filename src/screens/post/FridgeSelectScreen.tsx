@@ -28,6 +28,7 @@ import {
   LOCATION_REQUIRED_TITLE,
 } from '@/utils/locationGuard';
 import { isShareableCategory } from '@/utils/postPolicy';
+import { DSButton, DSCard, DSText } from '@/design-system';
 import { colors } from '@/theme';
 import { styles } from './FridgeSelectScreen.styles';
 
@@ -139,31 +140,38 @@ const FridgeSelectScreen = ({ route, navigation }: Props) => {
   const renderItem = ({ item }: { item: Fridge }) => {
     const isSelected = selectedFridgeId === item.id;
     return (
-      <TouchableOpacity
+      <DSCard
+        variant="outlined"
+        padded={false}
+        accessibilityState={{ selected: isSelected }}
         style={[styles.fridgeCard, isSelected && styles.fridgeCardSelected]}
         onPress={() => setSelectedFridgeId(item.id)}>
         <View style={styles.fridgeInfo}>
-          <Text style={[styles.fridgeName, isSelected && styles.textSelected]}>
+          <DSText
+            variant="bodyBold"
+            color={isSelected ? 'textOnPrimary' : 'textPrimary'}
+            style={styles.fridgeName}>
             {item.name}
-          </Text>
-          <Text
-            style={[styles.fridgeAddress, isSelected && styles.textSelected]}>
+          </DSText>
+          <DSText
+            variant="caption"
+            color={isSelected ? 'textOnPrimary' : 'textSecondary'}
+            style={styles.fridgeAddress}>
             {item.address}
-          </Text>
+          </DSText>
           {item.distance !== undefined && (
-            <Text
-              style={[
-                styles.fridgeDistance,
-                isSelected && styles.textSelected,
-              ]}>
+            <DSText
+              variant="small"
+              color={isSelected ? 'textOnPrimary' : 'primary'}
+              style={styles.fridgeDistance}>
               {item.distance.toFixed(2)}km
-            </Text>
+            </DSText>
           )}
         </View>
         <View style={[styles.radio, isSelected && styles.radioSelected]}>
           {isSelected && <View style={styles.radioInner} />}
         </View>
-      </TouchableOpacity>
+      </DSCard>
     );
   };
 
@@ -178,31 +186,54 @@ const FridgeSelectScreen = ({ route, navigation }: Props) => {
           style={styles.headerButton}>
           <Text style={styles.headerIcon}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>냉장고 선택</Text>
+        <DSText
+          variant="bodyBold"
+          color="textPrimary"
+          style={styles.headerTitle}>
+          냉장고 선택
+        </DSText>
         <View style={styles.headerSpacer} />
       </View>
 
       <View style={styles.content}>
-        <Text style={styles.title}>
+        <DSText variant="heading2" color="textPrimary" style={styles.title}>
           나눔을 진행할{'\n'}
-          <Text style={styles.highlight}>공유 냉장고</Text>를 선택해주세요
-        </Text>
+          <DSText variant="heading2" color="primary">
+            공유 냉장고
+          </DSText>
+          를 선택해주세요
+        </DSText>
 
         {isLoading ? (
           <View style={styles.centerBox}>
             <ActivityIndicator size="large" color={colors.primary} />
-            <Text style={styles.loadingText}>주변 냉장고를 찾는 중...</Text>
+            <DSText
+              variant="body"
+              color="textSecondary"
+              style={styles.loadingText}>
+              주변 냉장고를 찾는 중...
+            </DSText>
           </View>
         ) : fridgeError ? (
           <View style={styles.centerBox}>
-            <Text style={styles.errorTitle}>
+            <DSText
+              variant="bodyBold"
+              color="textPrimary"
+              style={styles.errorTitle}>
               {location
                 ? '냉장고를 불러오지 못했습니다'
                 : LOCATION_REQUIRED_TITLE}
-            </Text>
-            <Text style={styles.errorSubtitle}>{fridgeError}</Text>
-            <TouchableOpacity
-              style={styles.retryButton}
+            </DSText>
+            <DSText
+              variant="caption"
+              color="textSecondary"
+              align="center"
+              style={styles.errorSubtitle}>
+              {fridgeError}
+            </DSText>
+            <DSButton
+              label={location ? '다시 시도' : LOCATION_REQUIRED_CTA}
+              size="small"
               onPress={() => {
                 const registeredLocation = getRegisteredLocation(user);
                 if (!registeredLocation) {
@@ -213,18 +244,19 @@ const FridgeSelectScreen = ({ route, navigation }: Props) => {
                   registeredLocation.latitude,
                   registeredLocation.longitude,
                 );
-              }}>
-              <Text style={styles.retryButtonText}>
-                {location ? '다시 시도' : LOCATION_REQUIRED_CTA}
-              </Text>
-            </TouchableOpacity>
+              }}
+            />
           </View>
         ) : fridges.length === 0 ? (
           <View style={styles.centerBox}>
             <Text style={styles.emptyEmoji}>🏢</Text>
-            <Text style={styles.emptyText}>
+            <DSText
+              variant="body"
+              color="textSecondary"
+              align="center"
+              style={styles.emptyText}>
               반경 2km 이내에{'\n'}사용 가능한 냉장고가 없습니다.
-            </Text>
+            </DSText>
           </View>
         ) : (
           <FlatList
@@ -239,30 +271,24 @@ const FridgeSelectScreen = ({ route, navigation }: Props) => {
 
       {location ? (
         <View style={styles.footer}>
-          <TouchableOpacity
-            style={[
-              styles.submitButton,
-              (!selectedFridgeId || !postData || isSubmitting) &&
-                styles.submitDisabled,
-            ]}
+          <DSButton
+            label="나눔 완료하기"
+            fullWidth
+            loading={isSubmitting}
+            loadingLabel="처리 중"
             onPress={() => handleComplete('direct')}
-            disabled={!selectedFridgeId || !postData || isSubmitting}>
-            {isSubmitting ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <Text style={styles.submitButtonText}>나눔 완료하기</Text>
-            )}
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.qrSubmitButton,
-              (!selectedFridgeId || !postData || isSubmitting) &&
-                styles.submitDisabled,
-            ]}
+            disabled={!selectedFridgeId || !postData || isSubmitting}
+          />
+
+          <DSButton
+            label="QR 입고로 등록하기"
+            variant="outlined"
+            fullWidth
+            loading={isSubmitting}
+            loadingLabel="처리 중"
             onPress={() => handleComplete('fridge_qr')}
-            disabled={!selectedFridgeId || !postData || isSubmitting}>
-            <Text style={styles.qrSubmitButtonText}>QR 입고로 등록하기</Text>
-          </TouchableOpacity>
+            disabled={!selectedFridgeId || !postData || isSubmitting}
+          />
         </View>
       ) : null}
     </View>

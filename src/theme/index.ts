@@ -4,4 +4,5 @@
 export {colors} from './colors';
 export type {ColorToken} from './colors';
 export {fontFamily, fontSize, lineHeight, textStyles} from './typography';
+export type {TextStyleToken} from './typography';
 export {spacing, radius, layout} from './spacing';

@@ -41,6 +41,7 @@ import {
   LOCATION_REQUIRED_MESSAGE,
   LOCATION_REQUIRED_TITLE,
 } from '@/utils/locationGuard';
+import { DSIcon } from '@/design-system';
 import { colors } from '@/theme';
 
 const HomeScreen = () => {
@@ -156,16 +157,31 @@ const HomeScreen = () => {
           <Text style={styles.locationName}>
             {hasLocation ? '내 동네' : '위치 미설정'}
           </Text>
-          <Text style={styles.chevron}>▾</Text>
+          <DSIcon name="angle-right" size="small" color="textTertiary" />
         </TouchableOpacity>
         <View style={styles.headerIcons}>
-          <TouchableOpacity onPress={() => navigation.navigate('Map')}>
-            <Text style={styles.iconEmoji}>🗺️</Text>
+          <TouchableOpacity
+            accessibilityLabel="지도 열기"
+            accessibilityRole="button"
+            onPress={() => navigation.navigate('Map')}>
+            <DSIcon
+              name="map-location-dot"
+              size="large"
+              color="textSecondary"
+              style={styles.headerIcon}
+            />
           </TouchableOpacity>
           <TouchableOpacity
+            accessibilityLabel="알림 열기"
+            accessibilityRole="button"
             style={styles.bellWrapper}
             onPress={() => navigation.navigate('Chat')}>
-            <Text style={styles.iconEmoji}>🔔</Text>
+            <DSIcon
+              name="bell"
+              size="large"
+              color="textSecondary"
+              style={styles.headerIcon}
+            />
           </TouchableOpacity>
         </View>
       </View>
@@ -196,7 +212,12 @@ const HomeScreen = () => {
               <Text style={styles.heroButtonText}>지금 시작하기</Text>
             </TouchableOpacity>
           </View>
-          <Text style={styles.heroIcon}>📸</Text>
+          <DSIcon
+            name="camera"
+            size={64}
+            color="textOnPrimary"
+            style={styles.heroIcon}
+          />
         </View>
 
         {/* 통계 카드 */}
@@ -225,7 +246,12 @@ const HomeScreen = () => {
           </View>
           {posts.length > 0 && feedState === 'ready' ? (
             <View style={styles.feedSearchBox}>
-              <Text style={styles.feedSearchIcon}>🔍</Text>
+              <DSIcon
+                name="magnifying-glass"
+                size="small"
+                color="textTertiary"
+                style={styles.feedSearchIcon}
+              />
               <TextInput
                 style={styles.feedSearchInput}
                 value={feedQuery}
@@ -299,7 +325,12 @@ const HomeScreen = () => {
             </View>
           ) : (
             <View style={styles.emptyFeed}>
-              <Text style={styles.emptyIcon}>🌿</Text>
+              <DSIcon
+                name="seedling"
+                size="xlarge"
+                color="accent"
+                style={styles.emptyIcon}
+              />
               <Text style={styles.emptyTitle}>아직 근처에 나눔이 없어요</Text>
               <Text style={styles.emptySubtitle}>
                 첫 번째 나눔을 시작해보세요!{'\n'}AI 스캔으로 신선도를 확인하고
@@ -340,16 +371,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.textPrimary,
   },
-  chevron: {
-    fontSize: 12,
-    color: colors.textTertiary,
-  },
   headerIcons: {
     flexDirection: 'row',
     gap: 16,
   },
-  iconEmoji: {
-    fontSize: 22,
+  headerIcon: {
+    lineHeight: 24,
   },
   bellWrapper: {
     position: 'relative',
@@ -412,7 +439,6 @@ const styles = StyleSheet.create({
     color: colors.primary,
   },
   heroIcon: {
-    fontSize: 64,
     opacity: 0.3,
     position: 'absolute',
     right: -8,
@@ -476,7 +502,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   feedSearchIcon: {
-    fontSize: 15,
     marginRight: 8,
   },
   feedSearchInput: {
@@ -517,7 +542,6 @@ const styles = StyleSheet.create({
     borderColor: colors.borderLight,
   },
   emptyIcon: {
-    fontSize: 40,
     marginBottom: 16,
   },
   emptyTitle: {
