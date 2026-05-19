@@ -141,6 +141,16 @@ export const styles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: 'center',
   },
+  requestHoldNotice: {
+    marginBottom: 12,
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.primary,
+    textAlign: 'center',
+  },
+  requestHoldNoticeExpired: {
+    color: colors.error,
+  },
   chatButton: {
     height: 56,
     backgroundColor: colors.primary,

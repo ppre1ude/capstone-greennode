@@ -73,6 +73,7 @@ const findButtonByText = (
 
 describe('PostDetailScreen share request', () => {
   const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
+  let dateNowSpy: jest.SpyInstance<number, []> | undefined;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -102,6 +103,11 @@ describe('PostDetailScreen share request', () => {
       nearbyPostsRefreshToken: 0,
       requestedPostId: null,
     });
+  });
+
+  afterEach(() => {
+    dateNowSpy?.mockRestore();
+    dateNowSpy = undefined;
   });
 
   afterAll(() => {
@@ -187,6 +193,101 @@ describe('PostDetailScreen share request', () => {
     );
     expect(useFeedRefreshStore.getState().requestedPostId).toBe(10);
     expect(findButtonByText(renderer, '신청 접수')).toBeTruthy();
+
+    await ReactTestRenderer.act(async () => {
+      renderer.unmount();
+    });
+  });
+
+  it('shows the pickup countdown for a requested post with requestExpiresAt', async () => {
+    dateNowSpy = jest
+      .spyOn(Date, 'now')
+      .mockReturnValue(new Date('2026-05-06T00:00:00Z').getTime());
+    mockedGetPostDetail.mockResolvedValue({
+      success: true,
+      message: 'ok',
+      data: {
+        ...basePost,
+        status: 'requested',
+        requestExpiresAt: '2026-05-06T00:09:30Z',
+      },
+    });
+
+    const renderer = await createScreen();
+
+    expect(findButtonByText(renderer, '신청 접수')).toBeTruthy();
+    expect(
+      renderer.root.findAllByProps({
+        children: '신청이 접수된 상태이며 예약 확정은 아니에요.',
+      }),
+    ).not.toHaveLength(0);
+    expect(
+      renderer.root.findAllByProps({
+        children: '수령까지 남은 시간 09:30',
+      }),
+    ).not.toHaveLength(0);
+
+    await ReactTestRenderer.act(async () => {
+      renderer.unmount();
+    });
+  });
+
+  it('shows the expired pickup limit message for an expired requestExpiresAt', async () => {
+    dateNowSpy = jest
+      .spyOn(Date, 'now')
+      .mockReturnValue(new Date('2026-05-06T00:00:00Z').getTime());
+    mockedGetPostDetail.mockResolvedValue({
+      success: true,
+      message: 'ok',
+      data: {
+        ...basePost,
+        status: 'requested',
+        requestExpiresAt: '2026-05-05T23:59:59Z',
+      },
+    });
+
+    const renderer = await createScreen();
+
+    expect(findButtonByText(renderer, '신청 접수')).toBeTruthy();
+    expect(
+      renderer.root.findAllByProps({
+        children:
+          '수령 제한 시간이 지났어요. 목록을 새로고침하면 상태가 갱신됩니다.',
+      }),
+    ).not.toHaveLength(0);
+
+    await ReactTestRenderer.act(async () => {
+      renderer.unmount();
+    });
+  });
+
+  it('ignores an invalid requestExpiresAt instead of showing a broken countdown', async () => {
+    dateNowSpy = jest
+      .spyOn(Date, 'now')
+      .mockReturnValue(new Date('2026-05-06T00:00:00Z').getTime());
+    mockedGetPostDetail.mockResolvedValue({
+      success: true,
+      message: 'ok',
+      data: {
+        ...basePost,
+        status: 'requested',
+        requestExpiresAt: 'not-a-date',
+      },
+    });
+
+    const renderer = await createScreen();
+
+    expect(findButtonByText(renderer, '신청 접수')).toBeTruthy();
+    expect(
+      renderer.root.findAllByProps({
+        children: '신청이 접수된 상태이며 예약 확정은 아니에요.',
+      }),
+    ).not.toHaveLength(0);
+    expect(
+      renderer.root.findAllByProps({
+        children: '수령까지 남은 시간 NaN:NaN',
+      }),
+    ).toHaveLength(0);
 
     await ReactTestRenderer.act(async () => {
       renderer.unmount();

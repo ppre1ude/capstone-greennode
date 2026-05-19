@@ -31,6 +31,11 @@ import { useFeedRefreshStore } from '@/store/feedRefreshStore';
 import type { Post } from '@/types';
 import { getApiErrorMessage } from '@/utils/apiError';
 import {
+  formatInventoryHoldRemaining,
+  getInventoryHoldRemainingMs,
+  isInventoryHoldExpired,
+} from '@/features/inventory/holdPolicy';
+import {
   getConfidencePercent,
   getPostDisplayName,
   getPostStatusLabel,
@@ -51,6 +56,9 @@ const getErrorStatus = (error: unknown): number | null => {
   return typeof response?.status === 'number' ? response.status : null;
 };
 
+const isValidDateInput = (value?: string | null): value is string =>
+  Boolean(value && Number.isFinite(new Date(value).getTime()));
+
 const PostDetailScreen = ({ route, navigation }: Props) => {
   const { postId } = route.params;
   const user = useAuthStore(state => state.user);
@@ -62,6 +70,7 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isRequesting, setIsRequesting] = useState(false);
+  const [currentTimeMs, setCurrentTimeMs] = useState(() => Date.now());
 
   const fetchPostDetail = useCallback(async () => {
     try {
@@ -87,6 +96,19 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
   useEffect(() => {
     fetchPostDetail();
   }, [fetchPostDetail]);
+
+  useEffect(() => {
+    if (post?.status !== 'requested' || !post.requestExpiresAt) {
+      return;
+    }
+
+    setCurrentTimeMs(Date.now());
+    const timerId = setInterval(() => {
+      setCurrentTimeMs(Date.now());
+    }, 1000);
+
+    return () => clearInterval(timerId);
+  }, [post?.requestExpiresAt, post?.status]);
 
   const handleDelete = () => {
     Alert.alert('나눔 취소', '정말로 이 나눔을 취소(삭제)하시겠습니까?', [
@@ -185,6 +207,21 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
       : post.status === 'requested'
       ? '신청이 접수된 상태이며 예약 확정은 아니에요.'
       : null;
+  const requestExpiresAt =
+    post.status === 'requested' && isValidDateInput(post.requestExpiresAt)
+      ? post.requestExpiresAt
+      : null;
+  const isRequestHoldExpired = requestExpiresAt
+    ? isInventoryHoldExpired(requestExpiresAt, currentTimeMs)
+    : false;
+  const requestHoldNotice =
+    requestExpiresAt
+      ? isRequestHoldExpired
+        ? '수령 제한 시간이 지났어요. 목록을 새로고침하면 상태가 갱신됩니다.'
+        : `수령까지 남은 시간 ${formatInventoryHoldRemaining(
+            getInventoryHoldRemainingMs(requestExpiresAt, currentTimeMs),
+          )}`
+      : null;
   const daysLeft = Math.ceil(
     (new Date(post.expirationDate).getTime() - new Date().getTime()) /
       (1000 * 3600 * 24),
@@ -268,6 +305,15 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
         <View style={styles.footer}>
           {requestNotice && (
             <Text style={styles.requestNotice}>{requestNotice}</Text>
+          )}
+          {requestHoldNotice && (
+            <Text
+              style={[
+                styles.requestHoldNotice,
+                isRequestHoldExpired && styles.requestHoldNoticeExpired,
+              ]}>
+              {requestHoldNotice}
+            </Text>
           )}
           <TouchableOpacity
             style={[
