@@ -128,6 +128,47 @@ describe('FridgeOperatorConsoleScreen', () => {
     });
   });
 
+  it('blocks the operator console when the backend rejects operator permission', async () => {
+    mockedGetOperatorInventorySummary.mockRejectedValue({
+      response: {
+        status: 403,
+        data: {message: '운영자 권한이 없습니다.'},
+      },
+    });
+    mockedGetOperatorInventoryItems.mockRejectedValue({
+      response: {
+        status: 403,
+        data: {message: '운영자 권한이 없습니다.'},
+      },
+    });
+
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(
+        <FridgeOperatorConsoleScreen
+          navigation={{goBack: jest.fn()} as any}
+          route={{params: undefined} as any}
+        />,
+      );
+      await Promise.resolve();
+    });
+
+    expect(
+      renderer!.root.findAllByProps({children: '운영자 권한이 필요합니다'}),
+    ).not.toHaveLength(0);
+    expect(renderer!.root.findAllByProps({children: '냉장고 상태'})).toHaveLength(
+      0,
+    );
+    expect(
+      renderer!.root.findAllByProps({children: '폐기 처분 완료'}),
+    ).toHaveLength(0);
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
   it('disposes a discard candidate through the operator API', async () => {
     mockedDisposeOperatorItem.mockResolvedValue({
       success: true,

@@ -105,6 +105,7 @@
 - QR/inventory 계약 확정 후 프론트는 `flow: "fridge_qr"` 등록, 보관 QR 인증, 수령 QR 인증, 운영자 폐기 요청을 실제 API 호출 경로로 연결했다. 백엔드 미배포/불일치 시 Alert 또는 fallback 메시지를 표시한다.
 - 운영자 콘솔은 `GET /operator/fridges/{fridgeId}/inventory/summary`, `GET /operator/fridges/{fridgeId}/inventory/items`, `PATCH /operator/items/{postId}/dispose` 계약으로 선행 구현했다. summary/items 실패 시 기존 샘플 데이터를 fallback으로 표시한다.
 - 운영자 폐기 성공 후에는 summary/items를 즉시 재조회해 폐기 대상 수, 만료 임박 수, 항목 상태를 서버 결과 기준으로 다시 맞춘다.
+- 운영자 inventory 조회가 401/403으로 거절되면 샘플 재고와 폐기 버튼을 숨기고 `운영자 권한이 필요합니다` 안내만 표시한다. 네트워크/배포 실패 fallback과 권한 실패를 분리했다.
 - 검증: `operator.api`, `fridgeOperatorConsole.screen`, `fridgeSelect.qrFlow`, `inventoryQrPrototype.screen`, `postDetail.requestShare` 테스트와 전체 Jest/TypeScript 검증으로 프론트 계약을 고정했다. 실제 QR 스캔 기기 QA와 백엔드 런타임 QA는 백엔드 배포 후 필요하다.
 
 ---

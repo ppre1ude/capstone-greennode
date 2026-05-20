@@ -198,6 +198,21 @@ const getStorageZoneLabel = (
   return '일반 구역';
 };
 
+type ErrorWithResponseStatus = {
+  response?: {
+    status?: number;
+  };
+};
+
+const isOperatorAuthorizationError = (error: unknown): boolean => {
+  if (typeof error !== 'object' || error === null) {
+    return false;
+  }
+
+  const status = (error as ErrorWithResponseStatus).response?.status;
+  return status === 401 || status === 403;
+};
+
 const mapOperatorItemStatus = (
   status: OperatorInventoryItem['status'],
 ): OperatorItemStatus => {
@@ -256,6 +271,7 @@ const FridgeOperatorConsoleScreen = ({navigation, route}: Props) => {
   const [disposingPostId, setDisposingPostId] = useState<string | null>(null);
   const [isLoadingInventory, setIsLoadingInventory] = useState(false);
   const [inventoryError, setInventoryError] = useState<string | null>(null);
+  const [isOperatorAccessDenied, setIsOperatorAccessDenied] = useState(false);
 
   const summaryCards = useMemo(
     () => makeSummaryCards(inventorySummary),
@@ -271,6 +287,8 @@ const FridgeOperatorConsoleScreen = ({navigation, route}: Props) => {
         getOperatorInventorySummary(fridgeId),
         getOperatorInventoryItems(fridgeId),
       ]);
+
+      setIsOperatorAccessDenied(false);
 
       if (summaryResponse.success && summaryResponse.data) {
         setInventorySummary(summaryResponse.data);
@@ -288,6 +306,14 @@ const FridgeOperatorConsoleScreen = ({navigation, route}: Props) => {
         );
       }
     } catch (error) {
+      if (isOperatorAuthorizationError(error)) {
+        setIsOperatorAccessDenied(true);
+        setInventoryError(
+          getApiErrorMessage(error, '운영자 권한이 없습니다.'),
+        );
+        return;
+      }
+
       setInventoryError(
         getApiErrorMessage(
           error,
@@ -382,109 +408,126 @@ const FridgeOperatorConsoleScreen = ({navigation, route}: Props) => {
           ) : null}
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>냉장고 상태</Text>
-          <Text style={styles.sectionNote}>
-            마지막 동기화 {inventorySummary.lastSyncedAt ?? '확인 중'}
-          </Text>
-          <View style={styles.summaryGrid}>
-            {summaryCards.map(item => (
-              <View key={item.label} style={styles.summaryCell}>
-                <Text style={styles.summaryLabel}>{item.label}</Text>
-                <Text style={styles.summaryValue}>{item.value}</Text>
-                <Text style={styles.summaryNote}>{item.note}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>바구니 후보</Text>
-          <Text style={styles.sectionNote}>
-            정식 채택 전이며 같은 촬영/보관 흐름에서 나온 묶음 후보
-          </Text>
-          {basketCandidates.map(candidate => {
-            const candidateStatus = deriveBasketStatus(candidate.items);
-
-            return (
-              <View key={candidate.id} style={styles.rowCard}>
-                <View style={styles.rowHeader}>
-                  <Text style={styles.rowTitle}>{candidate.id}</Text>
-                  <Text style={styles.rowMeta}>{candidate.source}</Text>
-                </View>
-                <View style={styles.pillRow}>
-                  {candidate.items.map(item => (
-                    <Text key={item.name} style={styles.neutralPill}>
-                      {item.name}
-                    </Text>
-                  ))}
-                </View>
-                <Text
-                  style={[styles.statusPill, statusTone(candidateStatus.tone)]}>
-                  {candidateStatus.label}
-                </Text>
-                <Text style={styles.rowText}>{candidate.decision}</Text>
-              </View>
-            );
-          })}
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>개별 나눔 식재료 점검</Text>
-          <Text style={styles.sectionNote}>
-            사용자 등록/신청 단위는 개별 나눔 식재료로 유지
-          </Text>
-          {inspectionItems.map(item => (
-            <View key={item.postId} style={styles.rowCard}>
-              <View style={styles.rowHeader}>
-                <View>
-                  <Text style={styles.rowTitle}>{item.name}</Text>
-                  <Text style={styles.rowMeta}>postId {item.postId}</Text>
-                </View>
-                <Text style={[styles.statusPill, itemStatusTone(item.status)]}>
-                  {item.status}
-                </Text>
-              </View>
-              <View style={styles.itemMetaRow}>
-                {item.labelCode ? (
-                  <Text style={styles.itemMetaPill}>{item.labelCode}</Text>
-                ) : null}
-                {item.storageZone ? (
-                  <Text style={styles.itemMetaPill}>{item.storageZone}</Text>
-                ) : null}
-              </View>
-              <Text style={styles.rowText}>AI 상태: {item.ai}</Text>
-              <Text style={styles.rowText}>
-                권장 나눔 기한: {item.recommendedUntil}
-              </Text>
-              {item.status === 'discardCandidate' ? (
-                <TouchableOpacity
-                  disabled={disposingPostId === item.postId}
-                  onPress={() => handleDispose(item)}
-                  style={[
-                    styles.disposeButton,
-                    disposingPostId === item.postId &&
-                      styles.disposeButtonDisabled,
-                  ]}>
-                  <Text style={styles.disposeButtonText}>
-                    {disposingPostId === item.postId
-                      ? '폐기 요청 중'
-                      : '폐기 처분 완료'}
-                  </Text>
-                </TouchableOpacity>
-              ) : null}
-            </View>
-          ))}
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>상태 검증 규칙</Text>
-          {validationRules.map(rule => (
-            <Text key={rule} style={styles.ruleText}>
-              - {rule}
+        {isOperatorAccessDenied ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>운영자 권한이 필요합니다</Text>
+            <Text style={styles.sectionNote}>
+              이 냉장고의 운영자로 등록된 계정만 재고를 확인하고 폐기 처리할 수 있습니다.
             </Text>
-          ))}
-        </View>
+          </View>
+        ) : (
+          <>
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>냉장고 상태</Text>
+              <Text style={styles.sectionNote}>
+                마지막 동기화 {inventorySummary.lastSyncedAt ?? '확인 중'}
+              </Text>
+              <View style={styles.summaryGrid}>
+                {summaryCards.map(item => (
+                  <View key={item.label} style={styles.summaryCell}>
+                    <Text style={styles.summaryLabel}>{item.label}</Text>
+                    <Text style={styles.summaryValue}>{item.value}</Text>
+                    <Text style={styles.summaryNote}>{item.note}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>바구니 후보</Text>
+              <Text style={styles.sectionNote}>
+                정식 채택 전이며 같은 촬영/보관 흐름에서 나온 묶음 후보
+              </Text>
+              {basketCandidates.map(candidate => {
+                const candidateStatus = deriveBasketStatus(candidate.items);
+
+                return (
+                  <View key={candidate.id} style={styles.rowCard}>
+                    <View style={styles.rowHeader}>
+                      <Text style={styles.rowTitle}>{candidate.id}</Text>
+                      <Text style={styles.rowMeta}>{candidate.source}</Text>
+                    </View>
+                    <View style={styles.pillRow}>
+                      {candidate.items.map(item => (
+                        <Text key={item.name} style={styles.neutralPill}>
+                          {item.name}
+                        </Text>
+                      ))}
+                    </View>
+                    <Text
+                      style={[
+                        styles.statusPill,
+                        statusTone(candidateStatus.tone),
+                      ]}>
+                      {candidateStatus.label}
+                    </Text>
+                    <Text style={styles.rowText}>{candidate.decision}</Text>
+                  </View>
+                );
+              })}
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>개별 나눔 식재료 점검</Text>
+              <Text style={styles.sectionNote}>
+                사용자 등록/신청 단위는 개별 나눔 식재료로 유지
+              </Text>
+              {inspectionItems.map(item => (
+                <View key={item.postId} style={styles.rowCard}>
+                  <View style={styles.rowHeader}>
+                    <View>
+                      <Text style={styles.rowTitle}>{item.name}</Text>
+                      <Text style={styles.rowMeta}>postId {item.postId}</Text>
+                    </View>
+                    <Text
+                      style={[styles.statusPill, itemStatusTone(item.status)]}>
+                      {item.status}
+                    </Text>
+                  </View>
+                  <View style={styles.itemMetaRow}>
+                    {item.labelCode ? (
+                      <Text style={styles.itemMetaPill}>{item.labelCode}</Text>
+                    ) : null}
+                    {item.storageZone ? (
+                      <Text style={styles.itemMetaPill}>
+                        {item.storageZone}
+                      </Text>
+                    ) : null}
+                  </View>
+                  <Text style={styles.rowText}>AI 상태: {item.ai}</Text>
+                  <Text style={styles.rowText}>
+                    권장 나눔 기한: {item.recommendedUntil}
+                  </Text>
+                  {item.status === 'discardCandidate' ? (
+                    <TouchableOpacity
+                      disabled={disposingPostId === item.postId}
+                      onPress={() => handleDispose(item)}
+                      style={[
+                        styles.disposeButton,
+                        disposingPostId === item.postId &&
+                          styles.disposeButtonDisabled,
+                      ]}>
+                      <Text style={styles.disposeButtonText}>
+                        {disposingPostId === item.postId
+                          ? '폐기 요청 중'
+                          : '폐기 처분 완료'}
+                      </Text>
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+              ))}
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>상태 검증 규칙</Text>
+              {validationRules.map(rule => (
+                <Text key={rule} style={styles.ruleText}>
+                  - {rule}
+                </Text>
+              ))}
+            </View>
+          </>
+        )}
       </ScrollView>
     </View>
   );
