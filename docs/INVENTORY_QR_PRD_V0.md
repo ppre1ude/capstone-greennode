@@ -500,5 +500,6 @@ AI 분석 완료 -> 냉장고 선택 -> QR 인증 -> 등록 완료
 
 - `InventoryQrPrototype`은 보관/수령 QR pending action의 countdown 기준으로 `pendingExpiresAt`을 받는다.
 - 보관 QR 흐름은 `POST /posts` 응답의 `storeExpiresAt`을 우선 전달한다. 없거나 잘못된 날짜이면 프론트가 `createdAt + 10분`으로 보정한다.
+- 수령 QR 흐름은 상세 응답의 `requestExpiresAt`을 `pendingExpiresAt`으로 전달해 30분 임시 선점 기준을 QR 인증 화면과 공유한다.
 - API-backed QR 화면이 `fridgePublicCode` 없이 열리면 프론트는 유효한 FoodLink 냉장고 QR을 사전 차단하지 않는다. 스캔된 `fridgePublicCode`를 백엔드에 전달하고 pending action 검증을 서버에 맡긴다.
 - 샘플 냉장고 public code는 API-backed route params가 없는 프로토타입 모드에서만 fallback으로 사용한다.

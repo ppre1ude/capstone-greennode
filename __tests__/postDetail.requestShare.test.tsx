@@ -325,6 +325,7 @@ describe('PostDetailScreen share request', () => {
     expect(navigation.navigate).toHaveBeenCalledWith('InventoryQrPrototype', {
       mode: 'pickup',
       postId: 10,
+      pendingExpiresAt: '2026-05-06T00:30:00Z',
     });
 
     await ReactTestRenderer.act(async () => {

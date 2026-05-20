@@ -332,6 +332,7 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
                 navigation.navigate('InventoryQrPrototype', {
                   mode: 'pickup',
                   postId: post.id,
+                  pendingExpiresAt: requestExpiresAt ?? undefined,
                 })
               }>
               <Text style={styles.pickupQrButtonText}>수령 QR 인증</Text>

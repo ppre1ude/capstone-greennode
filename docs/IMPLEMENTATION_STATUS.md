@@ -266,5 +266,6 @@ node ./node_modules/typescript/bin/tsc --noEmit
 ### 2026-05-20 Inventory/QR 대기 만료 시각 후속 구현
 
 - `FridgeSelect`는 백엔드 `storeExpiresAt`을 `pendingExpiresAt`으로 `InventoryQrPrototype`에 전달한다. 값이 없거나 잘못된 날짜이면 `createdAt + 10분`으로 보정하고, 둘 다 유효하지 않으면 QR 화면의 API fallback countdown을 사용한다.
+- `PostDetail`의 수령 QR 진입은 검증된 `requestExpiresAt`을 같은 `pendingExpiresAt` route param으로 넘겨 QR 화면의 30분 countdown과 서버 인증 흐름을 맞춘다.
 - API-backed QR 인증 화면에 route `fridgePublicCode`가 없으면 프론트가 임의로 냉장고 불일치 차단을 하지 않는다. 스캔된 public code를 보관/수령 인증 API에 보내고 서버가 pending action과 냉장고 일치를 검증한다.
 - Focused verification: `npm test -- --runInBand __tests__/fridgeSelect.qrFlow.test.tsx __tests__/inventoryQrPrototype.screen.test.tsx`.
