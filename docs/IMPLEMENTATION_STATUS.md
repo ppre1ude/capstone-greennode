@@ -106,6 +106,7 @@
 - 운영자 콘솔은 `GET /operator/fridges/{fridgeId}/inventory/summary`, `GET /operator/fridges/{fridgeId}/inventory/items`, `PATCH /operator/items/{postId}/dispose` 계약으로 선행 구현했다. summary/items 실패 시 기존 샘플 데이터를 fallback으로 표시한다.
 - 운영자 폐기 성공 후에는 summary/items를 즉시 재조회해 폐기 대상 수, 만료 임박 수, 항목 상태를 서버 결과 기준으로 다시 맞춘다.
 - 운영자 inventory 조회가 401/403으로 거절되면 샘플 재고와 폐기 버튼을 숨기고 `운영자 권한이 필요합니다` 안내만 표시한다. 네트워크/배포 실패 fallback과 권한 실패를 분리했다.
+- 프로필의 `냉장고 운영자 콘솔 (실험)` 진입점은 `isOperator`, `operatorRole`, `operatorFridgeIds`, `roles` 중 하나로 운영자 힌트가 있는 계정에만 노출한다.
 - 검증: `operator.api`, `fridgeOperatorConsole.screen`, `fridgeSelect.qrFlow`, `inventoryQrPrototype.screen`, `postDetail.requestShare` 테스트와 전체 Jest/TypeScript 검증으로 프론트 계약을 고정했다. 실제 QR 스캔 기기 QA와 백엔드 런타임 QA는 백엔드 배포 후 필요하다.
 
 ---
