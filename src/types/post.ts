@@ -30,6 +30,7 @@ export interface Post {
   authorId: number;
   userId?: number;
   requestExpiresAt?: string | null;
+  storeExpiresAt?: string | null;
   pickedUpAt?: string | null;
   labelCode?: string | null;
   storageZone?: PostStorageZone | string | null;

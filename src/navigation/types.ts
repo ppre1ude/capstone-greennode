@@ -51,6 +51,7 @@ export type RootStackParamList = {
         fridgePublicCode?: string;
         fridgeName?: string;
         fridgeLocation?: string;
+        pendingExpiresAt?: string;
       }
     | undefined;
   FridgeSelect: {
