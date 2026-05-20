@@ -1,8 +1,7 @@
 /**
  * LoginScreen — 로그인 방식 선택
  *
- * 소셜 로그인 버튼 (카카오, Apple, Google) + 이메일 로그인
- * 현재 MVP에서는 이메일만 동작, 소셜은 "준비 중" Alert
+ * MVP에서는 이메일 로그인을 유일한 진입점으로 제공한다.
  *
  * @wireframe wireframe-foodlink/login.html
  */
@@ -13,7 +12,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   StatusBar,
-  Alert,
 } from 'react-native';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {AuthStackParamList} from '@/navigation/types';
@@ -22,10 +20,6 @@ import {colors} from '@/theme';
 type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 
 const LoginScreen = ({navigation}: Props) => {
-  const handleSocialLogin = (provider: string) => {
-    Alert.alert('준비 중', `${provider} 로그인은 추후 지원 예정입니다.`);
-  };
-
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
@@ -40,30 +34,6 @@ const LoginScreen = ({navigation}: Props) => {
 
       {/* 로그인 버튼들 */}
       <View style={styles.buttonGroup}>
-        {/* 카카오 */}
-        <TouchableOpacity
-          style={styles.kakaoButton}
-          onPress={() => handleSocialLogin('카카오')}>
-          <Text style={styles.kakaoIcon}>💬</Text>
-          <Text style={styles.kakaoText}>카카오로 계속하기</Text>
-        </TouchableOpacity>
-
-        {/* Apple */}
-        <TouchableOpacity
-          style={styles.appleButton}
-          onPress={() => handleSocialLogin('Apple')}>
-          <Text style={styles.appleIcon}>🍎</Text>
-          <Text style={styles.appleText}>Apple로 계속하기</Text>
-        </TouchableOpacity>
-
-        {/* Google */}
-        <TouchableOpacity
-          style={styles.googleButton}
-          onPress={() => handleSocialLogin('Google')}>
-          <Text style={styles.googleIcon}>G</Text>
-          <Text style={styles.googleText}>구글로 계속하기</Text>
-        </TouchableOpacity>
-
         {/* 이메일 */}
         <TouchableOpacity
           style={styles.emailButton}
@@ -118,60 +88,6 @@ const styles = StyleSheet.create({
   buttonGroup: {
     gap: 12,
     marginBottom: 40,
-  },
-  // 카카오
-  kakaoButton: {
-    height: 56,
-    backgroundColor: colors.kakao,
-    borderRadius: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-  },
-  kakaoIcon: {fontSize: 18},
-  kakaoText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.kakaoText,
-  },
-  // Apple
-  appleButton: {
-    height: 56,
-    backgroundColor: '#000000',
-    borderRadius: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-  },
-  appleIcon: {fontSize: 20},
-  appleText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  // Google
-  googleButton: {
-    height: 56,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-  },
-  googleIcon: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#4285F4',
-  },
-  googleText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#334155',
   },
   // 이메일
   emailButton: {
