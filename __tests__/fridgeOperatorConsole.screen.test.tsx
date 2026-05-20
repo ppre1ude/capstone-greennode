@@ -138,6 +138,38 @@ describe('FridgeOperatorConsoleScreen', () => {
         disposedAt: '2026-05-20T09:00:00Z',
       },
     });
+    mockedGetOperatorInventoryItems.mockResolvedValueOnce({
+      success: true,
+      message: 'ok',
+      data: [
+        {
+          postId: 120,
+          labelCode: '#07',
+          itemName: '사과',
+          status: 'expired',
+          freshnessLabel: 'Mid',
+          confidenceScore: 0.88,
+          storageZone: 'ETHYLENE_SEPARATED',
+          storageDeadlineAt: '2026-05-19T00:00:00Z',
+        },
+      ],
+    });
+    mockedGetOperatorInventoryItems.mockResolvedValueOnce({
+      success: true,
+      message: 'ok',
+      data: [
+        {
+          postId: 120,
+          labelCode: '#07',
+          itemName: '사과',
+          status: 'disposed',
+          freshnessLabel: 'Mid',
+          confidenceScore: 0.88,
+          storageZone: 'ETHYLENE_SEPARATED',
+          storageDeadlineAt: '2026-05-19T00:00:00Z',
+        },
+      ],
+    });
 
     let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
 
@@ -157,6 +189,109 @@ describe('FridgeOperatorConsoleScreen', () => {
     });
 
     expect(mockedDisposeOperatorItem).toHaveBeenCalledWith(120);
+    expect(renderer!.root.findAllByProps({children: 'discarded'})).not.toHaveLength(
+      0,
+    );
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
+  it('re-syncs operator inventory after a successful dispose', async () => {
+    mockedGetOperatorInventorySummary
+      .mockResolvedValueOnce({
+        success: true,
+        message: 'ok',
+        data: {
+          totalItems: 2,
+          availableItems: 1,
+          requestedItems: 0,
+          expiringSoonItems: 1,
+          expiredItems: 1,
+          needsReviewItems: 0,
+          ethyleneSeparatedItems: 1,
+          lastSyncedAt: '2026-05-20T00:00:00Z',
+        },
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        message: 'ok',
+        data: {
+          totalItems: 2,
+          availableItems: 1,
+          requestedItems: 0,
+          expiringSoonItems: 0,
+          expiredItems: 0,
+          needsReviewItems: 0,
+          ethyleneSeparatedItems: 1,
+          lastSyncedAt: '2026-05-20T00:10:00Z',
+        },
+      });
+    mockedGetOperatorInventoryItems
+      .mockResolvedValueOnce({
+        success: true,
+        message: 'ok',
+        data: [
+          {
+            postId: 120,
+            labelCode: '#07',
+            itemName: '사과',
+            status: 'expired',
+            freshnessLabel: 'Mid',
+            confidenceScore: 0.88,
+            storageZone: 'ETHYLENE_SEPARATED',
+            storageDeadlineAt: '2026-05-19T00:00:00Z',
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        message: 'ok',
+        data: [
+          {
+            postId: 120,
+            labelCode: '#07',
+            itemName: '사과',
+            status: 'disposed',
+            freshnessLabel: 'Mid',
+            confidenceScore: 0.88,
+            storageZone: 'ETHYLENE_SEPARATED',
+            storageDeadlineAt: '2026-05-19T00:00:00Z',
+          },
+        ],
+      });
+    mockedDisposeOperatorItem.mockResolvedValue({
+      success: true,
+      message: '폐기 처분 완료',
+      data: {
+        postId: 120,
+        status: 'disposed',
+        disposedAt: '2026-05-20T09:00:00Z',
+      },
+    });
+
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(
+        <FridgeOperatorConsoleScreen
+          navigation={{goBack: jest.fn()} as any}
+          route={{params: undefined} as any}
+        />,
+      );
+      await Promise.resolve();
+    });
+
+    await ReactTestRenderer.act(async () => {
+      findTouchableByText(renderer!, '폐기 처분 완료').props.onPress();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(mockedDisposeOperatorItem).toHaveBeenCalledWith(120);
+    expect(mockedGetOperatorInventorySummary).toHaveBeenCalledTimes(2);
+    expect(mockedGetOperatorInventoryItems).toHaveBeenCalledTimes(2);
     expect(renderer!.root.findAllByProps({children: 'discarded'})).not.toHaveLength(
       0,
     );

@@ -324,6 +324,7 @@ const FridgeOperatorConsoleScreen = ({navigation, route}: Props) => {
               : currentItem,
           ),
         );
+        await fetchOperatorInventory();
         Alert.alert(
           '폐기 처분 완료',
           response.message || '운영자 폐기 처분이 완료되었습니다.',
