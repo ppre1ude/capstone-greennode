@@ -2,7 +2,9 @@ import React from 'react';
 import {Text, TouchableOpacity} from 'react-native';
 import ReactTestRenderer from 'react-test-renderer';
 import {confirmPickup, confirmStore} from '@/api/inventory';
+import {QrScannerShell} from '@/features/qr';
 import InventoryQrPrototypeScreen from '@/screens/inventory/InventoryQrPrototypeScreen';
+import {useFeedRefreshStore} from '@/store/feedRefreshStore';
 
 jest.mock('@/api/inventory', () => ({
   confirmPickup: jest.fn(),
@@ -63,6 +65,10 @@ const pressWrongFridgeQrAction = (
 describe('InventoryQrPrototypeScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    useFeedRefreshStore.setState({
+      nearbyPostsRefreshToken: 0,
+      requestedPostId: null,
+    });
   });
 
   it('renders the QR and inventory prototype surface', async () => {
@@ -194,6 +200,105 @@ describe('InventoryQrPrototypeScreen', () => {
     });
     expect(getTextContent(renderer!)).toContain('#03');
     expect(getTextContent(renderer!)).toContain('에틸렌 분리 구역');
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
+  it('requests a nearby feed refresh without a removal id when store confirmation succeeds', async () => {
+    mockedConfirmStore.mockResolvedValue({
+      success: true,
+      message: 'ok',
+      data: {
+        postId: 42,
+        status: 'available',
+        labelCode: '#42',
+        storageZone: 'GENERAL',
+        storageDeadlineAt: '2026-06-18T05:30:00Z',
+        storedAt: '2026-05-19T05:30:00Z',
+      },
+    });
+
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(
+        <InventoryQrPrototypeScreen
+          navigation={{goBack: jest.fn()} as any}
+          route={{
+            params: {
+              mode: 'store',
+              postId: 10,
+              fridgePublicCode: 'GJ-STATION-001',
+            },
+          } as any}
+        />,
+      );
+    });
+
+    const previousToken =
+      useFeedRefreshStore.getState().nearbyPostsRefreshToken;
+
+    await ReactTestRenderer.act(async () => {
+      await renderer!.root.findByType(QrScannerShell).props.onValidScan({
+        fridgePublicCode: 'GJ-STATION-001',
+      });
+    });
+
+    expect(useFeedRefreshStore.getState().requestedPostId).toBeNull();
+    expect(useFeedRefreshStore.getState().nearbyPostsRefreshToken).toBe(
+      previousToken + 1,
+    );
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
+  it('requests a nearby feed refresh with the confirmed pickup response post id', async () => {
+    mockedConfirmPickup.mockResolvedValue({
+      success: true,
+      message: 'ok',
+      data: {
+        postId: 43,
+        status: 'completed',
+        labelCode: '#43',
+        storageZone: 'GENERAL',
+        pickedUpAt: '2026-05-19T05:30:00Z',
+      },
+    });
+
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(
+        <InventoryQrPrototypeScreen
+          navigation={{goBack: jest.fn()} as any}
+          route={{
+            params: {
+              mode: 'pickup',
+              postId: 10,
+              fridgePublicCode: 'GJ-STATION-001',
+            },
+          } as any}
+        />,
+      );
+    });
+
+    const previousToken =
+      useFeedRefreshStore.getState().nearbyPostsRefreshToken;
+
+    await ReactTestRenderer.act(async () => {
+      await renderer!.root.findByType(QrScannerShell).props.onValidScan({
+        fridgePublicCode: 'GJ-STATION-001',
+      });
+    });
+
+    expect(useFeedRefreshStore.getState().requestedPostId).toBe(43);
+    expect(useFeedRefreshStore.getState().nearbyPostsRefreshToken).toBe(
+      previousToken + 1,
+    );
 
     await ReactTestRenderer.act(async () => {
       renderer?.unmount();

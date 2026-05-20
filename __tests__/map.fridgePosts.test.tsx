@@ -288,4 +288,31 @@ describe('MapScreen fridge posts', () => {
         .length,
     ).toBeGreaterThan(0);
   });
+
+  it('keeps selected fridge posts when a generic nearby refresh has no removal id', async () => {
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(<MapScreen />);
+    });
+
+    await ReactTestRenderer.act(async () => {
+      findTouchableByText(renderer!, post.fridgeName).props.onPress();
+    });
+
+    expect(
+      renderer!.root.findAllByProps({children: post.detectedFruitKo}).length,
+    ).toBeGreaterThan(0);
+
+    await ReactTestRenderer.act(async () => {
+      useFeedRefreshStore.setState({
+        nearbyPostsRefreshToken: 1,
+        requestedPostId: post.id,
+      });
+      useFeedRefreshStore.getState().requestNearbyPostsRefresh();
+    });
+
+    expect(useFeedRefreshStore.getState().requestedPostId).toBeNull();
+    expect(
+      renderer!.root.findAllByProps({children: post.detectedFruitKo}).length,
+    ).toBeGreaterThan(0);
+  });
 });

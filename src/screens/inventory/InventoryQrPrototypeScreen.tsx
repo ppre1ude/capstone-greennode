@@ -29,6 +29,7 @@ import type {
   ConfirmPickupResult,
   ConfirmStoreResult,
 } from '@/api/inventory';
+import {useFeedRefreshStore} from '@/store/feedRefreshStore';
 import {colors} from '@/theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'InventoryQrPrototype'>;
@@ -108,6 +109,9 @@ const InventoryQrPrototypeScreen = ({navigation, route}: Props) => {
     useState<ConfirmStoreResult | null>(null);
   const [confirmedPickupResult, setConfirmedPickupResult] =
     useState<ConfirmPickupResult | null>(null);
+  const requestNearbyPostsRefresh = useFeedRefreshStore(
+    state => state.requestNearbyPostsRefresh,
+  );
   const [scanMessage, setScanMessage] = useState(
     isApiBacked
       ? '냉장고 QR을 스캔하면 실제 인증 API를 호출합니다.'
@@ -198,6 +202,7 @@ const InventoryQrPrototypeScreen = ({navigation, route}: Props) => {
               setConfirmedStoreResult(response.data);
               setStoreConfirmed(true);
               setPickupConfirmed(false);
+              requestNearbyPostsRefresh();
               setScanMessage(
                 response.message ||
                   '입고 인증 완료. 라벨 코드를 식재료에 붙여주세요.',
@@ -238,6 +243,7 @@ const InventoryQrPrototypeScreen = ({navigation, route}: Props) => {
           if (response.success && response.data) {
             setConfirmedPickupResult(response.data);
             setPickupConfirmed(true);
+            requestNearbyPostsRefresh(response.data.postId ?? postId);
             setScanMessage(response.message || '수령 인증이 완료되었습니다.');
             return;
           }
@@ -256,7 +262,14 @@ const InventoryQrPrototypeScreen = ({navigation, route}: Props) => {
       setPickupConfirmed(true);
       setScanMessage('수령 인증 완료. 임시 선점이 종료됐습니다.');
     },
-    [expectedFridgePublicCode, isApiBacked, postId, scanMode, storeConfirmed],
+    [
+      expectedFridgePublicCode,
+      isApiBacked,
+      postId,
+      requestNearbyPostsRefresh,
+      scanMode,
+      storeConfirmed,
+    ],
   );
 
   const resetPrototype = () => {

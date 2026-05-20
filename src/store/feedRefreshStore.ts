@@ -13,9 +13,9 @@ export const useFeedRefreshStore = create<FeedRefreshState>(set => ({
   nearbyPostsRefreshToken: 0,
   requestedPostId: null,
   requestNearbyPostsRefresh: requestedPostId => {
-    set({
-      nearbyPostsRefreshToken: Date.now(),
+    set(state => ({
+      nearbyPostsRefreshToken: state.nearbyPostsRefreshToken + 1,
       requestedPostId: requestedPostId ?? null,
-    });
+    }));
   },
 }));
