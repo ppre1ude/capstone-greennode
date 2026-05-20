@@ -264,6 +264,7 @@ node ./node_modules/typescript/bin/tsc --noEmit
 ### 2026-05-20 QR feed refresh update
 
 - API-backed `confirmStore` success now requests a generic nearby feed refresh without a removal id, while `confirmPickup` success requests refresh with the confirmed post id so Home/Map remove completed pickup items from discovery state.
+- `PostDetail` now treats an expired valid `requestExpiresAt` on a `requested` post as a restored hold candidate: it keeps the expired hold message, hides pickup QR entry, and requests a generic nearby feed refresh without a post id so discovery can re-query the item as available.
 
 실제 앱/서버 검증은 [`VALIDATION_AND_BACKLOG.md`](./VALIDATION_AND_BACKLOG.md)의 각 섹션 결과와 시연/검증용 데이터 준비 항목을 기준으로 한다.
 

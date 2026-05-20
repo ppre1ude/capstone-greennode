@@ -7,7 +7,7 @@
  *
  * @wireframe (별도 와이어프레임은 없으나, 피드 상세 기능을 위해 필요)
  */
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -71,6 +71,7 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isRequesting, setIsRequesting] = useState(false);
   const [currentTimeMs, setCurrentTimeMs] = useState(() => Date.now());
+  const expiredHoldRefreshKeysRef = useRef<Set<string>>(new Set());
 
   const fetchPostDetail = useCallback(async () => {
     try {
@@ -109,6 +110,30 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
 
     return () => clearInterval(timerId);
   }, [post?.requestExpiresAt, post?.status]);
+
+  useEffect(() => {
+    if (
+      post?.status !== 'requested' ||
+      !isValidDateInput(post.requestExpiresAt) ||
+      !isInventoryHoldExpired(post.requestExpiresAt, currentTimeMs)
+    ) {
+      return;
+    }
+
+    const refreshKey = `${post.id}:${post.requestExpiresAt}`;
+    if (expiredHoldRefreshKeysRef.current.has(refreshKey)) {
+      return;
+    }
+
+    expiredHoldRefreshKeysRef.current.add(refreshKey);
+    requestNearbyPostsRefresh();
+  }, [
+    currentTimeMs,
+    post?.id,
+    post?.requestExpiresAt,
+    post?.status,
+    requestNearbyPostsRefresh,
+  ]);
 
   const handleDelete = () => {
     Alert.alert('나눔 취소', '정말로 이 나눔을 취소(삭제)하시겠습니까?', [
@@ -196,7 +221,6 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
   const confidencePercent = getConfidencePercent(post.confidenceScore);
   const statusLabel = getPostStatusLabel(post.status);
   const canRequestShare = !isMyPost && post.status === 'available';
-  const canConfirmPickup = !isMyPost && post.status === 'requested';
   const requestButtonLabel = isRequesting
     ? '신청 중...'
     : canRequestShare
@@ -223,6 +247,8 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
             getInventoryHoldRemainingMs(requestExpiresAt, currentTimeMs),
           )}`
       : null;
+  const canConfirmPickup =
+    !isMyPost && post.status === 'requested' && !isRequestHoldExpired;
   const daysLeft = Math.ceil(
     (new Date(post.expirationDate).getTime() - new Date().getTime()) /
       (1000 * 3600 * 24),
