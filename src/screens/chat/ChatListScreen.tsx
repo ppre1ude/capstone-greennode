@@ -50,12 +50,18 @@ const ChatListScreen = () => {
   const clearNotifications = useNotificationStore(
     state => state.clearNotifications,
   );
+  const markNotificationRead = useNotificationStore(
+    state => state.markNotificationRead,
+  );
 
   const renderNotification = ({item}: {item: NotificationRecord}) => (
     <TouchableOpacity
       style={styles.notificationCard}
       activeOpacity={0.82}
-      onPress={() => openNotificationTarget(item)}>
+      onPress={() => {
+        markNotificationRead(item.id);
+        openNotificationTarget(item);
+      }}>
       <View style={styles.notificationHeader}>
         <Text style={styles.notificationTitle} numberOfLines={1}>
           {item.title}
@@ -68,6 +74,9 @@ const ChatListScreen = () => {
         {item.body}
       </Text>
       <View style={styles.notificationMetaRow}>
+        <Text style={styles.notificationMeta}>
+          {item.readAt ? '읽음' : '새 알림'}
+        </Text>
         <Text style={styles.notificationMeta}>{getSourceLabel(item.source)}</Text>
         <Text style={styles.notificationMeta}>
           {item.fridgeName || '공유 냉장고'}

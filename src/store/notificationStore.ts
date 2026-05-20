@@ -8,6 +8,7 @@ const MAX_NOTIFICATION_RECORDS = 50;
 interface NotificationState {
   notifications: NotificationRecord[];
   addNotification: (notification: NotificationRecord) => void;
+  markNotificationRead: (notificationId: string, readAt?: string) => void;
   clearNotifications: () => void;
 }
 
@@ -29,6 +30,18 @@ export const useNotificationStore = create<NotificationState>()(
             ),
           };
         });
+      },
+      markNotificationRead: (
+        notificationId,
+        readAt = new Date().toISOString(),
+      ) => {
+        set(state => ({
+          notifications: state.notifications.map(notification =>
+            notification.id === notificationId
+              ? {...notification, readAt}
+              : notification,
+          ),
+        }));
       },
       clearNotifications: () => set({notifications: []}),
     }),
