@@ -1,5 +1,5 @@
 import React from 'react';
-import {TouchableOpacity} from 'react-native';
+import {Alert, Text, TouchableOpacity} from 'react-native';
 import ReactTestRenderer from 'react-test-renderer';
 import {
   disposeOperatorItem,
@@ -43,9 +43,44 @@ const findTouchableByText = (
   return touchable;
 };
 
+const flattenTextChildren = (children: React.ReactNode): string => {
+  if (Array.isArray(children)) {
+    return children.map(flattenTextChildren).join('');
+  }
+
+  if (children == null || typeof children === 'boolean') {
+    return '';
+  }
+
+  return String(children);
+};
+
+const getRenderedText = (renderer: ReactTestRenderer.ReactTestRenderer) =>
+  renderer.root
+    .findAllByType(Text)
+    .map(node => flattenTextChildren(node.props.children))
+    .join('\n');
+
+const pressAlertButton = async (label: string) => {
+  const latestAlert = (Alert.alert as jest.Mock).mock.calls.at(-1);
+  const buttons = latestAlert?.[2] as
+    | {text?: string; onPress?: () => void | Promise<void>}[]
+    | undefined;
+  const button = buttons?.find(item => item.text === label);
+
+  if (!button?.onPress) {
+    throw new Error(`Alert button "${label}" not found`);
+  }
+
+  await button.onPress();
+};
+
 describe('FridgeOperatorConsoleScreen', () => {
+  const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
+
   beforeEach(() => {
     jest.clearAllMocks();
+    alertSpy.mockClear();
     mockedGetOperatorInventorySummary.mockResolvedValue({
       success: true,
       message: 'ok',
@@ -76,6 +111,10 @@ describe('FridgeOperatorConsoleScreen', () => {
         },
       ],
     });
+  });
+
+  afterAll(() => {
+    alertSpy.mockRestore();
   });
 
   it('renders the temporary fridge operator verification sections', async () => {
@@ -125,6 +164,10 @@ describe('FridgeOperatorConsoleScreen', () => {
     expect(renderer!.root.findAllByProps({children: '폐기 후보'})).not.toHaveLength(
       0,
     );
+    const renderedText = getRenderedText(renderer!);
+    expect(renderedText).toContain('마지막 동기화 5월 20일');
+    expect(renderedText).toContain('권장 나눔 기한: 5월 19일');
+    expect(renderedText).not.toContain('2026-05-19T00:00:00Z');
 
     await ReactTestRenderer.act(async () => {
       renderer?.unmount();
@@ -232,6 +275,18 @@ describe('FridgeOperatorConsoleScreen', () => {
       await Promise.resolve();
     });
 
+    expect(mockedDisposeOperatorItem).not.toHaveBeenCalled();
+    expect(alertSpy).toHaveBeenCalledWith(
+      '폐기 처분 확인',
+      expect.stringContaining('사과'),
+      expect.any(Array),
+    );
+
+    await ReactTestRenderer.act(async () => {
+      await pressAlertButton('폐기 처분');
+      await Promise.resolve();
+    });
+
     expect(mockedDisposeOperatorItem).toHaveBeenCalledWith(120);
     expect(renderer!.root.findAllByProps({children: '폐기 완료'})).not.toHaveLength(
       0,
@@ -329,6 +384,13 @@ describe('FridgeOperatorConsoleScreen', () => {
 
     await ReactTestRenderer.act(async () => {
       findTouchableByText(renderer!, '폐기 처분 완료').props.onPress();
+      await Promise.resolve();
+    });
+
+    expect(mockedDisposeOperatorItem).not.toHaveBeenCalled();
+
+    await ReactTestRenderer.act(async () => {
+      await pressAlertButton('폐기 처분');
       await Promise.resolve();
       await Promise.resolve();
     });

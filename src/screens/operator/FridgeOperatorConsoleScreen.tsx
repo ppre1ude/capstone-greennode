@@ -189,6 +189,43 @@ const formatConfidence = (confidenceScore?: number | null): string | null => {
     : (confidenceScore / 100).toFixed(2);
 };
 
+const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+const formatOperatorDateTime = (value?: string | null): string => {
+  const trimmedValue = value?.trim();
+
+  if (!trimmedValue) {
+    return '-';
+  }
+
+  const isDateOnly = DATE_ONLY_PATTERN.test(trimmedValue);
+  const normalizedValue = isDateOnly
+    ? `${trimmedValue}T00:00:00`
+    : trimmedValue.replace(' ', 'T');
+  const date = new Date(normalizedValue);
+
+  if (!Number.isFinite(date.getTime())) {
+    return trimmedValue;
+  }
+
+  const dateText = date.toLocaleDateString('ko-KR', {
+    month: 'long',
+    day: 'numeric',
+  });
+
+  if (isDateOnly) {
+    return dateText;
+  }
+
+  const timeText = date.toLocaleTimeString('ko-KR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+
+  return `${dateText} ${timeText}`;
+};
+
 const getStorageZoneLabel = (
   storageZone?: OperatorInventoryItem['storageZone'],
 ): string => {
@@ -257,8 +294,9 @@ const mapOperatorInventoryItem = (
     labelCode: item.labelCode ?? undefined,
     storageZone: getStorageZoneLabel(item.storageZone),
     ai: confidence ? `${freshness}, ${confidence}` : String(freshness),
-    recommendedUntil:
-      item.storageDeadlineAt ?? item.expirationDate ?? item.updatedAt ?? '-',
+    recommendedUntil: formatOperatorDateTime(
+      item.storageDeadlineAt ?? item.expirationDate ?? item.updatedAt,
+    ),
     status: mapOperatorItemStatus(item.status),
   };
 };
@@ -330,14 +368,7 @@ const FridgeOperatorConsoleScreen = ({navigation, route}: Props) => {
     fetchOperatorInventory();
   }, [fetchOperatorInventory]);
 
-  const handleDispose = async (item: InspectionItem) => {
-    const postId = Number(item.postId);
-
-    if (!Number.isFinite(postId)) {
-      Alert.alert('폐기 요청 실패', '식재료 번호를 확인할 수 없습니다.');
-      return;
-    }
-
+  const disposeItem = async (item: InspectionItem, postId: number) => {
     setDisposingPostId(item.postId);
 
     try {
@@ -371,6 +402,28 @@ const FridgeOperatorConsoleScreen = ({navigation, route}: Props) => {
     } finally {
       setDisposingPostId(null);
     }
+  };
+
+  const handleDispose = (item: InspectionItem) => {
+    const postId = Number(item.postId);
+
+    if (!Number.isFinite(postId)) {
+      Alert.alert('폐기 요청 실패', '식재료 번호를 확인할 수 없습니다.');
+      return;
+    }
+
+    Alert.alert(
+      '폐기 처분 확인',
+      `${item.name} (postId ${item.postId})을 폐기 완료로 처리할까요? 이 작업은 실제 재고 상태를 변경합니다.`,
+      [
+        {text: '취소', style: 'cancel'},
+        {
+          text: '폐기 처분',
+          style: 'destructive',
+          onPress: () => disposeItem(item, postId),
+        },
+      ],
+    );
   };
 
   return (
@@ -429,7 +482,10 @@ const FridgeOperatorConsoleScreen = ({navigation, route}: Props) => {
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>냉장고 상태</Text>
               <Text style={styles.sectionNote}>
-                마지막 동기화 {inventorySummary.lastSyncedAt ?? '확인 중'}
+                마지막 동기화{' '}
+                {inventorySummary.lastSyncedAt
+                  ? formatOperatorDateTime(inventorySummary.lastSyncedAt)
+                  : '확인 중'}
               </Text>
               <View style={styles.summaryGrid}>
                 {summaryCards.map(item => (
