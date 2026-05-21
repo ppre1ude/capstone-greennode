@@ -185,4 +185,74 @@ describe('PostCreateScreen review notice', () => {
       renderer!.unmount();
     });
   });
+
+  it('keeps multi-object detections visible while registering one representative item', async () => {
+    const navigation = {
+      goBack: jest.fn(),
+      navigate: jest.fn(),
+    };
+    const multiObjectResult: GenerateResult = {
+      ...lowConfidenceResult,
+      detections: [
+        {
+          label: 'banana',
+          labelKo: '바나나',
+          freshnessLabel: 'Fresh',
+          confidenceScore: 0.92,
+        },
+        {
+          label: 'apple',
+          labelKo: '사과',
+          freshnessLabel: 'Fresh',
+          confidenceScore: 0.89,
+        },
+      ],
+    };
+
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(
+        <PostCreateScreen
+          navigation={navigation as never}
+          route={{
+            params: {
+              result: multiObjectResult,
+              imageUri: 'file:///banana.jpg',
+            },
+          } as never}
+        />,
+      );
+    });
+
+    expect(
+      renderer!.root.findAllByProps({children: '감지된 식재료 후보'}),
+    ).not.toHaveLength(0);
+    expect(
+      renderer!.root.findAllByProps({
+        children:
+          '백엔드 분리 등록 계약 전까지는 대표 식재료 1개 기준으로 등록합니다.',
+      }),
+    ).not.toHaveLength(0);
+    expect(renderer!.root.findAllByProps({children: '사과'})).not.toHaveLength(
+      0,
+    );
+
+    await ReactTestRenderer.act(async () => {
+      findButtonByText(renderer!, '다음 단계로')?.props.onPress();
+    });
+
+    expect(navigation.navigate).toHaveBeenCalledWith('FridgeSelect', {
+      postData: {
+        imageToken: 'image-token',
+        expirationDate: '2026-05-21',
+      },
+      qualityCategory: 'Fresh',
+      qualityCanShare: true,
+    });
+
+    await ReactTestRenderer.act(async () => {
+      renderer!.unmount();
+    });
+  });
 });

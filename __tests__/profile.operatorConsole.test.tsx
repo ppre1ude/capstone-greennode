@@ -51,6 +51,14 @@ describe('ProfileScreen operator console entry', () => {
   });
 
   it('opens the temporary fridge operator console from profile', async () => {
+    useAuthStore.setState({
+      user: {
+        ...useAuthStore.getState().user!,
+        operatorRole: 'operator',
+        operatorFridgeIds: [1],
+      },
+    });
+
     let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
 
     await ReactTestRenderer.act(async () => {
@@ -65,6 +73,24 @@ describe('ProfileScreen operator console entry', () => {
     });
 
     expect(mockParentNavigate).toHaveBeenCalledWith('FridgeOperatorConsole');
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
+  it('hides the operator console entry for regular users', async () => {
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(<ProfileScreen />);
+    });
+
+    expect(
+      renderer!.root.findAllByProps({
+        children: '냉장고 운영자 콘솔 (실험)',
+      }),
+    ).toHaveLength(0);
 
     await ReactTestRenderer.act(async () => {
       renderer?.unmount();

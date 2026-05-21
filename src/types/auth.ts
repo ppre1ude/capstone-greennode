@@ -11,6 +11,10 @@ export interface User {
   longitude: number | null;
   fcmToken: string | null;
   isActive: boolean;
+  isOperator?: boolean | null;
+  operatorRole?: 'operator' | 'admin' | null;
+  operatorFridgeIds?: number[] | null;
+  roles?: string[] | null;
   createdAt: string;
   updatedAt: string;
 }

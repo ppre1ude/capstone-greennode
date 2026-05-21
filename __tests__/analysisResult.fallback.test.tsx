@@ -140,4 +140,45 @@ describe('AnalysisResultScreen fallback QA', () => {
       renderer.unmount();
     });
   });
+
+  it('shows detected food candidates when the backend sends multi-object detections', async () => {
+    const multiObjectResult: GenerateResult = {
+      ...baseResult,
+      detections: [
+        {
+          label: 'banana',
+          labelKo: '바나나',
+          freshnessLabel: 'Fresh',
+          confidenceScore: 0.96,
+        },
+        {
+          label: 'tomato',
+          labelKo: '토마토',
+          freshnessLabel: 'Mid',
+          confidenceScore: 0.82,
+        },
+      ],
+    };
+
+    const {renderer} = await createScreen(multiObjectResult);
+
+    expect(
+      renderer.root.findAllByProps({children: '감지된 식재료 후보'}),
+    ).not.toHaveLength(0);
+    expect(renderer.root.findAllByProps({children: '바나나'})).not.toHaveLength(
+      0,
+    );
+    expect(renderer.root.findAllByProps({children: '토마토'})).not.toHaveLength(
+      0,
+    );
+    expect(
+      renderer.root.findAllByProps({
+        children: '이번 등록은 대표 식재료 1개 기준으로 진행합니다.',
+      }),
+    ).not.toHaveLength(0);
+
+    await ReactTestRenderer.act(async () => {
+      renderer.unmount();
+    });
+  });
 });

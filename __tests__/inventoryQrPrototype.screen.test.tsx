@@ -1,8 +1,10 @@
 import React from 'react';
 import {Text, TouchableOpacity} from 'react-native';
 import ReactTestRenderer from 'react-test-renderer';
-import {confirmStore} from '@/api/inventory';
+import {confirmPickup, confirmStore} from '@/api/inventory';
+import {QrScannerShell} from '@/features/qr';
 import InventoryQrPrototypeScreen from '@/screens/inventory/InventoryQrPrototypeScreen';
+import {useFeedRefreshStore} from '@/store/feedRefreshStore';
 
 jest.mock('@/api/inventory', () => ({
   confirmPickup: jest.fn(),
@@ -11,6 +13,9 @@ jest.mock('@/api/inventory', () => ({
 
 const mockedConfirmStore = confirmStore as jest.MockedFunction<
   typeof confirmStore
+>;
+const mockedConfirmPickup = confirmPickup as jest.MockedFunction<
+  typeof confirmPickup
 >;
 
 const flattenText = (value: unknown): string => {
@@ -43,9 +48,27 @@ const findTouchableByText = (
   return touchable;
 };
 
+const pressWrongFridgeQrAction = (
+  renderer: ReactTestRenderer.ReactTestRenderer,
+) => {
+  const wrongFridgeButton = renderer.root.findByProps({
+    testID: 'inventory-qr-wrong-fridge-action',
+  });
+
+  if (!wrongFridgeButton) {
+    throw new Error('Wrong fridge QR action not found');
+  }
+
+  wrongFridgeButton.props.onPress();
+};
+
 describe('InventoryQrPrototypeScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    useFeedRefreshStore.setState({
+      nearbyPostsRefreshToken: 0,
+      requestedPostId: null,
+    });
   });
 
   it('renders the QR and inventory prototype surface', async () => {
@@ -177,6 +200,263 @@ describe('InventoryQrPrototypeScreen', () => {
     });
     expect(getTextContent(renderer!)).toContain('#03');
     expect(getTextContent(renderer!)).toContain('에틸렌 분리 구역');
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
+  it('requests a nearby feed refresh without a removal id when store confirmation succeeds', async () => {
+    mockedConfirmStore.mockResolvedValue({
+      success: true,
+      message: 'ok',
+      data: {
+        postId: 42,
+        status: 'available',
+        labelCode: '#42',
+        storageZone: 'GENERAL',
+        storageDeadlineAt: '2026-06-18T05:30:00Z',
+        storedAt: '2026-05-19T05:30:00Z',
+      },
+    });
+
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(
+        <InventoryQrPrototypeScreen
+          navigation={{goBack: jest.fn()} as any}
+          route={{
+            params: {
+              mode: 'store',
+              postId: 10,
+              fridgePublicCode: 'GJ-STATION-001',
+            },
+          } as any}
+        />,
+      );
+    });
+
+    const previousToken =
+      useFeedRefreshStore.getState().nearbyPostsRefreshToken;
+
+    await ReactTestRenderer.act(async () => {
+      await renderer!.root.findByType(QrScannerShell).props.onValidScan({
+        fridgePublicCode: 'GJ-STATION-001',
+      });
+    });
+
+    expect(useFeedRefreshStore.getState().requestedPostId).toBeNull();
+    expect(useFeedRefreshStore.getState().nearbyPostsRefreshToken).toBe(
+      previousToken + 1,
+    );
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
+  it('requests a nearby feed refresh with the confirmed pickup response post id', async () => {
+    mockedConfirmPickup.mockResolvedValue({
+      success: true,
+      message: 'ok',
+      data: {
+        postId: 43,
+        status: 'completed',
+        labelCode: '#43',
+        storageZone: 'GENERAL',
+        pickedUpAt: '2026-05-19T05:30:00Z',
+      },
+    });
+
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(
+        <InventoryQrPrototypeScreen
+          navigation={{goBack: jest.fn()} as any}
+          route={{
+            params: {
+              mode: 'pickup',
+              postId: 10,
+              fridgePublicCode: 'GJ-STATION-001',
+            },
+          } as any}
+        />,
+      );
+    });
+
+    const previousToken =
+      useFeedRefreshStore.getState().nearbyPostsRefreshToken;
+
+    await ReactTestRenderer.act(async () => {
+      await renderer!.root.findByType(QrScannerShell).props.onValidScan({
+        fridgePublicCode: 'GJ-STATION-001',
+      });
+    });
+
+    expect(useFeedRefreshStore.getState().requestedPostId).toBe(43);
+    expect(useFeedRefreshStore.getState().nearbyPostsRefreshToken).toBe(
+      previousToken + 1,
+    );
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
+  it('renders an API-backed countdown from the route expiry and current time', async () => {
+    const dateNowSpy = jest
+      .spyOn(Date, 'now')
+      .mockReturnValue(new Date('2026-05-20T00:00:00Z').getTime());
+
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(
+        <InventoryQrPrototypeScreen
+          navigation={{goBack: jest.fn()} as any}
+          route={{
+            params: {
+              mode: 'store',
+              postId: 10,
+              pendingExpiresAt: '2026-05-20T00:07:30Z',
+            },
+          } as any}
+        />,
+      );
+    });
+
+    expect(getTextContent(renderer!)).toContain('07:30');
+    expect(getTextContent(renderer!)).not.toContain('05:00');
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+
+    dateNowSpy.mockRestore();
+  });
+
+  it('falls back to an API expiry when route pendingExpiresAt is invalid', async () => {
+    const dateNowSpy = jest
+      .spyOn(Date, 'now')
+      .mockReturnValue(new Date('2026-05-20T00:00:00Z').getTime());
+
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(
+        <InventoryQrPrototypeScreen
+          navigation={{goBack: jest.fn()} as any}
+          route={{
+            params: {
+              mode: 'store',
+              postId: 10,
+              pendingExpiresAt: 'not-a-date',
+            },
+          } as any}
+        />,
+      );
+    });
+
+    const textContent = getTextContent(renderer!);
+    expect(textContent).toContain('10:00');
+    expect(textContent).not.toContain('NaN:NaN');
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+
+    dateNowSpy.mockRestore();
+  });
+
+  it('lets the backend validate a post-backed store scan when no expected fridge public code is provided', async () => {
+    mockedConfirmStore.mockResolvedValue({
+      success: true,
+      message: 'ok',
+      data: {
+        postId: 10,
+        status: 'available',
+        labelCode: '#03',
+        storageZone: 'GENERAL',
+        storageDeadlineAt: '2026-06-18T05:30:00Z',
+        storedAt: '2026-05-19T05:30:00Z',
+      },
+    });
+
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(
+        <InventoryQrPrototypeScreen
+          navigation={{goBack: jest.fn()} as any}
+          route={{
+            params: {
+              mode: 'store',
+              postId: 10,
+              pendingExpiresAt: '2030-01-01T00:05:00Z',
+            },
+          } as any}
+        />,
+      );
+    });
+
+    await ReactTestRenderer.act(async () => {
+      pressWrongFridgeQrAction(renderer!);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(mockedConfirmStore).toHaveBeenCalledWith({
+      postId: 10,
+      fridgePublicCode: 'GJ-WRONG-999',
+    });
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
+  it('lets the backend validate a post-backed pickup scan when no expected fridge public code is provided', async () => {
+    mockedConfirmPickup.mockResolvedValue({
+      success: true,
+      message: 'ok',
+      data: {
+        postId: 10,
+        status: 'completed',
+        labelCode: '#03',
+        storageZone: 'GENERAL',
+        pickedUpAt: '2026-05-19T05:30:00Z',
+      },
+    });
+
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(
+        <InventoryQrPrototypeScreen
+          navigation={{goBack: jest.fn()} as any}
+          route={{
+            params: {
+              mode: 'pickup',
+              postId: 10,
+              pendingExpiresAt: '2030-01-01T00:30:00Z',
+            },
+          } as any}
+        />,
+      );
+    });
+
+    await ReactTestRenderer.act(async () => {
+      pressWrongFridgeQrAction(renderer!);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(mockedConfirmPickup).toHaveBeenCalledWith({
+      postId: 10,
+      fridgePublicCode: 'GJ-WRONG-999',
+    });
 
     await ReactTestRenderer.act(async () => {
       renderer?.unmount();

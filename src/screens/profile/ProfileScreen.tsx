@@ -19,6 +19,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useAuthStore } from '@/store/authStore';
 import { DSButton, DSCard, DSChip, DSListCell, DSText } from '@/design-system';
 import { colors } from '@/theme';
+import type { User } from '@/types';
 
 const MENU_ITEMS = [
   {id: 'location', title: '동네 위치 재설정', icon: '📍'},
@@ -31,10 +32,37 @@ const MENU_ITEMS = [
   {id: 'help', title: '고객센터', icon: '🎧'},
 ];
 
+const OPERATOR_ROLES = new Set(['operator', 'admin', 'fridge_operator']);
+
+const canAccessOperatorConsole = (user: User | null): boolean => {
+  if (!user) {
+    return false;
+  }
+
+  if (user.isOperator === true || user.operatorRole) {
+    return true;
+  }
+
+  if (
+    Array.isArray(user.operatorFridgeIds) &&
+    user.operatorFridgeIds.length > 0
+  ) {
+    return true;
+  }
+
+  return (
+    Array.isArray(user.roles) &&
+    user.roles.some(role => OPERATOR_ROLES.has(role))
+  );
+};
+
 const ProfileScreen = () => {
   const user = useAuthStore(state => state.user);
   const logoutStore = useAuthStore(state => state.logout);
   const navigation = useNavigation<any>();
+  const visibleMenuItems = MENU_ITEMS.filter(
+    item => item.id !== 'operator-console' || canAccessOperatorConsole(user),
+  );
 
   const handleLogout = () => {
     Alert.alert('로그아웃', '정말 로그아웃 하시겠습니까?', [
@@ -56,6 +84,11 @@ const ProfileScreen = () => {
     }
 
     if (id === 'operator-console') {
+      if (!canAccessOperatorConsole(user)) {
+        Alert.alert('운영자 권한 필요', '운영자로 등록된 계정만 사용할 수 있습니다.');
+        return;
+      }
+
       navigation.getParent()?.navigate('FridgeOperatorConsole');
       return;
     }
@@ -161,13 +194,13 @@ const ProfileScreen = () => {
 
         {/* 메뉴 리스트 */}
         <DSCard variant="plain" padded={false} style={styles.menuSection}>
-          {MENU_ITEMS.map((item, index) => (
+          {visibleMenuItems.map((item, index) => (
             <DSListCell
               key={item.id}
               title={item.title}
               leading={<DSText style={styles.menuIcon}>{item.icon}</DSText>}
               chevron
-              divider={index !== MENU_ITEMS.length - 1}
+              divider={index !== visibleMenuItems.length - 1}
               verticalPadding="large"
               onPress={() => handleMenuPress(item.id)}
               style={styles.menuItem}

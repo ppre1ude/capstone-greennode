@@ -8,10 +8,12 @@ export type {
 export type {
   Post,
   PostNearbyRead,
+  FreshnessLabel,
   PostCreateFlow,
   PostStorageZone,
   PostStatus,
   AiAnalysis,
+  AiDetection,
   GenerateResult,
   PostCreateData,
   ShareRequest,

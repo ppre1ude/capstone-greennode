@@ -41,6 +41,7 @@ import {
   LOCATION_REQUIRED_MESSAGE,
   LOCATION_REQUIRED_TITLE,
 } from '@/utils/locationGuard';
+import { selectHomeRecommendations } from '@/utils/homeRecommendations';
 import { DSIcon } from '@/design-system';
 import { colors } from '@/theme';
 
@@ -74,6 +75,12 @@ const HomeScreen = () => {
       ),
     );
   }, [isFilteringFeed, normalizedFeedQuery, posts]);
+  const recommendedPosts = useMemo(
+    () => selectHomeRecommendations(posts),
+    [posts],
+  );
+  const shouldShowRecommendations =
+    feedState === 'ready' && !isFilteringFeed && recommendedPosts.length > 0;
 
   const openLocationSetup = useCallback(() => {
     navigation.getParent()?.navigate('LocationSetup', { allowBack: true });
@@ -144,6 +151,15 @@ const HomeScreen = () => {
     await fetchPosts();
     setRefreshing(false);
   }, [fetchPosts]);
+
+  const openPostDetail = useCallback(
+    (postId: number) => {
+      navigation.getParent()?.navigate('PostDetail', {
+        postId,
+      });
+    },
+    [navigation],
+  );
 
   return (
     <View style={styles.container}>
@@ -237,6 +253,28 @@ const HomeScreen = () => {
         </View>
 
         {/* 근처 나눔 피드 */}
+        {shouldShowRecommendations ? (
+          <View style={styles.recommendationSection}>
+            <View style={styles.recommendationHeader}>
+              <Text style={styles.recommendationTitle}>
+                오늘 가져가기 좋은 재료
+              </Text>
+              <Text style={styles.recommendationSubtitle}>
+                권장 수령일이 가까운 나눔을 먼저 보여드려요.
+              </Text>
+            </View>
+            <View style={styles.feedList}>
+              {recommendedPosts.map(post => (
+                <NearbyPostCard
+                  key={`recommended-${post.id}`}
+                  post={post}
+                  onPress={() => openPostDetail(post.id)}
+                />
+              ))}
+            </View>
+          </View>
+        ) : null}
+
         <View style={styles.feedSection}>
           <View style={styles.feedHeader}>
             <Text style={styles.feedTitle}>내 주변 실시간 나눔</Text>
@@ -303,11 +341,7 @@ const HomeScreen = () => {
                 <NearbyPostCard
                   key={post.id}
                   post={post}
-                  onPress={() =>
-                    navigation.getParent()?.navigate('PostDetail', {
-                      postId: post.id,
-                    })
-                  }
+                  onPress={() => openPostDetail(post.id)}
                 />
               ))}
             </View>
@@ -470,6 +504,24 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   // 피드
+  recommendationSection: {
+    paddingHorizontal: 24,
+    marginTop: 28,
+  },
+  recommendationHeader: {
+    marginBottom: 12,
+  },
+  recommendationTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    marginBottom: 4,
+  },
+  recommendationSubtitle: {
+    fontSize: 12,
+    lineHeight: 18,
+    color: colors.textSecondary,
+  },
   feedSection: {
     paddingHorizontal: 24,
     marginTop: 28,

@@ -80,3 +80,6 @@ temp/
 *.pem
 2026-GreenNode.pem
 .ssh/
+android/app/google-services.json
+ios/GoogleService-Info.plist
+*firebase-adminsdk*.json

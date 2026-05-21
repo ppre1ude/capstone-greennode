@@ -1,3 +1,6 @@
 <resources>
     <string name="app_name">greennode</string>
+    <string name="default_notification_channel_id" translatable="false">greennode_default_notifications</string>
+    <string name="default_notification_channel_name">Greennode notifications</string>
+    <string name="default_notification_channel_description">General app notifications.</string>
 </resources>

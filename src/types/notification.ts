@@ -33,5 +33,6 @@ export interface NotificationRecord {
   title: string;
   body: string;
   receivedAt: string;
+  readAt?: string | null;
   source: NotificationSource;
 }

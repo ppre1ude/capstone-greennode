@@ -34,6 +34,34 @@ import { styles } from './FridgeSelectScreen.styles';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'FridgeSelect'>;
 
+const PENDING_STORE_TIMEOUT_MS = 10 * 60 * 1000;
+
+const toValidTimestamp = (value?: string | null): number | null => {
+  if (!value) {
+    return null;
+  }
+
+  const timestamp = Date.parse(value);
+  return Number.isFinite(timestamp) ? timestamp : null;
+};
+
+const resolvePendingStoreExpiresAt = (
+  storeExpiresAt?: string | null,
+  createdAt?: string | null,
+) => {
+  const storeExpiresAtTimestamp = toValidTimestamp(storeExpiresAt);
+  if (storeExpiresAt && storeExpiresAtTimestamp !== null) {
+    return storeExpiresAt;
+  }
+
+  const createdAtTimestamp = toValidTimestamp(createdAt);
+  if (createdAtTimestamp === null) {
+    return undefined;
+  }
+
+  return new Date(createdAtTimestamp + PENDING_STORE_TIMEOUT_MS).toISOString();
+};
+
 const FridgeSelectScreen = ({ route, navigation }: Props) => {
   const { postData, qualityCategory, qualityCanShare } = route.params;
   const user = useAuthStore(state => state.user);
@@ -118,6 +146,10 @@ const FridgeSelectScreen = ({ route, navigation }: Props) => {
             fridgePublicCode: selectedFridge?.publicCode,
             fridgeName: selectedFridge?.name,
             fridgeLocation: selectedFridge?.address,
+            pendingExpiresAt: resolvePendingStoreExpiresAt(
+              response.data.storeExpiresAt,
+              response.data.createdAt,
+            ),
           });
           return;
         }
@@ -281,6 +313,7 @@ const FridgeSelectScreen = ({ route, navigation }: Props) => {
           />
 
           <DSButton
+            testID="fridge-select-qr-submit"
             label="QR 입고로 등록하기"
             variant="outlined"
             fullWidth
@@ -288,6 +321,8 @@ const FridgeSelectScreen = ({ route, navigation }: Props) => {
             loadingLabel="처리 중"
             onPress={() => handleComplete('fridge_qr')}
             disabled={!selectedFridgeId || !postData || isSubmitting}
+            style={styles.qrSubmitButton}
+            textStyle={styles.qrSubmitButtonText}
           />
         </View>
       ) : null}

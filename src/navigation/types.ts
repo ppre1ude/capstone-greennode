@@ -38,7 +38,12 @@ export type RootStackParamList = {
   PostCreate: {result: GenerateResult; imageUri: string};
   PostComplete: {postId: number};
   PostDetail: {postId: number};
-  FridgeOperatorConsole: undefined;
+  FridgeOperatorConsole:
+    | {
+        fridgeId?: number;
+        fridgeName?: string;
+      }
+    | undefined;
   InventoryQrPrototype:
     | {
         mode?: 'store' | 'pickup';
@@ -46,6 +51,7 @@ export type RootStackParamList = {
         fridgePublicCode?: string;
         fridgeName?: string;
         fridgeLocation?: string;
+        pendingExpiresAt?: string;
       }
     | undefined;
   FridgeSelect: {

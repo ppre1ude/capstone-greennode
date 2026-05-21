@@ -97,6 +97,42 @@ export const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 19,
   },
+  detectionCard: {
+    marginTop: -8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    backgroundColor: colors.surface,
+    padding: 16,
+    gap: 8,
+  },
+  detectionTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: colors.primary,
+  },
+  detectionHint: {
+    fontSize: 13,
+    lineHeight: 19,
+    color: colors.textSecondary,
+  },
+  detectionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 12,
+  },
+  detectionName: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '800',
+    color: colors.textPrimary,
+  },
+  detectionMeta: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.textSecondary,
+  },
   summaryCard: {
     borderWidth: 1,
     borderColor: colors.border,

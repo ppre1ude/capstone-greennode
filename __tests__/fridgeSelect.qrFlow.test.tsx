@@ -55,8 +55,59 @@ const createdPost: Post = {
   imageUrl: '/static/posts/55.jpg',
   expirationDate: '2026-05-24',
   status: 'pending_store',
+  storeExpiresAt: '2026-05-20T00:08:30Z',
   createdAt: '2026-05-20T00:00:00Z',
   updatedAt: '2026-05-20T00:00:00Z',
+};
+
+const renderScreen = async () => {
+  const navigation = {
+    goBack: jest.fn(),
+    navigate: jest.fn(),
+    replace: jest.fn(),
+  };
+  let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+  await ReactTestRenderer.act(async () => {
+    renderer = ReactTestRenderer.create(
+      <FridgeSelectScreen
+        navigation={navigation as never}
+        route={{
+          params: {
+            postData: {
+              imageToken: 'image-token',
+              expirationDate: '2026-05-24',
+            },
+            qualityCategory: 'Fresh',
+            qualityCanShare: true,
+          },
+        } as never}
+      />,
+    );
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+
+  return {navigation, renderer: renderer!};
+};
+
+const selectFridgeAndSubmitQr = async (
+  renderer: ReactTestRenderer.ReactTestRenderer,
+) => {
+  await ReactTestRenderer.act(async () => {
+    const fridgeButton = findButtonByText(renderer, '광주역 앞 공유냉장고');
+    if (!fridgeButton) {
+      throw new Error('Fridge option not found');
+    }
+    fridgeButton.props.onPress();
+  });
+
+  await ReactTestRenderer.act(async () => {
+    renderer.root
+      .findByProps({testID: 'fridge-select-qr-submit'})
+      .props.onPress();
+    await Promise.resolve();
+  });
 };
 
 describe('FridgeSelectScreen QR flow', () => {
@@ -90,41 +141,10 @@ describe('FridgeSelectScreen QR flow', () => {
     });
   });
 
-  it('creates a pending-store post and opens store QR confirmation', async () => {
-    const navigation = {
-      goBack: jest.fn(),
-      navigate: jest.fn(),
-      replace: jest.fn(),
-    };
-    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+  it('creates a pending-store post and opens store QR confirmation with backend expiry', async () => {
+    const {navigation, renderer} = await renderScreen();
 
-    await ReactTestRenderer.act(async () => {
-      renderer = ReactTestRenderer.create(
-        <FridgeSelectScreen
-          navigation={navigation as never}
-          route={{
-            params: {
-              postData: {
-                imageToken: 'image-token',
-                expirationDate: '2026-05-24',
-              },
-              qualityCategory: 'Fresh',
-              qualityCanShare: true,
-            },
-          } as never}
-        />,
-      );
-      await Promise.resolve();
-    });
-
-    await ReactTestRenderer.act(async () => {
-      findButtonByText(renderer!, '광주역 앞 공유냉장고')?.props.onPress();
-    });
-
-    await ReactTestRenderer.act(async () => {
-      findButtonByText(renderer!, 'QR 입고로 등록하기')?.props.onPress();
-      await Promise.resolve();
-    });
+    await selectFridgeAndSubmitQr(renderer);
 
     expect(mockedCreatePost).toHaveBeenCalledWith({
       imageToken: 'image-token',
@@ -138,10 +158,87 @@ describe('FridgeSelectScreen QR flow', () => {
       fridgePublicCode: 'GJ-STATION-001',
       fridgeName: '광주역 앞 공유냉장고',
       fridgeLocation: '광주 북구 중흥동',
+      pendingExpiresAt: '2026-05-20T00:08:30Z',
     });
 
     await ReactTestRenderer.act(async () => {
-      renderer?.unmount();
+      renderer.unmount();
+    });
+  });
+
+  it('derives store QR expiry from createdAt when the response omits storeExpiresAt', async () => {
+    mockedCreatePost.mockResolvedValue({
+      success: true,
+      message: 'ok',
+      data: {
+        ...createdPost,
+        storeExpiresAt: null,
+      },
+    });
+    const {navigation, renderer} = await renderScreen();
+
+    await selectFridgeAndSubmitQr(renderer);
+
+    expect(navigation.replace).toHaveBeenCalledWith(
+      'InventoryQrPrototype',
+      expect.objectContaining({
+        pendingExpiresAt: '2026-05-20T00:10:00.000Z',
+      }),
+    );
+
+    await ReactTestRenderer.act(async () => {
+      renderer.unmount();
+    });
+  });
+
+  it('derives store QR expiry from createdAt when storeExpiresAt is invalid', async () => {
+    mockedCreatePost.mockResolvedValue({
+      success: true,
+      message: 'ok',
+      data: {
+        ...createdPost,
+        storeExpiresAt: 'not-a-date',
+      },
+    });
+    const {navigation, renderer} = await renderScreen();
+
+    await selectFridgeAndSubmitQr(renderer);
+
+    expect(navigation.replace).toHaveBeenCalledWith(
+      'InventoryQrPrototype',
+      expect.objectContaining({
+        pendingExpiresAt: '2026-05-20T00:10:00.000Z',
+      }),
+    );
+
+    await ReactTestRenderer.act(async () => {
+      renderer.unmount();
+    });
+  });
+
+  it('omits store QR expiry when both storeExpiresAt and createdAt are invalid', async () => {
+    mockedCreatePost.mockResolvedValue({
+      success: true,
+      message: 'ok',
+      data: {
+        ...createdPost,
+        storeExpiresAt: 'not-a-date',
+        createdAt: 'also-not-a-date',
+      },
+    });
+    const {navigation, renderer} = await renderScreen();
+
+    await selectFridgeAndSubmitQr(renderer);
+
+    expect(navigation.replace).toHaveBeenCalledWith(
+      'InventoryQrPrototype',
+      expect.objectContaining({
+        pendingExpiresAt: undefined,
+      }),
+    );
+
+    await ReactTestRenderer.act(async () => {
+      renderer.unmount();
     });
   });
 });

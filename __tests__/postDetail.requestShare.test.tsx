@@ -75,6 +75,16 @@ const findButtonByText = (
     }),
   );
 
+const findPickupQrButtons = (renderer: ReactTestRenderer.ReactTestRenderer) => {
+  const button = findButtonByText(renderer, '수령 QR 인증');
+  return button ? [button] : [];
+};
+
+const findExpiredHoldNotices = (renderer: ReactTestRenderer.ReactTestRenderer) =>
+  renderer.root.findAllByProps({
+    children: '수령 제한 시간이 지났어요. 목록을 새로고침하면 상태가 갱신됩니다.',
+  });
+
 describe('PostDetailScreen share request', () => {
   const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
   let dateNowSpy: jest.SpyInstance<number, []> | undefined;
@@ -303,6 +313,9 @@ describe('PostDetailScreen share request', () => {
       goBack: jest.fn(),
       navigate: jest.fn(),
     };
+    dateNowSpy = jest
+      .spyOn(Date, 'now')
+      .mockReturnValue(new Date('2026-05-06T00:00:00Z').getTime());
     mockedGetPostDetail.mockResolvedValue({
       success: true,
       message: 'ok',
@@ -325,7 +338,114 @@ describe('PostDetailScreen share request', () => {
     expect(navigation.navigate).toHaveBeenCalledWith('InventoryQrPrototype', {
       mode: 'pickup',
       postId: 10,
+      pendingExpiresAt: '2026-05-06T00:30:00Z',
     });
+
+    await ReactTestRenderer.act(async () => {
+      renderer.unmount();
+    });
+  });
+
+  it('blocks pickup QR and requests a generic refresh for an expired requested hold', async () => {
+    dateNowSpy = jest
+      .spyOn(Date, 'now')
+      .mockReturnValue(new Date('2026-05-06T00:00:00Z').getTime());
+    mockedGetPostDetail.mockResolvedValue({
+      success: true,
+      message: 'ok',
+      data: {
+        ...basePost,
+        status: 'requested',
+        requestExpiresAt: '2026-05-05T23:59:59Z',
+      },
+    });
+
+    const renderer = await createScreen({
+      goBack: jest.fn(),
+      navigate: jest.fn(),
+    });
+
+    expect(findPickupQrButtons(renderer)).toHaveLength(0);
+    expect(findExpiredHoldNotices(renderer).length).toBeGreaterThan(0);
+    expect(useFeedRefreshStore.getState().nearbyPostsRefreshToken).toBe(1);
+    expect(useFeedRefreshStore.getState().requestedPostId).toBeNull();
+
+    await ReactTestRenderer.act(async () => {
+      renderer.update(
+        <PostDetailScreen
+          navigation={{ goBack: jest.fn(), navigate: jest.fn() } as any}
+          route={{ params: { postId: 10 } } as any}
+        />,
+      );
+      await Promise.resolve();
+    });
+
+    expect(useFeedRefreshStore.getState().nearbyPostsRefreshToken).toBe(1);
+
+    await ReactTestRenderer.act(async () => {
+      renderer.unmount();
+    });
+  });
+
+  it('keeps pickup QR available for a non-expired requested hold without refresh', async () => {
+    const navigation = {
+      goBack: jest.fn(),
+      navigate: jest.fn(),
+    };
+    dateNowSpy = jest
+      .spyOn(Date, 'now')
+      .mockReturnValue(new Date('2026-05-06T00:00:00Z').getTime());
+    mockedGetPostDetail.mockResolvedValue({
+      success: true,
+      message: 'ok',
+      data: {
+        ...basePost,
+        status: 'requested',
+        requestExpiresAt: '2026-05-06T00:30:00Z',
+      },
+    });
+
+    const renderer = await createScreen(navigation);
+    const pickupButton = findPickupQrButtons(renderer)[0];
+
+    expect(pickupButton).toBeTruthy();
+    expect(useFeedRefreshStore.getState().nearbyPostsRefreshToken).toBe(0);
+
+    await ReactTestRenderer.act(async () => {
+      pickupButton?.props.onPress();
+    });
+
+    expect(navigation.navigate).toHaveBeenCalledWith('InventoryQrPrototype', {
+      mode: 'pickup',
+      postId: 10,
+      pendingExpiresAt: '2026-05-06T00:30:00Z',
+    });
+    expect(useFeedRefreshStore.getState().nearbyPostsRefreshToken).toBe(0);
+    expect(useFeedRefreshStore.getState().requestedPostId).toBeNull();
+
+    await ReactTestRenderer.act(async () => {
+      renderer.unmount();
+    });
+  });
+
+  it('does not request an expired refresh for an invalid requestExpiresAt', async () => {
+    dateNowSpy = jest
+      .spyOn(Date, 'now')
+      .mockReturnValue(new Date('2026-05-06T00:00:00Z').getTime());
+    mockedGetPostDetail.mockResolvedValue({
+      success: true,
+      message: 'ok',
+      data: {
+        ...basePost,
+        status: 'requested',
+        requestExpiresAt: 'not-a-date',
+      },
+    });
+
+    const renderer = await createScreen();
+
+    expect(useFeedRefreshStore.getState().nearbyPostsRefreshToken).toBe(0);
+    expect(useFeedRefreshStore.getState().requestedPostId).toBeNull();
 
     await ReactTestRenderer.act(async () => {
       renderer.unmount();

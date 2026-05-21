@@ -1,4 +1,4 @@
-import React, {useCallback, useMemo, useRef, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -29,6 +29,7 @@ import type {
   ConfirmPickupResult,
   ConfirmStoreResult,
 } from '@/api/inventory';
+import {useFeedRefreshStore} from '@/store/feedRefreshStore';
 import {colors} from '@/theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'InventoryQrPrototype'>;
@@ -56,6 +57,10 @@ const SAMPLE_STORAGE_POLICY = resolveStoragePolicy({
   storedAt: HOLD_STARTED_AT,
 });
 
+const PENDING_STORE_TIMEOUT_MS = 10 * 60 * 1000;
+const REQUEST_HOLD_TIMEOUT_MS = 30 * 60 * 1000;
+const UNKNOWN_FRIDGE_CODE_LABEL = 'QR 스캔 후 확인';
+
 const wrongFridgePayload = 'foodlink://fridges/GJ-WRONG-999/verify';
 
 const addScanNonce = (payload: string, nonce: number): string => {
@@ -73,16 +78,29 @@ const getErrorStatus = (error: unknown): number | null => {
   return typeof response?.status === 'number' ? response.status : null;
 };
 
+const isValidDateInput = (value?: string): value is string => {
+  if (!value) {
+    return false;
+  }
+
+  return Number.isFinite(Date.parse(value));
+};
+
 const InventoryQrPrototypeScreen = ({navigation, route}: Props) => {
   const params = route.params;
-  const expectedFridgePublicCode =
-    params?.fridgePublicCode ?? SELECTED_FRIDGE.publicCode;
   const postId = params?.postId;
   const isApiBacked = typeof postId === 'number';
+  const routeFridgePublicCode = params?.fridgePublicCode;
+  const expectedFridgePublicCode =
+    routeFridgePublicCode ??
+    (isApiBacked ? undefined : SELECTED_FRIDGE.publicCode);
+  const displayFridgePublicCode =
+    expectedFridgePublicCode ?? UNKNOWN_FRIDGE_CODE_LABEL;
   const fridgeName = params?.fridgeName ?? SELECTED_FRIDGE.name;
   const fridgeLocation = params?.fridgeLocation ?? SELECTED_FRIDGE.location;
   const scanSerial = useRef(0);
   const [scanMode, setScanMode] = useState<ScanMode>(params?.mode ?? 'store');
+  const [currentTime, setCurrentTime] = useState(() => Date.now());
   const [lastScannedValue, setLastScannedValue] = useState<string | null>(null);
   const [storeConfirmed, setStoreConfirmed] = useState(false);
   const [pickupConfirmed, setPickupConfirmed] = useState(false);
@@ -91,11 +109,51 @@ const InventoryQrPrototypeScreen = ({navigation, route}: Props) => {
     useState<ConfirmStoreResult | null>(null);
   const [confirmedPickupResult, setConfirmedPickupResult] =
     useState<ConfirmPickupResult | null>(null);
+  const requestNearbyPostsRefresh = useFeedRefreshStore(
+    state => state.requestNearbyPostsRefresh,
+  );
   const [scanMessage, setScanMessage] = useState(
     isApiBacked
       ? '냉장고 QR을 스캔하면 실제 인증 API를 호출합니다.'
       : '냉장고 QR을 스캔하면 이 화면에서 보관/수령 흐름을 확인할 수 있어요.',
   );
+
+  useEffect(() => {
+    if (!isApiBacked) {
+      return undefined;
+    }
+
+    const timer = setInterval(() => {
+      setCurrentTime(Date.now());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [isApiBacked]);
+
+  const apiFallbackExpiresAt = useMemo(
+    () =>
+      new Date(
+        Date.now() +
+          (scanMode === 'pickup'
+            ? REQUEST_HOLD_TIMEOUT_MS
+            : PENDING_STORE_TIMEOUT_MS),
+      ),
+    [scanMode],
+  );
+
+  const countdownExpiresAt = useMemo(() => {
+    if (!isApiBacked) {
+      return HOLD_EXPIRES_AT;
+    }
+
+    if (isValidDateInput(params?.pendingExpiresAt)) {
+      return params.pendingExpiresAt;
+    }
+
+    return apiFallbackExpiresAt;
+  }, [apiFallbackExpiresAt, isApiBacked, params?.pendingExpiresAt]);
+
+  const countdownNow = isApiBacked ? currentTime : PROTOTYPE_NOW;
 
   const inventoryStatus: InventoryDisplayStatus = useMemo(() => {
     if (pickupConfirmed) {
@@ -117,6 +175,9 @@ const InventoryQrPrototypeScreen = ({navigation, route}: Props) => {
     scanSerial.current += 1;
     setLastScannedValue(addScanNonce(payload, scanSerial.current));
   }, []);
+
+  const simulatedFridgePublicCode =
+    expectedFridgePublicCode ?? SELECTED_FRIDGE.publicCode;
 
   const handleValidScan = useCallback(
     async (target: FridgeQrVerificationTarget) => {
@@ -141,6 +202,7 @@ const InventoryQrPrototypeScreen = ({navigation, route}: Props) => {
               setConfirmedStoreResult(response.data);
               setStoreConfirmed(true);
               setPickupConfirmed(false);
+              requestNearbyPostsRefresh();
               setScanMessage(
                 response.message ||
                   '입고 인증 완료. 라벨 코드를 식재료에 붙여주세요.',
@@ -181,6 +243,7 @@ const InventoryQrPrototypeScreen = ({navigation, route}: Props) => {
           if (response.success && response.data) {
             setConfirmedPickupResult(response.data);
             setPickupConfirmed(true);
+            requestNearbyPostsRefresh(response.data.postId ?? postId);
             setScanMessage(response.message || '수령 인증이 완료되었습니다.');
             return;
           }
@@ -199,7 +262,14 @@ const InventoryQrPrototypeScreen = ({navigation, route}: Props) => {
       setPickupConfirmed(true);
       setScanMessage('수령 인증 완료. 임시 선점이 종료됐습니다.');
     },
-    [expectedFridgePublicCode, isApiBacked, postId, scanMode, storeConfirmed],
+    [
+      expectedFridgePublicCode,
+      isApiBacked,
+      postId,
+      requestNearbyPostsRefresh,
+      scanMode,
+      storeConfirmed,
+    ],
   );
 
   const resetPrototype = () => {
@@ -258,12 +328,12 @@ const InventoryQrPrototypeScreen = ({navigation, route}: Props) => {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>{fridgeName}</Text>
-            <Text style={styles.fridgeCode}>{expectedFridgePublicCode}</Text>
+            <Text style={styles.fridgeCode}>{displayFridgePublicCode}</Text>
           </View>
           <Text style={styles.sectionNote}>{fridgeLocation}</Text>
           <InventoryCountdownBadge
-            expiresAt={HOLD_EXPIRES_AT}
-            now={PROTOTYPE_NOW}
+            expiresAt={countdownExpiresAt}
+            now={countdownNow}
             testID="inventory-qr-countdown"
           />
         </View>
@@ -310,7 +380,7 @@ const InventoryQrPrototypeScreen = ({navigation, route}: Props) => {
                 simulateScan(
                   buildFridgeQrVerificationUrl(
                     'https://foodlink.app',
-                    expectedFridgePublicCode,
+                    simulatedFridgePublicCode,
                   ),
                 );
               }}
@@ -322,13 +392,14 @@ const InventoryQrPrototypeScreen = ({navigation, route}: Props) => {
                 simulateScan(
                   buildFridgeQrVerificationUrl(
                     'https://foodlink.app',
-                    expectedFridgePublicCode,
+                    simulatedFridgePublicCode,
                   ),
                 );
               }}
             />
             <ActionButton
               label="다른 냉장고 QR"
+              testID="inventory-qr-wrong-fridge-action"
               tone="warning"
               onPress={() => simulateScan(wrongFridgePayload)}
             />
@@ -394,15 +465,18 @@ const ModeButton = ({active, label, onPress}: ModeButtonProps) => (
 type ActionButtonProps = {
   label: string;
   onPress: () => void;
+  testID?: string;
   tone?: 'primary' | 'secondary' | 'warning';
 };
 
 const ActionButton = ({
   label,
   onPress,
+  testID,
   tone = 'primary',
 }: ActionButtonProps) => (
   <TouchableOpacity
+    testID={testID}
     onPress={onPress}
     style={[styles.actionButton, actionButtonTone(tone)]}>
     <Text style={[styles.actionButtonText, actionButtonTextTone(tone)]}>

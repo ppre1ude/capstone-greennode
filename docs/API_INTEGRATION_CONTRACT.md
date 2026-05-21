@@ -559,7 +559,7 @@ const imageFullUrl = `${BASE_URL}${post.imageUrl}`;
 
 ### 설정 순서
 
-1. Firebase 프로젝트: `foodlink-cf8e7`
+1. Firebase 프로젝트: `greennode-94eae`
 2. `@react-native-firebase/app` + `@react-native-firebase/messaging` 설치
 3. `google-services.json` (Android) / `GoogleService-Info.plist` (iOS) 배치
 
@@ -571,6 +571,8 @@ const imageFullUrl = `${BASE_URL}${post.imageUrl}`;
 - `2026-GreenNode.pem`: NHN Cloud VM SSH 접속과 터널을 위한 키다. Firebase 앱 초기화, FCM token 발급, FCM 서버 발송 권한을 대신할 수 없다.
 
 FCM 실수신 QA를 하려면 클라이언트 설정 파일과 서버 발송 자격증명이 모두 필요하다. `google-services.json`만 있으면 앱 token 발급 경로를 확인할 수 있지만, `share_created`/`share_requested` 실제 수신까지 검증하려면 백엔드 VM이 Firebase Admin/service account credentials로 실제 발송해야 한다. VM에 credentials가 없으면 `[Mock FCM]` 계열 로그만 남을 수 있다.
+
+2026-05-21 QA note: Android client config `android/app/google-services.json`은 로컬에 있고 gitignored 상태다. Firebase project는 `greennode-94eae`, Android package는 `com.greennode`다. NHN Cloud VM Firebase Admin credentials도 `greennode-94eae`로 맞췄고 VM 경로는 `/home/ubuntu/foodlink/credentials/firebase-service-account.json`, API container mount 경로는 `/app/credentials/firebase-service-account.json`이다. credential 내용은 repo나 문서에 남기지 않는다. 정렬 이후 emulator QA에서 `share_created`, `share_requested` 실제 send가 backend log success 1 / failure 0으로 확인됐고, foreground는 로컬 알림 탭 기록, background는 system notification 표시와 post detail tap routing까지 확인했다. Terminated 상태는 backend Android FCM priority `high` 적용 후 재검증한다. 현재 logcat에는 `Background messages only work if the message priority is set to 'high'`가 남았고, terminated tap routing은 신뢰할 수 없었다.
 
 ### 토큰 등록
 
@@ -599,7 +601,7 @@ type FoodLinkFcmPayload =
 - `AppNavigator`에서 foreground, opened-app, initial-notification handler를 등록한다.
 - handler는 `data` payload가 문자열 + camelCase인지 검증하고, 유효한 이벤트만 로컬 알림함에 저장한다.
 - foreground 수신은 즉시 화면을 이동하지 않고 알림함 기록만 남긴다.
-- background/terminated 상태에서 알림을 열면 대상 화면으로 이동한다.
+- background 상태에서 알림을 열면 대상 화면으로 이동한다. Terminated 상태의 tap routing reliability는 backend Android FCM priority `high` 적용 후 재검증한다.
 
 수신 분기 기준:
 

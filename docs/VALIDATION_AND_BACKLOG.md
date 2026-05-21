@@ -286,21 +286,21 @@
 - API 계약/백엔드 연동 상태: [API_INTEGRATION_CONTRACT.md](./API_INTEGRATION_CONTRACT.md)
 - 현재 README 요약: [../README.md](../README.md)
 
-| 기능                    | 구현 상태                | 테스트/검증 상태                                                                                                              | 부족한 점                                        |
-| ----------------------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
-| 이메일 회원가입/로그인  | 구현됨                   | 앱/API 흐름 검증됨                                                                                                            | 소셜 로그인, 이메일 인증 없음                    |
-| 위치 등록/재설정        | 구현됨                   | 권한 거부/재시도 단위 테스트, 일부 실기기 QA                                                                                  | 권한 영구 거부 등 추가 실기기 반복 검증 필요     |
-| AI 촬영/갤러리 분석     | 부분 구현, MVP 흐름 가능 | 실기기에서 `generate` 성공/실패 경로 검증                                                                                     | false-positive는 서버/AI 계약 한계로 Post-MVP    |
-| 나눔 식재료 등록        | 구현됨                   | 실기기에서 `generate -> create -> home/detail/map` 검증. 2026-05-18 등록 화면에서 권장 수령일 확인/수정과 지난 날짜 차단 추가 | OCR, 최대 허용 기간 등 백엔드 날짜 정책은 없음   |
-| 홈 주변 나눔 목록       | 구현됨                   | 등록 후 홈 재조회, requested 제외 검증. 2026-05-18 식재료명/냉장고명 로컬 검색 추가                                           | 서버 검색/추천/랭킹은 없음                       |
-| 나눔 상세/신청          | 구현됨                   | 201/403/409, `available -> requested`, 중복 신청 방어 검증                                                                    | `reserved/completed/cancelled/expired` 흐름 없음 |
-| 공유 냉장고 지도        | 구현됨                   | 지도 마커, 냉장고 선택, 내부 available 목록, 상세 이동 검증. 2026-05-18 선택 카드와 내부 목록을 단일 bottom sheet로 정리      | 냉장고 없음 fixture/API 검증 추가 필요           |
-| 공유 냉장고별 나눔 목록 | 구현됨                   | 신청 후 내부 목록에서 즉시 제거되는 것까지 실기기 재검증                                                                      | 냉장고 inventory 개념은 없음                     |
-| FCM/알림함              | 프론트 구현됨            | payload parsing, fallback, 로컬 알림함 테스트됨                                                                               | 실제 FCM 수신 QA 미완료. 다음 스프린트 P0        |
-| 검색                    | 최소 구현                | 홈 나눔 식재료명/냉장고명 로컬 필터, 지도 공유 냉장고 이름/주소 로컬 필터                                                     | 서버 검색 없음                                   |
-| 채팅                    | 알림함으로 축소          | mock 채팅 제거됨                                                                                                              | WebSocket 채팅은 보류                            |
-| 통계/탄소 절감          | 목업 제거/정리됨         | 준비 중 상태                                                                                                                  | 실제 지표 API/계산식 없음                        |
-| 냉장고 운영자 기능      | 프로토타입/임시 진입점   | 정적 HTML 프로토타입, 프로필 임시 진입점, Android 에뮬레이터 렌더링 QA                                                        | 실제 operator API/권한/상태 변경은 없음          |
+| 기능 | 구현 상태 | 테스트/검증 상태 | 부족한 점 |
+| --- | --- | --- | --- |
+| 이메일 회원가입/로그인 | 구현됨 | 앱/API 흐름 검증됨 | 소셜 로그인, 이메일 인증 없음 |
+| 위치 등록/재설정 | 구현됨 | 권한 거부/재시도 단위 테스트, 일부 실기기 QA | 권한 영구 거부 등 추가 실기기 반복 검증 필요 |
+| AI 촬영/갤러리 분석 | 부분 구현, MVP 흐름 가능 | 실기기에서 `generate` 성공/실패 경로 검증 | false-positive는 서버/AI 계약 한계로 Post-MVP |
+| 나눔 식재료 등록 | 구현됨 | 실기기에서 `generate -> create -> home/detail/map` 검증. 2026-05-18 등록 화면에서 권장 수령일 확인/수정과 지난 날짜 차단 추가 | OCR, 최대 허용 기간 등 백엔드 날짜 정책은 없음 |
+| 홈 주변 나눔 목록 | 구현됨 | 등록 후 홈 재조회, requested 제외 검증. 2026-05-18 식재료명/냉장고명 로컬 검색 추가. 2026-05-21 `오늘 가져가기 좋은 재료` 로컬 추천 섹션 추가 | 서버 검색/추천/랭킹 API는 없음 |
+| 나눔 상세/신청 | 구현됨 | 201/403/409, `available -> requested`, 중복 신청 방어 검증 | `reserved/completed/cancelled/expired` 흐름 없음 |
+| 공유 냉장고 지도 | 구현됨 | 지도 마커, 냉장고 선택, 내부 available 목록, 상세 이동 검증. 2026-05-18 선택 카드와 내부 목록을 단일 bottom sheet로 정리 | 냉장고 없음 fixture/API 검증 추가 필요 |
+| 공유 냉장고별 나눔 목록 | 구현됨 | 신청 후 내부 목록에서 즉시 제거되는 것까지 실기기 재검증 | 냉장고 inventory 개념은 없음 |
+| FCM/알림함 | 프론트 구현됨 | payload parsing, fallback, 로컬 알림함 테스트됨 | 실제 FCM 수신 QA 미완료. 다음 스프린트 P0 |
+| 검색 | 최소 구현 | 홈 나눔 식재료명/냉장고명 로컬 필터, 지도 공유 냉장고 이름/주소 로컬 필터 | 서버 검색 없음 |
+| 채팅 | 알림함으로 축소 | mock 채팅 제거됨 | WebSocket 채팅은 보류 |
+| 통계/탄소 절감 | 목업 제거/정리됨 | 준비 중 상태 | 실제 지표 API/계산식 없음 |
+| 냉장고 운영자 기능 | 프론트 선행 구현 | 프로필 임시 진입점, operator summary/items 조회, dispose 호출, 권한 실패/빈 목록/상태 label UX 구현 | 실제 백엔드 런타임 QA와 운영자 role 관리 UI는 없음 |
 
 현재 검증 완료된 공유 냉장고 관련 흐름:
 
@@ -361,22 +361,26 @@
 
 목표:
 
-- `share_created`, `share_requested` 실제 수신 확인.
-- 2기기/2계정 기준으로 foreground/background/terminated 수신 확인.
+- 2026-05-21 기준 emulator foreground/background 실제 수신 결과를 반영하고, 남은 backend/device handoff를 닫는다.
+- true 2기기/2계정 기준으로 `share_created`, `share_requested` foreground/background/terminated 수신을 최종 확인한다.
 
 필요 사항:
 
-- Android `google-services.json` 준비.
-- 백엔드 NHN Cloud VM에 Firebase Admin/service account credentials 설정 여부 확인.
-- 실제 발송 로그와 `[Mock FCM]` 로그 구분.
+- Android `google-services.json`은 로컬에 준비됐고 gitignored 상태다. Firebase project는 `greennode-94eae`, Android package는 `com.greennode`다.
+- NHN Cloud VM의 Firebase Admin/service account credentials는 기존 `foodlink-cf8e7` mismatch에서 `greennode-94eae` service account로 교체됐다. VM 경로는 `/home/ubuntu/foodlink/credentials/firebase-service-account.json`, container mount 경로는 `/app/credentials/firebase-service-account.json`이다. secret 내용은 문서화하지 않는다.
+- backend handoff P0: Android FCM priority를 `high`로 설정한다.
+- backend handoff P0: aggregate success/failure뿐 아니라 per-token FCM failure를 로그로 남긴다.
+- physical 2-device QA 재개 조건: Windows에 연결된 USB Samsung device가 `adb devices`에 실제 device로 표시되어야 한다. 현재는 `emulator-5554`만 표시된다.
 - `share_created`, `share_requested` 각각의 발송 조건 재확인.
 
 완료 기준:
 
-- 계정 A가 나눔 식재료를 등록하면 계정 B가 `share_created`를 수신한다.
-- 계정 B가 나눔 신청을 하면 계정 A가 `share_requested`를 수신한다.
-- 알림 탭 또는 알림함 항목 탭이 `PostDetail` fallback으로 이어진다.
-- 백엔드 로그에서 실제 발송, mock 발송, 반경 내 대상 없음, 발송 실패를 구분할 수 있다.
+- emulator QA에서 계정 A 등록 시 `share_created`, 계정 B 신청 시 `share_requested` 실제 FCM send가 backend log success 1 / failure 0으로 확인됐다.
+- foreground에서는 두 이벤트가 emulator에 수신되고 로컬 알림 탭에 기록됐다.
+- background에서는 system notification 표시와 tap의 `PostDetail` 라우팅이 확인됐다.
+- terminated surrogate에서는 app process kill 후 system notification 표시는 확인됐지만, logcat의 `Background messages only work if the message priority is set to 'high'` 때문에 tap routing reliability는 미완료로 둔다.
+- true 2-device QA에서 계정 A/B가 실제 physical devices로 `share_created`, `share_requested`를 foreground/background/terminated에서 수신한다.
+- 백엔드 로그에서 실제 발송, mock 발송, 반경 내 대상 없음, per-token 발송 실패를 구분할 수 있다.
 
 ### P1: 나눔 등록 flow 개선
 
@@ -409,7 +413,7 @@
 구현 후보:
 
 - 홈 검색 기능. 2026-05-18 현재 불러온 nearby 목록에 대한 로컬 검색 구현 완료.
-- `오늘 가져가기 좋은 재료` 같은 규칙 기반 추천 섹션.
+- `오늘 가져가기 좋은 재료` 같은 규칙 기반 추천 섹션. 2026-05-21 현재 nearby 응답 안에서 `available` + 오늘 이후 `expirationDate`를 가진 항목을 로컬 규칙으로 최대 3개 노출한다. 서버 추천/랭킹은 없다.
 
 결정 필요:
 
@@ -420,7 +424,7 @@
 완료 기준:
 
 - 사용자가 홈에서 나눔 식재료를 더 쉽게 찾을 수 있다.
-- 추천 섹션은 실제 데이터 근거가 있는 규칙만 사용한다. 예: 거리, 최신순, 유통기한 가까움.
+- 추천 섹션은 실제 데이터 근거가 있는 규칙만 사용한다. 2026-05-21 구현은 권장 수령일 가까움, 같은 날짜 내 최신순, 낮은 id 순으로 제한했다.
 - `많이 찾는 식재료` 같은 표현은 조회/신청/관심 데이터가 쌓이기 전까지 보류한다.
 
 ### P2/설계: Auth 확장
@@ -1244,32 +1248,33 @@ docs/VALIDATION_AND_BACKLOG.md의 "4. 한 장 촬영 UX와 multi-object 정책 �
 
 #### 기능별 구현 상태
 
-| 항목                      | 상태                                                       | 현재 구현                                                                                                                                                                                                                                                                                                                                                                                                                      | 다음 액션                                                                        |
-| ------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------- |
-| 소셜 로그인               | 목업                                                       | `LoginScreen`에 카카오/Apple/Google 버튼은 있지만 `준비 중` Alert만 표시한다. 서버 OpenAPI에도 소셜 로그인 엔드포인트가 없다.                                                                                                                                                                                                                                                                                                  | MVP에서는 이메일 로그인만 공식 경로로 표시하거나, 소셜 버튼을 숨긴다.            |
-| 이메일 인증               | 미구현                                                     | 이메일 형식 검증과 회원가입 API만 있다. 이메일 인증 메일, OTP, verification 상태 필드는 없다.                                                                                                                                                                                                                                                                                                                                  | 다음 스프린트 범위 밖이면 “이메일 형식 검증만 제공”으로 명시한다.                |
-| 최초 위치 등록            | 구현됨                                                     | 로그인 후 `latitude === null`이면 `LocationSetup`으로 분기하고, GPS 좌표와 FCM 토큰을 `/auth/me/location`에 저장한다.                                                                                                                                                                                                                                                                                                          | 권한 거부/수동 위치 입력 UX 보강.                                                |
-| 위치 재설정               | 구현됨                                                     | 홈 위치 헤더와 프로필 `동네 위치 재설정` 메뉴에서 `LocationSetup`으로 재진입한다. API는 `/auth/me/location`을 재사용한다.                                                                                                                                                                                                                                                                                                      | 권한 거부/수동 위치 입력 UX 보강.                                                |
-| 주변 나눔 수              | 부분 구현/임시                                             | 홈 통계는 `posts.length`를 `주변 나눔`으로 표시한다. pagination 전 현재 조회 결과 수 기준이다.                                                                                                                                                                                                                                                                                                                                 | 실제 통계로 유지하려면 기준과 API를 정의한다.                                    |
-| 탄소 절감액               | 정리됨                                                     | 홈과 프로필의 고정 kg 값을 제거하고 `준비 중`으로 표시한다. 계산식/API는 없다.                                                                                                                                                                                                                                                                                                                                                 | 실제 지표를 넣으려면 계산식과 API 계약을 먼저 정의한다.                          |
-| 내 주변 실시간 나눔       | 부분 구현                                                  | `getNearbyPosts()`로 실제 주변 available 나눔 식재료를 가져와 카드로 표시한다. 백엔드 기준 `/posts/nearby`는 requested를 자동 제외한다. 실시간 구독, pagination, `전체보기` 동작은 없다.                                                                                                                                                                                                                                       | 신청 성공 후 requested 항목이 홈에서 사라지는지 프론트 연동/QA.                  |
-| 홈 데이터 없음 상태       | 구현됨                                                     | 나눔 식재료가 없으면 `아직 근처에 나눔이 없어요` 빈 상태를 표시한다.                                                                                                                                                                                                                                                                                                                                                           | API 실패와 진짜 빈 상태를 구분하는 에러 UI 추가.                                 |
-| 검색 기능                 | 부분 구현                                                  | 홈은 현재 불러온 주변 나눔 식재료를 식재료명/냉장고명으로 로컬 필터링한다. 홈 지도 아이콘은 지도 탭으로 이동하고, 지도 검색 입력은 공유 냉장고 이름/주소 로컬 필터로 동작한다. 서버 OpenAPI에는 검색 엔드포인트가 없다.                                                                                                                                                                                                        | 서버 검색/독립 검색 화면은 후속 범위로 분리.                                     |
-| 검색 결과 없음            | 구현됨                                                     | 홈 나눔 식재료 로컬 검색과 지도 공유 냉장고 로컬 검색 모두 결과 없음 상태와 검색 초기화를 제공한다.                                                                                                                                                                                                                                                                                                                            | 서버 검색/독립 검색 화면은 후속 범위로 분리.                                     |
-| 푸쉬 알림                 | 프론트 코드 연동 완료, 실제 수신 QA 필요                   | Firebase Messaging 의존성, Android 알림 권한, FCM 토큰 등록이 있다. `share_created`, `share_requested` foreground/background/opened/initial handler를 구현했고, payload는 문자열 + camelCase(`type`, `postId`, `requestId`, `fruitName`, `fridgeName`)로 검증한다. Firebase 설정이 없는 QA/release 빌드에서는 알림 handler와 FCM 토큰 등록을 안전하게 건너뛴다. 알림함은 로컬 수신 기록/빈 상태 중심이며 읽음 상태 API는 없다. | 실제 기기에서 foreground/background/terminated 수신과 알림 탭 라우팅을 검증한다. |
-| 유저 프로필               | 부분 구현                                                  | 닉네임/이메일은 실제 유저 정보를 표시한다. 프로필 수정, 메뉴 이동, 내 나눔/관심/받은 나눔은 연결되어 있지 않다.                                                                                                                                                                                                                                                                                                                | 프로필 수정 또는 내 나눔 내역 중 하나만 우선 연결.                               |
-| 유저 통계                 | 정리됨                                                     | 신선도 온도, 포인트, 탄소 절감량의 하드코딩 숫자를 제거하고 `준비 중` 상태로 표시한다.                                                                                                                                                                                                                                                                                                                                         | 실제 지표를 넣으려면 계산식과 API 계약을 먼저 정의.                              |
-| 냉장고별 나눔 식재료 조회 | 프론트 코드 연동 완료, VM/API QA 및 Android UI 재확인 통과 | 지도에서 특정 냉장고를 선택하면 `GET /fridges/{id}/posts?status=available`로 내부 available 목록을 조회한다. loading/error/empty/list 상태를 분리하고 항목 탭 시 상세로 이동한다. 2026-05-08 VM/API에서 `PostNearbyRead` 카드 필드와 requested 제외를 재확인했고, 실제 Android UI에서 신규 Post 표시명/상태와 신청 후 즉시 제거를 확인했다.                                                                                    | 별도 inventory 개념은 후속으로 분리.                                             |
-| 지도 근처 냉장고 조회     | 구현됨                                                     | `MapScreen`이 `/fridges/nearby`, `FridgeSelectScreen`이 `/fridges/available`을 호출한다. 1번 검증에서 실제 냉장고 목록 표시를 확인했다.                                                                                                                                                                                                                                                                                        | 위치 미설정 기본 좌표 fallback과 API 실패 UI 보강.                               |
-| 채팅 탭                   | 알림함으로 축소/구현됨                                     | `ChatListScreen`의 `MOCK_CHATS`를 제거하고 탭 라벨을 `알림`으로 바꿨다. 현재는 FCM 수신 기록/빈 상태를 보여준다. WebSocket, 채팅방 상세, 메시지 송수신 API는 없다.                                                                                                                                                                                                                                                             | MVP에서는 알림함으로 유지하고 WebSocket 채팅은 보류.                             |
-| WebSocket 채팅            | 미구현/보류 권장                                           | 코드와 OpenAPI 모두 실시간 채팅 계약이 없다. 구현/검증 비용이 크다.                                                                                                                                                                                                                                                                                                                                                            | 다음 스프린트에서는 단순 문의/예약 CTA 또는 알림함으로 축소한다.                 |
+| 항목                      | 상태                           | 현재 구현                                                                                                                                                                                                                                                            | 다음 액션                                                                                                 |
+| ------------------------- | ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| 소셜 로그인               | 숨김/후속                      | 서버 OpenAPI에 소셜 로그인 엔드포인트가 없으므로 `LoginScreen`은 이메일 로그인만 공식 경로로 표시한다. 카카오/Apple/Google 버튼은 MVP 화면에서 숨겼다.                                                                                                                                        | 소셜 로그인을 넣으려면 provider, redirect, 계정 병합, 에러 계약을 먼저 정의한다.                                     |
+| 이메일 인증               | 미구현                         | 이메일 형식 검증과 회원가입 API만 있다. 이메일 인증 메일, OTP, verification 상태 필드는 없다.                                                                                                                                                                        | 다음 스프린트 범위 밖이면 “이메일 형식 검증만 제공”으로 명시한다.                                         |
+| 최초 위치 등록            | 구현됨                         | 로그인 후 `latitude === null`이면 `LocationSetup`으로 분기하고, GPS 좌표와 FCM 토큰을 `/auth/me/location`에 저장한다.                                                                                                                                                | 권한 거부/수동 위치 입력 UX 보강.                                                                         |
+| 위치 재설정               | 구현됨                         | 홈 위치 헤더와 프로필 `동네 위치 재설정` 메뉴에서 `LocationSetup`으로 재진입한다. API는 `/auth/me/location`을 재사용한다.                                                                                                                                            | 권한 거부/수동 위치 입력 UX 보강.                                                                         |
+| 주변 나눔 수              | 부분 구현/임시                 | 홈 통계는 `posts.length`를 `주변 나눔`으로 표시한다. pagination 전 현재 조회 결과 수 기준이다.                                                                                                                                                                       | 실제 통계로 유지하려면 기준과 API를 정의한다.                                                             |
+| 탄소 절감액               | 정리됨                         | 홈과 프로필의 고정 kg 값을 제거하고 `준비 중`으로 표시한다. 계산식/API는 없다.                                                                                                                                                                                       | 실제 지표를 넣으려면 계산식과 API 계약을 먼저 정의한다.                                                   |
+| 내 주변 실시간 나눔       | 부분 구현                      | `getNearbyPosts()`로 실제 주변 available 나눔 식재료를 가져와 카드로 표시한다. 백엔드 기준 `/posts/nearby`는 requested를 자동 제외한다. 실시간 구독, pagination, `전체보기` 동작은 없다.                                                                             | 신청 성공 후 requested 항목이 홈에서 사라지는지 프론트 연동/QA.                                           |
+| 홈 데이터 없음 상태       | 구현됨                         | 나눔 식재료가 없으면 `아직 근처에 나눔이 없어요` 빈 상태를 표시한다.                                                                                                                                                                                                 | API 실패와 진짜 빈 상태를 구분하는 에러 UI 추가.                                                          |
+| 검색 기능                 | 부분 구현                      | 홈은 현재 불러온 주변 나눔 식재료를 식재료명/냉장고명으로 로컬 필터링한다. 홈 지도 아이콘은 지도 탭으로 이동하고, 지도 검색 입력은 공유 냉장고 이름/주소 로컬 필터로 동작한다. 서버 OpenAPI에는 검색 엔드포인트가 없다.                                                        | 서버 검색/독립 검색 화면은 후속 범위로 분리.                                                             |
+| 검색 결과 없음            | 구현됨                         | 홈 나눔 식재료 로컬 검색과 지도 공유 냉장고 로컬 검색 모두 결과 없음 상태와 검색 초기화를 제공한다.                                                                                                                                                                  | 서버 검색/독립 검색 화면은 후속 범위로 분리.                                                             |
+| 푸쉬 알림                 | emulator foreground/background 실수신 QA 통과, terminated/physical 2-device 보류 | Firebase Messaging 의존성, Android 알림 권한, FCM 토큰 등록이 있다. `share_created`, `share_requested` foreground/background/opened/initial handler를 구현했고, payload는 문자열 + camelCase(`type`, `postId`, `requestId`, `fruitName`, `fridgeName`)로 검증한다. Firebase 설정이 없는 QA/release 빌드에서는 알림 handler와 FCM 토큰 등록을 안전하게 건너뛴다. 2026-05-21 emulator QA에서 `greennode-94eae` client/Admin project 정렬 후 실제 send success 1 / failure 0, foreground 로컬 알림 탭 기록, background system notification 표시와 tap의 `PostDetail` 라우팅을 확인했다. 알림함은 로컬 수신 기록/빈 상태 중심이며 읽음 상태 API는 없다. | backend Android FCM priority `high`, per-token failure log 적용 후 terminated routing을 재검증하고, ADB가 실제 Samsung device를 인식하면 physical 2-device QA를 재개한다. |
+| 유저 프로필               | 부분 구현                      | 닉네임/이메일은 실제 유저 정보를 표시한다. 프로필 수정, 메뉴 이동, 내 나눔/관심/받은 나눔은 연결되어 있지 않다.                                                                                                                                                      | 프로필 수정 또는 내 나눔 내역 중 하나만 우선 연결.                                                        |
+| 유저 통계                 | 정리됨                         | 신선도 온도, 포인트, 탄소 절감량의 하드코딩 숫자를 제거하고 `준비 중` 상태로 표시한다.                                                                                                                                                                               | 실제 지표를 넣으려면 계산식과 API 계약을 먼저 정의.                                                       |
+| 냉장고별 나눔 식재료 조회 | 프론트 코드 연동 완료, VM/API QA 및 Android UI 재확인 통과 | 지도에서 특정 냉장고를 선택하면 `GET /fridges/{id}/posts?status=available`로 내부 available 목록을 조회한다. loading/error/empty/list 상태를 분리하고 항목 탭 시 상세로 이동한다. 2026-05-08 VM/API에서 `PostNearbyRead` 카드 필드와 requested 제외를 재확인했고, 실제 Android UI에서 신규 Post 표시명/상태와 신청 후 즉시 제거를 확인했다. | 별도 inventory 개념은 후속으로 분리. |
+| 지도 근처 냉장고 조회     | 구현됨                         | `MapScreen`이 `/fridges/nearby`, `FridgeSelectScreen`이 `/fridges/available`을 호출한다. 1번 검증에서 실제 냉장고 목록 표시를 확인했다.                                                                                                                              | 위치 미설정 기본 좌표 fallback과 API 실패 UI 보강.                                                        |
+| 채팅 탭                   | 알림함으로 축소/구현됨         | `ChatListScreen`의 `MOCK_CHATS`를 제거하고 탭 라벨을 `알림`으로 바꿨다. 현재는 FCM 수신 기록/빈 상태를 보여준다. WebSocket, 채팅방 상세, 메시지 송수신 API는 없다.                                                                                                 | MVP에서는 알림함으로 유지하고 WebSocket 채팅은 보류.                                                      |
+| WebSocket 채팅            | 미구현/보류 권장               | 코드와 OpenAPI 모두 실시간 채팅 계약이 없다. 구현/검증 비용이 크다.                                                                                                                                                                                                  | 다음 스프린트에서는 단순 문의/예약 CTA 또는 알림함으로 축소한다.                                          |
 
 #### 다음 스프린트 우선순위 제안
 
-1. 실제 FCM 수신 QA: Firebase 설정 포함 빌드와 FCM token이 등록된 두 테스트 계정/기기에서 `share_created`, `share_requested` foreground/background/terminated 수신과 알림 탭 라우팅을 확인한다.
-2. FCM 발송 로그 분리: 백엔드 로그에서 `FCM 발송 완료`, `[Mock FCM]`, `반경 내 사용자 없음`, `FCM 발송 실패`를 구분한다.
-3. Post-MVP AI/rejection contract: `stale-or-rotten`, `screenshot-or-ui`, `low-quality` false-positive를 rejection reason 또는 review-required 계약으로 승격할지 백엔드/AI와 결정한다.
-4. Optional UX polish: 분석 실패 후 수동 입력 CTA를 MVP 이후에 추가할지 결정한다.
+1. Backend FCM handoff: Android FCM priority를 `high`로 설정하고 per-token failure log를 남긴다.
+2. Terminated FCM 재검증: backend `high` priority 적용 후 terminated notification tap routing reliability를 다시 확인한다.
+3. Physical 2-device QA: ADB가 실제 Samsung device를 인식하면 Firebase 설정 포함 빌드와 FCM token이 등록된 두 테스트 계정/기기에서 `share_created`, `share_requested` foreground/background/terminated 수신을 확인한다.
+4. Post-MVP AI/rejection contract: `stale-or-rotten`, `screenshot-or-ui`, `low-quality` false-positive를 rejection reason 또는 review-required 계약으로 승격할지 백엔드/AI와 결정한다.
+5. Optional UX polish: 분석 실패 후 수동 입력 CTA를 MVP 이후에 추가할지 결정한다.
 
 #### 채팅 탭 결정
 
@@ -1581,8 +1586,8 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
 
 - 분류: 기능 구현
 - 우선순위: P2
-- 배경: FCM 토큰 등록은 있지만 알림 수신/목록/읽음 처리는 없다.
-- 현재 동작: FCM token은 사용자가 위치 설정 화면의 `나눔 알림 받기` CTA를 눌렀을 때 권한 요청 후 `/auth/me/location`으로 등록한다. 위치 설정 진입과 기존 유저의 위치 자동 갱신만으로는 알림 권한을 요청하지 않으며, Android 13+ `POST_NOTIFICATIONS` 거부 시 Firebase permission/register/getToken을 호출하지 않고 `fcmToken` 없이 위치 등록을 계속한다. `share_created`, `share_requested` handler는 foreground/background/opened/initial 메시지를 로컬 알림함에 기록한다. 알림 열기와 알림함 항목 탭은 `PostDetail`로 이동하며, `share_requested`는 내 나눔 관리 화면이 없으므로 상세 fallback을 쓴다. Firebase 앱이 설정되지 않은 QA/release 빌드에서는 Messaging 인스턴스 생성 실패를 잡고 handler 등록과 FCM 토큰 조회를 건너뛰어 앱 시작/위치 갱신 크래시를 막는다. 2026-05-08 백엔드 답변 기준 `share_created`는 반경 2km 내 FCM 토큰이 있는 다른 사용자에게, `share_requested`는 공급자 FCM 토큰이 있을 때 발송된다.
+- 배경: FCM 토큰 등록과 로컬 알림함 수신 처리는 구현됐지만, 서버 알림 목록/읽음 상태 API는 없다.
+- 현재 동작: FCM token은 사용자가 위치 설정 화면의 `나눔 알림 받기` CTA를 눌렀을 때 권한 요청 후 `/auth/me/location`으로 등록한다. 위치 설정 진입과 기존 유저의 위치 자동 갱신만으로는 알림 권한을 요청하지 않으며, Android 13+ `POST_NOTIFICATIONS` 거부 시 Firebase permission/register/getToken을 호출하지 않고 `fcmToken` 없이 위치 등록을 계속한다. `share_created`, `share_requested` handler는 foreground/background/opened/initial 메시지를 로컬 알림함에 기록한다. 알림 열기와 알림함 항목 탭은 `PostDetail`로 이동하며, `share_requested`는 내 나눔 관리 화면이 없으므로 상세 fallback을 쓴다. Firebase 앱이 설정되지 않은 QA/release 빌드에서는 Messaging 인스턴스 생성 실패를 잡고 handler 등록과 FCM 토큰 조회를 건너뛰어 앱 시작/위치 갱신 크래시를 막는다. 2026-05-21 emulator QA에서 Firebase client/Admin project를 `greennode-94eae`로 맞춘 뒤 `share_created`, `share_requested` 실제 FCM send와 foreground/background 수신은 확인됐다. terminated surrogate는 system notification 표시까지만 확인됐고, tap routing reliability는 backend Android FCM priority `high` 설정 후 재검증한다. true 2-device QA는 physical Samsung device가 `adb devices`에 표시되지 않아 보류 중이다.
 - 기대 동작: MVP에서는 WebSocket 채팅 대신 알림함과 단순 신청 흐름으로 축소한다. 읽음 상태 API는 후속으로 분리한다.
 - Acceptance Criteria:
   - [x] foreground/background 알림 수신 handler가 정의된다.
@@ -1597,8 +1602,14 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
   - [x] 위치 설정 진입만으로 알림 권한을 요청하지 않고, 사용자가 알림 CTA를 누를 때만 FCM 토큰을 준비한다.
   - [x] 기존 유저의 위치 자동 갱신 경로는 알림 권한 요청을 열지 않는다.
   - [x] Android 알림 권한 거부 시 FCM token/register 경로를 호출하지 않는다.
-  - [ ] 실제 흐름 테스트로 백엔드 로그의 발송 완료/Mock FCM/반경 내 사용자 없음 상태를 분리한다.
-- 검증 방법: FCM 테스트 메시지 수신 QA, 앱 foreground/background 확인, `notificationService.firebaseFallback.test.ts`, `deviceRegistration.firebaseFallback.test.ts`, `deviceRegistration.notificationPermission.test.ts`, `locationSetup.notificationPermission.test.tsx`
+  - [x] 2026-05-21 emulator foreground에서 `share_created`, `share_requested` 실제 FCM 수신과 로컬 알림 탭 기록을 확인한다.
+  - [x] 2026-05-21 emulator background에서 system notification 표시와 tap의 `PostDetail` 라우팅을 확인한다.
+  - [x] 2026-05-21 백엔드 로그에서 `share_created`, `share_requested` 실제 send success 1 / failure 0을 확인한다.
+  - [ ] backend가 Android FCM priority를 `high`로 설정한다.
+  - [ ] backend가 per-token FCM failure를 로그로 남긴다.
+  - [ ] terminated 상태 notification tap routing reliability를 `high` priority 적용 후 재검증한다.
+  - [ ] physical 2-device/2-account QA를 `adb devices`가 실제 Samsung device를 인식한 뒤 재개한다.
+- 검증 방법: FCM 테스트 메시지 수신 QA, 앱 foreground/background/terminated 확인, backend FCM send log 확인, `notificationService.firebaseFallback.test.ts`, `deviceRegistration.firebaseFallback.test.ts`, `deviceRegistration.notificationPermission.test.ts`, `locationSetup.notificationPermission.test.tsx`
 - 관련 파일/화면/API: `notifications.ts`, `deviceRegistration.ts`, `firebaseMessaging.ts`, `notificationStore.ts`, `ChatListScreen`, `index.js`, `AppNavigator`, Firebase Messaging
 
 ## multi-object detection 연구/계약 초안
@@ -1607,9 +1618,11 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
 - 우선순위: P2
 - 배경: 현재 API와 앱 타입은 단일 대표 객체만 지원한다.
 - 현재 동작: `detectedFruit`/`detectedFruitKo` 단일 문자열만 처리한다.
-- 기대 동작: 다음 스프린트에서는 구현보다 먼저 `detections[]` 계약과 UX 정책을 검증한다.
+- 기대 동작: 다음 스프린트에서는 백엔드 `detections[]` 계약과 UX 정책을 검증한다. 2026-05-21 프론트는 `detections[]`가 내려와도 분석/등록 화면에서 후보 목록을 보여주되, 정식 분리 등록 전까지는 대표 식재료 1개 기준으로만 진행한다.
 - Acceptance Criteria:
-  - [ ] `detections[]` 최소 필드 초안이 작성된다.
+  - [x] 프론트 타입이 `detections[]` 후보 필드를 방어적으로 받을 수 있다.
+  - [x] 분석/등록 화면이 여러 후보를 표시하되 대표 식재료 1개 등록 안내를 유지한다.
+  - [ ] 백엔드 `detections[]` 최소 필드 초안이 확정된다.
   - [ ] 대표 객체 1개 처리와 객체별 분리 등록 중 UX 방향을 결정한다.
   - [x] multi-object fixture 이미지를 준비하고 VM/API report-only 결과를 기록한다.
 - 검증 방법: multi-object 이미지 API 실험, 계약 리뷰
@@ -1618,7 +1631,7 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
 #### 스프린트 제외/보류
 
 - WebSocket 기반 실시간 채팅: 서버 계약과 앱 구조가 없으므로 보류. `알림함` 또는 `나눔 신청하기`로 축소한다.
-- 소셜 로그인 전체 구현: 이메일 로그인 MVP가 동작하므로 우선순위 낮음. 버튼을 숨기거나 준비 중으로 명확히 둔다.
+- 소셜 로그인 전체 구현: 이메일 로그인 MVP가 동작하므로 우선순위 낮음. 현재 앱에서는 소셜 버튼을 숨기고 이메일 로그인만 노출한다.
 - 이메일 verification 전체 예외 케이스: 인증 메일/OTP 서버 계약이 없어 보류.
 - 냉장고 내부 inventory: 별도 재고 관리 개념은 보류한다. 단, 백엔드가 냉장고별 available 나눔 식재료 조회 API를 구현했고, 프론트는 지도 선택 냉장고 내부 목록으로 연동했다. 별도 inventory/냉장고 운영자 기능은 후속 범위다.
 
