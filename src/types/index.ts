@@ -13,6 +13,7 @@ export type {
   PostStorageZone,
   PostStatus,
   AiAnalysis,
+  AiDetection,
   GenerateResult,
   PostCreateData,
   ShareRequest,

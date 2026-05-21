@@ -122,6 +122,9 @@ describe('FridgeOperatorConsoleScreen', () => {
     expect(
       renderer!.root.findAllByProps({children: '에틸렌 분리 구역'}),
     ).not.toHaveLength(0);
+    expect(renderer!.root.findAllByProps({children: '폐기 후보'})).not.toHaveLength(
+      0,
+    );
 
     await ReactTestRenderer.act(async () => {
       renderer?.unmount();
@@ -230,7 +233,7 @@ describe('FridgeOperatorConsoleScreen', () => {
     });
 
     expect(mockedDisposeOperatorItem).toHaveBeenCalledWith(120);
-    expect(renderer!.root.findAllByProps({children: 'discarded'})).not.toHaveLength(
+    expect(renderer!.root.findAllByProps({children: '폐기 완료'})).not.toHaveLength(
       0,
     );
 
@@ -333,9 +336,57 @@ describe('FridgeOperatorConsoleScreen', () => {
     expect(mockedDisposeOperatorItem).toHaveBeenCalledWith(120);
     expect(mockedGetOperatorInventorySummary).toHaveBeenCalledTimes(2);
     expect(mockedGetOperatorInventoryItems).toHaveBeenCalledTimes(2);
-    expect(renderer!.root.findAllByProps({children: 'discarded'})).not.toHaveLength(
+    expect(renderer!.root.findAllByProps({children: '폐기 완료'})).not.toHaveLength(
       0,
     );
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
+  it('shows an explicit empty state when operator inventory has no items', async () => {
+    mockedGetOperatorInventorySummary.mockResolvedValue({
+      success: true,
+      message: 'ok',
+      data: {
+        totalItems: 0,
+        availableItems: 0,
+        requestedItems: 0,
+        expiringSoonItems: 0,
+        expiredItems: 0,
+        needsReviewItems: 0,
+        ethyleneSeparatedItems: 0,
+        lastSyncedAt: '2026-05-20T00:00:00Z',
+      },
+    });
+    mockedGetOperatorInventoryItems.mockResolvedValue({
+      success: true,
+      message: 'ok',
+      data: [],
+    });
+
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(
+        <FridgeOperatorConsoleScreen
+          navigation={{goBack: jest.fn()} as any}
+          route={{params: undefined} as any}
+        />,
+      );
+      await Promise.resolve();
+    });
+
+    expect(
+      renderer!.root.findAllByProps({children: '점검할 식재료가 없습니다'}),
+    ).not.toHaveLength(0);
+    expect(
+      renderer!.root.findAllByProps({
+        children:
+          '백엔드 inventory API가 빈 목록을 반환했습니다. 새 나눔이 보관되면 이 영역에 표시됩니다.',
+      }),
+    ).not.toHaveLength(0);
 
     await ReactTestRenderer.act(async () => {
       renderer?.unmount();

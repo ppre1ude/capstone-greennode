@@ -23,6 +23,11 @@ import {
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@/navigation/types';
 import {
+  getDetectionName,
+  getDetectionSummary,
+  getResultDetections,
+} from '@/utils/aiDetections';
+import {
   getConfidencePercent,
   getGenerateResultQualityMeta,
   needsAnalysisReview,
@@ -101,6 +106,8 @@ const PostCreateScreen = ({ route, navigation }: Props) => {
         result.confidenceScore ?? result.aiAnalysis?.confidenceScore,
       ));
   const hasImageToken = Boolean(result.imageToken);
+  const detections = getResultDetections(result);
+  const showMultiObjectNotice = detections.length > 1;
 
   const handleNext = () => {
     if (!quality.canShare || !hasImageToken) {
@@ -185,6 +192,27 @@ const PostCreateScreen = ({ route, navigation }: Props) => {
               AI가 나눔 가능으로 분석했지만 실제 상태를 직접 확인한 뒤 등록해주세요.
             </Text>
           )}
+
+          {showMultiObjectNotice ? (
+            <View style={styles.detectionCard}>
+              <Text style={styles.detectionTitle}>감지된 식재료 후보</Text>
+              <Text style={styles.detectionHint}>
+                백엔드 분리 등록 계약 전까지는 대표 식재료 1개 기준으로 등록합니다.
+              </Text>
+              {detections.map((detection, index) => (
+                <View
+                  key={`${getDetectionName(detection)}-${index}`}
+                  style={styles.detectionRow}>
+                  <Text style={styles.detectionName} numberOfLines={1}>
+                    {getDetectionName(detection)}
+                  </Text>
+                  <Text style={styles.detectionMeta}>
+                    {getDetectionSummary(detection)}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          ) : null}
 
           <View style={styles.summaryCard}>
             <Text style={styles.summaryTitle}>등록될 나눔 식재료</Text>
