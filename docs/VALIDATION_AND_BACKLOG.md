@@ -345,22 +345,26 @@
 
 목표:
 
-- `share_created`, `share_requested` 실제 수신 확인.
-- 2기기/2계정 기준으로 foreground/background/terminated 수신 확인.
+- 2026-05-21 기준 emulator foreground/background 실제 수신 결과를 반영하고, 남은 backend/device handoff를 닫는다.
+- true 2기기/2계정 기준으로 `share_created`, `share_requested` foreground/background/terminated 수신을 최종 확인한다.
 
 필요 사항:
 
-- Android `google-services.json` 준비.
-- 백엔드 NHN Cloud VM에 Firebase Admin/service account credentials 설정 여부 확인.
-- 실제 발송 로그와 `[Mock FCM]` 로그 구분.
+- Android `google-services.json`은 로컬에 준비됐고 gitignored 상태다. Firebase project는 `greennode-94eae`, Android package는 `com.greennode`다.
+- NHN Cloud VM의 Firebase Admin/service account credentials는 기존 `foodlink-cf8e7` mismatch에서 `greennode-94eae` service account로 교체됐다. VM 경로는 `/home/ubuntu/foodlink/credentials/firebase-service-account.json`, container mount 경로는 `/app/credentials/firebase-service-account.json`이다. secret 내용은 문서화하지 않는다.
+- backend handoff P0: Android FCM priority를 `high`로 설정한다.
+- backend handoff P0: aggregate success/failure뿐 아니라 per-token FCM failure를 로그로 남긴다.
+- physical 2-device QA 재개 조건: Windows에 연결된 USB Samsung device가 `adb devices`에 실제 device로 표시되어야 한다. 현재는 `emulator-5554`만 표시된다.
 - `share_created`, `share_requested` 각각의 발송 조건 재확인.
 
 완료 기준:
 
-- 계정 A가 나눔 식재료를 등록하면 계정 B가 `share_created`를 수신한다.
-- 계정 B가 나눔 신청을 하면 계정 A가 `share_requested`를 수신한다.
-- 알림 탭 또는 알림함 항목 탭이 `PostDetail` fallback으로 이어진다.
-- 백엔드 로그에서 실제 발송, mock 발송, 반경 내 대상 없음, 발송 실패를 구분할 수 있다.
+- emulator QA에서 계정 A 등록 시 `share_created`, 계정 B 신청 시 `share_requested` 실제 FCM send가 backend log success 1 / failure 0으로 확인됐다.
+- foreground에서는 두 이벤트가 emulator에 수신되고 로컬 알림 탭에 기록됐다.
+- background에서는 system notification 표시와 tap의 `PostDetail` 라우팅이 확인됐다.
+- terminated surrogate에서는 app process kill 후 system notification 표시는 확인됐지만, logcat의 `Background messages only work if the message priority is set to 'high'` 때문에 tap routing reliability는 미완료로 둔다.
+- true 2-device QA에서 계정 A/B가 실제 physical devices로 `share_created`, `share_requested`를 foreground/background/terminated에서 수신한다.
+- 백엔드 로그에서 실제 발송, mock 발송, 반경 내 대상 없음, per-token 발송 실패를 구분할 수 있다.
 
 ### P1: 나눔 등록 flow 개선
 
@@ -1240,7 +1244,7 @@ docs/VALIDATION_AND_BACKLOG.md의 "4. 한 장 촬영 UX와 multi-object 정책 �
 | 홈 데이터 없음 상태       | 구현됨                         | 나눔 식재료가 없으면 `아직 근처에 나눔이 없어요` 빈 상태를 표시한다.                                                                                                                                                                                                 | API 실패와 진짜 빈 상태를 구분하는 에러 UI 추가.                                                          |
 | 검색 기능                 | 부분 구현                      | 홈은 현재 불러온 주변 나눔 식재료를 식재료명/냉장고명으로 로컬 필터링한다. 홈 지도 아이콘은 지도 탭으로 이동하고, 지도 검색 입력은 공유 냉장고 이름/주소 로컬 필터로 동작한다. 서버 OpenAPI에는 검색 엔드포인트가 없다.                                                        | 서버 검색/독립 검색 화면은 후속 범위로 분리.                                                             |
 | 검색 결과 없음            | 구현됨                         | 홈 나눔 식재료 로컬 검색과 지도 공유 냉장고 로컬 검색 모두 결과 없음 상태와 검색 초기화를 제공한다.                                                                                                                                                                  | 서버 검색/독립 검색 화면은 후속 범위로 분리.                                                             |
-| 푸쉬 알림                 | 프론트 코드 연동 완료, 실제 수신 QA 필요 | Firebase Messaging 의존성, Android 알림 권한, FCM 토큰 등록이 있다. `share_created`, `share_requested` foreground/background/opened/initial handler를 구현했고, payload는 문자열 + camelCase(`type`, `postId`, `requestId`, `fruitName`, `fridgeName`)로 검증한다. Firebase 설정이 없는 QA/release 빌드에서는 알림 handler와 FCM 토큰 등록을 안전하게 건너뛴다. 알림함은 로컬 수신 기록/빈 상태 중심이며 읽음 상태 API는 없다. | 실제 기기에서 foreground/background/terminated 수신과 알림 탭 라우팅을 검증한다. |
+| 푸쉬 알림                 | emulator foreground/background 실수신 QA 통과, terminated/physical 2-device 보류 | Firebase Messaging 의존성, Android 알림 권한, FCM 토큰 등록이 있다. `share_created`, `share_requested` foreground/background/opened/initial handler를 구현했고, payload는 문자열 + camelCase(`type`, `postId`, `requestId`, `fruitName`, `fridgeName`)로 검증한다. Firebase 설정이 없는 QA/release 빌드에서는 알림 handler와 FCM 토큰 등록을 안전하게 건너뛴다. 2026-05-21 emulator QA에서 `greennode-94eae` client/Admin project 정렬 후 실제 send success 1 / failure 0, foreground 로컬 알림 탭 기록, background system notification 표시와 tap의 `PostDetail` 라우팅을 확인했다. 알림함은 로컬 수신 기록/빈 상태 중심이며 읽음 상태 API는 없다. | backend Android FCM priority `high`, per-token failure log 적용 후 terminated routing을 재검증하고, ADB가 실제 Samsung device를 인식하면 physical 2-device QA를 재개한다. |
 | 유저 프로필               | 부분 구현                      | 닉네임/이메일은 실제 유저 정보를 표시한다. 프로필 수정, 메뉴 이동, 내 나눔/관심/받은 나눔은 연결되어 있지 않다.                                                                                                                                                      | 프로필 수정 또는 내 나눔 내역 중 하나만 우선 연결.                                                        |
 | 유저 통계                 | 정리됨                         | 신선도 온도, 포인트, 탄소 절감량의 하드코딩 숫자를 제거하고 `준비 중` 상태로 표시한다.                                                                                                                                                                               | 실제 지표를 넣으려면 계산식과 API 계약을 먼저 정의.                                                       |
 | 냉장고별 나눔 식재료 조회 | 프론트 코드 연동 완료, VM/API QA 및 Android UI 재확인 통과 | 지도에서 특정 냉장고를 선택하면 `GET /fridges/{id}/posts?status=available`로 내부 available 목록을 조회한다. loading/error/empty/list 상태를 분리하고 항목 탭 시 상세로 이동한다. 2026-05-08 VM/API에서 `PostNearbyRead` 카드 필드와 requested 제외를 재확인했고, 실제 Android UI에서 신규 Post 표시명/상태와 신청 후 즉시 제거를 확인했다. | 별도 inventory 개념은 후속으로 분리. |
@@ -1250,10 +1254,11 @@ docs/VALIDATION_AND_BACKLOG.md의 "4. 한 장 촬영 UX와 multi-object 정책 �
 
 #### 다음 스프린트 우선순위 제안
 
-1. 실제 FCM 수신 QA: Firebase 설정 포함 빌드와 FCM token이 등록된 두 테스트 계정/기기에서 `share_created`, `share_requested` foreground/background/terminated 수신과 알림 탭 라우팅을 확인한다.
-2. FCM 발송 로그 분리: 백엔드 로그에서 `FCM 발송 완료`, `[Mock FCM]`, `반경 내 사용자 없음`, `FCM 발송 실패`를 구분한다.
-3. Post-MVP AI/rejection contract: `stale-or-rotten`, `screenshot-or-ui`, `low-quality` false-positive를 rejection reason 또는 review-required 계약으로 승격할지 백엔드/AI와 결정한다.
-4. Optional UX polish: 분석 실패 후 수동 입력 CTA를 MVP 이후에 추가할지 결정한다.
+1. Backend FCM handoff: Android FCM priority를 `high`로 설정하고 per-token failure log를 남긴다.
+2. Terminated FCM 재검증: backend `high` priority 적용 후 terminated notification tap routing reliability를 다시 확인한다.
+3. Physical 2-device QA: ADB가 실제 Samsung device를 인식하면 Firebase 설정 포함 빌드와 FCM token이 등록된 두 테스트 계정/기기에서 `share_created`, `share_requested` foreground/background/terminated 수신을 확인한다.
+4. Post-MVP AI/rejection contract: `stale-or-rotten`, `screenshot-or-ui`, `low-quality` false-positive를 rejection reason 또는 review-required 계약으로 승격할지 백엔드/AI와 결정한다.
+5. Optional UX polish: 분석 실패 후 수동 입력 CTA를 MVP 이후에 추가할지 결정한다.
 
 #### 채팅 탭 결정
 
@@ -1565,8 +1570,8 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
 
 - 분류: 기능 구현
 - 우선순위: P2
-- 배경: FCM 토큰 등록은 있지만 알림 수신/목록/읽음 처리는 없다.
-- 현재 동작: FCM token은 사용자가 위치 설정 화면의 `나눔 알림 받기` CTA를 눌렀을 때 권한 요청 후 `/auth/me/location`으로 등록한다. 위치 설정 진입과 기존 유저의 위치 자동 갱신만으로는 알림 권한을 요청하지 않으며, Android 13+ `POST_NOTIFICATIONS` 거부 시 Firebase permission/register/getToken을 호출하지 않고 `fcmToken` 없이 위치 등록을 계속한다. `share_created`, `share_requested` handler는 foreground/background/opened/initial 메시지를 로컬 알림함에 기록한다. 알림 열기와 알림함 항목 탭은 `PostDetail`로 이동하며, `share_requested`는 내 나눔 관리 화면이 없으므로 상세 fallback을 쓴다. Firebase 앱이 설정되지 않은 QA/release 빌드에서는 Messaging 인스턴스 생성 실패를 잡고 handler 등록과 FCM 토큰 조회를 건너뛰어 앱 시작/위치 갱신 크래시를 막는다. 2026-05-08 백엔드 답변 기준 `share_created`는 반경 2km 내 FCM 토큰이 있는 다른 사용자에게, `share_requested`는 공급자 FCM 토큰이 있을 때 발송된다.
+- 배경: FCM 토큰 등록과 로컬 알림함 수신 처리는 구현됐지만, 서버 알림 목록/읽음 상태 API는 없다.
+- 현재 동작: FCM token은 사용자가 위치 설정 화면의 `나눔 알림 받기` CTA를 눌렀을 때 권한 요청 후 `/auth/me/location`으로 등록한다. 위치 설정 진입과 기존 유저의 위치 자동 갱신만으로는 알림 권한을 요청하지 않으며, Android 13+ `POST_NOTIFICATIONS` 거부 시 Firebase permission/register/getToken을 호출하지 않고 `fcmToken` 없이 위치 등록을 계속한다. `share_created`, `share_requested` handler는 foreground/background/opened/initial 메시지를 로컬 알림함에 기록한다. 알림 열기와 알림함 항목 탭은 `PostDetail`로 이동하며, `share_requested`는 내 나눔 관리 화면이 없으므로 상세 fallback을 쓴다. Firebase 앱이 설정되지 않은 QA/release 빌드에서는 Messaging 인스턴스 생성 실패를 잡고 handler 등록과 FCM 토큰 조회를 건너뛰어 앱 시작/위치 갱신 크래시를 막는다. 2026-05-21 emulator QA에서 Firebase client/Admin project를 `greennode-94eae`로 맞춘 뒤 `share_created`, `share_requested` 실제 FCM send와 foreground/background 수신은 확인됐다. terminated surrogate는 system notification 표시까지만 확인됐고, tap routing reliability는 backend Android FCM priority `high` 설정 후 재검증한다. true 2-device QA는 physical Samsung device가 `adb devices`에 표시되지 않아 보류 중이다.
 - 기대 동작: MVP에서는 WebSocket 채팅 대신 알림함과 단순 신청 흐름으로 축소한다. 읽음 상태 API는 후속으로 분리한다.
 - Acceptance Criteria:
   - [x] foreground/background 알림 수신 handler가 정의된다.
@@ -1581,8 +1586,14 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
   - [x] 위치 설정 진입만으로 알림 권한을 요청하지 않고, 사용자가 알림 CTA를 누를 때만 FCM 토큰을 준비한다.
   - [x] 기존 유저의 위치 자동 갱신 경로는 알림 권한 요청을 열지 않는다.
   - [x] Android 알림 권한 거부 시 FCM token/register 경로를 호출하지 않는다.
-  - [ ] 실제 흐름 테스트로 백엔드 로그의 발송 완료/Mock FCM/반경 내 사용자 없음 상태를 분리한다.
-- 검증 방법: FCM 테스트 메시지 수신 QA, 앱 foreground/background 확인, `notificationService.firebaseFallback.test.ts`, `deviceRegistration.firebaseFallback.test.ts`, `deviceRegistration.notificationPermission.test.ts`, `locationSetup.notificationPermission.test.tsx`
+  - [x] 2026-05-21 emulator foreground에서 `share_created`, `share_requested` 실제 FCM 수신과 로컬 알림 탭 기록을 확인한다.
+  - [x] 2026-05-21 emulator background에서 system notification 표시와 tap의 `PostDetail` 라우팅을 확인한다.
+  - [x] 2026-05-21 백엔드 로그에서 `share_created`, `share_requested` 실제 send success 1 / failure 0을 확인한다.
+  - [ ] backend가 Android FCM priority를 `high`로 설정한다.
+  - [ ] backend가 per-token FCM failure를 로그로 남긴다.
+  - [ ] terminated 상태 notification tap routing reliability를 `high` priority 적용 후 재검증한다.
+  - [ ] physical 2-device/2-account QA를 `adb devices`가 실제 Samsung device를 인식한 뒤 재개한다.
+- 검증 방법: FCM 테스트 메시지 수신 QA, 앱 foreground/background/terminated 확인, backend FCM send log 확인, `notificationService.firebaseFallback.test.ts`, `deviceRegistration.firebaseFallback.test.ts`, `deviceRegistration.notificationPermission.test.ts`, `locationSetup.notificationPermission.test.tsx`
 - 관련 파일/화면/API: `notifications.ts`, `deviceRegistration.ts`, `firebaseMessaging.ts`, `notificationStore.ts`, `ChatListScreen`, `index.js`, `AppNavigator`, Firebase Messaging
 
 ## multi-object detection 연구/계약 초안
