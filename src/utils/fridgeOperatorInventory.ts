@@ -31,6 +31,27 @@ export const getOperatorItemStatusTone = (
   return 'warning';
 };
 
+export const getOperatorItemStatusLabel = (
+  status: OperatorItemStatus,
+): string => {
+  switch (status) {
+    case 'available':
+      return '신청 가능';
+    case 'requested':
+      return '신청 접수';
+    case 'needsReview':
+      return '현장 확인';
+    case 'discardCandidate':
+      return '폐기 후보';
+    case 'discarded':
+      return '폐기 완료';
+    case 'completed':
+      return '수령 완료';
+    case 'missing':
+      return '분실 확인';
+  }
+};
+
 export const deriveBasketStatus = (items: StatusSource[]) => {
   const total = items.length;
   const discardCandidateCount = items.filter(

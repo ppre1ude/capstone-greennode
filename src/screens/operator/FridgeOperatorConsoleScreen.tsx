@@ -21,6 +21,7 @@ import {colors} from '@/theme';
 import {getApiErrorMessage} from '@/utils/apiError';
 import {
   deriveBasketStatus,
+  getOperatorItemStatusLabel,
   getOperatorItemStatusTone,
   type OperatorItemStatus,
   type OperatorStatusTone,
@@ -400,9 +401,17 @@ const FridgeOperatorConsoleScreen = ({navigation, route}: Props) => {
             <>
               <Text style={styles.syncErrorText}>{inventoryError}</Text>
               <TouchableOpacity
-                style={styles.retryButton}
+                disabled={isLoadingInventory}
+                style={[
+                  styles.retryButton,
+                  isLoadingInventory && styles.retryButtonDisabled,
+                ]}
                 onPress={fetchOperatorInventory}>
-                <Text style={styles.retryButtonText}>다시 불러오기</Text>
+                <Text style={styles.retryButtonText}>
+                  {isOperatorAccessDenied
+                    ? '권한 확인 다시 시도'
+                    : '다시 불러오기'}
+                </Text>
               </TouchableOpacity>
             </>
           ) : null}
@@ -472,50 +481,71 @@ const FridgeOperatorConsoleScreen = ({navigation, route}: Props) => {
               <Text style={styles.sectionNote}>
                 사용자 등록/신청 단위는 개별 나눔 식재료로 유지
               </Text>
-              {inspectionItems.map(item => (
-                <View key={item.postId} style={styles.rowCard}>
-                  <View style={styles.rowHeader}>
-                    <View>
-                      <Text style={styles.rowTitle}>{item.name}</Text>
-                      <Text style={styles.rowMeta}>postId {item.postId}</Text>
+              {inspectionItems.length > 0 ? (
+                inspectionItems.map(item => (
+                  <View key={item.postId} style={styles.rowCard}>
+                    <View style={styles.rowHeader}>
+                      <View>
+                        <Text style={styles.rowTitle}>{item.name}</Text>
+                        <Text style={styles.rowMeta}>
+                          postId {item.postId}
+                        </Text>
+                      </View>
+                      <Text
+                        style={[
+                          styles.statusPill,
+                          itemStatusTone(item.status),
+                        ]}>
+                        {getOperatorItemStatusLabel(item.status)}
+                      </Text>
                     </View>
-                    <Text
-                      style={[styles.statusPill, itemStatusTone(item.status)]}>
-                      {item.status}
+                    <View style={styles.itemMetaRow}>
+                      {item.labelCode ? (
+                        <Text style={styles.itemMetaPill}>
+                          {item.labelCode}
+                        </Text>
+                      ) : null}
+                      {item.storageZone ? (
+                        <Text style={styles.itemMetaPill}>
+                          {item.storageZone}
+                        </Text>
+                      ) : null}
+                    </View>
+                    <Text style={styles.rowText}>AI 상태: {item.ai}</Text>
+                    <Text style={styles.rowText}>
+                      권장 나눔 기한: {item.recommendedUntil}
                     </Text>
-                  </View>
-                  <View style={styles.itemMetaRow}>
-                    {item.labelCode ? (
-                      <Text style={styles.itemMetaPill}>{item.labelCode}</Text>
+                    {item.status === 'discardCandidate' ? (
+                      <TouchableOpacity
+                        disabled={disposingPostId === item.postId}
+                        onPress={() => handleDispose(item)}
+                        style={[
+                          styles.disposeButton,
+                          disposingPostId === item.postId &&
+                            styles.disposeButtonDisabled,
+                        ]}>
+                        <Text style={styles.disposeButtonText}>
+                          {disposingPostId === item.postId
+                            ? '폐기 요청 중'
+                            : '폐기 처분 완료'}
+                        </Text>
+                      </TouchableOpacity>
                     ) : null}
-                    {item.storageZone ? (
-                      <Text style={styles.itemMetaPill}>
-                        {item.storageZone}
-                      </Text>
-                    ) : null}
                   </View>
-                  <Text style={styles.rowText}>AI 상태: {item.ai}</Text>
-                  <Text style={styles.rowText}>
-                    권장 나눔 기한: {item.recommendedUntil}
+                ))
+              ) : (
+                <View style={styles.emptyState}>
+                  <Text style={styles.emptyTitle}>점검할 식재료가 없습니다</Text>
+                  <Text style={styles.emptyText}>
+                    백엔드 inventory API가 빈 목록을 반환했습니다. 새 나눔이 보관되면 이 영역에 표시됩니다.
                   </Text>
-                  {item.status === 'discardCandidate' ? (
-                    <TouchableOpacity
-                      disabled={disposingPostId === item.postId}
-                      onPress={() => handleDispose(item)}
-                      style={[
-                        styles.disposeButton,
-                        disposingPostId === item.postId &&
-                          styles.disposeButtonDisabled,
-                      ]}>
-                      <Text style={styles.disposeButtonText}>
-                        {disposingPostId === item.postId
-                          ? '폐기 요청 중'
-                          : '폐기 처분 완료'}
-                      </Text>
-                    </TouchableOpacity>
-                  ) : null}
+                  <TouchableOpacity
+                    style={styles.retryButton}
+                    onPress={fetchOperatorInventory}>
+                    <Text style={styles.retryButtonText}>다시 불러오기</Text>
+                  </TouchableOpacity>
                 </View>
-              ))}
+              )}
             </View>
 
             <View style={styles.section}>
@@ -624,6 +654,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
+  retryButtonDisabled: {
+    opacity: 0.55,
+  },
   retryButtonText: {
     color: '#9A3412',
     fontSize: 12,
@@ -678,6 +711,23 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderTopWidth: 1,
     borderTopColor: colors.borderLight,
+  },
+  emptyState: {
+    marginTop: 12,
+    padding: 16,
+    borderRadius: 10,
+    backgroundColor: colors.surface,
+  },
+  emptyTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: colors.textPrimary,
+  },
+  emptyText: {
+    marginTop: 6,
+    fontSize: 13,
+    lineHeight: 19,
+    color: colors.textSecondary,
   },
   rowHeader: {
     flexDirection: 'row',

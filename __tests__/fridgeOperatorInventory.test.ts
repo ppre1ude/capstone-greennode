@@ -1,5 +1,6 @@
 import {
   deriveBasketStatus,
+  getOperatorItemStatusLabel,
   getOperatorItemStatusTone,
 } from '@/utils/fridgeOperatorInventory';
 
@@ -40,5 +41,12 @@ describe('fridge operator inventory helpers', () => {
     expect(getOperatorItemStatusTone('requested')).toBe('info');
     expect(getOperatorItemStatusTone('needsReview')).toBe('warning');
     expect(getOperatorItemStatusTone('discardCandidate')).toBe('danger');
+  });
+
+  it('maps operator-only statuses to user-facing labels', () => {
+    expect(getOperatorItemStatusLabel('available')).toBe('신청 가능');
+    expect(getOperatorItemStatusLabel('discardCandidate')).toBe('폐기 후보');
+    expect(getOperatorItemStatusLabel('discarded')).toBe('폐기 완료');
+    expect(getOperatorItemStatusLabel('missing')).toBe('분실 확인');
   });
 });

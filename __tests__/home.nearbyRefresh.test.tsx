@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, TouchableOpacity } from 'react-native';
+import { Text, TextInput, TouchableOpacity } from 'react-native';
 import ReactTestRenderer from 'react-test-renderer';
 import HomeScreen from '@/screens/home/HomeScreen';
 import { getNearbyPosts } from '@/api/posts';
@@ -49,6 +49,8 @@ const findButtonByText = (
 describe('HomeScreen nearby post refresh', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-05-21T12:00:00Z'));
     mockRouteParams = undefined;
     mockedGetNearbyPosts.mockResolvedValue({
       success: true,
@@ -155,6 +157,10 @@ describe('HomeScreen nearby post refresh', () => {
     });
   });
 
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
   it('uses the feed header action to open the map tab', async () => {
     let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
 
@@ -236,6 +242,89 @@ describe('HomeScreen nearby post refresh', () => {
     expect(
       renderer!.root.findAllByProps({children: '검색 결과가 없습니다'}),
     ).not.toHaveLength(0);
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
+  it('renders today pickup recommendations from loaded nearby posts and hides them while searching', async () => {
+    mockedGetNearbyPosts.mockResolvedValue({
+      success: true,
+      message: 'ok',
+      data: [
+        {
+          id: 10,
+          fridgeId: 1,
+          fridgeName: '전남대 공유 냉장고',
+          detectedFruit: 'apple',
+          detectedFruitKo: '사과',
+          freshnessLabel: 'Fresh',
+          imageUrl: '/static/posts/10.jpg',
+          expirationDate: '2026-05-22',
+          status: 'available',
+          createdAt: '2026-05-20T00:00:00Z',
+        },
+        {
+          id: 11,
+          fridgeId: 2,
+          fridgeName: '충장로 공유 냉장고',
+          detectedFruit: 'banana',
+          detectedFruitKo: '바나나',
+          freshnessLabel: 'Mid',
+          imageUrl: '/static/posts/11.jpg',
+          expirationDate: '2026-05-21',
+          status: 'available',
+          createdAt: '2026-05-21T00:00:00Z',
+        },
+      ],
+    });
+
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(<HomeScreen />);
+    });
+
+    expect(
+      renderer!.root.findAllByProps({
+        children: '오늘 가져가기 좋은 재료',
+      }),
+    ).not.toHaveLength(0);
+    expect(
+      renderer!.root.findAllByProps({
+        children: '권장 수령일이 가까운 나눔을 먼저 보여드려요.',
+      }),
+    ).not.toHaveLength(0);
+
+    const recommendationButton = renderer!.root
+      .findAllByType(TouchableOpacity)
+      .find(button =>
+        button.findAllByType(Text).some(textNode => {
+          const children = textNode.props.children;
+          return children === '바나나';
+        }),
+      );
+
+    await ReactTestRenderer.act(async () => {
+      recommendationButton?.props.onPress();
+    });
+
+    expect(mockParentNavigate).toHaveBeenCalledWith('PostDetail', {
+      postId: 11,
+    });
+
+    const searchInput = renderer!.root.findByType(TextInput);
+
+    await ReactTestRenderer.act(async () => {
+      searchInput.props.onChangeText('사과');
+    });
+
+    expect(
+      renderer!.root.findAllByProps({
+        children: '오늘 가져가기 좋은 재료',
+      }),
+    ).toHaveLength(0);
 
     await ReactTestRenderer.act(async () => {
       renderer?.unmount();

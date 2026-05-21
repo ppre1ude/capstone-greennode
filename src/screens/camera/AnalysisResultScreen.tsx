@@ -23,6 +23,11 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@/navigation/types';
 import { colors } from '@/theme';
 import {
+  getDetectionName,
+  getDetectionSummary,
+  getResultDetections,
+} from '@/utils/aiDetections';
+import {
   getConfidencePercent,
   getGenerateResultQualityMeta,
   needsAnalysisReview,
@@ -58,6 +63,8 @@ const AnalysisResultScreen = ({ route, navigation }: Props) => {
     '알 수 없음';
   const analysisMessage =
     result.aiAnalysis?.analysisMessage || '분석 결과를 불러올 수 없습니다.';
+  const detections = getResultDetections(result);
+  const showMultiObjectNotice = detections.length > 1;
 
   return (
     <View style={styles.container}>
@@ -131,6 +138,27 @@ const AnalysisResultScreen = ({ route, navigation }: Props) => {
               {confidencePercent != null ? `${confidencePercent}%` : '미제공'}
             </Text>
           </View>
+
+          {showMultiObjectNotice ? (
+            <View style={styles.detectionBox}>
+              <Text style={styles.detectionTitle}>감지된 식재료 후보</Text>
+              <Text style={styles.detectionHint}>
+                이번 등록은 대표 식재료 1개 기준으로 진행합니다.
+              </Text>
+              {detections.map((detection, index) => (
+                <View
+                  key={`${getDetectionName(detection)}-${index}`}
+                  style={styles.detectionRow}>
+                  <Text style={styles.detectionName} numberOfLines={1}>
+                    {getDetectionName(detection)}
+                  </Text>
+                  <Text style={styles.detectionMeta}>
+                    {getDetectionSummary(detection)}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          ) : null}
 
           {needsReview && (
             <View style={[styles.summaryBox, styles.reviewBox]}>
@@ -324,6 +352,40 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     padding: 16,
     borderRadius: 12,
+  },
+  detectionBox: {
+    backgroundColor: colors.surface,
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+    gap: 8,
+  },
+  detectionTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+  detectionHint: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    lineHeight: 19,
+  },
+  detectionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 12,
+  },
+  detectionName: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  detectionMeta: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.textSecondary,
   },
   reviewBox: {
     backgroundColor: '#FEF3C7',
