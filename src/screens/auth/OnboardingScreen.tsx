@@ -6,25 +6,25 @@
  *
  * @wireframe temp/screen-onboarding.html
  */
-import React, {useRef, useState, useCallback} from 'react';
+import React, { useRef, useState, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   FlatList,
   Dimensions,
-  TouchableOpacity,
   StatusBar,
   ViewToken,
 } from 'react-native';
-import type {NativeStackScreenProps} from '@react-navigation/native-stack';
-import type {AuthStackParamList} from '@/navigation/types';
-import {setOnboarded} from '@/utils/storage';
-import {colors} from '@/theme';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { AuthStackParamList } from '@/navigation/types';
+import { setOnboarded } from '@/utils/storage';
+import { DSButton, DSChip, DSText } from '@/design-system';
+import { colors } from '@/theme';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Onboarding'>;
 
-const {width} = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
 interface SlideData {
   id: string;
@@ -69,12 +69,12 @@ const SLIDES: SlideData[] = [
   },
 ];
 
-const OnboardingScreen = ({navigation}: Props) => {
+const OnboardingScreen = ({ navigation }: Props) => {
   const flatListRef = useRef<FlatList>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
 
   const onViewableItemsChanged = useCallback(
-    ({viewableItems}: {viewableItems: ViewToken[]}) => {
+    ({ viewableItems }: { viewableItems: ViewToken[] }) => {
       if (viewableItems.length > 0 && viewableItems[0].index !== null) {
         setCurrentIndex(viewableItems[0].index);
       }
@@ -82,11 +82,13 @@ const OnboardingScreen = ({navigation}: Props) => {
     [],
   );
 
-  const viewabilityConfig = useRef({viewAreaCoveragePercentThreshold: 50}).current;
+  const viewabilityConfig = useRef({
+    viewAreaCoveragePercentThreshold: 50,
+  }).current;
 
   const handleNext = async () => {
     if (currentIndex < SLIDES.length - 1) {
-      flatListRef.current?.scrollToIndex({index: currentIndex + 1});
+      flatListRef.current?.scrollToIndex({ index: currentIndex + 1 });
     } else {
       await handleFinish();
     }
@@ -101,27 +103,39 @@ const OnboardingScreen = ({navigation}: Props) => {
     navigation.replace('Login');
   };
 
-  const renderSlide = ({item}: {item: SlideData}) => (
+  const renderSlide = ({ item }: { item: SlideData }) => (
     <View style={styles.slide}>
       {/* 일러스트 카드 */}
       <View style={styles.illustrationCard}>
         <Text style={styles.illustrationIcon}>{item.icon}</Text>
 
         {/* 떠있는 뱃지 */}
-        <View style={styles.floatingBadge}>
-          <Text style={styles.badgeIcon}>{item.badgeIcon}</Text>
-          <Text style={styles.badgeText}>{item.badgeText}</Text>
-        </View>
+        <DSChip
+          label={item.badgeText}
+          tone="primary"
+          size="small"
+          leading={<Text style={styles.badgeIcon}>{item.badgeIcon}</Text>}
+          style={styles.floatingBadge}
+        />
       </View>
 
       {/* 텍스트 */}
       <View style={styles.textSection}>
-        <Text style={styles.slideTitle}>
-          {item.title}{'\n'}
-          <Text style={styles.slideHighlight}>{item.highlight}</Text>
+        <DSText variant="heading1" color="primary" style={styles.slideTitle}>
+          {item.title}
+          {'\n'}
+          <DSText variant="heading1" style={styles.slideHighlight}>
+            {item.highlight}
+          </DSText>
           {'부터 나눔까지'}
-        </Text>
-        <Text style={styles.slideDescription}>{item.description}</Text>
+        </DSText>
+        <DSText
+          variant="body"
+          color="textSecondary"
+          align="center"
+          style={styles.slideDescription}>
+          {item.description}
+        </DSText>
       </View>
     </View>
   );
@@ -133,9 +147,15 @@ const OnboardingScreen = ({navigation}: Props) => {
       <StatusBar barStyle="dark-content" backgroundColor={colors.surface} />
 
       {/* 건너뛰기 버튼 */}
-      <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
-        <Text style={styles.skipText}>건너뛰기</Text>
-      </TouchableOpacity>
+      <DSButton
+        label="건너뛰기"
+        variant="text"
+        color="assistive"
+        size="small"
+        style={styles.skipButton}
+        textStyle={styles.skipText}
+        onPress={handleSkip}
+      />
 
       {/* 슬라이드 */}
       <FlatList
@@ -168,20 +188,30 @@ const OnboardingScreen = ({navigation}: Props) => {
 
       {/* 하단 CTA */}
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
-          <Text style={styles.nextButtonText}>
-            {isLastSlide ? '시작하기' : '다음으로'}
-          </Text>
-        </TouchableOpacity>
+        <DSButton
+          label={isLastSlide ? '시작하기' : '다음으로'}
+          size="large"
+          fullWidth
+          style={styles.nextButton}
+          textStyle={styles.nextButtonText}
+          onPress={handleNext}
+        />
 
-        <TouchableOpacity
+        <DSButton
+          label="이미 계정이 있으신가요?"
+          variant="text"
+          color="assistive"
+          size="medium"
+          trailing={
+            <DSText variant="bodyBold" style={styles.loginLinkBold}>
+              로그인
+            </DSText>
+          }
+          accessibilityLabel="이미 계정이 있으신가요? 로그인"
           style={styles.loginLink}
-          onPress={() => navigation.replace('Login')}>
-          <Text style={styles.loginLinkText}>
-            이미 계정이 있으신가요?{' '}
-            <Text style={styles.loginLinkBold}>로그인</Text>
-          </Text>
-        </TouchableOpacity>
+          textStyle={styles.loginLinkText}
+          onPress={() => navigation.replace('Login')}
+        />
       </View>
     </View>
   );
@@ -221,7 +251,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: colors.primary,
-    shadowOffset: {width: 0, height: 8},
+    shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.05,
     shadowRadius: 24,
     elevation: 8,
@@ -235,14 +265,8 @@ const styles = StyleSheet.create({
     top: 24,
     right: 24,
     backgroundColor: 'rgba(255,255,255,0.9)',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
@@ -250,20 +274,12 @@ const styles = StyleSheet.create({
   badgeIcon: {
     fontSize: 14,
   },
-  badgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.primary,
-  },
   textSection: {
     paddingHorizontal: 32,
     paddingTop: 40,
     alignItems: 'center',
   },
   slideTitle: {
-    fontSize: 26,
-    fontWeight: '700',
-    color: colors.primary,
     textAlign: 'center',
     lineHeight: 36,
   },
@@ -272,9 +288,6 @@ const styles = StyleSheet.create({
   },
   slideDescription: {
     marginTop: 16,
-    fontSize: 15,
-    color: colors.textSecondary,
-    textAlign: 'center',
     lineHeight: 24,
   },
   indicatorContainer: {
@@ -304,27 +317,22 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: -10},
+    shadowOffset: { width: 0, height: -10 },
     shadowOpacity: 0.05,
     shadowRadius: 20,
     elevation: 10,
   },
   nextButton: {
-    height: 60,
-    backgroundColor: colors.primary,
+    minHeight: 60,
     borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
     shadowColor: colors.primary,
-    shadowOffset: {width: 0, height: 4},
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 12,
     elevation: 6,
   },
   nextButtonText: {
-    color: '#FFFFFF',
     fontSize: 18,
-    fontWeight: '700',
   },
   loginLink: {
     marginTop: 16,

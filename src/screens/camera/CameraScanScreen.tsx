@@ -3,10 +3,10 @@
  *
  * Vision AI 분석을 위한 식재료 촬영 화면.
  * 카메라 뷰, 스캔 프레임 애니메이션, 촬영/갤러리 전환.
- * 
+ *
  * @wireframe wireframe-foodlink/scanpage1.html
  */
-import React, {useState, useRef, useEffect} from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -18,8 +18,8 @@ import {
   Alert,
   Linking,
 } from 'react-native';
-import type {NativeStackScreenProps} from '@react-navigation/native-stack';
-import type {RootStackParamList} from '@/navigation/types';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '@/navigation/types';
 import {
   Camera,
   type CameraRef,
@@ -27,19 +27,21 @@ import {
   useCameraPermission,
   usePhotoOutput,
 } from 'react-native-vision-camera';
-import {launchImageLibrary} from 'react-native-image-picker';
-import {styles} from './CameraScanScreen.styles';
-import {generatePost} from '@/api/posts';
-import {getApiErrorMessage} from '@/utils/apiError';
-import {validateImageForUpload} from '@/utils/imageUploadPolicy';
+import { launchImageLibrary } from 'react-native-image-picker';
+import { DSButton, DSChip, DSText } from '@/design-system';
+import { colors } from '@/theme';
+import { styles } from './CameraScanScreen.styles';
+import { generatePost } from '@/api/posts';
+import { getApiErrorMessage } from '@/utils/apiError';
+import { validateImageForUpload } from '@/utils/imageUploadPolicy';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CameraScan'>;
 
-const CameraScanScreen = ({navigation}: Props) => {
-  const {hasPermission, requestPermission} = useCameraPermission();
+const CameraScanScreen = ({ navigation }: Props) => {
+  const { hasPermission, requestPermission } = useCameraPermission();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const device = useCameraDevice('back');
-  const photoOutput = usePhotoOutput({containerFormat: 'jpeg'});
+  const photoOutput = usePhotoOutput({ containerFormat: 'jpeg' });
   const camera = useRef<CameraRef>(null);
 
   // 스캔 라인 애니메이션
@@ -108,8 +110,8 @@ const CameraScanScreen = ({navigation}: Props) => {
         '카메라 권한 필요',
         '설정에서 카메라 권한을 허용하거나 갤러리에서 사진을 선택해주세요.',
         [
-          {text: '취소', style: 'cancel'},
-          {text: '설정 열기', onPress: () => Linking.openSettings()},
+          { text: '취소', style: 'cancel' },
+          { text: '설정 열기', onPress: () => Linking.openSettings() },
         ],
       );
     }
@@ -121,8 +123,8 @@ const CameraScanScreen = ({navigation}: Props) => {
         '카메라 준비 실패',
         '카메라를 사용할 수 없습니다. 갤러리에서 사진을 선택할 수 있습니다.',
         [
-          {text: '취소', style: 'cancel'},
-          {text: '갤러리 선택', onPress: handleGallery},
+          { text: '취소', style: 'cancel' },
+          { text: '갤러리 선택', onPress: handleGallery },
         ],
       );
       return;
@@ -142,8 +144,8 @@ const CameraScanScreen = ({navigation}: Props) => {
         '촬영 오류',
         '사진 촬영에 실패했습니다. 갤러리에서 기존 사진을 선택할 수 있습니다.',
         [
-          {text: '취소', style: 'cancel'},
-          {text: '갤러리 선택', onPress: handleGallery},
+          { text: '취소', style: 'cancel' },
+          { text: '갤러리 선택', onPress: handleGallery },
         ],
       );
     }
@@ -156,7 +158,7 @@ const CameraScanScreen = ({navigation}: Props) => {
   ) => {
     setIsAnalyzing(true);
     try {
-      const response = await generatePost({uri, type, name});
+      const response = await generatePost({ uri, type, name });
 
       if (response.success && response.data) {
         navigation.replace('AnalysisResult', {
@@ -171,14 +173,14 @@ const CameraScanScreen = ({navigation}: Props) => {
         message: error?.message,
         status: error?.response?.status,
         response: error?.response?.data,
-        image: {uri, type, name},
+        image: { uri, type, name },
       });
       const message = getApiErrorMessage(error, 'AI 분석에 실패했습니다.', {
         preferDetail: true,
       });
       Alert.alert('분석 실패', message, [
-        {text: '다시 촬영', style: 'cancel'},
-        {text: '갤러리 선택', onPress: handleGallery},
+        { text: '다시 촬영', style: 'cancel' },
+        { text: '갤러리 선택', onPress: handleGallery },
       ]);
     } finally {
       setIsAnalyzing(false);
@@ -188,20 +190,34 @@ const CameraScanScreen = ({navigation}: Props) => {
   if (!hasPermission) {
     return (
       <View style={styles.centerContainer}>
-        <Text style={styles.permissionText}>카메라 권한이 필요합니다.</Text>
-        <TouchableOpacity
+        <DSText
+          variant="body"
+          color="textOnPrimary"
+          align="center"
+          style={styles.permissionText}>
+          카메라 권한이 필요합니다.
+        </DSText>
+        <DSButton
+          label="권한 다시 요청"
+          size="medium"
           style={styles.galleryFallbackButton}
-          onPress={handleRequestCameraPermission}>
-          <Text style={styles.galleryFallbackText}>권한 다시 요청</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
+          onPress={handleRequestCameraPermission}
+        />
+        <DSButton
+          label="설정 열기"
+          variant="outlined"
+          color="assistive"
+          size="medium"
           style={styles.secondaryFallbackButton}
-          onPress={() => Linking.openSettings()}>
-          <Text style={styles.secondaryFallbackText}>설정 열기</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.galleryFallbackButton} onPress={handleGallery}>
-          <Text style={styles.galleryFallbackText}>갤러리에서 선택하기</Text>
-        </TouchableOpacity>
+          textStyle={styles.secondaryFallbackText}
+          onPress={() => Linking.openSettings()}
+        />
+        <DSButton
+          label="갤러리에서 선택하기"
+          size="medium"
+          style={styles.galleryFallbackButton}
+          onPress={handleGallery}
+        />
       </View>
     );
   }
@@ -209,11 +225,20 @@ const CameraScanScreen = ({navigation}: Props) => {
   if (device == null) {
     return (
       <View style={styles.centerContainer}>
-        <Text style={styles.permissionText}>사용 가능한 카메라가 없습니다.</Text>
+        <DSText
+          variant="body"
+          color="textOnPrimary"
+          align="center"
+          style={styles.permissionText}>
+          사용 가능한 카메라가 없습니다.
+        </DSText>
         {/* 에뮬레이터 환경을 위한 갤러리 버튼 폴백 */}
-        <TouchableOpacity style={styles.galleryFallbackButton} onPress={handleGallery}>
-          <Text style={styles.galleryFallbackText}>갤러리에서 선택하기</Text>
-        </TouchableOpacity>
+        <DSButton
+          label="갤러리에서 선택하기"
+          size="medium"
+          style={styles.galleryFallbackButton}
+          onPress={handleGallery}
+        />
       </View>
     );
   }
@@ -224,25 +249,35 @@ const CameraScanScreen = ({navigation}: Props) => {
 
       {/* 헤더 */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.headerButton}>
           <Text style={styles.headerIcon}>✕</Text>
         </TouchableOpacity>
-        
+
         {isAnalyzing ? (
-          <View style={styles.statusBadge}>
-            <ActivityIndicator
-              size="small"
-              color="#FFFFFF"
-              style={styles.statusSpinner}
-            />
-            <Text style={styles.statusText}>신선도를 분석 중입니다...</Text>
-          </View>
+          <DSChip
+            label="신선도를 분석 중입니다..."
+            tone="neutral"
+            size="medium"
+            leading={
+              <ActivityIndicator
+                size="small"
+                color={colors.textPrimary}
+                style={styles.statusSpinner}
+              />
+            }
+            style={styles.statusBadge}
+          />
         ) : (
-          <View style={styles.statusBadge}>
-            <Text style={styles.statusText}>식재료를 스캔해주세요</Text>
-          </View>
+          <DSChip
+            label="식재료를 스캔해주세요"
+            tone="neutral"
+            size="medium"
+            style={styles.statusBadge}
+          />
         )}
-        
+
         <TouchableOpacity style={styles.headerButton}>
           <Text style={styles.headerIcon}>⚡️</Text>
         </TouchableOpacity>
@@ -265,7 +300,7 @@ const CameraScanScreen = ({navigation}: Props) => {
             <View style={[styles.corner, styles.topRight]} />
             <View style={[styles.corner, styles.bottomLeft]} />
             <View style={[styles.corner, styles.bottomRight]} />
-            
+
             <Animated.View
               style={[
                 styles.scanLine,
@@ -296,7 +331,10 @@ const CameraScanScreen = ({navigation}: Props) => {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.shutterContainer, isAnalyzing && styles.shutterDisabled]}
+            style={[
+              styles.shutterContainer,
+              isAnalyzing && styles.shutterDisabled,
+            ]}
             onPress={handleCapture}
             disabled={isAnalyzing}>
             <View style={styles.shutterButton} />

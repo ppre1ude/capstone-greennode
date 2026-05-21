@@ -79,13 +79,14 @@ FoodLink는 사용자가 남는 식재료를 AI로 확인하고, 가까운 공�
 ```text
 src/
   api/          API client와 인증 이벤트
-  components/   재사용 UI 컴포넌트
+  design-system/ Montage식 API를 GreenNode 토큰 위에 얹은 DS 프리미티브
+  components/   도메인 데이터를 DS 프리미티브로 조합하는 제품 컴포넌트
   config/       API base URL 등 실행 설정
   navigation/   Auth/Main/Root 네비게이션
   screens/      화면 단위 구현
   services/     FCM, 디바이스 등록, 알림 처리
   store/        Zustand store
-  theme/        컬러, 타이포그래피, spacing 토큰
+  theme/        컬러, 타이포그래피, spacing, radius, layout 토큰
   types/        API/도메인 타입
   utils/        정책, validation, storage helper
 docs/           제품/도메인/API/검증 문서
@@ -196,6 +197,7 @@ npm run mock:api
 | [docs/API_INTEGRATION_CONTRACT.md](./docs/API_INTEGRATION_CONTRACT.md) | API 접속, 요청/응답 계약, FCM 계약 |
 | [docs/VALIDATION_AND_BACKLOG.md](./docs/VALIDATION_AND_BACKLOG.md) | 실제 검증 결과와 다음 백로그 |
 | [docs/IMPLEMENTATION_STATUS.md](./docs/IMPLEMENTATION_STATUS.md) | 구현 상태 요약 |
+| [docs/DESIGN_SYSTEM.md](./docs/DESIGN_SYSTEM.md) | 디자인 토큰, DS 컴포넌트 레이어, UI 마이그레이션 규칙 |
 | [docs/INVENTORY_QR_PRD_V0.md](./docs/INVENTORY_QR_PRD_V0.md) | Post-MVP QR 인증, 30분 임시 선점, 냉장고 재고 운영 PRD |
 | [docs/DESIGN_SYSTEM.md](./docs/DESIGN_SYSTEM.md) | 디자인 토큰과 UI 가이드 |
 | [docs/AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md](./docs/AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md) | AI fixture와 카메라 QA 체크리스트 |

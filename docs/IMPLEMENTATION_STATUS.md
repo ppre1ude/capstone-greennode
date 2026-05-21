@@ -1,8 +1,13 @@
+## 2026-05-19 지도 디자인 시스템 마이그레이션 업데이트
+
+- 지도 화면은 기존 MapView/Marker/Circle, API 호출, 냉장고 선택, refresh, 상세 이동 로직을 유지하면서 검색 필드와 반복 카드/시트/액션을 DS primitive로 치환했다.
+- DS 카탈로그는 `leading`/`trailing` icon slot, 선택된 list/card 패턴, static status chip 예시를 포함한다.
+- 검증 범위는 Jest 회귀 테스트 기준이다. 이 pass에서는 실제 Android 기기 QA를 수행하지 않았고, 남은 시각/실기기 QA는 Task 4 또는 별도 QA에서 확인한다.
+
 # FoodLink Implementation Status
 
 > **작성일**: 2026-05-06
-> **기준 브랜치**: `codex/backend-phase1half-frontend-sync`
-> **기준 문서**: [`VALIDATION_AND_BACKLOG.md`](./VALIDATION_AND_BACKLOG.md)
+> **기준 브랜치**: `codex/backend-phase1half-frontend-sync` > **기준 문서**: [`VALIDATION_AND_BACKLOG.md`](./VALIDATION_AND_BACKLOG.md)
 
 ## Agent Workflow
 
@@ -19,6 +24,14 @@
   [VALIDATION_AND_BACKLOG.md](./VALIDATION_AND_BACKLOG.md) win over this summary.
 
 이 문서는 초기 Phase 1~6 구현 리포트를 2026-05-05 MVP 검증 결과 기준으로 갱신한 것이다. 과거 문서의 일괄 완료 표현은 실제 서버/기기 검증 결과를 반영하지 못하므로, 현재는 `구현됨`, `부분 구현`, `목업`, `미구현`, `검증 필요`, `버그`로 분리한다.
+
+## 2026-05-19 Montage 기반 디자인 시스템 레이어
+
+- 상태 변경: GreenNode의 기존 컬러 팔레트와 `src/theme` 토큰을 유지하면서, Wanted Montage Android/iOS의 컴포넌트 API 패턴을 참고한 `src/design-system` 레이어를 추가했다.
+- 구현 범위: `DSText`, `DSButton`, `DSChip`, `DSTextField`, `DSCard`, `DSListCell`을 추가하고, 홈 주변 나눔 카드(`NearbyPostCard`)를 `DSCard`/`DSChip`/`DSText` 조합으로 마이그레이션했다.
+- 확장 범위: DS 컴포넌트 카탈로그를 추가하고, 로그인/회원가입/위치 설정/나눔 등록/나눔 상세의 반복 CTA와 입력 패턴을 DS 프리미티브 우선으로 치환한다.
+- 설계 기준: Montage는 팔레트 공급원이 아니라 `variant`, `tone`, `size`, `status`, `loading`, `disabled`, leading/trailing slot, 선택/비활성 상태 분리의 참조 모델로 사용한다.
+- 검증: `npx tsc --noEmit`, `npm test -- --runInBand`(28 suites / 112 tests), `npm run lint`를 통과했다. lint는 기존 warning 9개가 남아 있지만 exit code는 0이다. 이 환경은 `adb`가 PATH에 없어 Android 시각 QA는 다음 실기기 QA로 넘긴다.
 
 ## 2026-05-06 백엔드 Phase 1.5 동기화
 
@@ -131,21 +144,23 @@
 
 ## 1. 현재 상태 요약
 
-| 영역                       | 상태                              | 요약                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| -------------------------- | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 이메일 인증/로그인         | 구현됨                            | 이메일 회원가입, 로그인, JWT 저장, `/auth/me` 조회가 동작한다. 소셜 로그인과 이메일 verification은 미구현이며, MVP 로그인 화면은 이메일 진입만 노출한다.                                                                                                                                                                                                                                                                                                             |
-| 최초 위치 등록             | 구현됨                            | 위치 없는 유저는 `LocationSetup`으로 이동하고 `/auth/me/location`에 좌표와 FCM 토큰을 저장한다. 홈/지도/나눔 등록 강제 진입도 위치 설정 CTA로 되돌린다. 위치 권한 거부/영구 거부/위치 탐색 실패 시 화면 안에서 재시도와 설정 열기 CTA를 제공하고, 좌표가 없으면 위치 저장을 비활성화한다.                                                                                                                           |
-| 위치 재설정                | 구현됨                            | 홈 위치 헤더와 프로필 `동네 위치 재설정` 메뉴에서 `LocationSetup`으로 재진입한다.                                                                                                                                                                                                                                                                                                                                          |
-| AI 분석                    | 부분 구현, 실제 기기 촬영/갤러리 QA 통과 | mock 파이프라인은 제거됐고 실제 `/posts/generate` 호출이 동작한다. 백엔드 기준 label은 `Fresh/Mid/Stale/unknown`이며 `Mid`는 기존 `Normal` 그룹이다. `confidenceScore`는 Stage 2 신선도 분류 softmax max 확률이고 차단 기준이 아니다. 앱은 0.9 미만을 `확인 필요`로 표시하며, 낮은 confidence 안내는 실제 상태 직접 확인을 명시한다. 에뮬레이터와 실제 Android 기기에서 셔터 촬영, 파일 생성, API 호출, 결과 표시를 확인했다. 2026-05-08 실제 기기에서 카메라 촬영 generate 400 실패 Alert와 갤러리 fresh fixture 분석 성공을 모두 확인했다. 백엔드 답변 기준 screenshot/UI 통과는 MVP 허용이고, rejection reason enum은 Post-MVP다.                                                        |
-| 나눔 식재료 등록           | 부분 구현, 실제 기기 등록 QA 통과 | 실제 `generate -> imageToken -> createPost` 흐름으로 서버 등록이 확인됐다. 백엔드 Phase 1.5 구조에 맞춰 작성 화면은 제목/설명/카테고리 입력 대신 AI 판별 식재료명, 신선도, confidence를 확인하고 `fridgeId`, `expirationDate`, `imageToken`만 최종 등록 payload로 보낸다. `canShare=false` 또는 `imageToken` 누락은 분석 결과, 작성, 최종 등록 단계에서 차단한다. 2026-05-08 실제 기기 갤러리 fresh fixture로 Post id `8`을 생성했고, 홈 복귀 후 주변 목록 재조회, 상세 AI 메타데이터, 지도 냉장고 내부 목록을 확인했다. VM/API에서 백엔드 sidecar 저장/복원 수정 후 신규 Post 생성 응답의 AI 메타데이터 non-null도 확인했다. |
-| 나눔 식재료 상세/삭제/신청 | 부분 구현, 실제 기기 신청 QA 통과 | 실제 상세 응답의 `authorId` 기준으로 작성자 여부를 판단한다. 상세 화면은 구형 `title/description/category` 대신 `detectedFruitKo`, `freshnessLabel`, `confidenceScore`, `status`를 표시한다. `available` 나눔 식재료는 `requestShare(postId)`로 신청하고, 201/409 이후 `신청 접수` 상태로 CTA를 비활성화한다. 403은 작성자 본인 fallback 문구로 처리한다. 2026-05-08 VM/API에서 신규 Post 상세 AI 메타데이터 non-null과 `available -> requested` 전환을 재확인했고, 실제 Android 기기에서도 신청 완료 alert와 `신청 접수` disabled CTA를 확인했다.                                                                  |
-| 홈 주변 나눔 식재료        | 부분 구현, 실제 기기 홈 재조회 통과 | `/posts/nearby` 데이터를 카드로 표시한다. 홈 카드는 `PostNearbyRead` 기준으로 `detectedFruitKo`, `freshnessLabel`, `status`, `fridgeName`을 사용하며 `confidenceScore`는 이 응답 계약에 없다. API 실패와 빈 상태는 UI에서 분리됐다. 위치가 없으면 API를 호출하지 않고 위치 설정 CTA를 표시한다. 홈은 냉장고보다 available 나눔 식재료를 먼저 보여주는 화면이다. 홈 포커스와 등록 완료 refresh token 변경 시 재조회한다. 2026-05-21부터 현재 로딩된 nearby 목록에서 권장 수령일이 가까운 available 항목을 `오늘 가져가기 좋은 재료`로 로컬 추천한다. 2026-05-08 실제 기기 등록 완료 후 주변 나눔 `3건`에 신규 `바나나`가 표시됐고, 다른 계정 신청 후 `2건`으로 줄어 requested 항목이 제외됐다. |
-| 지도/냉장고                | 부분 구현, 실제 기기 UI QA 통과        | `/fridges/nearby`, `/fridges/available` 조회와 지도 마커/냉장고 선택은 동작한다. 지도에서 냉장고를 선택하면 `GET /fridges/{id}/posts?status=available`로 내부 available 나눔 식재료를 조회하고, loading/error/empty/list 상태를 분리한다. VM API에서 생성 직후 냉장고 내부 목록 포함과 신청 후 `requested` 제외를 확인했다. Android emulator에서 냉장고 empty/list 상태와 목록 항목 상세 이동을 확인했다. 2026-05-08 VM/API에서 응답이 `PostNearbyRead`이며 `confidenceScore`를 포함하지 않고, 신규 Post의 카드 표시명/상태가 내려오는 것을 재확인했다. 실제 Android 기기에서는 신규 Post가 `바나나 / 상태가 좋아 보여요`로 표시되고, 상세 신청 후 지도 내부 목록에서 수동 새로고침 없이 제거되는 것을 확인했다. |
-| 나눔 신청                  | 프론트 코드 연동 완료, 실제 기기 QA 통과 | 백엔드는 `POST /posts/{id}/requests`, `available -> requested`, `SELECT ... FOR UPDATE` 경합 처리, 작성자 403, 중복/경합 409, 신청 알림을 구현/검증했다. 프론트는 `requestShare(postId)`, 상세 CTA, 201/403/409 UX, 홈/지도 refresh store를 구현했다. 2026-05-06 VM API에서 작성자 본인 403, 첫 신청 201, 중복 신청 409, 신청 후 `requested` 전환과 주변 목록 제외를 확인했다. 2026-05-08 실제 Android 기기에서 신청 완료 alert, 상세 `신청 접수` 전환, 지도 냉장고 내부 목록 즉시 제거를 확인했다.                                                                                                                               |
-| FCM                        | foreground/background 실수신 QA 통과, P0 handoff 남음 | FCM 토큰 등록과 `share_created`, `share_requested` 수신 handler가 있다. 위치 설정 화면은 진입 즉시 알림 권한을 요청하지 않고 `나눔 알림 받기` CTA를 눌렀을 때만 토큰을 준비한다. 기존 유저의 위치 자동 갱신 경로도 알림 권한 요청을 열지 않으며, 기존 `fcmToken`이 있을 때만 함께 보낸다. Android 13+ 알림 권한 거부 시 Firebase permission/register/getToken을 호출하지 않고 `fcmToken` 없이 위치 등록을 계속한다. payload는 문자열 + camelCase(`postId`, `requestId`, `fruitName`, `fridgeName`, `type`)로 검증한다. 2026-05-21 emulator QA에서 `greennode-94eae` client/Admin project 정렬 후 `share_created`, `share_requested` 실제 send success 1 / failure 0, foreground 수신/로컬 알림 탭 기록, background system notification 표시와 tap의 `PostDetail` 라우팅을 확인했다. terminated surrogate는 notification 표시까지만 확인됐고, tap routing reliability는 backend Android FCM priority `high` 적용 후 재검증한다. true 2-device QA는 physical Samsung device가 `adb devices`에 표시되지 않아 보류 중이다. 서버 읽음 상태 API는 없다. |
-| 채팅                       | 보류                              | 정적 채팅 mock 데이터는 제거했다. WebSocket/API 계약은 없다.                                                                                                                                                                                                                                                                                                                                                               |
-| 통계/탄소 절감             | 정리됨                            | 실제 지표 API가 없는 홈/프로필 mock 숫자는 제거하고 준비 중 상태로 표시한다.                                                                                                                                                                                                                                                                                                                                               |
-| 검색                       | 부분 구현                         | MVP 검색은 지도 공유 냉장고 이름/주소 로컬 필터로 제한했다. 서버 검색 API는 없다.                                                                                                                                                                                                                                                                                                                                          |
+| 영역                       | 상태                                     | 요약 |
+| -------------------------- | ---------------------------------------- | --- |
+| 이메일 인증/로그인         | 구현됨                                   | 이메일 회원가입, 로그인, JWT 저장, `/auth/me` 조회가 동작한다. 소셜 로그인과 이메일 verification은 미구현이며, MVP 로그인 화면은 이메일 진입만 노출한다. |
+| 최초 위치 등록             | 구현됨                                   | 위치 없는 유저는 `LocationSetup`으로 이동하고 `/auth/me/location`에 좌표와 FCM 토큰을 저장한다. 홈/지도/나눔 등록 강제 진입도 위치 설정 CTA로 되돌린다. 위치 권한 거부/영구 거부/위치 탐색 실패 시 화면 안에서 재시도와 설정 열기 CTA를 제공하고, 좌표가 없으면 위치 저장을 비활성화한다. |
+| 위치 재설정                | 구현됨                                   | 홈 위치 헤더와 프로필 `동네 위치 재설정` 메뉴에서 `LocationSetup`으로 재진입한다. |
+| 디자인 시스템              | 컴포넌트 레이어 도입됨                   | `src/theme`는 GreenNode 색상/타이포그래피/spacing/radius/layout 토큰의 source of truth로 유지한다. `src/design-system`은 Montage식 prop 계약을 React Native 프리미티브로 제공하며, 홈 주변 나눔 카드부터 로그인/회원가입/위치 설정/나눔 등록/나눔 상세의 반복 CTA와 입력 패턴으로 적용 범위를 넓힌다. |
+| AI 분석                    | 부분 구현, 실제 기기 촬영/갤러리 QA 통과 | mock 파이프라인은 제거됐고 실제 `/posts/generate` 호출이 동작한다. 백엔드 기준 label은 `Fresh/Mid/Stale/unknown`이며 `Mid`는 기존 `Normal` 그룹이다. 앱은 0.9 미만을 `확인 필요`로 표시하며, 낮은 confidence 안내는 실제 상태 직접 확인을 명시한다. 2026-05-08 실제 기기에서 카메라 촬영 generate 400 실패 Alert와 갤러리 fresh fixture 분석 성공을 모두 확인했다. |
+| 나눔 식재료 등록           | 부분 구현, 실제 기기 등록 QA 통과        | 실제 `generate -> imageToken -> createPost` 흐름으로 서버 등록이 확인됐다. 작성 화면은 AI 판별 식재료명, 신선도, confidence를 확인하고 `fridgeId`, `expirationDate`, `imageToken`만 최종 등록 payload로 보낸다. `canShare=false` 또는 `imageToken` 누락은 분석 결과, 작성, 최종 등록 단계에서 차단한다. |
+| 나눔 식재료 상세/삭제/신청 | 부분 구현, 실제 기기 신청 QA 통과        | 실제 상세 응답의 `authorId` 기준으로 작성자 여부를 판단한다. 상세 화면은 `detectedFruitKo`, `freshnessLabel`, `confidenceScore`, `status`를 표시한다. `available` 나눔 식재료는 `requestShare(postId)`로 신청하고, 201/409 이후 `신청 접수` 상태로 CTA를 비활성화한다. 403은 작성자 본인 fallback 문구로 처리한다. |
+| 홈 주변 나눔 식재료        | 부분 구현, 실제 기기 홈 재조회 통과      | `/posts/nearby` 데이터를 카드로 표시한다. 홈 포커스와 등록 완료 refresh token 변경 시 재조회한다. 2026-05-21부터 현재 로딩된 nearby 목록에서 권장 수령일이 가까운 available 항목을 `오늘 가져가기 좋은 재료`로 로컬 추천한다. |
+| 지도/냉장고                | 부분 구현, 실제 기기 UI QA 통과          | `/fridges/nearby`, `/fridges/available` 조회와 지도 마커/냉장고 선택은 동작한다. 지도에서 냉장고를 선택하면 `GET /fridges/{id}/posts?status=available`로 내부 available 나눔 식재료를 조회하고, loading/error/empty/list 상태를 분리한다. |
+| 냉장고 운영자/QR           | 프론트 선행 구현                         | `flow: "fridge_qr"` 등록, 보관 QR 인증, 수령 QR 인증, 운영자 폐기 요청을 실제 API 호출 경로로 연결했다. 운영자 inventory 조회가 401/403으로 거절되면 샘플 재고와 폐기 버튼을 숨기고 권한 안내만 표시한다. |
+| 나눔 신청                  | 프론트 코드 연동 완료, 실제 기기 QA 통과 | 프론트는 `requestShare(postId)`, 상세 CTA, 201/403/409 UX, 홈/지도 refresh store를 구현했다. 2026-05-08 실제 Android 기기에서 신청 완료 alert, 상세 `신청 접수` 전환, 지도 냉장고 내부 목록 즉시 제거를 확인했다. |
+| FCM                        | foreground/background 실수신 QA 통과, P0 handoff 남음 | 2026-05-21 emulator QA에서 `greennode-94eae` client/Admin project 정렬 후 `share_created`, `share_requested` 실제 send success 1 / failure 0, foreground 수신/로컬 알림 탭 기록, background system notification 표시와 tap의 `PostDetail` 라우팅을 확인했다. terminated tap routing은 backend Android FCM priority `high` 적용 후 재검증한다. true 2-device QA는 physical Samsung device가 `adb devices`에 표시되지 않아 보류 중이다. |
+| 채팅                       | 보류                                     | 정적 채팅 mock 데이터는 제거했다. WebSocket/API 계약은 없다. |
+| 통계/탄소 절감             | 정리됨                                   | 실제 지표 API가 없는 홈/프로필 mock 숫자는 제거하고 준비 중 상태로 표시한다. |
+| 검색                       | 부분 구현                                | MVP 검색은 홈 나눔 식재료명/냉장고명 로컬 필터와 지도 공유 냉장고 이름/주소 로컬 필터로 제한했다. 서버 검색 API는 없다. |
 
 ---
 

@@ -67,13 +67,7 @@ export const styles = StyleSheet.create({
   },
   categoryBadge: {
     backgroundColor: colors.primaryLight,
-    color: colors.primary,
-    fontSize: 12,
-    fontWeight: '700',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
     borderRadius: 8,
-    overflow: 'hidden',
   },
   timeText: {
     fontSize: 13,
@@ -152,17 +146,10 @@ export const styles = StyleSheet.create({
     color: colors.error,
   },
   chatButton: {
-    height: 56,
-    backgroundColor: colors.primary,
+    minHeight: 56,
     borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  chatButtonDisabled: {
-    opacity: 0.55,
   },
   chatButtonText: {
-    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
   },

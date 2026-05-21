@@ -7,24 +7,24 @@
  *
  * @wireframe wireframe-foodlink/scancomplete.html
  */
-import React, {useEffect, useRef} from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   StatusBar,
   Animated,
   Platform,
 } from 'react-native';
-import type {NativeStackScreenProps} from '@react-navigation/native-stack';
-import type {RootStackParamList} from '@/navigation/types';
-import {colors} from '@/theme';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '@/navigation/types';
+import { DSButton, DSCard, DSText } from '@/design-system';
+import { colors } from '@/theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PostComplete'>;
 
-const PostCompleteScreen = ({route, navigation}: Props) => {
-  const {postId} = route.params;
+const PostCompleteScreen = ({ route, navigation }: Props) => {
+  const { postId } = route.params;
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
 
@@ -71,35 +71,62 @@ const PostCompleteScreen = ({route, navigation}: Props) => {
         <Animated.View
           style={[
             styles.iconCircle,
-            {transform: [{scale: scaleAnim}], opacity: opacityAnim},
+            { transform: [{ scale: scaleAnim }], opacity: opacityAnim },
           ]}>
           <Text style={styles.icon}>🎉</Text>
         </Animated.View>
 
-        <Animated.View
-          style={[styles.resultContent, {opacity: opacityAnim}]}>
-          <Text style={styles.title}>나눔 등록 완료!</Text>
-          <Text style={styles.subtitle}>
+        <Animated.View style={[styles.resultContent, { opacity: opacityAnim }]}>
+          <DSText variant="heading1" color="textOnPrimary" style={styles.title}>
+            나눔 등록 완료!
+          </DSText>
+          <DSText
+            variant="body"
+            color="textOnPrimary"
+            align="center"
+            style={styles.subtitle}>
             선택하신 냉장고 주변 이웃들에게{'\n'}나눔 알림을 보낼 준비를 했어요.
-          </Text>
+          </DSText>
 
           {/* 알림 카드 */}
-          <View style={styles.pushCard}>
+          <DSCard variant="elevated" padded={false} style={styles.pushCard}>
             <View style={styles.pushHeader}>
               <Text style={styles.pushIcon}>🔔</Text>
-              <Text style={styles.pushAppName}>FoodLink</Text>
-              <Text style={styles.pushTime}>등록 직후</Text>
+              <DSText
+                variant="caption"
+                color="textSecondary"
+                style={styles.pushAppName}>
+                FoodLink
+              </DSText>
+              <DSText variant="small" color="textTertiary">
+                등록 직후
+              </DSText>
             </View>
-            <Text style={styles.pushTitle}>새로운 나눔이 등록되었어요!</Text>
-            <Text style={styles.pushBody}>근처 공유 냉장고에 나눔 식재료가 등록되었습니다.</Text>
-          </View>
+            <DSText
+              variant="bodyBold"
+              color="textPrimary"
+              style={styles.pushTitle}>
+              새로운 나눔이 등록되었어요!
+            </DSText>
+            <DSText
+              variant="caption"
+              color="textSecondary"
+              style={styles.pushBody}>
+              근처 공유 냉장고에 나눔 식재료가 등록되었습니다.
+            </DSText>
+          </DSCard>
         </Animated.View>
       </View>
 
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.homeButton} onPress={handleGoHome}>
-          <Text style={styles.homeButtonText}>홈으로 돌아가기</Text>
-        </TouchableOpacity>
+        <DSButton
+          label="홈으로 돌아가기"
+          color="assistive"
+          fullWidth
+          onPress={handleGoHome}
+          textStyle={styles.homeButtonText}
+          style={styles.homeButton}
+        />
       </View>
     </View>
   );
@@ -125,7 +152,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 32,
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 10},
+    shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.1,
     shadowRadius: 20,
     elevation: 10,
@@ -137,17 +164,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   title: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#FFFFFF',
     marginBottom: 16,
   },
   subtitle: {
-    fontSize: 16,
-    color: 'rgba(255,255,255,0.9)',
-    textAlign: 'center',
     lineHeight: 24,
     marginBottom: 48,
+    opacity: 0.9,
   },
   // 알림 안내 미리보기 UI
   pushCard: {
@@ -156,7 +178,7 @@ const styles = StyleSheet.create({
     padding: 16,
     width: '100%',
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 12,
     elevation: 8,
@@ -171,24 +193,12 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   pushAppName: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#666666',
     flex: 1,
   },
-  pushTime: {
-    fontSize: 12,
-    color: '#999999',
-  },
   pushTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: colors.textPrimary,
     marginBottom: 4,
   },
   pushBody: {
-    fontSize: 14,
-    color: colors.textSecondary,
     lineHeight: 20,
   },
   // 하단
@@ -197,16 +207,10 @@ const styles = StyleSheet.create({
     paddingBottom: Platform.OS === 'ios' ? 40 : 24,
   },
   homeButton: {
-    height: 56,
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   homeButtonText: {
     color: colors.primary,
-    fontSize: 16,
-    fontWeight: '700',
   },
 });
 

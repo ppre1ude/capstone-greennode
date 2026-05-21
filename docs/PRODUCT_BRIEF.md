@@ -232,5 +232,5 @@ MVP에서 공급자는 `requested` 이후 별도 승인 행동을 하지 않는�
 | 도메인 모델   | [DOMAIN_MODEL.md](./DOMAIN_MODEL.md)                         | FoodLink 용어, 관계, 모호성       |
 | API 연동 계약 | [API_INTEGRATION_CONTRACT.md](./API_INTEGRATION_CONTRACT.md) | 백엔드 API 명세 및 연동 방법      |
 | 검증/백로그   | [VALIDATION_AND_BACKLOG.md](./VALIDATION_AND_BACKLOG.md)     | MVP 검증 결과와 다음 작업         |
+| 디자인 시스템 | [DESIGN_SYSTEM.md](./DESIGN_SYSTEM.md)                       | 컬러/타이포그래피 토큰, DS 컴포넌트 레이어, UI 마이그레이션 규칙 |
 | Inventory/QR PRD | [INVENTORY_QR_PRD_V0.md](./INVENTORY_QR_PRD_V0.md)         | QR 인증, 30분 임시 선점, 냉장고 재고 운영 v0 |
-| 디자인 시스템 | [DESIGN_SYSTEM.md](./DESIGN_SYSTEM.md)                       | 컬러, 타이포그래피, 스페이싱 토큰 |

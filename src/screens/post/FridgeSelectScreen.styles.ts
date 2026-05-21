@@ -1,5 +1,5 @@
-import {StyleSheet, Platform} from 'react-native';
-import {colors} from '@/theme';
+import { StyleSheet, Platform } from 'react-native';
+import { colors } from '@/theme';
 
 export const styles = StyleSheet.create({
   container: {
@@ -31,7 +31,7 @@ export const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.textPrimary,
   },
-  headerSpacer: {width: 40},
+  headerSpacer: { width: 40 },
   content: {
     flex: 1,
     paddingTop: 32,
@@ -43,9 +43,6 @@ export const styles = StyleSheet.create({
     lineHeight: 32,
     paddingHorizontal: 24,
     marginBottom: 24,
-  },
-  highlight: {
-    color: colors.primary,
   },
   centerBox: {
     flex: 1,
@@ -80,17 +77,6 @@ export const styles = StyleSheet.create({
     lineHeight: 20,
     marginBottom: 16,
     paddingHorizontal: 24,
-  },
-  retryButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 10,
-    backgroundColor: colors.primary,
-  },
-  retryButtonText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#FFFFFF',
   },
   listContainer: {
     paddingHorizontal: 24,
@@ -128,9 +114,6 @@ export const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.primary,
     fontWeight: '700',
-  },
-  textSelected: {
-    color: '#FFFFFF',
   },
   radio: {
     width: 24,

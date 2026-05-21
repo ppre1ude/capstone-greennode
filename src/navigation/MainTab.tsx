@@ -5,12 +5,14 @@
  * @wireframe wireframe-foodlink/homescreen.html (하단바)
  */
 import React from 'react';
-import {View, Text, StyleSheet, TouchableOpacity} from 'react-native';
-import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
-import type {MainTabParamList} from './types';
-import {colors} from '@/theme';
-import {useAuthStore} from '@/store/authStore';
-import {hasRegisteredLocation} from '@/utils/locationGuard';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import type { MainTabParamList } from './types';
+import { colors } from '@/theme';
+import { DSIcon } from '@/design-system';
+import type { DSIconName } from '@/design-system';
+import { useAuthStore } from '@/store/authStore';
+import { hasRegisteredLocation } from '@/utils/locationGuard';
 
 import HomeScreen from '@/screens/home/HomeScreen';
 import MapScreen from '@/screens/map/MapScreen';
@@ -19,7 +21,12 @@ import ProfileScreen from '@/screens/profile/ProfileScreen';
 
 const CameraPlaceholder = () => (
   <View style={placeholderStyles.container}>
-    <Text style={placeholderStyles.emoji}>📷</Text>
+    <DSIcon
+      name="camera"
+      size={48}
+      color="primary"
+      style={placeholderStyles.icon}
+    />
     <Text style={placeholderStyles.title}>AI 스캔</Text>
   </View>
 );
@@ -34,20 +41,26 @@ const CameraTabButton = ({
 }) => (
   <TouchableOpacity style={fabStyles.wrapper} onPress={onPress}>
     <View style={fabStyles.button}>
-      <Text style={fabStyles.icon}>📷</Text>
+      <DSIcon
+        name="camera"
+        size="large"
+        color="textOnPrimary"
+        style={fabStyles.icon}
+      />
     </View>
     <Text style={fabStyles.label}>AI 스캔</Text>
   </TouchableOpacity>
 );
 
 /** 탭 아이콘 매핑 */
-const TAB_ICONS: Record<string, {active: string; inactive: string}> = {
-  Home: {active: '🏠', inactive: '🏡'},
-  Map: {active: '🗺️', inactive: '🗺️'},
-  CameraScan: {active: '📷', inactive: '📷'},
-  Chat: {active: '🔔', inactive: '🔔'},
-  Profile: {active: '👤', inactive: '👤'},
-};
+const TAB_ICONS: Record<string, { active: DSIconName; inactive: DSIconName }> =
+  {
+    Home: { active: 'house-chimney', inactive: 'house' },
+    Map: { active: 'map-location-dot', inactive: 'map-location-dot' },
+    CameraScan: { active: 'camera', inactive: 'camera' },
+    Chat: { active: 'bell', inactive: 'bell' },
+    Profile: { active: 'user', inactive: 'user' },
+  };
 
 const TabIcon = ({
   routeName,
@@ -58,25 +71,27 @@ const TabIcon = ({
 }) => {
   const icons = TAB_ICONS[routeName];
   return (
-    <Text style={styles.tabIcon}>
-      {focused ? icons?.active : icons?.inactive}
-    </Text>
+    <DSIcon
+      name={focused ? icons?.active : icons?.inactive}
+      size="large"
+      color={focused ? 'primary' : 'textTertiary'}
+    />
   );
 };
 
-const homeIcon = ({focused}: {focused: boolean}) => (
+const homeIcon = ({ focused }: { focused: boolean }) => (
   <TabIcon routeName="Home" focused={focused} />
 );
 
-const mapIcon = ({focused}: {focused: boolean}) => (
+const mapIcon = ({ focused }: { focused: boolean }) => (
   <TabIcon routeName="Map" focused={focused} />
 );
 
-const chatIcon = ({focused}: {focused: boolean}) => (
+const chatIcon = ({ focused }: { focused: boolean }) => (
   <TabIcon routeName="Chat" focused={focused} />
 );
 
-const profileIcon = ({focused}: {focused: boolean}) => (
+const profileIcon = ({ focused }: { focused: boolean }) => (
   <TabIcon routeName="Profile" focused={focused} />
 );
 
@@ -86,9 +101,7 @@ const cameraTabButton = ({
   onPress,
 }: {
   onPress?: React.ComponentProps<typeof TouchableOpacity>['onPress'];
-}) => (
-  <CameraTabButton onPress={onPress} />
-);
+}) => <CameraTabButton onPress={onPress} />;
 
 const MainTab = () => {
   const user = useAuthStore(state => state.user);
@@ -106,12 +119,12 @@ const MainTab = () => {
       <Tab.Screen
         name="Home"
         component={HomeScreen}
-        options={{tabBarLabel: '홈', tabBarIcon: homeIcon}}
+        options={{ tabBarLabel: '홈', tabBarIcon: homeIcon }}
       />
       <Tab.Screen
         name="Map"
         component={MapScreen}
-        options={{tabBarLabel: '지도', tabBarIcon: mapIcon}}
+        options={{ tabBarLabel: '지도', tabBarIcon: mapIcon }}
       />
       {/* 
         카메라 탭: 실제 화면은 RootStack의 CameraScan을 띄웁니다.
@@ -124,11 +137,13 @@ const MainTab = () => {
           tabBarLabel: emptyLabel,
           tabBarButton: cameraTabButton,
         }}
-        listeners={({navigation}) => ({
+        listeners={({ navigation }) => ({
           tabPress: e => {
             e.preventDefault();
             if (!hasLocation) {
-              navigation.getParent()?.navigate('LocationSetup', {allowBack: true});
+              navigation
+                .getParent()
+                ?.navigate('LocationSetup', { allowBack: true });
               return;
             }
             // RootStack의 CameraScan으로 이동
@@ -139,12 +154,12 @@ const MainTab = () => {
       <Tab.Screen
         name="Chat"
         component={ChatListScreen}
-        options={{tabBarLabel: '알림', tabBarIcon: chatIcon}}
+        options={{ tabBarLabel: '알림', tabBarIcon: chatIcon }}
       />
       <Tab.Screen
         name="Profile"
         component={ProfileScreen}
-        options={{tabBarLabel: '내정보', tabBarIcon: profileIcon}}
+        options={{ tabBarLabel: '내정보', tabBarIcon: profileIcon }}
       />
     </Tab.Navigator>
   );
@@ -163,9 +178,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
   },
-  tabIcon: {
-    fontSize: 22,
-  },
 });
 
 const fabStyles = StyleSheet.create({
@@ -182,7 +194,7 @@ const fabStyles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: colors.primary,
-    shadowOffset: {width: 0, height: 8},
+    shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.35,
     shadowRadius: 12,
     elevation: 10,
@@ -190,7 +202,7 @@ const fabStyles = StyleSheet.create({
     borderColor: '#FFFFFF',
   },
   icon: {
-    fontSize: 24,
+    lineHeight: 24,
   },
   label: {
     fontSize: 10,
@@ -207,8 +219,7 @@ const placeholderStyles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.surface,
   },
-  emoji: {
-    fontSize: 48,
+  icon: {
     marginBottom: 16,
   },
   title: {

@@ -2,7 +2,6 @@ import React from 'react';
 import { Alert, Text, TouchableOpacity } from 'react-native';
 import ReactTestRenderer from 'react-test-renderer';
 import PostDetailScreen from '@/screens/post/PostDetailScreen';
-import { styles } from '@/screens/post/PostDetailScreen.styles';
 import { getPostDetail, requestShare } from '@/api/posts';
 import { useAuthStore } from '@/store/authStore';
 import { useFeedRefreshStore } from '@/store/feedRefreshStore';
@@ -76,21 +75,15 @@ const findButtonByText = (
     }),
   );
 
-const findPickupQrButtons = (renderer: ReactTestRenderer.ReactTestRenderer) =>
-  renderer.root
-    .findAllByType(TouchableOpacity)
-    .filter(button => button.props.style === styles.pickupQrButton);
+const findPickupQrButtons = (renderer: ReactTestRenderer.ReactTestRenderer) => {
+  const button = findButtonByText(renderer, '수령 QR 인증');
+  return button ? [button] : [];
+};
 
-const findExpiredHoldNotices = (
-  renderer: ReactTestRenderer.ReactTestRenderer,
-) =>
-  renderer.root
-    .findAllByType(Text)
-    .filter(textNode =>
-      Array.isArray(textNode.props.style)
-        ? textNode.props.style.includes(styles.requestHoldNoticeExpired)
-        : false,
-    );
+const findExpiredHoldNotices = (renderer: ReactTestRenderer.ReactTestRenderer) =>
+  renderer.root.findAllByProps({
+    children: '수령 제한 시간이 지났어요. 목록을 새로고침하면 상태가 갱신됩니다.',
+  });
 
 describe('PostDetailScreen share request', () => {
   const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
@@ -373,7 +366,7 @@ describe('PostDetailScreen share request', () => {
     });
 
     expect(findPickupQrButtons(renderer)).toHaveLength(0);
-    expect(findExpiredHoldNotices(renderer)).toHaveLength(1);
+    expect(findExpiredHoldNotices(renderer).length).toBeGreaterThan(0);
     expect(useFeedRefreshStore.getState().nearbyPostsRefreshToken).toBe(1);
     expect(useFeedRefreshStore.getState().requestedPostId).toBeNull();
 

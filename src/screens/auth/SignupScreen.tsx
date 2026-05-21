@@ -7,32 +7,31 @@
  *
  * @wireframe wireframe-foodlink/login-input.html
  */
-import React, {useState} from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   StatusBar,
   Alert,
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
 } from 'react-native';
-import {useForm, Controller} from 'react-hook-form';
-import {zodResolver} from '@hookform/resolvers/zod';
-import type {NativeStackScreenProps} from '@react-navigation/native-stack';
-import type {AuthStackParamList} from '@/navigation/types';
-import {signupSchema, type SignupFormData} from '@/utils/validation';
-import {signup, login, getMe} from '@/api/auth';
-import {useAuthStore} from '@/store/authStore';
-import {colors} from '@/theme';
-import {styles} from './SignupScreen.styles';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { AuthStackParamList } from '@/navigation/types';
+import { signupSchema, type SignupFormData } from '@/utils/validation';
+import { signup, login, getMe } from '@/api/auth';
+import { useAuthStore } from '@/store/authStore';
+import { colors } from '@/theme';
+import { DSButton, DSTextField } from '@/design-system';
+import { styles } from './SignupScreen.styles';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Signup'>;
 
-const SignupScreen = ({navigation}: Props) => {
+const SignupScreen = ({ navigation }: Props) => {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const setToken = useAuthStore(state => state.setToken);
@@ -41,7 +40,7 @@ const SignupScreen = ({navigation}: Props) => {
   const {
     control,
     handleSubmit,
-    formState: {errors},
+    formState: { errors },
   } = useForm<SignupFormData>({
     resolver: zodResolver(signupSchema),
     defaultValues: {
@@ -63,7 +62,10 @@ const SignupScreen = ({navigation}: Props) => {
       });
 
       if (!signupRes.success) {
-        Alert.alert('가입 실패', signupRes.message || '회원가입에 실패했습니다.');
+        Alert.alert(
+          '가입 실패',
+          signupRes.message || '회원가입에 실패했습니다.',
+        );
         return;
       }
 
@@ -81,13 +83,12 @@ const SignupScreen = ({navigation}: Props) => {
         // 회원가입 직후 → 항상 LocationSetup
         const rootNav = navigation.getParent();
         if (rootNav) {
-          rootNav.reset({index: 0, routes: [{name: 'LocationSetup'}]});
+          rootNav.reset({ index: 0, routes: [{ name: 'LocationSetup' }] });
         }
       }
     } catch (error: any) {
       const message =
-        error?.response?.data?.message ||
-        '서버에 연결할 수 없습니다.';
+        error?.response?.data?.message || '서버에 연결할 수 없습니다.';
       Alert.alert('오류', message);
     } finally {
       setIsLoading(false);
@@ -127,15 +128,16 @@ const SignupScreen = ({navigation}: Props) => {
         <View style={styles.form}>
           {/* 이메일 */}
           <View style={styles.fieldGroup}>
-            <Text style={styles.label}>이메일 주소</Text>
             <Controller
               control={control}
               name="email"
-              render={({field: {onChange, onBlur, value}}) => (
-                <TextInput
-                  style={[styles.input, errors.email && styles.inputError]}
+              render={({ field: { onChange, onBlur, value } }) => (
+                <DSTextField
+                  label="이메일 주소"
+                  status={errors.email ? 'error' : 'normal'}
+                  caption={errors.email?.message}
+                  inputContainerStyle={styles.input}
                   placeholder="example@email.com"
-                  placeholderTextColor={colors.textPlaceholder}
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
@@ -145,22 +147,22 @@ const SignupScreen = ({navigation}: Props) => {
                 />
               )}
             />
-            {errors.email && (
-              <Text style={styles.errorText}>{errors.email.message}</Text>
-            )}
           </View>
 
           {/* 닉네임 */}
           <View style={styles.fieldGroup}>
-            <Text style={styles.label}>닉네임</Text>
             <Controller
               control={control}
               name="nickname"
-              render={({field: {onChange, onBlur, value}}) => (
-                <TextInput
-                  style={[styles.input, errors.nickname && styles.inputError]}
+              render={({ field: { onChange, onBlur, value } }) => (
+                <DSTextField
+                  label="닉네임"
+                  status={errors.nickname ? 'error' : 'normal'}
+                  caption={
+                    errors.nickname?.message ?? '2~10자, 한글/영문/숫자 가능'
+                  }
+                  inputContainerStyle={styles.input}
                   placeholder="닉네임을 입력해주세요"
-                  placeholderTextColor={colors.textPlaceholder}
                   autoCapitalize="none"
                   maxLength={10}
                   onBlur={onBlur}
@@ -169,63 +171,50 @@ const SignupScreen = ({navigation}: Props) => {
                 />
               )}
             />
-            {errors.nickname ? (
-              <Text style={styles.errorText}>{errors.nickname.message}</Text>
-            ) : (
-              <Text style={styles.hintText}>2~10자, 한글/영문/숫자 가능</Text>
-            )}
           </View>
 
           {/* 비밀번호 */}
           <View style={styles.fieldGroup}>
-            <Text style={styles.label}>비밀번호</Text>
-            <View style={styles.passwordWrapper}>
-              <Controller
-                control={control}
-                name="password"
-                render={({field: {onChange, onBlur, value}}) => (
-                  <TextInput
-                    style={[
-                      styles.input,
-                      styles.passwordInput,
-                      errors.password && styles.inputError,
-                    ]}
-                    placeholder="8자 이상 입력해주세요"
-                    placeholderTextColor={colors.textPlaceholder}
-                    secureTextEntry={!showPassword}
-                    onBlur={onBlur}
-                    onChangeText={onChange}
-                    value={value}
-                  />
-                )}
-              />
-              <TouchableOpacity
-                style={styles.eyeButton}
-                onPress={() => setShowPassword(!showPassword)}>
-                <Text style={styles.eyeIcon}>
-                  {showPassword ? '🙈' : '👁️'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-            {errors.password && (
-              <Text style={styles.errorText}>{errors.password.message}</Text>
-            )}
+            <Controller
+              control={control}
+              name="password"
+              render={({ field: { onChange, onBlur, value } }) => (
+                <DSTextField
+                  label="비밀번호"
+                  status={errors.password ? 'error' : 'normal'}
+                  caption={errors.password?.message}
+                  inputContainerStyle={styles.input}
+                  placeholder="8자 이상 입력해주세요"
+                  secureTextEntry={!showPassword}
+                  onBlur={onBlur}
+                  onChangeText={onChange}
+                  value={value}
+                  trailing={
+                    <TouchableOpacity
+                      style={styles.eyeButton}
+                      onPress={() => setShowPassword(!showPassword)}>
+                      <Text style={styles.eyeIcon}>
+                        {showPassword ? '🙈' : '👁️'}
+                      </Text>
+                    </TouchableOpacity>
+                  }
+                />
+              )}
+            />
           </View>
 
           {/* 비밀번호 확인 */}
           <View style={styles.fieldGroup}>
-            <Text style={styles.label}>비밀번호 확인</Text>
             <Controller
               control={control}
               name="passwordConfirm"
-              render={({field: {onChange, onBlur, value}}) => (
-                <TextInput
-                  style={[
-                    styles.input,
-                    errors.passwordConfirm && styles.inputError,
-                  ]}
+              render={({ field: { onChange, onBlur, value } }) => (
+                <DSTextField
+                  label="비밀번호 확인"
+                  status={errors.passwordConfirm ? 'error' : 'normal'}
+                  caption={errors.passwordConfirm?.message}
+                  inputContainerStyle={styles.input}
                   placeholder="비밀번호를 한번 더 입력해주세요"
-                  placeholderTextColor={colors.textPlaceholder}
                   secureTextEntry={!showPassword}
                   onBlur={onBlur}
                   onChangeText={onChange}
@@ -233,11 +222,6 @@ const SignupScreen = ({navigation}: Props) => {
                 />
               )}
             />
-            {errors.passwordConfirm && (
-              <Text style={styles.errorText}>
-                {errors.passwordConfirm.message}
-              </Text>
-            )}
           </View>
         </View>
 
@@ -247,22 +231,22 @@ const SignupScreen = ({navigation}: Props) => {
             <Text style={styles.termsCheckIcon}>✓</Text>
           </View>
           <Text style={styles.termsText}>
-            <Text style={styles.termsBold}>이용약관 및 개인정보 처리방침</Text>에
-            동의합니다.
+            <Text style={styles.termsBold}>이용약관 및 개인정보 처리방침</Text>
+            에 동의합니다.
           </Text>
         </View>
 
         {/* CTA */}
-        <TouchableOpacity
-          style={[styles.submitButton, isLoading && styles.submitButtonDisabled]}
+        <DSButton
+          label={isLoading ? '' : '가입하기'}
+          accessibilityLabel="가입하기"
+          loading={isLoading}
+          loadingLabel=""
           onPress={handleSubmit(onSubmit)}
-          disabled={isLoading}>
-          {isLoading ? (
-            <ActivityIndicator color="#FFFFFF" />
-          ) : (
-            <Text style={styles.submitButtonText}>가입하기</Text>
-          )}
-        </TouchableOpacity>
+          disabled={isLoading}
+          style={styles.submitButton}
+          textStyle={styles.submitButtonText}
+        />
 
         {/* 로그인 링크 */}
         <View style={styles.loginRow}>

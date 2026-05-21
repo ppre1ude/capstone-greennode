@@ -9,18 +9,17 @@
 import React from 'react';
 import {
   View,
-  Text,
   StyleSheet,
-  TouchableOpacity,
   ScrollView,
   Alert,
   StatusBar,
   Platform,
 } from 'react-native';
-import {useNavigation} from '@react-navigation/native';
-import {useAuthStore} from '@/store/authStore';
-import {colors} from '@/theme';
-import type {User} from '@/types';
+import { useNavigation } from '@react-navigation/native';
+import { useAuthStore } from '@/store/authStore';
+import { DSButton, DSCard, DSChip, DSListCell, DSText } from '@/design-system';
+import { colors } from '@/theme';
+import type { User } from '@/types';
 
 const MENU_ITEMS = [
   {id: 'location', title: '동네 위치 재설정', icon: '📍'},
@@ -67,7 +66,7 @@ const ProfileScreen = () => {
 
   const handleLogout = () => {
     Alert.alert('로그아웃', '정말 로그아웃 하시겠습니까?', [
-      {text: '취소', style: 'cancel'},
+      { text: '취소', style: 'cancel' },
       {
         text: '로그아웃',
         style: 'destructive',
@@ -80,7 +79,7 @@ const ProfileScreen = () => {
 
   const handleMenuPress = (id: string) => {
     if (id === 'location') {
-      navigation.getParent()?.navigate('LocationSetup', {allowBack: true});
+      navigation.getParent()?.navigate('LocationSetup', { allowBack: true });
       return;
     }
 
@@ -108,76 +107,117 @@ const ProfileScreen = () => {
 
       {/* 헤더 */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>내 정보</Text>
+        <DSText variant="heading2" style={styles.headerTitle}>
+          내 정보
+        </DSText>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* 프로필 정보 */}
-        <View style={styles.profileSection}>
+        <DSCard variant="plain" padded={false} style={styles.profileSection}>
           <View style={styles.profileRow}>
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>
+              <DSText
+                variant="heading2"
+                color="primary"
+                style={styles.avatarText}>
                 {user?.nickname?.[0] || 'G'}
-              </Text>
+              </DSText>
             </View>
             <View style={styles.info}>
-              <Text style={styles.nickname}>{user?.nickname || '게스트'}</Text>
-              <Text style={styles.email}>{user?.email}</Text>
+              <DSText variant="heading3" style={styles.nickname}>
+                {user?.nickname || '게스트'}
+              </DSText>
+              <DSText
+                variant="caption"
+                color="textSecondary"
+                style={styles.email}>
+                {user?.email}
+              </DSText>
             </View>
-            <TouchableOpacity style={styles.editButton}>
-              <Text style={styles.editButtonText}>프로필 수정</Text>
-            </TouchableOpacity>
+            <DSButton
+              label="프로필 수정"
+              color="assistive"
+              size="small"
+              style={styles.editButton}
+              textStyle={styles.editButtonText}
+            />
           </View>
 
           {/* 신뢰도 온도 (프로그레스) */}
-          <View style={styles.trustBox}>
+          <DSCard variant="plain" style={styles.trustBox}>
             <View style={styles.trustHeader}>
-              <Text style={styles.trustTitle}>신선도 온도 🌡️</Text>
-              <Text style={styles.trustScore}>준비 중</Text>
+              <DSText variant="bodyBold" style={styles.trustTitle}>
+                신선도 온도 🌡️
+              </DSText>
+              <DSChip
+                label="준비 중"
+                tone="primary"
+                size="small"
+                style={styles.trustScore}
+              />
             </View>
             <View style={styles.progressBarBg}>
-              <View style={[styles.progressBarFill, {width: '0%'}]} />
+              <View style={[styles.progressBarFill, styles.progressBarEmpty]} />
             </View>
-            <Text style={styles.trustDesc}>
+            <DSText
+              variant="small"
+              color="textTertiary"
+              style={styles.trustDesc}>
               나눔 기록이 쌓이면 활동 지표가 표시됩니다.
-            </Text>
-          </View>
+            </DSText>
+          </DSCard>
 
           {/* 포인트 & 탄소절감량 */}
           <View style={styles.statsRow}>
             <View style={styles.statBox}>
-              <Text style={styles.statTitle}>보유 포인트</Text>
-              <Text style={styles.statValue}>준비 중</Text>
+              <DSText
+                variant="caption"
+                color="textSecondary"
+                style={styles.statTitle}>
+                보유 포인트
+              </DSText>
+              <DSChip label="준비 중" size="large" style={styles.statValue} />
             </View>
             <View style={styles.divider} />
             <View style={styles.statBox}>
-              <Text style={styles.statTitle}>탄소 절감량</Text>
-              <Text style={styles.statValue}>준비 중</Text>
+              <DSText
+                variant="caption"
+                color="textSecondary"
+                style={styles.statTitle}>
+                탄소 절감량
+              </DSText>
+              <DSChip label="준비 중" size="large" style={styles.statValue} />
             </View>
           </View>
-        </View>
+        </DSCard>
 
         {/* 메뉴 리스트 */}
-        <View style={styles.menuSection}>
+        <DSCard variant="plain" padded={false} style={styles.menuSection}>
           {visibleMenuItems.map((item, index) => (
-            <TouchableOpacity
+            <DSListCell
               key={item.id}
+              title={item.title}
+              leading={<DSText style={styles.menuIcon}>{item.icon}</DSText>}
+              chevron
+              divider={index !== visibleMenuItems.length - 1}
+              verticalPadding="large"
               onPress={() => handleMenuPress(item.id)}
-              style={[
-                styles.menuItem,
-                index === visibleMenuItems.length - 1 && styles.menuItemLast,
-              ]}>
-              <Text style={styles.menuIcon}>{item.icon}</Text>
-              <Text style={styles.menuTitle}>{item.title}</Text>
-              <Text style={styles.menuChevron}>›</Text>
-            </TouchableOpacity>
+              style={styles.menuItem}
+            />
           ))}
-        </View>
+        </DSCard>
 
         {/* 하단 로그아웃 */}
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Text style={styles.logoutText}>로그아웃</Text>
-        </TouchableOpacity>
+        <DSButton
+          label="로그아웃"
+          variant="outlined"
+          color="danger"
+          size="medium"
+          style={styles.logoutButton}
+          textStyle={styles.logoutText}
+          onPress={handleLogout}
+        />
       </ScrollView>
     </View>
   );
@@ -196,14 +236,13 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 22,
-    fontWeight: '700',
-    color: colors.textPrimary,
   },
   scrollContent: {
     paddingBottom: 40,
   },
   profileSection: {
     backgroundColor: '#FFFFFF',
+    borderRadius: 0,
     padding: 24,
     marginBottom: 12,
   },
@@ -223,32 +262,22 @@ const styles = StyleSheet.create({
   },
   avatarText: {
     fontSize: 24,
-    fontWeight: '700',
-    color: colors.primary,
   },
   info: {
     flex: 1,
   },
   nickname: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.textPrimary,
     marginBottom: 4,
   },
   email: {
     fontSize: 13,
-    color: colors.textSecondary,
   },
   editButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
     borderRadius: 16,
-    backgroundColor: colors.surface,
+    minHeight: 32,
   },
   editButtonText: {
     fontSize: 12,
-    fontWeight: '600',
-    color: colors.textSecondary,
   },
   trustBox: {
     backgroundColor: colors.surface,
@@ -264,13 +293,9 @@ const styles = StyleSheet.create({
   },
   trustTitle: {
     fontSize: 14,
-    fontWeight: '600',
-    color: colors.textPrimary,
   },
   trustScore: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: colors.primary,
+    alignSelf: 'center',
   },
   progressBarBg: {
     height: 8,
@@ -284,9 +309,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     borderRadius: 4,
   },
+  progressBarEmpty: {
+    width: '0%',
+  },
   trustDesc: {
     fontSize: 11,
-    color: colors.textTertiary,
   },
   statsRow: {
     flexDirection: 'row',
@@ -298,13 +325,10 @@ const styles = StyleSheet.create({
   },
   statTitle: {
     fontSize: 12,
-    color: colors.textSecondary,
     marginBottom: 8,
   },
   statValue: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: colors.textPrimary,
+    alignSelf: 'center',
   },
   divider: {
     width: 1,
@@ -313,47 +337,27 @@ const styles = StyleSheet.create({
   },
   menuSection: {
     backgroundColor: '#FFFFFF',
+    borderRadius: 0,
     paddingHorizontal: 24,
     paddingVertical: 8,
     marginBottom: 24,
   },
   menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
     paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
-  },
-  menuItemLast: {
-    borderBottomWidth: 0,
   },
   menuIcon: {
     fontSize: 20,
-    marginRight: 16,
-  },
-  menuTitle: {
-    flex: 1,
-    fontSize: 16,
-    color: colors.textPrimary,
-  },
-  menuChevron: {
-    fontSize: 20,
-    color: colors.textTertiary,
+    marginRight: 8,
   },
   logoutButton: {
     marginHorizontal: 24,
-    height: 52,
+    minHeight: 52,
     borderRadius: 12,
     backgroundColor: '#FFFFFF',
-    borderWidth: 1,
     borderColor: colors.borderLight,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   logoutText: {
     fontSize: 15,
-    fontWeight: '600',
-    color: colors.error,
   },
 });
 

@@ -6,25 +6,25 @@
  *
  * @wireframe wireframe-foodlink/location-setup.html
  */
-import React, {useState, useEffect, useCallback} from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StatusBar,
   Alert,
-  ActivityIndicator,
   Linking,
   Platform,
   PermissionsAndroid,
 } from 'react-native';
 import Geolocation from 'react-native-geolocation-service';
-import type {NativeStackScreenProps} from '@react-navigation/native-stack';
-import type {RootStackParamList} from '@/navigation/types';
-import {updateLocation} from '@/api/auth';
-import {useAuthStore} from '@/store/authStore';
-import {styles} from './LocationSetupScreen.styles';
-import {getFcmToken} from '@/services/deviceRegistration';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '@/navigation/types';
+import { updateLocation } from '@/api/auth';
+import { useAuthStore } from '@/store/authStore';
+import { styles } from './LocationSetupScreen.styles';
+import { getFcmToken } from '@/services/deviceRegistration';
+import { DSButton, DSCard } from '@/design-system';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'LocationSetup'>;
 
@@ -71,7 +71,7 @@ const LOCATION_ISSUE_COPY: Record<
   },
 };
 
-const LocationSetupScreen = ({route, navigation}: Props) => {
+const LocationSetupScreen = ({ route, navigation }: Props) => {
   const [location, setLocation] = useState<LocationCoords | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
@@ -208,12 +208,13 @@ const LocationSetupScreen = ({route, navigation}: Props) => {
 
       if (response.success && response.data) {
         setUser(response.data);
-        navigation.reset({index: 0, routes: [{name: 'Main'}]});
+        navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
       } else {
         Alert.alert('오류', response.message || '위치 등록에 실패했습니다.');
       }
     } catch (error: any) {
-      const message = error?.response?.data?.message || '서버에 연결할 수 없습니다.';
+      const message =
+        error?.response?.data?.message || '서버에 연결할 수 없습니다.';
       Alert.alert('오류', message);
     } finally {
       setIsLoading(false);
@@ -234,6 +235,18 @@ const LocationSetupScreen = ({route, navigation}: Props) => {
   const locationIssueCopy = locationIssue
     ? LOCATION_ISSUE_COPY[locationIssue]
     : null;
+  const notificationButtonLabel =
+    notificationStatus === 'requesting'
+      ? ''
+      : notificationStatus === 'ready'
+      ? '설정 완료'
+      : '나눔 알림 받기';
+  const notificationAccessibilityLabel =
+    notificationStatus === 'requesting'
+      ? '나눔 알림 설정 중'
+      : notificationStatus === 'ready'
+      ? '설정 완료'
+      : '나눔 알림 받기';
 
   const handlePrimaryLocationIssueAction = () => {
     if (locationIssue === 'permissionBlocked') {
@@ -287,7 +300,7 @@ const LocationSetupScreen = ({route, navigation}: Props) => {
         </View>
 
         {/* 위치 정보 카드 */}
-        <View style={styles.locationCard}>
+        <DSCard padded={false} style={styles.locationCard}>
           <View style={styles.locationRow}>
             <Text style={styles.locationPin}>📍</Text>
             <Text style={styles.locationName}>
@@ -323,58 +336,51 @@ const LocationSetupScreen = ({route, navigation}: Props) => {
               </View>
             </View>
           ) : null}
-        </View>
+        </DSCard>
       </View>
 
       {/* CTA */}
       <View style={styles.footer}>
-        <View style={styles.notificationPanel}>
+        <DSCard
+          variant="outlined"
+          padded={false}
+          style={styles.notificationPanel}>
           <View style={styles.notificationTextGroup}>
             <Text style={styles.notificationTitle}>나눔 알림</Text>
             <Text style={styles.notificationHint}>
               {notificationStatus === 'ready'
                 ? '알림 받을 준비가 됐어요'
                 : notificationStatus === 'unavailable'
-                  ? '알림 권한이 꺼져 있어요'
-                  : '근처 나눔과 신청 소식을 알려드릴게요'}
+                ? '알림 권한이 꺼져 있어요'
+                : '근처 나눔과 신청 소식을 알려드릴게요'}
             </Text>
           </View>
-          <TouchableOpacity
-            style={[
-              styles.notificationButton,
-              (notificationStatus === 'requesting' ||
-                notificationStatus === 'ready') &&
-                styles.notificationButtonDisabled,
-            ]}
+          <DSButton
+            label={notificationButtonLabel}
+            accessibilityLabel={notificationAccessibilityLabel}
+            loading={notificationStatus === 'requesting'}
+            loadingLabel=""
+            size="small"
             onPress={handleEnableNotifications}
             disabled={
               notificationStatus === 'requesting' ||
               notificationStatus === 'ready'
-            }>
-            {notificationStatus === 'requesting' ? (
-              <ActivityIndicator color="#FFFFFF" size="small" />
-            ) : (
-              <Text style={styles.notificationButtonText}>
-                {notificationStatus === 'ready' ? '설정 완료' : '나눔 알림 받기'}
-              </Text>
-            )}
-          </TouchableOpacity>
-        </View>
+            }
+            style={styles.notificationButton}
+            textStyle={styles.notificationButtonText}
+          />
+        </DSCard>
 
-        <TouchableOpacity
-          style={[
-            styles.submitButton,
-            (isLoading || isFetching || !location) &&
-              styles.submitButtonDisabled,
-          ]}
+        <DSButton
+          label={isLoading ? '' : '이 위치로 설정하기'}
+          accessibilityLabel="이 위치로 설정하기"
+          loading={isLoading}
+          loadingLabel=""
           onPress={handleSetLocation}
-          disabled={isLoading || isFetching || !location}>
-          {isLoading ? (
-            <ActivityIndicator color="#FFFFFF" />
-          ) : (
-            <Text style={styles.submitButtonText}>이 위치로 설정하기</Text>
-          )}
-        </TouchableOpacity>
+          disabled={isLoading || isFetching || !location}
+          style={styles.submitButton}
+          textStyle={styles.submitButtonText}
+        />
       </View>
     </View>
   );

@@ -6,58 +6,74 @@
  * @wireframe wireframe-foodlink/login.html
  */
 import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  StatusBar,
-} from 'react-native';
-import type {NativeStackScreenProps} from '@react-navigation/native-stack';
-import type {AuthStackParamList} from '@/navigation/types';
-import {colors} from '@/theme';
+import { View, StyleSheet, StatusBar } from 'react-native';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { AuthStackParamList } from '@/navigation/types';
+import { DSButton, DSIcon, DSText } from '@/design-system';
+import { colors } from '@/theme';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 
-const LoginScreen = ({navigation}: Props) => {
+const LoginScreen = ({ navigation }: Props) => {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
       {/* 인사 헤더 */}
       <View style={styles.header}>
-        <Text style={styles.greeting}>반가워요!{'\n'}푸드링크입니다</Text>
-        <Text style={styles.subtitle}>
+        <DSText variant="heading2" style={styles.greeting}>
+          반가워요!{'\n'}푸드링크입니다
+        </DSText>
+        <DSText variant="body" color="textTertiary" style={styles.subtitle}>
           이웃과 함께하는 신선한 나눔을 시작해보세요.
-        </Text>
+        </DSText>
       </View>
 
       {/* 로그인 버튼들 */}
       <View style={styles.buttonGroup}>
         {/* 이메일 */}
-        <TouchableOpacity
+        <DSButton
+          label="이메일로 계속하기"
+          variant="outlined"
+          color="assistive"
+          leading={
+            <DSIcon
+              name="envelope"
+              variant="regular"
+              size="small"
+              color="textSecondary"
+            />
+          }
           style={styles.emailButton}
-          onPress={() => navigation.navigate('LoginEmail')}>
-          <Text style={styles.emailIcon}>✉️</Text>
-          <Text style={styles.emailText}>이메일로 계속하기</Text>
-        </TouchableOpacity>
+          contentStyle={styles.buttonContent}
+          textStyle={styles.emailText}
+          onPress={() => navigation.navigate('LoginEmail')}
+        />
       </View>
 
       {/* 하단 약관 + 지원 */}
       <View style={styles.termsSection}>
         <View style={styles.termsRow}>
           <View style={styles.checkbox}>
-            <Text style={styles.checkIcon}>✓</Text>
+            <DSIcon name="check" size="xsmall" color="#CBD5E1" />
           </View>
-          <Text style={styles.termsText}>
+          <DSText
+            variant="caption"
+            color="textTertiary"
+            style={styles.termsText}>
             이용약관, 개인정보 처리방침, 위치기반 서비스 이용약관에 모두
             동의합니다.
-          </Text>
+          </DSText>
         </View>
 
-        <TouchableOpacity style={styles.supportLink}>
-          <Text style={styles.supportText}>로그인에 문제가 있나요?</Text>
-        </TouchableOpacity>
+        <DSButton
+          label="로그인에 문제가 있나요?"
+          variant="text"
+          color="assistive"
+          size="small"
+          style={styles.supportLink}
+          textStyle={styles.supportText}
+        />
       </View>
     </View>
   );
@@ -89,6 +105,9 @@ const styles = StyleSheet.create({
     gap: 12,
     marginBottom: 40,
   },
+  buttonContent: {
+    gap: 12,
+  },
   // 이메일
   emailButton: {
     height: 56,
@@ -101,7 +120,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 12,
   },
-  emailIcon: {fontSize: 16},
   emailText: {
     fontSize: 16,
     fontWeight: '700',
@@ -127,10 +145,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 2,
-  },
-  checkIcon: {
-    fontSize: 10,
-    color: '#CBD5E1',
   },
   termsText: {
     flex: 1,

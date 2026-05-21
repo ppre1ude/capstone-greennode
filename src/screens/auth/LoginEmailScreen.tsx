@@ -6,32 +6,31 @@
  *
  * ⚠️ 로그인 API: application/x-www-form-urlencoded, 필드명 'username'
  */
-import React, {useState} from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
   StyleSheet,
   TouchableOpacity,
   StatusBar,
   Alert,
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
 } from 'react-native';
-import {useForm, Controller} from 'react-hook-form';
-import {zodResolver} from '@hookform/resolvers/zod';
-import type {NativeStackScreenProps} from '@react-navigation/native-stack';
-import type {AuthStackParamList} from '@/navigation/types';
-import {loginSchema, type LoginFormData} from '@/utils/validation';
-import {login, getMe} from '@/api/auth';
-import {useAuthStore} from '@/store/authStore';
-import {colors} from '@/theme';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { AuthStackParamList } from '@/navigation/types';
+import { loginSchema, type LoginFormData } from '@/utils/validation';
+import { login, getMe } from '@/api/auth';
+import { useAuthStore } from '@/store/authStore';
+import { colors } from '@/theme';
+import { DSButton, DSTextField } from '@/design-system';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'LoginEmail'>;
 
-const LoginEmailScreen = ({navigation}: Props) => {
+const LoginEmailScreen = ({ navigation }: Props) => {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const setToken = useAuthStore(state => state.setToken);
@@ -40,10 +39,10 @@ const LoginEmailScreen = ({navigation}: Props) => {
   const {
     control,
     handleSubmit,
-    formState: {errors},
+    formState: { errors },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
-    defaultValues: {email: '', password: ''},
+    defaultValues: { email: '', password: '' },
   });
 
   const onSubmit = async (data: LoginFormData) => {
@@ -63,16 +62,19 @@ const LoginEmailScreen = ({navigation}: Props) => {
           const rootNav = navigation.getParent();
           if (rootNav) {
             if (meResponse.data.latitude !== null) {
-              rootNav.reset({index: 0, routes: [{name: 'Main'}]});
+              rootNav.reset({ index: 0, routes: [{ name: 'Main' }] });
             } else {
-              rootNav.reset({index: 0, routes: [{name: 'LocationSetup'}]});
+              rootNav.reset({ index: 0, routes: [{ name: 'LocationSetup' }] });
             }
           }
         }
 
         // TODO: Phase 2에서 LocationSetup / Main 분기
       } else {
-        Alert.alert('로그인 실패', response.message || '이메일 또는 비밀번호를 확인해주세요.');
+        Alert.alert(
+          '로그인 실패',
+          response.message || '이메일 또는 비밀번호를 확인해주세요.',
+        );
       }
     } catch (error: any) {
       const message =
@@ -116,15 +118,16 @@ const LoginEmailScreen = ({navigation}: Props) => {
         <View style={styles.form}>
           {/* 이메일 */}
           <View style={styles.fieldGroup}>
-            <Text style={styles.label}>이메일 주소</Text>
             <Controller
               control={control}
               name="email"
-              render={({field: {onChange, onBlur, value}}) => (
-                <TextInput
-                  style={[styles.input, errors.email && styles.inputError]}
+              render={({ field: { onChange, onBlur, value } }) => (
+                <DSTextField
+                  label="이메일 주소"
+                  status={errors.email ? 'error' : 'normal'}
+                  caption={errors.email?.message}
+                  inputContainerStyle={styles.input}
                   placeholder="example@email.com"
-                  placeholderTextColor={colors.textPlaceholder}
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
@@ -134,59 +137,50 @@ const LoginEmailScreen = ({navigation}: Props) => {
                 />
               )}
             />
-            {errors.email && (
-              <Text style={styles.errorText}>{errors.email.message}</Text>
-            )}
           </View>
 
           {/* 비밀번호 */}
           <View style={styles.fieldGroup}>
-            <Text style={styles.label}>비밀번호</Text>
-            <View style={styles.passwordWrapper}>
-              <Controller
-                control={control}
-                name="password"
-                render={({field: {onChange, onBlur, value}}) => (
-                  <TextInput
-                    style={[
-                      styles.input,
-                      styles.passwordInput,
-                      errors.password && styles.inputError,
-                    ]}
-                    placeholder="비밀번호를 입력해주세요"
-                    placeholderTextColor={colors.textPlaceholder}
-                    secureTextEntry={!showPassword}
-                    onBlur={onBlur}
-                    onChangeText={onChange}
-                    value={value}
-                  />
-                )}
-              />
-              <TouchableOpacity
-                style={styles.eyeButton}
-                onPress={() => setShowPassword(!showPassword)}>
-                <Text style={styles.eyeIcon}>
-                  {showPassword ? '🙈' : '👁️'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-            {errors.password && (
-              <Text style={styles.errorText}>{errors.password.message}</Text>
-            )}
+            <Controller
+              control={control}
+              name="password"
+              render={({ field: { onChange, onBlur, value } }) => (
+                <DSTextField
+                  label="비밀번호"
+                  status={errors.password ? 'error' : 'normal'}
+                  caption={errors.password?.message}
+                  inputContainerStyle={styles.input}
+                  placeholder="비밀번호를 입력해주세요"
+                  secureTextEntry={!showPassword}
+                  onBlur={onBlur}
+                  onChangeText={onChange}
+                  value={value}
+                  trailing={
+                    <TouchableOpacity
+                      style={styles.eyeButton}
+                      onPress={() => setShowPassword(!showPassword)}>
+                      <Text style={styles.eyeIcon}>
+                        {showPassword ? '🙈' : '👁️'}
+                      </Text>
+                    </TouchableOpacity>
+                  }
+                />
+              )}
+            />
           </View>
         </View>
 
         {/* CTA */}
-        <TouchableOpacity
-          style={[styles.submitButton, isLoading && styles.submitButtonDisabled]}
+        <DSButton
+          label={isLoading ? '' : '로그인'}
+          accessibilityLabel="로그인"
+          loading={isLoading}
+          loadingLabel=""
           onPress={handleSubmit(onSubmit)}
-          disabled={isLoading}>
-          {isLoading ? (
-            <ActivityIndicator color="#FFFFFF" />
-          ) : (
-            <Text style={styles.submitButtonText}>로그인</Text>
-          )}
-        </TouchableOpacity>
+          disabled={isLoading}
+          style={styles.submitButton}
+          textStyle={styles.submitButtonText}
+        />
 
         {/* 회원가입 링크 */}
         <View style={styles.signupRow}>
@@ -236,7 +230,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.textPrimary,
   },
-  headerSpacer: {width: 40},
+  headerSpacer: { width: 40 },
   // 인트로
   intro: {
     marginTop: 32,
@@ -255,68 +249,33 @@ const styles = StyleSheet.create({
   form: {
     gap: 24,
   },
-  fieldGroup: {
-    gap: 8,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#4B5563',
-    marginLeft: 4,
-  },
+  fieldGroup: {},
   input: {
-    height: 56,
+    minHeight: 56,
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    paddingHorizontal: 16,
-    fontSize: 15,
-    color: colors.textPrimary,
-  },
-  inputError: {
-    borderColor: colors.error,
-  },
-  passwordWrapper: {
-    position: 'relative',
-  },
-  passwordInput: {
-    paddingRight: 50,
   },
   eyeButton: {
-    position: 'absolute',
-    right: 16,
-    top: 0,
-    bottom: 0,
+    minHeight: 40,
+    minWidth: 32,
     justifyContent: 'center',
+    alignItems: 'center',
   },
   eyeIcon: {
     fontSize: 18,
   },
-  errorText: {
-    fontSize: 12,
-    color: colors.error,
-    marginLeft: 4,
-  },
   // CTA
   submitButton: {
-    height: 60,
-    backgroundColor: colors.primary,
+    minHeight: 60,
     borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
     marginTop: 32,
     shadowColor: colors.primary,
-    shadowOffset: {width: 0, height: 4},
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 12,
     elevation: 6,
   },
-  submitButtonDisabled: {
-    opacity: 0.7,
-  },
   submitButtonText: {
-    color: '#FFFFFF',
     fontSize: 18,
     fontWeight: '700',
   },
