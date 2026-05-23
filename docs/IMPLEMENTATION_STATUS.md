@@ -122,12 +122,12 @@
 - background QA는 system notification 표시와 notification tap의 post detail 라우팅을 통과했다.
 - terminated surrogate QA는 부분 통과다. app process kill 이후 system notification은 표시됐지만 logcat에 `Background messages only work if the message priority is set to 'high'`가 남았고, terminated 상태의 notification tap 라우팅은 신뢰할 수 없었다.
 - true 2-device QA는 아직 막혀 있다. Windows는 USB Samsung device를 감지하지만 `adb devices`에는 `emulator-5554`만 보이므로, physical device ADB authorization/driver/debugging은 사용자 측 해결 후 재개한다.
-- 남은 P0 backend handoff는 Android FCM priority를 `high`로 설정하고, aggregate success/failure뿐 아니라 per-token FCM failure를 로그로 남기는 것이다. Android notification channel 정리는 별도 local Android polish 작업이며 backend blocker가 아니다.
+- 당시 남은 P0 backend handoff는 Android FCM priority `high`와 per-token FCM failure log였다. 2026-05-23 백엔드 회신에서 해당 항목은 구현 예정으로 답변됐고, 프론트 QA는 VM 재배포 후 재개한다. Android notification channel 정리는 별도 local Android polish 작업이며 backend blocker가 아니다.
 
 ### 2026-05-20 Inventory/QR 프론트 선행 구현 업데이트
 
 - QR/inventory 계약 확정 후 프론트는 `flow: "fridge_qr"` 등록, 보관 QR 인증, 수령 QR 인증, 운영자 폐기 요청을 실제 API 호출 경로로 연결했다. 백엔드 미배포/불일치 시 Alert 또는 fallback 메시지를 표시한다.
-- 운영자 콘솔은 `GET /operator/fridges/{fridgeId}/inventory/summary`, `GET /operator/fridges/{fridgeId}/inventory/items`, `PATCH /operator/items/{postId}/dispose` 계약으로 선행 구현했다. summary/items 실패 시 기존 샘플 데이터를 fallback으로 표시한다.
+- 운영자 콘솔은 `GET /api/v1/operator/fridges/{fridgeId}/inventory/summary`, `GET /api/v1/operator/fridges/{fridgeId}/inventory/items`, `PATCH /api/v1/operator/items/{postId}/dispose` 계약으로 선행 구현했다. 2026-05-23 백엔드 회신 전의 내부 필드명은 adapter에서 최신 응답 shape로 정렬한다.
 - 운영자 폐기 성공 후에는 summary/items를 즉시 재조회해 폐기 대상 수, 만료 임박 수, 항목 상태를 서버 결과 기준으로 다시 맞춘다.
 - 운영자 inventory 조회가 401/403으로 거절되면 샘플 재고와 폐기 버튼을 숨기고 `운영자 권한이 필요합니다` 안내만 표시한다. 네트워크/배포 실패 fallback과 권한 실패를 분리했다.
 - 프로필의 `냉장고 운영자 콘솔 (실험)` 진입점은 `isOperator`, `operatorRole`, `operatorFridgeIds`, `roles` 중 하나로 운영자 힌트가 있는 계정에만 노출한다.
@@ -140,6 +140,14 @@
 - `detections[]` multi-object 응답이 도입될 경우를 대비해 프론트 타입과 분석/등록 화면 표시를 방어적으로 열어뒀다. 현재 정식 분리 등록은 구현하지 않고, 여러 후보가 내려와도 “대표 식재료 1개 기준 등록” 안내만 보여준다.
 - 검증: `homeRecommendations`, `home.nearbyRefresh`, `aiDetections`, `analysisResult.fallback`, `postCreate.reviewNotice`, `fridgeOperatorInventory`, `fridgeOperatorConsole.screen` 테스트를 통과했다.
 
+### 2026-05-23 백엔드 회신 반영 업데이트
+
+- FCM: 백엔드는 Android `priority: high`, iOS `apns-priority: 10`, per-token failure log, `[FCM:share_created]`/`[FCM:share_requested]` 로그 prefix를 구현할 예정이다. 프론트의 다음 액션은 백엔드 VM 재배포 완료 후 `share_created`/`share_requested` foreground/background/terminated 및 notification tap routing을 2기기/2계정으로 재검증하는 것이다.
+- Operator / Inventory: `GET /api/v1/operator/fridges/{fridgeId}/inventory/summary`, `GET /api/v1/operator/fridges/{fridgeId}/inventory/items`, `PATCH /api/v1/operator/items/{postId}/dispose` 경로가 확정됐다. summary는 `total/available/requested/expired/disposedToday`, items/dispose는 `PostRead` camelCase 기반이다. 프론트는 내부 화면용 필드명과 백엔드 필드명 차이를 adapter에서 흡수해야 한다.
+- Dispose 정책: 가능 상태는 `expired`, `available`이고, `requested`, `completed`, `pending_store`, `cancelled`, `disposed`는 409로 거절된다. 성공 후 summary는 `total` 감소 및 `disposedToday` 증가, items/home/map에서는 disposed 항목 미포함이 기준이다.
+- Multi-object: `POST /posts/generate`는 root-level 필드와 함께 `detections[]`를 내려주는 것으로 계약이 확정됐다. MVP에서는 단일 객체 배열 래핑(`detections[0]` = 대표 객체), `bbox: null`, `rejectionReason: null`이다. 실제 다중 객체 분리 등록과 non-null rejection reason/bbox는 Post-MVP다.
+- 서버 검색: MVP에서는 서버 검색 API를 포함하지 않고 홈/지도 로컬 필터를 유지한다. 향후 필요 시 기존 nearby API에 optional `q`, `skip`, `limit`를 추가하는 방식으로 확장한다.
+
 ---
 
 ## 1. 현재 상태 요약
@@ -150,17 +158,17 @@
 | 최초 위치 등록             | 구현됨                                   | 위치 없는 유저는 `LocationSetup`으로 이동하고 `/auth/me/location`에 좌표와 FCM 토큰을 저장한다. 홈/지도/나눔 등록 강제 진입도 위치 설정 CTA로 되돌린다. 위치 권한 거부/영구 거부/위치 탐색 실패 시 화면 안에서 재시도와 설정 열기 CTA를 제공하고, 좌표가 없으면 위치 저장을 비활성화한다. |
 | 위치 재설정                | 구현됨                                   | 홈 위치 헤더와 프로필 `동네 위치 재설정` 메뉴에서 `LocationSetup`으로 재진입한다. |
 | 디자인 시스템              | 컴포넌트 레이어 도입됨                   | `src/theme`는 GreenNode 색상/타이포그래피/spacing/radius/layout 토큰의 source of truth로 유지한다. `src/design-system`은 Montage식 prop 계약을 React Native 프리미티브로 제공하며, 홈 주변 나눔 카드부터 로그인/회원가입/위치 설정/나눔 등록/나눔 상세의 반복 CTA와 입력 패턴으로 적용 범위를 넓힌다. |
-| AI 분석                    | 부분 구현, 실제 기기 촬영/갤러리 QA 통과 | mock 파이프라인은 제거됐고 실제 `/posts/generate` 호출이 동작한다. 백엔드 기준 label은 `Fresh/Mid/Stale/unknown`이며 `Mid`는 기존 `Normal` 그룹이다. 앱은 0.9 미만을 `확인 필요`로 표시하며, 낮은 confidence 안내는 실제 상태 직접 확인을 명시한다. 2026-05-08 실제 기기에서 카메라 촬영 generate 400 실패 Alert와 갤러리 fresh fixture 분석 성공을 모두 확인했다. |
+| AI 분석                    | 부분 구현, 실제 기기 촬영/갤러리 QA 통과 | mock 파이프라인은 제거됐고 실제 `/posts/generate` 호출이 동작한다. 백엔드 기준 label은 `Fresh/Mid/Stale/unknown`이며 `Mid`는 기존 `Normal` 그룹이다. 2026-05-23 계약으로 MVP `detections[]`는 단일 객체 배열, `bbox/rejectionReason`은 `null`이다. 앱은 0.9 미만을 `확인 필요`로 표시하며, 낮은 confidence 안내는 실제 상태 직접 확인을 명시한다. |
 | 나눔 식재료 등록           | 부분 구현, 실제 기기 등록 QA 통과        | 실제 `generate -> imageToken -> createPost` 흐름으로 서버 등록이 확인됐다. 작성 화면은 AI 판별 식재료명, 신선도, confidence를 확인하고 `fridgeId`, `expirationDate`, `imageToken`만 최종 등록 payload로 보낸다. `canShare=false` 또는 `imageToken` 누락은 분석 결과, 작성, 최종 등록 단계에서 차단한다. |
 | 나눔 식재료 상세/삭제/신청 | 부분 구현, 실제 기기 신청 QA 통과        | 실제 상세 응답의 `authorId` 기준으로 작성자 여부를 판단한다. 상세 화면은 `detectedFruitKo`, `freshnessLabel`, `confidenceScore`, `status`를 표시한다. `available` 나눔 식재료는 `requestShare(postId)`로 신청하고, 201/409 이후 `신청 접수` 상태로 CTA를 비활성화한다. 403은 작성자 본인 fallback 문구로 처리한다. |
 | 홈 주변 나눔 식재료        | 부분 구현, 실제 기기 홈 재조회 통과      | `/posts/nearby` 데이터를 카드로 표시한다. 홈 포커스와 등록 완료 refresh token 변경 시 재조회한다. 2026-05-21부터 현재 로딩된 nearby 목록에서 권장 수령일이 가까운 available 항목을 `오늘 가져가기 좋은 재료`로 로컬 추천한다. |
 | 지도/냉장고                | 부분 구현, 실제 기기 UI QA 통과          | `/fridges/nearby`, `/fridges/available` 조회와 지도 마커/냉장고 선택은 동작한다. 지도에서 냉장고를 선택하면 `GET /fridges/{id}/posts?status=available`로 내부 available 나눔 식재료를 조회하고, loading/error/empty/list 상태를 분리한다. |
-| 냉장고 운영자/QR           | 프론트 선행 구현                         | `flow: "fridge_qr"` 등록, 보관 QR 인증, 수령 QR 인증, 운영자 폐기 요청을 실제 API 호출 경로로 연결했다. 운영자 inventory 조회가 401/403으로 거절되면 샘플 재고와 폐기 버튼을 숨기고 권한 안내만 표시한다. |
+| 냉장고 운영자/QR           | 프론트 선행 구현, 백엔드 계약 확정       | `flow: "fridge_qr"` 등록, 보관 QR 인증, 수령 QR 인증, 운영자 폐기 요청을 실제 API 호출 경로로 연결했다. 2026-05-23 기준 operator summary/items/dispose 경로와 응답 shape가 확정됐고, 배포 후 권한/빈 목록/available·expired dispose/409 상태 QA가 필요하다. |
 | 나눔 신청                  | 프론트 코드 연동 완료, 실제 기기 QA 통과 | 프론트는 `requestShare(postId)`, 상세 CTA, 201/403/409 UX, 홈/지도 refresh store를 구현했다. 2026-05-08 실제 Android 기기에서 신청 완료 alert, 상세 `신청 접수` 전환, 지도 냉장고 내부 목록 즉시 제거를 확인했다. |
-| FCM                        | foreground/background 실수신 QA 통과, P0 handoff 남음 | 2026-05-21 emulator QA에서 `greennode-94eae` client/Admin project 정렬 후 `share_created`, `share_requested` 실제 send success 1 / failure 0, foreground 수신/로컬 알림 탭 기록, background system notification 표시와 tap의 `PostDetail` 라우팅을 확인했다. terminated tap routing은 backend Android FCM priority `high` 적용 후 재검증한다. true 2-device QA는 physical Samsung device가 `adb devices`에 표시되지 않아 보류 중이다. |
+| FCM                        | foreground/background 실수신 QA 통과, 백엔드 재배포 대기 | 2026-05-21 emulator QA에서 `share_created`, `share_requested` 실제 send success 1 / failure 0, foreground 수신/로컬 알림 탭 기록, background system notification 표시와 tap의 `PostDetail` 라우팅을 확인했다. 2026-05-23 백엔드가 Android `priority: high`, APNS priority, per-token log를 추가하기로 했으므로 VM 재배포 후 terminated tap routing과 physical 2-device QA를 재검증한다. |
 | 채팅                       | 보류                                     | 정적 채팅 mock 데이터는 제거했다. WebSocket/API 계약은 없다. |
 | 통계/탄소 절감             | 정리됨                                   | 실제 지표 API가 없는 홈/프로필 mock 숫자는 제거하고 준비 중 상태로 표시한다. |
-| 검색                       | 부분 구현                                | MVP 검색은 홈 나눔 식재료명/냉장고명 로컬 필터와 지도 공유 냉장고 이름/주소 로컬 필터로 제한했다. 서버 검색 API는 없다. |
+| 검색                       | 부분 구현, 서버 검색 Post-MVP            | MVP 검색은 홈 나눔 식재료명/냉장고명 로컬 필터와 지도 공유 냉장고 이름/주소 로컬 필터로 제한했다. 2026-05-23 백엔드 회신 기준 서버 검색은 MVP 미포함이며, 필요 시 nearby API의 optional `q` 파라미터로 확장한다. |
 
 ---
 

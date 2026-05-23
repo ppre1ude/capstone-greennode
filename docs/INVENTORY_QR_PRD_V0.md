@@ -346,11 +346,21 @@ GET /api/v1/operator/fridges/{fridgeId}/inventory/items
 PATCH /api/v1/operator/items/{postId}/dispose
 ```
 
+2026-05-23 백엔드 회신으로 operator inventory 최소 계약은 확정됐다.
+
+- summary 응답: `fridgeId`, `fridgeName`, `total`, `available`, `requested`, `expired`, `disposedToday`.
+- items 응답: 기존 `PostRead[]` camelCase. `id`, `authorId`, `fridgeId`, `detectedFruitKo`, `freshnessLabel`, `confidenceScore`, `expirationDate`, `status`, `labelCode`, `storageZone`, `storedAt`, `storageDeadlineAt`, `requestExpiresAt`, `pickedUpAt`, `createdAt`, `updatedAt` 등을 포함한다.
+- dispose 응답: `PostRead` 전체 필드와 `status: "disposed"`.
+- dispose 가능 상태: `expired`, `available`.
+- dispose 불가 상태: `requested`, `completed`, `pending_store`, `cancelled`, `disposed`. 서버는 409와 메시지를 반환한다.
+- dispose 성공 후 summary는 `total` 감소, `disposedToday` 증가이며, items/home/map 목록에서는 disposed 항목을 제외한다.
+- 실제 QA는 백엔드 VM 재배포와 운영자 테스트 데이터 생성 후 진행한다.
+
 MVP 운영자 처리:
 
 - summary/items는 냉장고 운영자 콘솔의 요약 카드와 점검 목록을 채운다.
 - `dispose`는 만료/폐기 대상 항목을 `disposed`로 직접 전환한다.
-- 백엔드 미배포 또는 권한 불일치 시 프론트는 실패 메시지를 표시하고 샘플 fallback을 유지한다.
+- 백엔드 미배포 또는 권한 불일치 시 프론트는 실패 메시지를 표시하고 샘플 fallback 또는 폐기 버튼을 숨긴 권한 안내 상태로 전환한다.
 
 Post-MVP 운영자 상태 이벤트 후보:
 
@@ -471,7 +481,7 @@ AI 분석 완료 -> 냉장고 선택 -> QR 인증 -> 등록 완료
 4. 공급자 `pending_store` 흐름을 구현한다. 프론트는 `flow: "fridge_qr"` 등록과 confirm-store 호출을 선행 구현했다.
 5. 수요자 30분 임시 선점과 confirm-pickup 흐름을 구현한다. 프론트는 `requestExpiresAt` countdown과 confirm-pickup 호출을 선행 구현했다.
 6. timeout job 또는 lazy-expire 로직을 구현한다.
-7. 최소 냉장고 운영자 inventory 화면을 구현한다. 프론트는 summary/items 조회와 dispose 호출을 선행 구현했다.
+7. 최소 냉장고 운영자 inventory 화면을 구현한다. 프론트는 summary/items 조회와 dispose 호출을 선행 구현했고, 2026-05-23 백엔드 회신으로 API 경로와 shape가 확정됐다.
 8. API 계약 QA, Android emulator QA, 실제 기기 QR/FCM QA 순서로 검증한다.
 
 ## Open Questions
@@ -483,6 +493,8 @@ AI 분석 완료 -> 냉장고 선택 -> QR 인증 -> 등록 완료
 5. 냉장고 QR public code는 누가 회전할 수 있는가?
 6. 첫 물리 파일럿에 라벨 스티커가 준비되는가?
 7. 첫 물리 파일럿에 에틸렌 분리 구역이 실제로 있는가, 아니면 모델만 먼저 둘 것인가?
+
+2026-05-23 기준으로 operator summary/items/dispose 계약은 열려 있는 질문에서 제외한다. 다만 `pending_store`, confirm-store, confirm-pickup, basket/batch, status event API는 여전히 Post-MVP QR lifecycle 질문이다.
 
 ## Acceptance Criteria
 

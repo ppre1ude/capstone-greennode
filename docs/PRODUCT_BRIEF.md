@@ -47,7 +47,7 @@ FoodLink의 핵심 가치는 남는 식재료 처리의 귀찮음과 죄책감�
 - AI가 대표 식재료와 나눔 가능 여부를 판단한다.
 - 백엔드 AI label은 `Fresh/Mid/Stale`이다. `Mid`는 기존 프론트 문서의 `Normal` 그룹으로 번역한다.
 - `Fresh/Mid` 계열은 사용자에게 `상태가 좋아 보여요`와 `나눔 가능`으로 통합 표시한다.
-- `Stale`은 사용자에게 `나눔 기준에 맞지 않아요`로 안내하고 등록하지 않는다. `not_food`, `low_quality`, `screenshot` 계열 rejection reason은 Post-MVP 백엔드 항목이다. 특히 screenshot/UI 캡처는 MVP 서버가 차단할 수 없어 `Fresh + imageToken`으로 통과할 수 있으며, 이 경우 앱은 `확인 필요` 표시만 하고 등록은 허용한다.
+- `Stale`은 사용자에게 `나눔 기준에 맞지 않아요`로 안내하고 등록하지 않는다. `not_food`, `low_quality`, `screenshot` 계열 rejection reason은 Post-MVP 백엔드 항목이다. 2026-05-23 기준 MVP 정상 응답의 root-level `rejectionReason`은 `null`이고, `detections[]`는 단일 대표 객체 래핑이다. 특히 screenshot/UI 캡처는 MVP 서버가 차단할 수 없어 `Fresh + imageToken`으로 통과할 수 있으며, 이 경우 앱은 `확인 필요` 표시만 하고 등록은 허용한다.
 - `confidenceScore`는 Stage 2 신선도 분류 모델의 softmax max 확률이며, 차단 기준이 아니라 보조 표시/검토 신호로만 사용한다. 제품 기준은 백엔드 활용 가이드를 따라 0.9 미만을 `확인 필요` 구간으로 본다.
 - 공급자는 공유 냉장고를 선택해 나눔 식재료를 등록한다.
 - 등록 완료 후 근처 사용자에게 푸시 알림을 보낸다.
@@ -58,7 +58,7 @@ FoodLink의 핵심 가치는 남는 식재료 처리의 귀찮음과 죄책감�
 
 - QR 코드, 비밀번호 토큰, 보관 사진, 냉장고 운영자 확인 기반 실제 보관 검증. QR 기반 보관/수령 검증은 [INVENTORY_QR_PRD_V0.md](./INVENTORY_QR_PRD_V0.md)에서 Post-MVP 방향으로 채택했다.
 - `reserved`, `completed`, `cancelled`, `expired`의 전체 앱 플로우
-- 냉장고 운영자 화면. 초기 운영 제어는 수동 운영으로 시작하고, 공유 냉장고/지도/신청 흐름이 안정화된 뒤 현장 점검 콘솔로 설계한다.
+- 냉장고 운영자 화면. 2026-05-23 기준 operator summary/items/dispose 최소 API 계약은 확정됐지만, 운영자 테스트 데이터와 백엔드 VM 재배포 후 runtime QA가 필요하다.
 - WebSocket 기반 실시간 채팅
 - 소셜 로그인, 이메일 verification, 실제 활동 지표 API
 - 진짜 인기 랭킹. 데이터가 쌓이기 전까지 "많이 찾는 식재료"는 후순위 추천 기능이다.
@@ -186,7 +186,7 @@ MVP에서 공급자는 `requested` 이후 별도 승인 행동을 하지 않는�
 - 수요자는 상세 화면에서 `나눔 신청하기`를 누른다.
 - MVP 목표 상태 전환은 `available -> requested`다.
 - `requested`는 신청 접수이며 예약 확정이 아니다.
-- 백엔드는 `POST /posts/{id}/requests`, `share_requested` 알림, 403/409 상태 처리를 구현했다. 프론트는 상세 CTA와 로컬 알림함을 이 계약에 맞게 연결했다. 실제 기기 FCM foreground/background/terminated QA는 남아 있다.
+- 백엔드는 `POST /posts/{id}/requests`, `share_requested` 알림, 403/409 상태 처리를 구현했다. 프론트는 상세 CTA와 로컬 알림함을 이 계약에 맞게 연결했다. 2026-05-21 emulator foreground/background QA는 통과했고, terminated/physical 2-device QA는 2026-05-23 백엔드 FCM priority/log 재배포 후 재검증한다.
 - 채팅은 MVP에서 보류하고 알림함/신청 흐름으로 축소한다.
 
 ### 6. 환경 성취 지표

@@ -1,6 +1,6 @@
 # AI QA Fixtures and Camera Checklist
 
-> 기준일: 2026-05-08
+> 기준일: 2026-05-23
 > 목적: AI 분석 실패 UX, false-positive 정책, 실제 기기 카메라 검증을 반복 가능하게 만든다.
 
 ## Fixture Set
@@ -13,7 +13,7 @@
 | `screenshot-or-ui` | 스크린샷/아이콘  | 앱 화면 캡처, 런처 아이콘, 지도 캡처          | MVP: `Fresh + imageToken` 통과 가능. Post-MVP: generate 400 또는 `확인 필요` | MVP에서는 차단 불가로 허용하되 낮은 confidence면 `확인 필요`로 표시한다.       |
 | `low-quality`      | 흐림/어두움/가림 | 흔들림, 저조도, 부분 가림 사진                | 낮은 confidence 또는 실패                                       | `확인 필요` 또는 재촬영 안내가 표시된다.                                       |
 | `large-image`      | 대용량 이미지    | 8MB 이상 또는 고해상도 원본                   | 8MB 초과는 업로드 전 차단                                       | 앱이 멈추지 않고 명확한 오류 문구를 제공한다.                                  |
-| `multi-object`     | 여러 식재료      | 한 장에 서로 다른 식재료가 2개 이상 있는 사진 | 현재는 대표 객체 1개 처리                                       | multi-object는 `detections[]` 계약 전까지 정책 검증용으로만 쓴다.              |
+| `multi-object`     | 여러 식재료      | 한 장에 서로 다른 식재료가 2개 이상 있는 사진 | MVP: `detections[]` 단일 객체 래핑, 대표 객체 1개 처리. Post-MVP: 실제 다중 객체 | 실제 `detections.length > 1`, `bbox`, non-null `rejectionReason`은 Post-MVP 검증용으로 둔다. |
 
 ## Fixture Storage Rule
 
@@ -56,15 +56,15 @@ FOODLINK_API_BASE_URL=http://localhost:8080 FOODLINK_ACCESS_TOKEN=<token> npm ru
 앱 책임:
 
 - generate 실패의 FastAPI `detail`을 사용자에게 그대로 이해 가능한 문구로 표시한다. `message`, `analysisMessage`는 400 응답의 안정 계약 필드가 아니다.
-- `canShare=false`, generate 400, `not_food/non_food/low_quality/screenshot/ui_screenshot` category 또는 `rejectionReason`은 나눔 식재료 작성/최종 등록으로 진행하지 않는다.
+- `canShare=false`, generate 400, `not_food/non_food/low_quality/screenshot/ui_screenshot` category 또는 non-null `rejectionReason`은 나눔 식재료 작성/최종 등록으로 진행하지 않는다. 2026-05-23 MVP 계약에서 정상 응답의 root-level `rejectionReason`은 `null`이다.
 - 낮은 confidence는 즉시 등록 차단이 아니라 `확인 필요`로 보여주고 재촬영/갤러리/수동 확인을 유도한다. 현재 제품 기준은 `confidenceScore < 0.9`다. 서버가 `Fresh + imageToken`을 반환하면 낮은 confidence만으로 최종 등록을 막지 않는다.
 
 서버/AI 책임:
 
 - 제품 목표상 비식재료, 스크린샷, 앱 아이콘, 실내 배경은 `Fresh` 식재료로 반환하지 않아야 한다. MVP에서는 스크린샷/UI 판별 모델이 없어 이 기준을 강제하지 못한다.
 - `Stale` 또는 `isFresh=false`이면 서버는 generate 400을 반환하고 `imageToken`을 발급하지 않는다.
-- 실패/검토 사유 enum은 Post-MVP 백엔드 항목이다. 도입 시 `not_food`, `non_food`, `low_quality`, `screenshot`, `ui_screenshot`, `multi_object_review`, `review_required`를 우선 사용한다.
-- 200 응답으로 검토 상태를 돌려보낼 때는 `aiAnalysis.rejectionReason` 또는 `aiAnalysis.reviewReason`을 포함한다. 서버가 400을 반환하는 경우에는 FastAPI `detail`에 같은 사유를 사람이 읽을 수 있는 문구로 담는다.
+- 실패/검토 사유 enum은 Post-MVP 백엔드 항목이다. 2026-05-23 백엔드 회신의 Post-MVP 후보는 `stale`, `not_food`, `low_quality`, `screenshot`, `multi_object_review`다. 앱은 기존 방어 호환으로 `non_food`, `ui_screenshot`, `review_required`도 계속 처리할 수 있다.
+- 200 응답으로 검토 상태를 돌려보낼 때는 root-level `rejectionReason` 또는 호환 필드인 `aiAnalysis.rejectionReason`/`aiAnalysis.reviewReason`을 포함한다. 서버가 400을 반환하는 경우에는 FastAPI `detail`에 같은 사유를 사람이 읽을 수 있는 문구로 담는다.
 
 ## Actual Android Device Camera Checklist
 
