@@ -54,6 +54,12 @@ const getServerMessage = body =>
   body?.data?.analysisMessage ||
   'no server message';
 
+const getCanonicalRejectionReason = body =>
+  body?.data?.rejectionReason || body?.data?.aiAnalysis?.rejectionReason;
+
+const getCanonicalReviewReason = body =>
+  body?.data?.reviewReason || body?.data?.aiAnalysis?.reviewReason;
+
 const getAiSummary = body => {
   const analysis = body?.data?.aiAnalysis;
   const detectedFruitKo =
@@ -64,8 +70,8 @@ const getAiSummary = body => {
     'missing';
   const category = analysis?.category || 'missing';
   const confidenceScore = analysis?.confidenceScore;
-  const rejectionReason = analysis?.rejectionReason || 'missing';
-  const reviewReason = analysis?.reviewReason || 'missing';
+  const rejectionReason = getCanonicalRejectionReason(body) || 'missing';
+  const reviewReason = getCanonicalReviewReason(body) || 'missing';
 
   return `detected=${detectedFruitKo}, category=${category}, confidence=${confidenceScore}, rejectionReason=${rejectionReason}, reviewReason=${reviewReason}`;
 };
@@ -92,8 +98,8 @@ const evaluateGenerateResponse = (fixture, status, body) => {
   }
 
   const category = body?.data?.aiAnalysis?.category;
-  const rejectionReason = body?.data?.aiAnalysis?.rejectionReason;
-  const reviewReason = body?.data?.aiAnalysis?.reviewReason;
+  const rejectionReason = getCanonicalRejectionReason(body);
+  const reviewReason = getCanonicalReviewReason(body);
   const confidenceScore = body?.data?.aiAnalysis?.confidenceScore;
   const lowConfidence =
     typeof confidenceScore === 'number' &&
@@ -103,14 +109,17 @@ const evaluateGenerateResponse = (fixture, status, body) => {
 
   if (fixture.expectedOutcome === 'shareable') {
     return {
-      passed: isShareableCategory(category),
+      passed: isShareableCategory(category) && !rejectionReason,
       detail: getAiSummary(body),
     };
   }
 
   if (fixture.expectedOutcome === 'rejected') {
     return {
-      passed: isRejectedCategory(category) || isRejectedCategory(rejectionReason),
+      passed:
+        isRejectedCategory(category) ||
+        Boolean(rejectionReason) ||
+        isRejectedCategory(rejectionReason),
       detail: getAiSummary(body),
     };
   }
@@ -119,8 +128,10 @@ const evaluateGenerateResponse = (fixture, status, body) => {
     return {
       passed:
         isRejectedCategory(category) ||
+        Boolean(rejectionReason) ||
         isRejectedCategory(rejectionReason) ||
         isReviewCategory(category) ||
+        isReviewCategory(rejectionReason) ||
         isReviewCategory(reviewReason) ||
         lowConfidence,
       detail: getAiSummary(body),

@@ -45,6 +45,7 @@ const fallbackSummary: OperatorInventorySummary = {
   expiredItems: 1,
   needsReviewItems: 3,
   ethyleneSeparatedItems: 0,
+  disposedItems: 0,
   lastSyncedAt: '2026-05-15T14:20:00+09:00',
 };
 
@@ -57,16 +58,15 @@ const makeSummaryCards = (summary: OperatorInventorySummary) => [
   {label: '신청 가능', value: String(summary.availableItems), note: 'available'},
   {label: '신청 접수', value: String(summary.requestedItems), note: 'requested'},
   {
-    label: '권장 기한 임박',
-    value: String(summary.expiringSoonItems),
-    note: '24시간 이내',
+    label: '폐기 후보',
+    value: String(summary.expiredItems),
+    note: '권장 기한 초과',
   },
   {
-    label: '에틸렌 분리',
-    value: String(summary.ethyleneSeparatedItems ?? 0),
-    note: '별도 구역',
+    label: '오늘 폐기',
+    value: String(summary.disposedItems ?? 0),
+    note: 'disposedToday',
   },
-  {label: '폐기 후보', value: String(summary.expiredItems), note: '권장 기한 초과'},
 ];
 
 type BasketCandidate = {

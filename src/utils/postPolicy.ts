@@ -78,6 +78,26 @@ export const getQualityMeta = (category?: string | null): QualityMeta => {
 export const isShareableCategory = (category?: string | null): boolean =>
   getQualityMeta(category).canShare;
 
+const getRejectionReasonQualityMeta = (
+  reason?: string | null,
+): QualityMeta | null => {
+  if (!reason) {
+    return null;
+  }
+
+  const meta = getQualityMeta(reason);
+
+  if (!meta.canShare) {
+    return meta;
+  }
+
+  if (meta.label === REVIEW_LABEL) {
+    return {...meta, canShare: false};
+  }
+
+  return {label: '사진으로 상태를 확인하기 어려워요', canShare: false};
+};
+
 export const getAnalysisQualityMeta = (
   analysis?: Partial<AiAnalysis> | null,
 ): QualityMeta => {
@@ -85,9 +105,11 @@ export const getAnalysisQualityMeta = (
     return { label: '나눔 기준에 맞지 않아요', canShare: false };
   }
 
-  const rejectionMeta = getQualityMeta(analysis?.rejectionReason);
+  const rejectionMeta = getRejectionReasonQualityMeta(
+    analysis?.rejectionReason,
+  );
 
-  if (!rejectionMeta.canShare || rejectionMeta.label === REVIEW_LABEL) {
+  if (rejectionMeta) {
     return rejectionMeta;
   }
 
@@ -103,6 +125,14 @@ export const getAnalysisQualityMeta = (
 export const getGenerateResultQualityMeta = (
   result?: Partial<GenerateResult> | null,
 ): QualityMeta => {
+  const rootRejectionMeta = getRejectionReasonQualityMeta(
+    result?.rejectionReason,
+  );
+
+  if (rootRejectionMeta) {
+    return rootRejectionMeta;
+  }
+
   if (!result?.aiAnalysis && !result?.freshnessLabel) {
     return { label: '분석 중', canShare: false };
   }
@@ -129,7 +159,7 @@ export const getGenerateResultQualityMeta = (
 export const canShareAnalysisResult = (
   result?: Pick<
     GenerateResult,
-    'aiAnalysis' | 'freshnessLabel' | 'isFresh'
+    'aiAnalysis' | 'freshnessLabel' | 'isFresh' | 'rejectionReason'
   > | null,
 ): boolean => getGenerateResultQualityMeta(result).canShare;
 
