@@ -1592,7 +1592,7 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
 - 분류: 기능 구현
 - 우선순위: P2
 - 배경: FCM 토큰 등록과 로컬 알림함 수신 처리는 구현됐지만, 서버 알림 목록/읽음 상태 API는 없다.
-- 현재 동작: FCM token은 사용자가 위치 설정 화면의 `나눔 알림 받기` CTA를 눌렀을 때 권한 요청 후 `/auth/me/location`으로 등록한다. 위치 설정 진입과 기존 유저의 위치 자동 갱신만으로는 알림 권한을 요청하지 않으며, Android 13+ `POST_NOTIFICATIONS` 거부 시 Firebase permission/register/getToken을 호출하지 않고 `fcmToken` 없이 위치 등록을 계속한다. `share_created`, `share_requested` handler는 foreground/background/opened/initial 메시지를 로컬 알림함에 기록한다. 알림 열기와 알림함 항목 탭은 `PostDetail`로 이동하며, `share_requested`는 내 나눔 관리 화면이 없으므로 상세 fallback을 쓴다. Firebase 앱이 설정되지 않은 QA/release 빌드에서는 Messaging 인스턴스 생성 실패를 잡고 handler 등록과 FCM 토큰 조회를 건너뛰어 앱 시작/위치 갱신 크래시를 막는다. 2026-05-21 emulator QA에서 Firebase client/Admin project를 `greennode-94eae`로 맞춘 뒤 `share_created`, `share_requested` 실제 FCM send와 foreground/background 수신은 확인됐다. terminated surrogate는 system notification 표시까지만 확인됐다. 2026-05-23 백엔드는 Android `priority: high`, iOS `apns-priority: 10`, per-token log, type별 prefix 구현 예정으로 회신했으며, tap routing reliability는 VM 재배포 후 재검증한다. true 2-device QA는 physical Samsung device가 `adb devices`에 표시되지 않아 보류 중이다.
+- 현재 동작: FCM token은 사용자가 위치 설정 화면의 `나눔 알림 받기` CTA를 눌렀을 때 권한 요청 후 `/auth/me/location`으로 등록한다. 위치 설정 진입과 기존 유저의 위치 자동 갱신만으로는 알림 권한을 요청하지 않으며, Android 13+ `POST_NOTIFICATIONS` 거부 시 Firebase permission/register/getToken을 호출하지 않고 `fcmToken` 없이 위치 등록을 계속한다. `share_created`, `share_requested` handler는 foreground/background/opened/initial 메시지를 로컬 알림함에 기록한다. 알림 열기와 알림함 항목 탭은 `PostDetail`로 이동하며, `share_requested`는 내 나눔 관리 화면이 없으므로 상세 fallback을 쓴다. Firebase 앱이 설정되지 않은 QA/release 빌드에서는 Messaging 인스턴스 생성 실패를 잡고 handler 등록과 FCM 토큰 조회를 건너뛰어 앱 시작/위치 갱신 크래시를 막는다. 2026-05-21 emulator QA에서 Firebase client/Admin project를 `greennode-94eae`로 맞춘 뒤 `share_created`, `share_requested` 실제 FCM send와 foreground/background 수신은 확인됐다. terminated surrogate는 system notification 표시까지만 확인됐다. 2026-05-23 백엔드는 Android `priority: high`, iOS `apns-priority: 10`, per-token log, type별 prefix 구현 예정으로 회신했다. 2026-05-25 실기기 `SM-S928N` + Android emulator `Medium_Phone_API_36.1` + NHN Cloud VM에서 2계정 foreground/background FCM QA를 통과했다. `share_created`는 수요자 emulator에 foreground 알림함 기록과 background system notification을 남겼고, `share_requested`는 공급자 실기기에 foreground 알림함 기록과 background system notification을 남겼다. VM 로그는 `[FCM:share_created]`와 `[FCM:share_requested]` type prefix, per-token OK/FAIL, 실제 send success를 구분했다. terminated tap routing은 아직 별도 재검증 대상으로 남긴다.
 - 기대 동작: MVP에서는 WebSocket 채팅 대신 알림함과 단순 신청 흐름으로 축소한다. 읽음 상태 API는 후속으로 분리한다.
 - Acceptance Criteria:
   - [x] foreground/background 알림 수신 handler가 정의된다.
@@ -1610,10 +1610,19 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
   - [x] 2026-05-21 emulator foreground에서 `share_created`, `share_requested` 실제 FCM 수신과 로컬 알림 탭 기록을 확인한다.
   - [x] 2026-05-21 emulator background에서 system notification 표시와 tap의 `PostDetail` 라우팅을 확인한다.
   - [x] 2026-05-21 백엔드 로그에서 `share_created`, `share_requested` 실제 send success 1 / failure 0을 확인한다.
-  - [ ] 2026-05-23 백엔드 회신의 FCM priority/log/prefix 변경이 VM에 재배포된다.
-  - [ ] `docker compose logs api | grep FCM`에서 실제 성공, 실패, token 없음, 대상 없음, Firebase 미초기화, invalid/expired token을 type별 prefix로 구분한다.
+  - [x] 2026-05-25 실기기 + Android emulator 2계정 foreground에서 `share_created`, `share_requested` 실제 FCM 수신과 로컬 알림 탭 기록을 확인한다.
+  - [x] 2026-05-25 실기기 + Android emulator 2계정 background에서 `share_created`, `share_requested` system notification 표시를 확인한다.
+  - [x] 2026-05-23 백엔드 회신의 FCM priority/log/prefix 변경이 VM에 재배포된 상태를 확인한다.
+  - [x] `docker logs foodlink-api-1 | grep FCM`에서 실제 성공, 실패, token 없음, 대상 없음, invalid/expired token을 type별 prefix로 구분한다.
   - [ ] terminated 상태 notification tap routing reliability를 `high` priority 적용 후 재검증한다.
-  - [ ] physical 2-device/2-account QA를 `adb devices`가 실제 Samsung device를 인식한 뒤 재개한다.
+  - [x] physical device + Android emulator 2-account QA를 `adb devices`가 두 대상을 인식한 상태에서 수행한다.
+- 2026-05-25 evidence:
+  - 환경: 실기기 `SM-S928N` Android 15/API 35 serial `R3CX203CV8X`, Android emulator `emulator-5554` (`Medium_Phone_API_36.1`), NHN Cloud VM API `localhost:8080`, Metro debug build.
+  - 계정: 공급자 `codex_fcm_a_1779690163@example.com`, 수요자 `codex_fcm_b_1779690163@example.com`.
+  - API 2계정 계약: `temp/two-account-api-qa-1779694285828.json`, `temp/twoqa-post9-after-request-api-check-1779694846535.json`.
+  - foreground FCM/UI: `temp/twoqa-emu-alerts-after-share-created.png`, `temp/twoqa-emu-request-result.png`, `temp/twoqa-real-app-alerts-after-share-requested-3.png`.
+  - background FCM/system notification: `temp/twoqa-emu-background-share-created-shade.png`, `temp/twoqa-real-background-share-requested-shade.png`.
+  - logcat: `temp/twoqa-emu-share-created-logcat.txt`, `temp/twoqa-real-share-requested-logcat.txt`, `temp/twoqa-emu-background-share-created-logcat.txt`, `temp/twoqa-real-background-share-requested-logcat.txt`.
 - 검증 방법: FCM 테스트 메시지 수신 QA, 앱 foreground/background/terminated 확인, backend FCM send log 확인, `notificationService.firebaseFallback.test.ts`, `deviceRegistration.firebaseFallback.test.ts`, `deviceRegistration.notificationPermission.test.ts`, `locationSetup.notificationPermission.test.tsx`
 - 관련 파일/화면/API: `notifications.ts`, `deviceRegistration.ts`, `firebaseMessaging.ts`, `notificationStore.ts`, `ChatListScreen`, `index.js`, `AppNavigator`, Firebase Messaging
 
