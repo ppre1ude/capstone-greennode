@@ -142,7 +142,7 @@
 
 ### 2026-05-23 백엔드 회신 반영 업데이트
 
-- FCM: 백엔드는 Android `priority: high`, iOS `apns-priority: 10`, per-token failure log, `[FCM:share_created]`/`[FCM:share_requested]` 로그 prefix를 구현할 예정이다. 프론트의 다음 액션은 백엔드 VM 재배포 완료 후 `share_created`/`share_requested` foreground/background/terminated 및 notification tap routing을 2기기/2계정으로 재검증하는 것이다.
+- FCM: 백엔드는 Android `priority: high`, iOS `apns-priority: 10`, per-token failure log, `[FCM:share_created]`/`[FCM:share_requested]` 로그 prefix를 구현할 예정이었다. 2026-05-25 VM 재배포 후 프론트 QA에서 `share_created`/`share_requested` foreground/background/terminated 및 notification tap routing을 실기기+emulator 2계정으로 재검증했다.
 - Operator / Inventory: `GET /api/v1/operator/fridges/{fridgeId}/inventory/summary`, `GET /api/v1/operator/fridges/{fridgeId}/inventory/items`, `PATCH /api/v1/operator/items/{postId}/dispose` 경로가 확정됐다. summary는 `total/available/requested/expired/disposedToday`, items/dispose는 `PostRead` camelCase 기반이다. 프론트는 내부 화면용 필드명과 백엔드 필드명 차이를 adapter에서 흡수해야 한다.
 - Dispose 정책: 가능 상태는 `expired`, `available`이고, `requested`, `completed`, `pending_store`, `cancelled`, `disposed`는 409로 거절된다. 성공 후 summary는 `total` 감소 및 `disposedToday` 증가, items/home/map에서는 disposed 항목 미포함이 기준이다.
 - Multi-object: `POST /posts/generate`는 root-level 필드와 함께 `detections[]`를 내려주는 것으로 계약이 확정됐다. MVP에서는 단일 객체 배열 래핑(`detections[0]` = 대표 객체), `bbox: null`, `rejectionReason: null`이다. 실제 다중 객체 분리 등록과 non-null rejection reason/bbox는 Post-MVP다.

@@ -250,8 +250,8 @@
   - 검색 MVP 범위: 지도 공유 냉장고 이름/주소 로컬 필터.
   - 홈/프로필 mock 통계 숫자 제거.
 - 이월 범위:
-  - 당시 이월 범위: FCM 실수신 QA. 이월 사유는 구현 미완성이 아니라 외부 Firebase/NHN Cloud 환경 blocker였고, 2026-05-25에 닫았다.
-  - 현재 blocker: `android/app/google-services.json` 부재, NHN Cloud VM의 Firebase Admin/service account credentials 설정 여부 미확인, 실제 FCM 발송 로그와 Mock FCM 로그 구분 미확인, 2 Android client/2계정/2 FCM token 환경 미준비.
+  - 당시 이월 범위: FCM 실수신 QA. 이월 사유는 구현 미완성이 아니라 외부 Firebase/NHN Cloud 환경 blocker였고, 아래 당시 blocker는 2026-05-25에 해소되어 QA를 닫았다.
+  - 당시 blocker: `android/app/google-services.json` 부재, NHN Cloud VM의 Firebase Admin/service account credentials 설정 여부 미확인, 실제 FCM 발송 로그와 Mock FCM 로그 구분 미확인, 2 Android client/2계정/2 FCM token 환경 미준비.
   - `2026-GreenNode.pem`은 NHN Cloud SSH 터널/접속용 키이며 Firebase 앱 초기화나 FCM 발송 권한을 대신하지 않는다.
 - 관리자 요청 항목:
   - Android package `com.greennode`용 `google-services.json`.

@@ -380,6 +380,53 @@ describe('InventoryQrPrototypeScreen', () => {
     });
   });
 
+  it('keeps the pending-store state when confirm-store returns a failed ApiResponse', async () => {
+    mockedConfirmStore.mockResolvedValue({
+      success: false,
+      message: '입고 인증에 실패했습니다.',
+      data: null,
+    });
+
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(
+        <InventoryQrPrototypeScreen
+          navigation={{ goBack: jest.fn() } as any}
+          route={
+            {
+              params: {
+                mode: 'store',
+                postId: 10,
+                fridgePublicCode: 'GJ-STATION-001',
+              },
+            } as any
+          }
+        />,
+      );
+    });
+
+    const previousToken =
+      useFeedRefreshStore.getState().nearbyPostsRefreshToken;
+
+    await ReactTestRenderer.act(async () => {
+      await renderer!.root.findByType(QrScannerShell).props.onValidScan({
+        fridgePublicCode: 'GJ-STATION-001',
+      });
+    });
+
+    expect(getTextContent(renderer!)).toContain('입고 인증에 실패했습니다.');
+    expect(getTextContent(renderer!)).toContain('라벨은 보관 인증 후 표시');
+    expect(useFeedRefreshStore.getState().nearbyPostsRefreshToken).toBe(
+      previousToken,
+    );
+    expect(alertSpy).not.toHaveBeenCalled();
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
   it('keeps pickup unconfirmed when confirm-pickup rejects', async () => {
     mockedConfirmPickup.mockRejectedValue(apiError(409));
 
@@ -429,6 +476,56 @@ describe('InventoryQrPrototypeScreen', () => {
       'QR 인증 실패',
       '이미 수거 완료된 식재료입니다.',
     );
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
+  it('keeps pickup unconfirmed when confirm-pickup returns a failed ApiResponse', async () => {
+    mockedConfirmPickup.mockResolvedValue({
+      success: false,
+      message: '수령 인증에 실패했습니다.',
+      data: null,
+    });
+
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(
+        <InventoryQrPrototypeScreen
+          navigation={{ goBack: jest.fn() } as any}
+          route={
+            {
+              params: {
+                mode: 'pickup',
+                postId: 10,
+                fridgePublicCode: 'GJ-STATION-001',
+              },
+            } as any
+          }
+        />,
+      );
+    });
+
+    const previousToken =
+      useFeedRefreshStore.getState().nearbyPostsRefreshToken;
+
+    await ReactTestRenderer.act(async () => {
+      await renderer!.root.findByType(QrScannerShell).props.onValidScan({
+        fridgePublicCode: 'GJ-STATION-001',
+      });
+    });
+
+    expect(getTextContent(renderer!)).toContain('수령 인증에 실패했습니다.');
+    expect(getTextContent(renderer!)).not.toContain(
+      '수령 인증이 완료되었습니다.',
+    );
+    expect(useFeedRefreshStore.getState().nearbyPostsRefreshToken).toBe(
+      previousToken,
+    );
+    expect(useFeedRefreshStore.getState().requestedPostId).toBeNull();
+    expect(alertSpy).not.toHaveBeenCalled();
 
     await ReactTestRenderer.act(async () => {
       renderer?.unmount();
