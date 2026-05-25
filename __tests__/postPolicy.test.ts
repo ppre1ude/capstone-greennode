@@ -136,6 +136,33 @@ describe('post policy', () => {
     ).toEqual({ label: '식재료 사진으로 확인되지 않았어요', canShare: false });
   });
 
+  it('blocks generated analysis results when the canonical root rejection reason is set', () => {
+    expect(
+      getGenerateResultQualityMeta({
+        rejectionReason: 'not_food',
+        aiAnalysis: {
+          isFresh: true,
+          confidenceScore: 0.98,
+          category: 'Fresh',
+          analysisMessage: '식재료가 아닌 이미지입니다.',
+        },
+      }),
+    ).toEqual({ label: '식재료 사진으로 확인되지 않았어요', canShare: false });
+  });
+
+  it('treats review-like rejection reasons as blocking when they are returned as rejectionReason', () => {
+    expect(
+      getGenerateResultQualityMeta({
+        rejectionReason: 'multi_object_review',
+        aiAnalysis: {
+          isFresh: true,
+          confidenceScore: 0.98,
+          category: 'Fresh',
+        },
+      }),
+    ).toEqual({ label: '확인 필요', canShare: false });
+  });
+
   it('uses authorId as the post ownership contract', () => {
     expect(getPostAuthorId({ authorId: 10 })).toBe(10);
     expect(isPostAuthoredByUser({ authorId: 10 }, 10)).toBe(true);

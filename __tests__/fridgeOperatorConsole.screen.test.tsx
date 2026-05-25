@@ -92,6 +92,7 @@ describe('FridgeOperatorConsoleScreen', () => {
         expiredItems: 1,
         needsReviewItems: 0,
         ethyleneSeparatedItems: 1,
+        disposedItems: 0,
         lastSyncedAt: '2026-05-20T00:00:00Z',
       },
     });
@@ -162,6 +163,9 @@ describe('FridgeOperatorConsoleScreen', () => {
       renderer!.root.findAllByProps({children: '에틸렌 분리 구역'}),
     ).not.toHaveLength(0);
     expect(renderer!.root.findAllByProps({children: '폐기 후보'})).not.toHaveLength(
+      0,
+    );
+    expect(renderer!.root.findAllByProps({children: '오늘 폐기'})).not.toHaveLength(
       0,
     );
     const renderedText = getRenderedText(renderer!);
@@ -310,6 +314,7 @@ describe('FridgeOperatorConsoleScreen', () => {
           expiredItems: 1,
           needsReviewItems: 0,
           ethyleneSeparatedItems: 1,
+          disposedItems: 0,
           lastSyncedAt: '2026-05-20T00:00:00Z',
         },
       })
@@ -317,13 +322,14 @@ describe('FridgeOperatorConsoleScreen', () => {
         success: true,
         message: 'ok',
         data: {
-          totalItems: 2,
+          totalItems: 1,
           availableItems: 1,
           requestedItems: 0,
           expiringSoonItems: 0,
           expiredItems: 0,
           needsReviewItems: 0,
           ethyleneSeparatedItems: 1,
+          disposedItems: 1,
           lastSyncedAt: '2026-05-20T00:10:00Z',
         },
       });
@@ -401,6 +407,7 @@ describe('FridgeOperatorConsoleScreen', () => {
     expect(renderer!.root.findAllByProps({children: '폐기 완료'})).not.toHaveLength(
       0,
     );
+    expect(getRenderedText(renderer!)).toContain('오늘 폐기\n1\ndisposedToday');
 
     await ReactTestRenderer.act(async () => {
       renderer?.unmount();
@@ -418,6 +425,7 @@ describe('FridgeOperatorConsoleScreen', () => {
         expiringSoonItems: 0,
         expiredItems: 0,
         needsReviewItems: 0,
+        disposedItems: 0,
         ethyleneSeparatedItems: 0,
         lastSyncedAt: '2026-05-20T00:00:00Z',
       },

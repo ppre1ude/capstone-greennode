@@ -81,7 +81,8 @@ const AppNavigator = () => {
   return (
     <NavigationContainer
       ref={rootNavigationRef}
-      onReady={flushPendingNotificationNavigation}>
+      onReady={flushPendingNotificationNavigation}
+      onStateChange={flushPendingNotificationNavigation}>
       <Stack.Navigator screenOptions={{headerShown: false}}>
         <Stack.Screen name="Auth" component={AuthStack} />
         <Stack.Screen

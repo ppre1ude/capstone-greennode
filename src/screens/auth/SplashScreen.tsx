@@ -19,6 +19,7 @@ import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import type {AuthStackParamList} from '@/navigation/types';
 import {useAuthStore} from '@/store/authStore';
 import {hasOnboarded} from '@/utils/storage';
+import {flushPendingNotificationNavigation} from '@/services/notifications';
 import {colors} from '@/theme';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Splash'>;
@@ -69,6 +70,7 @@ const SplashScreen = ({navigation}: Props) => {
           } else {
             rootNav.reset({index: 0, routes: [{name: 'LocationSetup'}]});
           }
+          requestAnimationFrame(flushPendingNotificationNavigation);
         }
       } else {
         const onboarded = await hasOnboarded();

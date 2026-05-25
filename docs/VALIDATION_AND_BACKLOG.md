@@ -92,14 +92,14 @@
 - 백엔드 AI label은 `Fresh`, `Mid`, `Stale`이다. 기존 프론트 문서의 `Normal`은 `Mid`와 같은 나눔 가능 그룹으로 번역한다.
 - `Fresh`와 `Mid`는 사용자 흐름에서 모두 `상태가 좋아 보여요`와 `나눔 가능`으로 통합 표시한다.
 - `Stale`은 나눔 기준 미충족으로 분류하고 등록하지 않는다. `Bad`, `Rotten`은 현재 백엔드 label은 아니지만 방어적 호환 label로 내려오면 같은 차단 그룹으로 처리한다.
-- `not_food`, `non_food`, `low_quality`, `screenshot`, `ui_screenshot` rejection reason enum은 Post-MVP 백엔드 항목이다. 앱은 enum이 내려오면 등록하지 않도록 방어적으로 처리하되, 현재 MVP 서버 계약은 generate 400의 `detail`과 성공 응답의 `isFresh`, `freshnessLabel`, `analysisMessage`를 우선한다.
+- `not_food`, `non_food`, `low_quality`, `screenshot`, `ui_screenshot` rejection reason enum은 Post-MVP 백엔드 항목이다. 2026-05-23 기준 MVP 정상 응답의 root-level `rejectionReason`은 `null`이고, 앱은 non-null enum이 내려오면 등록하지 않도록 방어적으로 처리한다.
 - `confidenceScore`는 Stage 2 신선도 분류 모델의 softmax max 확률이다. 차단 정책이 아니라 보조 표시/검토 신호다.
 - 사용자-facing 부정 문구는 `부패`, `상함`, `썩음`, `나쁨`, `AI 실패`가 아니라 `나눔 기준에 맞지 않아요`, `식재료 사진으로 확인되지 않았어요`, `사진으로 상태를 확인하기 어려워요` 계열을 쓴다.
 
 ### 후속 결정 필요
 
-- `not_food`, `low_quality`, `screenshot`, `ui_screenshot`, `review_required`, `multi_object_review` 등 rejection reason enum은 Post-MVP에서 백엔드와 확정한다.
-- 백엔드 Phase 1.5의 Post 구조 변경(`title/description/category` 제거, `detectedFruitKo/freshnessLabel/confidenceScore` 추가)은 프론트 코드 반영과 VM/API 런타임 QA를 진행했다. 2026-05-06에는 실제 VM `POST /posts`/`GET /posts/{id}` 응답에서 AI 메타데이터가 `null`로 저장되는 계약 불일치를 발견했고, 2026-05-08 백엔드가 버그로 인정해 sidecar 저장/복원 방식으로 수정 및 VM 재배포했다. 2026-05-08 VM/API 재검증과 실제 Android MVP flow 재검증은 통과했고, 실제 FCM 수신 QA만 환경 blocker로 남아 있다.
+- `stale`, `not_food`, `low_quality`, `screenshot`, `multi_object_review` 등 rejection reason enum은 Post-MVP에서 백엔드와 확정한다. 앱은 기존 호환 enum인 `ui_screenshot`, `review_required`, `non_food`도 방어적으로 유지한다.
+- 백엔드 Phase 1.5의 Post 구조 변경(`title/description/category` 제거, `detectedFruitKo/freshnessLabel/confidenceScore` 추가)은 프론트 코드 반영과 VM/API 런타임 QA를 진행했다. 2026-05-06에는 실제 VM `POST /posts`/`GET /posts/{id}` 응답에서 AI 메타데이터가 `null`로 저장되는 계약 불일치를 발견했고, 2026-05-08 백엔드가 버그로 인정해 sidecar 저장/복원 방식으로 수정 및 VM 재배포했다. 2026-05-08 VM/API 재검증과 실제 Android MVP flow 재검증은 통과했고, 2026-05-23 기준 실제 FCM terminated/physical 2-device QA와 operator inventory runtime QA가 백엔드 재배포 이후 항목으로 남아 있다.
 - 프론트는 백엔드가 구현한 `POST /posts/{id}/requests`와 `GET /fridges/{id}/posts?status=available`를 연동했다. 둘 다 2026-05-06 VM/API 런타임 QA에서 상태 전환과 available 제외 동작을 확인했다.
 - `requested` 이후 `reserved`, `completed`, `cancelled`, `expired` 흐름은 후속 버전에서 설계한다.
 
@@ -115,9 +115,9 @@
 | Post 구조             | `title/description/category` 제거, `detectedFruitKo/freshnessLabel/confidenceScore` 추가. 2026-05-08 `imageToken` sidecar AI 메타데이터 저장/복원 수정 VM 배포 완료. `/posts/nearby`, `/fridges/{id}/posts`는 `PostNearbyRead`라 `confidenceScore`가 없다 | `src/types/post.ts`, `PostNearbyRead`, `createPost()` payload, 홈/냉장고 카드, 상세, 등록 확인 화면 반영 완료                                                                                                                               | 2026-05-08 VM/API 재검증, 로컬 계약 회귀, 실제 Android 홈/상세/지도 UI 재검증 통과 |
 | AI label              | `Fresh/Mid/Stale/unknown`, `Mid`는 기존 `Normal` 그룹                                                                                                                                                                                                     | `postPolicy`가 `Fresh/Mid`를 나눔 가능, `Stale/unknown`을 등록 불가로 매핑                                                                                                                                                                  | fixture 기반 수동 QA                                                               |
 | confidenceScore       | Stage 2 신선도 분류 softmax max 확률로 확정. 백엔드 표시 가이드는 0.9 이상 높음, 0.9 미만 확인 필요                                                                                                                                                       | 앱 기준을 `confidenceScore < 0.9`로 갱신. 단독 등록 차단은 하지 않음                                                                                                                                                                        | 0.4/0.7/1.0 fixture로 확인 필요 표시 QA                                            |
-| rejection reason enum | `not_food`, `low_quality`, `screenshot`, `ui_screenshot`, `review_required`, `multi_object_review` 등은 Post-MVP                                                                                                                                          | 앱은 enum을 받으면 방어적으로 처리 가능. screenshot/UI는 MVP에서 서버 차단 불가라 통과 허용                                                                                                                                                 | false-positive fixture는 report-only 관찰 및 후속 계약 검증                        |
+| rejection reason enum | 2026-05-23 기준 MVP 정상 응답은 `rejectionReason: null`. `stale`, `not_food`, `low_quality`, `screenshot`, `multi_object_review` 등 non-null enum은 Post-MVP                                                                                                  | 앱은 enum을 받으면 방어적으로 처리 가능. screenshot/UI는 MVP에서 서버 차단 불가라 통과 허용                                                                                                                                                 | false-positive fixture는 report-only 관찰 및 후속 계약 검증                        |
 | Stale 최종 등록 방어  | `Stale`이면 generate 400, `imageToken` 미발급. create는 무효/만료 토큰 400                                                                                                                                                                                | 프론트도 `canShare=false` UX 가드를 갖고 있음                                                                                                                                                                                               | 서버가 최종 방어선임을 전제로 stale/token 실패 UX 검증                             |
-| 알림                  | `share_created`, `share_requested` payload 구현                                                                                                                                                                                                           | FCM 수신 handler와 로컬 알림함 구현. 읽음 상태 API 없음                                                                                                                                                                                     | 실제 기기 foreground/background/terminated 수신 QA                                 |
+| 알림                  | `share_created`, `share_requested` payload 구현. 2026-05-23 백엔드가 Android high priority, APNS priority, per-token log, type별 prefix를 구현 예정                                                                                                             | FCM 수신 handler와 로컬 알림함 구현. 읽음 상태 API 없음                                                                                                                                                                                     | VM 재배포 후 terminated/physical 2-device 수신 QA                                  |
 | 냉장고별 나눔 식재료  | `GET /fridges/{id}/posts?status=available` 구현/검증                                                                                                                                                                                                      | 지도에서 선택 냉장고 내부 available 목록 노출 구현. `PostNearbyRead` 타입/fixture는 `confidenceScore`, `authorId`, `updatedAt` 없이 `fridgeName` 포함 형태로 정렬. 신청 성공 후 지도 내부 목록도 `requestedPostId` refresh 신호로 즉시 제거 | 실제 Android UI 재검증 통과                                                        |
 
 ## 2026-05-08 백엔드 공식 답변 반영
@@ -368,8 +368,8 @@
 
 - Android `google-services.json`은 로컬에 준비됐고 gitignored 상태다. Firebase project는 `greennode-94eae`, Android package는 `com.greennode`다.
 - NHN Cloud VM의 Firebase Admin/service account credentials는 기존 `foodlink-cf8e7` mismatch에서 `greennode-94eae` service account로 교체됐다. VM 경로는 `/home/ubuntu/foodlink/credentials/firebase-service-account.json`, container mount 경로는 `/app/credentials/firebase-service-account.json`이다. secret 내용은 문서화하지 않는다.
-- backend handoff P0: Android FCM priority를 `high`로 설정한다.
-- backend handoff P0: aggregate success/failure뿐 아니라 per-token FCM failure를 로그로 남긴다.
+- 2026-05-23 백엔드 회신: Android FCM priority `high`, iOS `apns-priority: 10`, per-token FCM failure log, `[FCM:share_created]`/`[FCM:share_requested]` 로그 prefix를 구현할 예정이다.
+- 프론트 최종 QA 재개 조건: 백엔드 VM 재배포 완료 알림과 FCM 로그 패턴 확인.
 - physical 2-device QA 재개 조건: Windows에 연결된 USB Samsung device가 `adb devices`에 실제 device로 표시되어야 한다. 현재는 `emulator-5554`만 표시된다.
 - `share_created`, `share_requested` 각각의 발송 조건 재확인.
 
@@ -380,7 +380,7 @@
 - background에서는 system notification 표시와 tap의 `PostDetail` 라우팅이 확인됐다.
 - terminated surrogate에서는 app process kill 후 system notification 표시는 확인됐지만, logcat의 `Background messages only work if the message priority is set to 'high'` 때문에 tap routing reliability는 미완료로 둔다.
 - true 2-device QA에서 계정 A/B가 실제 physical devices로 `share_created`, `share_requested`를 foreground/background/terminated에서 수신한다.
-- 백엔드 로그에서 실제 발송, mock 발송, 반경 내 대상 없음, per-token 발송 실패를 구분할 수 있다.
+- 백엔드 로그에서 실제 발송, mock 발송, 반경 내 대상 없음, token 없음, per-token 발송 실패를 `[FCM:share_created]`/`[FCM:share_requested]` prefix로 구분할 수 있다.
 
 ### P1: 나눔 등록 flow 개선
 
@@ -417,7 +417,7 @@
 
 결정 필요:
 
-- 검색을 프론트 로컬 필터로 먼저 할지, 서버 검색 API로 할지. 2026-05-18 MVP는 로컬 필터로 시작하는 것으로 정리.
+- 검색을 프론트 로컬 필터로 먼저 할지, 서버 검색 API로 할지. 2026-05-18 MVP는 로컬 필터로 시작하는 것으로 정리했고, 2026-05-23 백엔드 회신에서 서버 검색은 Post-MVP로 확정했다.
 - 랭킹을 이번 주 구현 대상으로 볼지, 데이터 수집/설계만 할지.
 - 현재 조회/신청/관심 데이터가 부족하므로 `랭킹`은 실제 인기처럼 보이지 않도록 주의한다.
 
@@ -506,8 +506,13 @@ DB/API 초안:
 - `item_status_events`: 개별 나눔 식재료 상태 변경 이력. `itemId`, `fromStatus`, `toStatus`, `actorId`, `actorRole`, `reason`, `note`, `createdAt`.
 - `storage_policy_rules`: 품목/상태별 보관 구역과 서비스 노출/회수 기준.
 - `detections`: multi-object 감지 결과와 생성된 나눔 식재료 연결. `detectionId`, `boundingBox`, `detectedCropKo`, `freshnessLabel`, `confidenceScore`, `postId`.
-- 조회 후보: `GET /operator/fridges/{fridgeId}/inventory/summary`, `GET /operator/fridges/{fridgeId}/inventory/items`, `GET /operator/baskets/{basketId}`.
-- 변경 후보: `POST /operator/items/{postId}/status-events`로 `discarded`, `missing`, `completed`, `needsReview` 같은 운영자 처리 기록.
+- 확정된 운영자 조회 API: `GET /api/v1/operator/fridges/{fridgeId}/inventory/summary`, `GET /api/v1/operator/fridges/{fridgeId}/inventory/items`.
+- 확정된 운영자 변경 API: `PATCH /api/v1/operator/items/{postId}/dispose`. 성공 응답은 `PostRead` 전체 필드와 `status: "disposed"`다.
+- summary 응답 shape: `fridgeId`, `fridgeName`, `total`, `available`, `requested`, `expired`, `disposedToday`.
+- items 응답 shape: 기존 `PostRead[]` camelCase. disposed 항목은 포함하지 않는다.
+- dispose 가능 상태: `expired`, `available`. dispose 불가 상태: `requested`, `completed`, `pending_store`, `cancelled`, `disposed`이며 409로 거절한다.
+- Post-MVP 조회 후보: `GET /operator/baskets/{basketId}`.
+- Post-MVP 변경 후보: `POST /operator/items/{postId}/status-events`로 `missing`, `completed`, `needsReview`, `restored`, `manual_adjustment` 같은 운영자 처리 기록.
 - QR 후보: `POST /inventory/confirm-store`, `POST /inventory/confirm-pickup`.
 
 완료 기준:
@@ -1072,7 +1077,7 @@ image=@android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png; type=image/png
 | generate request           | 확인됨                                   | OpenAPI는 `multipart/form-data`, `image` 필수, `user_hint` 선택으로 정의한다.                                                                                                        | `API_INTEGRATION_CONTRACT.md` 갱신 완료. 앱/서버 category enum 정합성은 별도 구현 필요 |
 | API -> AI 내부 payload     | 미확인                                   | 현재 repo에는 백엔드/AI 서버 코드가 없다. OpenAPI도 앱과 API 서버 사이 계약만 보여준다.                                                                                              | 백엔드 코드 또는 서버 로그로 별도 검증                                                 |
 | raw AI 서버 응답           | 미확인                                   | 앱이 받는 것은 API 서버가 정리한 `PostGenerateResult`이다.                                                                                                                           | AI 서버 원 응답 schema 확보                                                            |
-| 대표 객체 처리             | 현재 계약은 단일 객체                    | 응답 schema가 `detectedFruit`/`detectedFruitKo` 단일 문자열만 제공한다. 배열, bounding box, object id 필드가 없다.                                                                   | multi-object를 하려면 `detections[]` 같은 새 계약 필요                                 |
+| 대표 객체 처리             | MVP 계약 확정                            | 2026-05-23 백엔드 회신 기준 generate 응답은 root-level `detectedFruit`/`detectedFruitKo`와 `detections[]`를 함께 내려준다. MVP에서는 `detections`가 단일 객체 배열이고 `detections[0]`이 대표 객체다. | 실제 `detections.length > 1`, bounding box, object id 활용은 Post-MVP 모델 도입 후 검증 |
 | multi-object 실제 성능     | 미확인                                   | 여러 음식이 있는 테스트 이미지를 아직 호출하지 않았다.                                                                                                                               | 테스트 이미지 세트 준비 후 generate 반복 검증                                          |
 | confidence                 | 정의 확정, 화면 표시/확인 필요 분기 구현 | `confidenceScore`는 Stage 2 신선도 분류 softmax max 확률이다. 분석 결과/작성 화면에 표시되고, `0.9` 미만은 `확인 필요`로 분기한다. 단, confidence만으로 즉시 등록 차단하지는 않는다. | 0.4/0.7/1.0 fixture로 사용자 확인 UX 검증                                              |
 | 신선도 등급                | 백엔드 enum 확정                         | 백엔드 값은 `Fresh/Mid/Stale`이다. `Fresh/Mid`는 나눔 가능, `Stale`은 나눔 기준 미충족이다. 앱의 `normal/mid/medium`, `bad/rotten` 매핑은 방어적 호환으로 유지할 수 있다.            | `Fresh/Mid/Stale` fixture로 서버와 앱 매핑을 고정                                      |
@@ -1084,7 +1089,7 @@ image=@android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png; type=image/png
 2. `Stale` 테스트 fixture 확보: `Fresh/Mid` 외에 `Stale` 응답을 실제 이미지 또는 서버 fixture로 재현한다.
 3. confidence UX 보강: 제품 기준은 90%로 확정했다. 낮은 confidence일 때 재촬영 강조, 수동 입력, 단순 확인 중 어떤 CTA를 둘지 추가로 정한다.
 4. 나눔 기준 미충족 등록 차단 회귀 검증: `canShare=false`일 때 화면 이동과 최종 등록이 계속 막히는지 `Stale` fixture로 확인한다.
-5. multi-object 연구 항목 분리: 현재 계약은 단일 객체이므로 다음 스프린트에서는 `detections[]` 응답 구조와 UI 표시 방식을 먼저 설계한다.
+5. multi-object 연구 항목 분리: 2026-05-23 기준 `detections[]` 최소 응답 구조는 확정됐다. 다음 스프린트에서는 실제 `detections.length > 1` 응답, `bbox`, non-null `rejectionReason` 도입 시 UI 표시 방식과 분리 등록 정책을 검증한다.
 
 ### Codex 작업 지시 예시
 
@@ -1144,10 +1149,10 @@ docs/VALIDATION_AND_BACKLOG.md의 "3. AI 파이프라인 데이터 흐름 검증
 | confidence 낮을 때 등록 차단            | 정책 결정 완료                    | 낮은 confidence는 단독 등록 차단 사유로 보지 않고 `확인 필요`로 표시한다. 나눔 기준 미충족 신선도 등급만 `canShare=false`로 등록을 차단한다.                                             | `AnalysisResultScreen`, `postPolicy.needsAnalysisReview()`               | 확인 필요 상태에서 사용자 확인/수동 수정 UX 보강                 |
 | confidence 낮을 때 재촬영               | 부분 구현                         | 낮은 confidence 전용 안내는 표시되지만 재촬영을 강제하지는 않는다.                                                                                                                       | `AnalysisResultScreen`, `CameraScanScreen`                               | `confidenceScore < threshold`면 재촬영 CTA를 강조                |
 | confidence 낮을 때 수동 입력            | 부분 구현                         | 분석 성공 뒤 나눔 식재료 작성 화면에서 제목/카테고리/설명은 수정 가능하다. 하지만 낮은 confidence 또는 분석 실패에서 바로 수동 입력으로 넘기는 흐름은 없다.                              | `PostCreateScreen` TextInput, category chip                              | `수동으로 입력` CTA 추가                                         |
-| 여러 음식 하나의 나눔 식재료 처리       | 현재 구조상 단일 대표 객체만 가능 | 현재 응답 계약은 `detectedFruit`, `detectedFruitKo` 단일 문자열이다. `detections[]`, bounding box, object id가 없다.                                                                     | OpenAPI `PostGenerateResult`, `PostAIResult`, `src/types/post.ts`        | MVP에서는 대표 객체 1개 나눔 식재료로만 처리                     |
+| 여러 음식 하나의 나눔 식재료 처리       | MVP 계약 확정                     | 2026-05-23 응답 계약은 root-level 대표 객체와 `detections[]` 단일 객체 배열 래핑을 함께 제공한다. `bbox`는 MVP에서 `null`이고 실제 여러 객체 배열은 Post-MVP다.                         | OpenAPI `PostGenerateResult`, `PostAIResult`, `src/types/post.ts`        | MVP에서는 대표 객체 1개 나눔 식재료로만 처리                     |
 | 여러 음식 객체별 분리 등록              | 미구현                            | 앱 내 route param, 타입, 나눔 식재료 작성 화면이 모두 단일 결과를 전제로 한다. 객체별 분리 등록 UX가 없다.                                                                               | `RootStackParamList`, `GenerateResult`, `PostCreateScreen`               | 다음 스프린트에서 계약/UX 먼저 설계                              |
 | 여러 객체 중 하나라도 `Stale`일 때 차단 | 미구현                            | multi-object 결과가 없어서 객체별 `Stale` 판단 자체가 불가능하다. 서버 설명상 `Stale`/AI 장애는 generate 단계에서 400으로 거부되는 흐름이므로 앱은 실패 Alert만 받는다.                  | OpenAPI `generate` 설명, `CameraScanScreen` error handling               | multi-object 도입 시 보수적으로 전체 확인 필요 상태 처리         |
-| 객체별 나눔 기준 미충족 상태 표시       | 미구현                            | 단일 `category`만 표시한다. 객체별 상태, confidence, 박스 표시 UI가 없다.                                                                                                                | `AnalysisResultScreen` 품질 분류, `PostCreateScreen` 분석 카드           | `detections[]` 계약 이후 표시 방식 설계                          |
+| 객체별 나눔 기준 미충족 상태 표시       | Post-MVP                          | MVP `detections[]`는 단일 대표 객체만 담는다. 객체별 상태, confidence, 박스 표시 UI는 실제 다중 객체와 `bbox`가 내려올 때 필요하다.                                                       | `AnalysisResultScreen` 품질 분류, `PostCreateScreen` 분석 카드           | `detections.length > 1` 계약 이후 표시 방식 설계                  |
 | multi-object 적용 시점                  | 정책 결정                         | 지금 MVP에는 붙이지 않는다. 현재 파이프라인은 단일 이미지/단일 대표 객체 계약이라 multi-object를 붙이면 API 계약, 결과 화면, 나눔 식재료 작성/분리 등록 UX가 동시에 바뀐다.              | `PostGenerateResult` 필드 목록, 앱 route 구조                            | 다음 스프린트 연구/검증 항목으로 분리                            |
 
 #### 정책 결정안
@@ -1157,8 +1162,8 @@ docs/VALIDATION_AND_BACKLOG.md의 "3. AI 파이프라인 데이터 흐름 검증
 - 라벨, 유통기한, 내부 상태가 핵심인 식재료는 AI가 확정하지 않고 `확인 필요`로 분기한다.
 - 낮은 confidence는 단독 등록 차단 사유로 확정하지 않는다. 대신 재촬영, 갤러리 재선택, 수동 입력 중 하나를 요구한다.
 - `Stale` 또는 서버 generate 400은 직접 나눔 등록으로 보내지 않고 재촬영/수동 확인으로 돌린다. `Bad/Rotten`은 현재 백엔드 label은 아니지만 내려오면 같은 차단 그룹으로 방어 처리한다.
-- multi-object detection은 MVP 필수 기능이 아니라 다음 스프린트의 API 계약/UX 연구 항목으로 둔다.
-- multi-object를 도입할 경우 먼저 `detections[]` 계약을 정의한다. 최소 필드는 `label`, `labelKo`, `confidence`, `qualityCategory`, `bbox`다.
+- multi-object detection은 MVP 필수 기능이 아니라 Post-MVP API/UX 연구 항목으로 둔다.
+- 2026-05-23 최소 `detections[]` 계약은 정의됐다. MVP 필드는 `id`, `label`, `labelKo`, `freshnessLabel`, `confidenceScore`, `bbox`이고 `bbox`는 `null`이다.
 
 #### 다음 스프린트 작업 후보
 
@@ -1167,7 +1172,7 @@ docs/VALIDATION_AND_BACKLOG.md의 "3. AI 파이프라인 데이터 흐름 검증
 3. 분석 실패/촬영 실패 Alert를 `다시 촬영`, `갤러리에서 선택`, `수동 입력` 액션으로 바꾼다.
 4. 유통기한 기본 3일 자동값은 유지하되, 작성 화면에서 권장 수령일을 수정 가능하게 만들었다. 최대 허용 기간과 OCR은 후속으로 둔다.
 5. multi-object 검증용 이미지 세트를 준비한다: 단일 객체, 여러 객체, 흐림/어두움, 라벨/유통기한 포함, 포장 내부 미노출, 나눔 기준 미충족.
-6. API 초안에 `detections[]` 응답 계약을 추가하고, 대표 객체 1개 처리와 객체별 분리 등록 중 어느 UX가 맞는지 별도 검증한다.
+6. 확정된 MVP `detections[]` 단일 객체 래핑 계약을 프론트 타입/fixture에 반영하고, 실제 다중 객체 응답이 도입되면 대표 객체 1개 처리와 객체별 분리 등록 중 어느 UX가 맞는지 별도 검증한다.
 7. 완료: 에뮬레이터 셔터의 `Capture error TypeError: undefined is not a function`는 `usePhotoOutput().capturePhotoToFile()` 적용 후 사라졌고, 촬영 파일이 API로 전달됐다.
 
 ### 산출물
@@ -1258,23 +1263,21 @@ docs/VALIDATION_AND_BACKLOG.md의 "4. 한 장 촬영 UX와 multi-object 정책 �
 | 탄소 절감액               | 정리됨                         | 홈과 프로필의 고정 kg 값을 제거하고 `준비 중`으로 표시한다. 계산식/API는 없다.                                                                                                                                                                                       | 실제 지표를 넣으려면 계산식과 API 계약을 먼저 정의한다.                                                   |
 | 내 주변 실시간 나눔       | 부분 구현                      | `getNearbyPosts()`로 실제 주변 available 나눔 식재료를 가져와 카드로 표시한다. 백엔드 기준 `/posts/nearby`는 requested를 자동 제외한다. 실시간 구독, pagination, `전체보기` 동작은 없다.                                                                             | 신청 성공 후 requested 항목이 홈에서 사라지는지 프론트 연동/QA.                                           |
 | 홈 데이터 없음 상태       | 구현됨                         | 나눔 식재료가 없으면 `아직 근처에 나눔이 없어요` 빈 상태를 표시한다.                                                                                                                                                                                                 | API 실패와 진짜 빈 상태를 구분하는 에러 UI 추가.                                                          |
-| 검색 기능                 | 부분 구현                      | 홈은 현재 불러온 주변 나눔 식재료를 식재료명/냉장고명으로 로컬 필터링한다. 홈 지도 아이콘은 지도 탭으로 이동하고, 지도 검색 입력은 공유 냉장고 이름/주소 로컬 필터로 동작한다. 서버 OpenAPI에는 검색 엔드포인트가 없다.                                                        | 서버 검색/독립 검색 화면은 후속 범위로 분리.                                                             |
+| 검색 기능                 | 부분 구현, 서버 검색 Post-MVP | 홈은 현재 불러온 주변 나눔 식재료를 식재료명/냉장고명으로 로컬 필터링한다. 홈 지도 아이콘은 지도 탭으로 이동하고, 지도 검색 입력은 공유 냉장고 이름/주소 로컬 필터로 동작한다. 2026-05-23 백엔드 회신 기준 서버 검색은 MVP 미포함이며 향후 nearby API optional `q`로 확장한다. | 서버 검색/독립 검색 화면은 후속 범위로 분리.                                                             |
 | 검색 결과 없음            | 구현됨                         | 홈 나눔 식재료 로컬 검색과 지도 공유 냉장고 로컬 검색 모두 결과 없음 상태와 검색 초기화를 제공한다.                                                                                                                                                                  | 서버 검색/독립 검색 화면은 후속 범위로 분리.                                                             |
-| 푸쉬 알림                 | emulator foreground/background 실수신 QA 통과, terminated/physical 2-device 보류 | Firebase Messaging 의존성, Android 알림 권한, FCM 토큰 등록이 있다. `share_created`, `share_requested` foreground/background/opened/initial handler를 구현했고, payload는 문자열 + camelCase(`type`, `postId`, `requestId`, `fruitName`, `fridgeName`)로 검증한다. Firebase 설정이 없는 QA/release 빌드에서는 알림 handler와 FCM 토큰 등록을 안전하게 건너뛴다. 2026-05-21 emulator QA에서 `greennode-94eae` client/Admin project 정렬 후 실제 send success 1 / failure 0, foreground 로컬 알림 탭 기록, background system notification 표시와 tap의 `PostDetail` 라우팅을 확인했다. 알림함은 로컬 수신 기록/빈 상태 중심이며 읽음 상태 API는 없다. | backend Android FCM priority `high`, per-token failure log 적용 후 terminated routing을 재검증하고, ADB가 실제 Samsung device를 인식하면 physical 2-device QA를 재개한다. |
+| 푸쉬 알림                 | 2계정 debug/release QA 및 Android 14/15 매트릭스 통과 | Firebase Messaging 의존성, Android 알림 권한, FCM 토큰 등록이 있다. `share_created`, `share_requested` foreground/background/opened/initial handler를 구현했고, payload는 문자열 + camelCase(`type`, `postId`, `requestId`, `fruitName`, `fridgeName`)로 검증한다. Firebase 설정이 없는 QA/release 빌드에서는 알림 handler와 FCM 토큰 등록을 안전하게 건너뛴다. 2026-05-21 emulator QA에서 `greennode-94eae` client/Admin project 정렬 후 실제 send success 1 / failure 0, foreground 로컬 알림 탭 기록, background system notification 표시와 tap의 `PostDetail` 라우팅을 확인했다. 2026-05-25 실기기+emulator 2계정 QA에서 debug foreground/background/terminated, 기존 task onNewIntent, fresh install, 로그아웃 후 로그인 defer 경로를 확인했다. release build는 background tap, process-killed notification tap, Samsung 패턴 잠금화면 notification tap 모두 `PostDetail` 진입을 확인했다. Android 14/API 34 Pixel 7 AVD release에서도 background와 `cmd activity stop-app` 종료 상태의 `share_created` notification tap이 `PostDetail`로 진입했다. process-killed release blank RN root는 notification payload 수신 시 Headless JS를 먼저 띄우지 않도록 native receiver를 분리해 해소했다. 알림함은 로컬 수신 기록/빈 상태 중심이며 읽음 상태 API는 없다. | Android 13 실기기 또는 추가 OEM 기기는 확보 시 참고 매트릭스로만 보강한다. |
 | 유저 프로필               | 부분 구현                      | 닉네임/이메일은 실제 유저 정보를 표시한다. 프로필 수정, 메뉴 이동, 내 나눔/관심/받은 나눔은 연결되어 있지 않다.                                                                                                                                                      | 프로필 수정 또는 내 나눔 내역 중 하나만 우선 연결.                                                        |
 | 유저 통계                 | 정리됨                         | 신선도 온도, 포인트, 탄소 절감량의 하드코딩 숫자를 제거하고 `준비 중` 상태로 표시한다.                                                                                                                                                                               | 실제 지표를 넣으려면 계산식과 API 계약을 먼저 정의.                                                       |
-| 냉장고별 나눔 식재료 조회 | 프론트 코드 연동 완료, VM/API QA 및 Android UI 재확인 통과 | 지도에서 특정 냉장고를 선택하면 `GET /fridges/{id}/posts?status=available`로 내부 available 목록을 조회한다. loading/error/empty/list 상태를 분리하고 항목 탭 시 상세로 이동한다. 2026-05-08 VM/API에서 `PostNearbyRead` 카드 필드와 requested 제외를 재확인했고, 실제 Android UI에서 신규 Post 표시명/상태와 신청 후 즉시 제거를 확인했다. | 별도 inventory 개념은 후속으로 분리. |
+| 냉장고별 나눔 식재료 조회 | 프론트 코드 연동 완료, VM/API QA 및 Android UI 재확인 통과 | 지도에서 특정 냉장고를 선택하면 `GET /fridges/{id}/posts?status=available`로 내부 available 목록을 조회한다. loading/error/empty/list 상태를 분리하고 항목 탭 시 상세로 이동한다. 2026-05-08 VM/API에서 `PostNearbyRead` 카드 필드와 requested 제외를 재확인했고, 실제 Android UI에서 신규 Post 표시명/상태와 신청 후 즉시 제거를 확인했다. 2026-05-23 기준 별도 operator inventory API는 `/api/v1/operator/fridges/{fridgeId}/inventory/*`로 분리된다. | operator inventory는 백엔드 VM 재배포 후 권한/빈 목록/dispose QA를 진행한다. |
 | 지도 근처 냉장고 조회     | 구현됨                         | `MapScreen`이 `/fridges/nearby`, `FridgeSelectScreen`이 `/fridges/available`을 호출한다. 1번 검증에서 실제 냉장고 목록 표시를 확인했다.                                                                                                                              | 위치 미설정 기본 좌표 fallback과 API 실패 UI 보강.                                                        |
 | 채팅 탭                   | 알림함으로 축소/구현됨         | `ChatListScreen`의 `MOCK_CHATS`를 제거하고 탭 라벨을 `알림`으로 바꿨다. 현재는 FCM 수신 기록/빈 상태를 보여준다. WebSocket, 채팅방 상세, 메시지 송수신 API는 없다.                                                                                                 | MVP에서는 알림함으로 유지하고 WebSocket 채팅은 보류.                                                      |
 | WebSocket 채팅            | 미구현/보류 권장               | 코드와 OpenAPI 모두 실시간 채팅 계약이 없다. 구현/검증 비용이 크다.                                                                                                                                                                                                  | 다음 스프린트에서는 단순 문의/예약 CTA 또는 알림함으로 축소한다.                                          |
 
 #### 다음 스프린트 우선순위 제안
 
-1. Backend FCM handoff: Android FCM priority를 `high`로 설정하고 per-token failure log를 남긴다.
-2. Terminated FCM 재검증: backend `high` priority 적용 후 terminated notification tap routing reliability를 다시 확인한다.
-3. Physical 2-device QA: ADB가 실제 Samsung device를 인식하면 Firebase 설정 포함 빌드와 FCM token이 등록된 두 테스트 계정/기기에서 `share_created`, `share_requested` foreground/background/terminated 수신을 확인한다.
-4. Post-MVP AI/rejection contract: `stale-or-rotten`, `screenshot-or-ui`, `low-quality` false-positive를 rejection reason 또는 review-required 계약으로 승격할지 백엔드/AI와 결정한다.
-5. Optional UX polish: 분석 실패 후 수동 입력 CTA를 MVP 이후에 추가할지 결정한다.
+1. Operator inventory QA: summary/items/dispose 확정 계약을 실제 운영자/비운영자/빈 냉장고/available·expired·requested 항목으로 검증한다.
+2. Android 13 실기기 또는 추가 OEM 참고 매트릭스: 기기가 확보되면 Firebase 설정 포함 빌드와 FCM token이 등록된 두 테스트 계정으로 background/terminated 수신을 보강한다.
+3. Post-MVP AI/rejection contract: `stale-or-rotten`, `screenshot-or-ui`, `low-quality` false-positive를 rejection reason 또는 review-required 계약으로 승격할지 백엔드/AI와 결정한다.
 
 #### 채팅 탭 결정
 
@@ -1541,9 +1544,9 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
 
 - 분류: 정책 결정/서버 계약
 - 우선순위: P1
-- 상태: 앱 방어 로직/fixture 반복 검증 스크립트 추가, 실제 기기 false-positive 증거 추가. 2026-05-08 백엔드 답변 기준 screenshot/UI 차단은 MVP 허용, rejection reason enum은 Post-MVP
+- 상태: 앱 방어 로직/fixture 반복 검증 스크립트 추가, 실제 기기 false-positive 증거 추가. 2026-05-08 백엔드 답변 기준 screenshot/UI 차단은 MVP 허용이고, 2026-05-23 백엔드 회신 기준 `rejectionReason`은 MVP 정상 응답에서 `null`, non-null enum은 Post-MVP
 - 배경: 에뮬레이터 QA에서 비식재료/스크린샷성 이미지가 `바나나 / 신선 / 100%`로 통과했다. 2026-05-06 실제 Android 기기 QA에서도 화면상 토마토 이미지를 촬영했으나 AI가 `바나나 / 나눔 가능 / 91%`로 판별했다.
-- 현재 동작: 앱은 이미지 내용을 자체 판별하지 않는다. 서버가 `not_food/non_food/low_quality/screenshot/ui_screenshot` category 또는 `rejectionReason`을 주면 등록 차단으로 처리한다. 다만 백엔드 Phase 1.5 기준 해당 enum은 아직 구현되지 않았고 Post-MVP로 기록됐다. MVP 서버/AI는 screenshot/UI 판별 모델이 없어 `Fresh + imageToken`을 반환할 수 있다.
+- 현재 동작: 앱은 이미지 내용을 자체 판별하지 않는다. 서버가 `not_food/non_food/low_quality/screenshot/ui_screenshot` category 또는 non-null `rejectionReason`을 주면 등록 차단으로 처리한다. 다만 백엔드 Phase 1.5 및 2026-05-23 회신 기준 해당 enum은 아직 구현되지 않았고 Post-MVP로 기록됐다. MVP 서버/AI는 screenshot/UI 판별 모델이 없어 `Fresh + imageToken`과 `rejectionReason: null`을 반환할 수 있다.
 - 기대 동작: MVP에서는 서버가 `Fresh + imageToken`을 반환하면 등록을 허용하고, 낮은 confidence는 `확인 필요`로만 표시한다. Post-MVP에서는 서버/AI가 비식재료, 스크린샷, 앱 아이콘, 실내 배경을 `Fresh` 식재료로 반환하지 않도록 rejection/review reason 계약을 추가한다.
 - Acceptance Criteria:
   - [ ] Post-MVP에서 `not_food`, `low_quality`, `screenshot`, `ui_screenshot`, `review_required`, `multi_object_review` 등 실패/검토 사유 enum을 서버 계약에 추가한다.
@@ -1560,7 +1563,7 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
 - 우선순위: P2
 - 배경: 홈 검색 아이콘과 지도 검색 입력은 있지만 동작이 없다.
 - 현재 동작: 홈은 현재 불러온 주변 나눔 식재료를 식재료명/냉장고명으로 로컬 필터링한다. 홈 지도 아이콘은 지도 탭으로 이동하고, 지도 검색 입력은 현재 불러온 공유 냉장고의 이름/주소를 로컬 필터링한다.
-- 기대 동작: MVP에서는 서버 검색 없이 현재 로딩된 나눔 식재료와 공유 냉장고에 대한 로컬 필터를 제공한다. 동네/서버 검색은 후속 범위로 분리한다.
+- 기대 동작: MVP에서는 서버 검색 없이 현재 로딩된 나눔 식재료와 공유 냉장고에 대한 로컬 필터를 제공한다. 2026-05-23 백엔드 회신 기준 동네/서버 검색은 Post-MVP이며, 향후 nearby API에 optional `q`, `skip`, `limit`를 추가하는 방향으로 분리한다.
 - Acceptance Criteria:
   - [x] 검색 대상은 MVP에서 현재 불러온 나눔 식재료명/냉장고명과 공유 냉장고 이름/주소로 제한한다.
   - [x] 결과 없음 상태가 표시된다.
@@ -1587,7 +1590,7 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
 - 분류: 기능 구현
 - 우선순위: P2
 - 배경: FCM 토큰 등록과 로컬 알림함 수신 처리는 구현됐지만, 서버 알림 목록/읽음 상태 API는 없다.
-- 현재 동작: FCM token은 사용자가 위치 설정 화면의 `나눔 알림 받기` CTA를 눌렀을 때 권한 요청 후 `/auth/me/location`으로 등록한다. 위치 설정 진입과 기존 유저의 위치 자동 갱신만으로는 알림 권한을 요청하지 않으며, Android 13+ `POST_NOTIFICATIONS` 거부 시 Firebase permission/register/getToken을 호출하지 않고 `fcmToken` 없이 위치 등록을 계속한다. `share_created`, `share_requested` handler는 foreground/background/opened/initial 메시지를 로컬 알림함에 기록한다. 알림 열기와 알림함 항목 탭은 `PostDetail`로 이동하며, `share_requested`는 내 나눔 관리 화면이 없으므로 상세 fallback을 쓴다. Firebase 앱이 설정되지 않은 QA/release 빌드에서는 Messaging 인스턴스 생성 실패를 잡고 handler 등록과 FCM 토큰 조회를 건너뛰어 앱 시작/위치 갱신 크래시를 막는다. 2026-05-21 emulator QA에서 Firebase client/Admin project를 `greennode-94eae`로 맞춘 뒤 `share_created`, `share_requested` 실제 FCM send와 foreground/background 수신은 확인됐다. terminated surrogate는 system notification 표시까지만 확인됐고, tap routing reliability는 backend Android FCM priority `high` 설정 후 재검증한다. true 2-device QA는 physical Samsung device가 `adb devices`에 표시되지 않아 보류 중이다.
+- 현재 동작: FCM token은 사용자가 위치 설정 화면의 `나눔 알림 받기` CTA를 눌렀을 때 권한 요청 후 `/auth/me/location`으로 등록한다. 위치 설정 진입과 기존 유저의 위치 자동 갱신만으로는 알림 권한을 요청하지 않으며, Android 13+ `POST_NOTIFICATIONS` 거부 시 Firebase permission/register/getToken을 호출하지 않고 `fcmToken` 없이 위치 등록을 계속한다. `share_created`, `share_requested` handler는 foreground/background/opened/initial 메시지를 로컬 알림함에 기록한다. 알림 열기와 알림함 항목 탭은 `PostDetail`로 이동하며, `share_requested`는 내 나눔 관리 화면이 없으므로 상세 fallback을 쓴다. Firebase 앱이 설정되지 않은 QA/release 빌드에서는 Messaging 인스턴스 생성 실패를 잡고 handler 등록과 FCM 토큰 조회를 건너뛰어 앱 시작/위치 갱신 크래시를 막는다. 2026-05-25 실기기 `SM-S928N` + Android emulator `Medium_Phone_API_36.1` + NHN Cloud VM에서 2계정 foreground/background/debug terminated FCM QA를 통과했다. VM 로그는 `[FCM:share_created]`와 `[FCM:share_requested]` type prefix, per-token OK/FAIL, 실제 send success를 구분했다. release build는 background tap과 process-killed notification tap 모두 `PostDetail` 진입을 확인했다. Android 14/API 34 Pixel 7 AVD release에서도 background와 `cmd activity stop-app` 종료 상태의 notification tap이 `PostDetail`로 진입했다. release process-killed blank RN root는 notification payload 수신 시 Headless JS를 먼저 띄우지 않고 RNFirebase initial notification 저장만 수행하는 custom receiver로 해소했다.
 - 기대 동작: MVP에서는 WebSocket 채팅 대신 알림함과 단순 신청 흐름으로 축소한다. 읽음 상태 API는 후속으로 분리한다.
 - Acceptance Criteria:
   - [x] foreground/background 알림 수신 handler가 정의된다.
@@ -1605,24 +1608,49 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
   - [x] 2026-05-21 emulator foreground에서 `share_created`, `share_requested` 실제 FCM 수신과 로컬 알림 탭 기록을 확인한다.
   - [x] 2026-05-21 emulator background에서 system notification 표시와 tap의 `PostDetail` 라우팅을 확인한다.
   - [x] 2026-05-21 백엔드 로그에서 `share_created`, `share_requested` 실제 send success 1 / failure 0을 확인한다.
-  - [ ] backend가 Android FCM priority를 `high`로 설정한다.
-  - [ ] backend가 per-token FCM failure를 로그로 남긴다.
-  - [ ] terminated 상태 notification tap routing reliability를 `high` priority 적용 후 재검증한다.
-  - [ ] physical 2-device/2-account QA를 `adb devices`가 실제 Samsung device를 인식한 뒤 재개한다.
-- 검증 방법: FCM 테스트 메시지 수신 QA, 앱 foreground/background/terminated 확인, backend FCM send log 확인, `notificationService.firebaseFallback.test.ts`, `deviceRegistration.firebaseFallback.test.ts`, `deviceRegistration.notificationPermission.test.ts`, `locationSetup.notificationPermission.test.tsx`
+  - [x] 2026-05-25 실기기 + Android emulator 2계정 foreground에서 `share_created`, `share_requested` 실제 FCM 수신과 로컬 알림 탭 기록을 확인한다.
+  - [x] 2026-05-25 실기기 + Android emulator 2계정 background에서 `share_created`, `share_requested` system notification 표시를 확인한다.
+  - [x] 2026-05-23 백엔드 회신의 FCM priority/log/prefix 변경이 VM에 재배포된 상태를 확인한다.
+  - [x] `docker logs foodlink-api-1 | grep FCM`에서 실제 성공, 실패, token 없음, 대상 없음, invalid/expired token을 type별 prefix로 구분한다.
+  - [x] 2026-05-25 debug process-killed 상태에서 `share_created`, `share_requested` notification tap이 `PostDetail`로 진입한다.
+  - [x] physical device + Android emulator 2-account QA를 `adb devices`가 두 대상을 인식한 상태에서 수행한다.
+  - [x] 2026-05-25 app이 background/alive 상태인 기존 task onNewIntent 경로에서 `share_created`, `share_requested` tap이 `PostDetail`로 진입한다.
+  - [x] 2026-05-25 fresh install에서 로그인, 위치/알림 권한 허용, FCM token 등록, `share_created` background 수신과 tap routing을 확인한다.
+  - [x] 2026-05-25 로그아웃 상태에서 notification tap 시 navigation을 로그인 완료 전까지 defer하고, 로그인 후 의도한 `PostDetail`로 이어진다.
+  - [x] 2026-05-25 Android 15 real device release background와 API 36 emulator debugOptimized background에서 `share_created` notification tap이 `PostDetail`로 진입한다.
+  - [x] 2026-05-25 release process-killed 상태의 notification tap은 custom receiver 적용 후 `PostDetail`로 진입한다.
+  - [x] 2026-05-25 Samsung 패턴 잠금화면에서 notification tap -> 패턴 잠금해제 -> `PostDetail` 진입을 확인한다.
+  - [x] 2026-05-25 Android 14/API 34 Pixel 7 AVD release에서 `share_created` background notification tap이 `PostDetail`로 진입한다.
+  - [x] 2026-05-25 Android 14/API 34 Pixel 7 AVD release에서 `cmd activity stop-app`으로 앱 프로세스가 없는 상태를 만든 뒤 notification tap이 `PostDetail`로 진입한다.
+- 2026-05-25 evidence:
+  - 환경: 실기기 `SM-S928N` Android 15/API 35 serial `R3CX203CV8X`, Android emulator `emulator-5554` (`Medium_Phone_API_36.1`), NHN Cloud VM API `localhost:8080`, Metro debug build.
+  - 계정: 공급자 `codex_fcm_a_1779690163@example.com`, 수요자 `codex_fcm_b_1779690163@example.com`.
+  - API 2계정 계약: `temp/two-account-api-qa-1779694285828.json`, `temp/twoqa-post9-after-request-api-check-1779694846535.json`.
+  - foreground FCM/UI: `temp/twoqa-emu-alerts-after-share-created.png`, `temp/twoqa-emu-request-result.png`, `temp/twoqa-real-app-alerts-after-share-requested-3.png`.
+  - background FCM/system notification: `temp/twoqa-emu-background-share-created-shade.png`, `temp/twoqa-real-background-share-requested-shade.png`.
+  - logcat: `temp/twoqa-emu-share-created-logcat.txt`, `temp/twoqa-real-share-requested-logcat.txt`, `temp/twoqa-emu-background-share-created-logcat.txt`, `temp/twoqa-real-background-share-requested-logcat.txt`.
+  - debug terminated/process-killed: `temp/twoqa-real-authleaf-process-killed-share-created-opened-summary.txt`, `temp/twoqa-real-share-requested-process-killed-opened-summary.txt`.
+  - 기존 task onNewIntent: `temp/twoqa-real-existingtask-valid-share-created-opened-summary.txt`, `temp/twoqa-real-existingtask-valid-share-requested-opened-summary.txt`.
+  - fresh install: `temp/fresh-install-auth-me.json`, `temp/fresh-install-dumpsys-package.txt`, `temp/fresh-install-appops.txt`, `temp/fresh-install-share-created-opened-summary.txt`.
+  - 권한/토큰/로그아웃 예외: `temp/loggedout-fix-after-notification-open-summary.txt`, `temp/loggedout-fix-after-login-opened-summary.txt`, `temp/loggedout-fix-after-login-opened-logcat.txt`.
+  - release: `temp/release-real-after-install-launch-summary.txt`, `temp/release-real-background-share-created-opened-summary.txt`, `temp/release-real-process-killed-share-created-opened-late-summary.txt`, `temp/release-real-process-killed-share-created-after-tap-late-logcat.txt`, `temp/release-fix-process-killed-share-created-located-opened-summary.txt`, `temp/release-fix-process-killed-share-created-located-after-tap-logcat.txt`.
+  - lockscreen: `temp/lockscreen-qa-release-share-created-lockscreen-summary.txt`, `temp/lockscreen-qa-release-share-created-after-row-tap-summary.txt`, `temp/lockscreen-qa-release-share-created-after-unlock-summary.txt`, `temp/lockscreen-qa-release-share-created-after-unlock-logcat.txt`.
+  - API36 debugOptimized: `temp/emu-api36-debugoptimized-force-launch-metro-summary.txt`, `temp/emu-api36-debugoptimized-auth-me.json`, `temp/emu-api36-debugoptimized-background-share-created-opened-summary.txt`, `temp/emu-api36-debugoptimized-background-share-created-after-tap-logcat.txt`.
+  - API34 Pixel release: `temp/pixel-api34-auth-me-after-token-retry.json`, `temp/pixel-api34-release-background-share-created-opened-summary.txt`, `temp/pixel-api34-release-background-share-created-after-tap-logcat.txt`, `temp/pixel-api34-release-stop-app-share-created-pids.json`, `temp/pixel-api34-release-stop-app-share-created-shade-summary.txt`, `temp/pixel-api34-release-stop-app-share-created-opened-summary.txt`, `temp/pixel-api34-release-stop-app-share-created-after-tap-logcat.txt`.
+- 검증 방법: FCM 테스트 메시지 수신 QA, 앱 foreground/background/terminated 확인, backend FCM send log 확인, `npx jest __tests__/notificationService.test.ts __tests__/appNavigator.notificationFlush.test.tsx __tests__/deviceRegistration.notificationPermission.test.ts --runInBand`, `npx tsc --noEmit`, `.\gradlew.bat :app:assembleRelease -PreactNativeArchitectures=arm64-v8a --console=plain`, `.\gradlew.bat :app:assembleRelease -PreactNativeArchitectures=x86_64 --console=plain`, `.\gradlew.bat :app:assembleDebugOptimized -PreactNativeArchitectures=x86_64 --console=plain`
 - 관련 파일/화면/API: `notifications.ts`, `deviceRegistration.ts`, `firebaseMessaging.ts`, `notificationStore.ts`, `ChatListScreen`, `index.js`, `AppNavigator`, Firebase Messaging
 
 ## multi-object detection 연구/계약 초안
 
 - 분류: 정책 결정 필요
 - 우선순위: P2
-- 배경: 현재 API와 앱 타입은 단일 대표 객체만 지원한다.
-- 현재 동작: `detectedFruit`/`detectedFruitKo` 단일 문자열만 처리한다.
-- 기대 동작: 다음 스프린트에서는 백엔드 `detections[]` 계약과 UX 정책을 검증한다. 2026-05-21 프론트는 `detections[]`가 내려와도 분석/등록 화면에서 후보 목록을 보여주되, 정식 분리 등록 전까지는 대표 식재료 1개 기준으로만 진행한다.
+- 배경: 2026-05-23 백엔드 회신으로 MVP `detections[]` 단일 객체 래핑 계약은 확정됐지만, 실제 다중 객체 분리 등록은 Post-MVP다.
+- 현재 동작: root-level `detectedFruit`/`detectedFruitKo`를 대표 객체로 처리하고, `detections[]`가 내려와도 대표 식재료 1개 기준으로 등록한다.
+- 기대 동작: MVP에서는 `detections[0]`을 root-level 대표 객체와 동일하게 처리한다. Post-MVP에서 `detections.length > 1`, `bbox`, non-null `rejectionReason`이 내려오면 다중 객체 UI와 분리 등록 정책을 검증한다.
 - Acceptance Criteria:
   - [x] 프론트 타입이 `detections[]` 후보 필드를 방어적으로 받을 수 있다.
   - [x] 분석/등록 화면이 여러 후보를 표시하되 대표 식재료 1개 등록 안내를 유지한다.
-  - [ ] 백엔드 `detections[]` 최소 필드 초안이 확정된다.
+  - [x] 백엔드 `detections[]` 최소 필드 초안이 확정된다.
   - [ ] 대표 객체 1개 처리와 객체별 분리 등록 중 UX 방향을 결정한다.
   - [x] multi-object fixture 이미지를 준비하고 VM/API report-only 결과를 기록한다.
 - 검증 방법: multi-object 이미지 API 실험, 계약 리뷰
@@ -1633,7 +1661,7 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
 - WebSocket 기반 실시간 채팅: 서버 계약과 앱 구조가 없으므로 보류. `알림함` 또는 `나눔 신청하기`로 축소한다.
 - 소셜 로그인 전체 구현: 이메일 로그인 MVP가 동작하므로 우선순위 낮음. 현재 앱에서는 소셜 버튼을 숨기고 이메일 로그인만 노출한다.
 - 이메일 verification 전체 예외 케이스: 인증 메일/OTP 서버 계약이 없어 보류.
-- 냉장고 내부 inventory: 별도 재고 관리 개념은 보류한다. 단, 백엔드가 냉장고별 available 나눔 식재료 조회 API를 구현했고, 프론트는 지도 선택 냉장고 내부 목록으로 연동했다. 별도 inventory/냉장고 운영자 기능은 후속 범위다.
+- 냉장고 내부 inventory: 사용자-facing 냉장고별 available 목록과 별도인 operator inventory API 계약은 2026-05-23에 확정됐다. 다만 백엔드 구현/VM 재배포와 운영자 테스트 데이터가 필요하므로 runtime QA는 후속으로 둔다.
 
 ### Codex 작업 지시 예시
 
@@ -1703,7 +1731,7 @@ docs/VALIDATION_AND_BACKLOG.md의 검증 결과를 바탕으로 다음 스프린
 | ------------------------------------ | --------- | -------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
 | AI 실패 케이스 이미지                | 준비됨    | `not-food`와 `multi-object`는 VM API에서 generate 400을 재현했다. `screenshot-or-ui`, `low-quality`는 Fresh false-positive로 관찰한다. | Post-MVP rejection reason enum과 서버/AI fixture mode 논의           |
 | 나눔 기준 미충족 상태 `Stale` 이미지 | 준비됨    | `stale-or-rotten` fixture는 준비됐지만 현재 VM API는 Fresh false-positive로 통과시킨다.                                                | 백엔드/AI 모델 개선 또는 서버 fixture mode 준비                      |
-| multi-object 예시 이미지             | 준비됨    | `multi-object` fixture는 VM API에서 400으로 거부됐다. 현재 API 계약은 여전히 단일 대표 객체만 반환한다.                                | Post-MVP `detections[]` 계약과 UX 정책 결정                          |
+| multi-object 예시 이미지             | 준비됨    | `multi-object` fixture는 기존 VM API에서 400으로 거부됐다. 2026-05-23 계약은 MVP에서 `detections[]` 단일 객체 래핑을 내려주며 실제 다중 객체 배열은 Post-MVP다. | Post-MVP 실제 다중 객체 응답과 UX 정책 결정                          |
 | 주변 냉장고 없음 위치                | 준비 실패 | `0,0`, 제주, 부산, 뉴욕 좌표에서도 `/fridges/nearby`가 3건을 반환했다. 반경 필터가 기대와 다를 가능성이 있다.                          | 서버 냉장고 거리 필터를 확인하거나 no-fridge fixture를 백엔드에 추가 |
 
 #### 재현 명령 요약

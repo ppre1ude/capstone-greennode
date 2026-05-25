@@ -47,14 +47,15 @@ FoodLink는 사용자가 남는 식재료를 AI로 확인하고, 가까운 공�
 
 ## 현재 구현 상태
 
-2026-05-08 기준으로 핵심 앱 흐름은 실제 Android 기기와 VM API에서 재검증했습니다.
+2026-05-23 기준으로 핵심 앱 흐름은 실제 Android 기기와 VM API에서 재검증했고, 백엔드 주간 회신의 신규 계약을 문서에 반영했습니다.
 
 - `generate -> create -> home/detail/map -> request -> requested 제외` 흐름 통과
 - 백엔드 AI 메타데이터 sidecar 저장/복원 수정 반영
 - `POST /posts/{id}/requests` 신청 API 연동 완료
 - `GET /fridges/{id}/posts?status=available` 냉장고별 목록 연동 완료
 - Firebase 설정 파일이 없는 빌드에서도 앱 시작과 위치 등록이 크래시하지 않도록 guard 처리
-- 실제 FCM foreground/background/terminated 수신 QA는 환경 준비가 필요해 다음 검증 항목으로 남아 있음
+- 실제 FCM foreground/background는 emulator에서 확인했고, terminated/physical 2-device QA는 백엔드 FCM priority/log 재배포 후 재검증 예정
+- operator inventory summary/items/dispose API와 MVP `detections[]` 단일 객체 래핑 계약은 2026-05-23 백엔드 회신으로 확정
 
 자세한 검증 결과와 남은 백로그는 [docs/VALIDATION_AND_BACKLOG.md](./docs/VALIDATION_AND_BACKLOG.md)를 기준으로 확인합니다.
 
@@ -174,19 +175,19 @@ npm run mock:api
 - `Stale`은 `나눔 기준에 맞지 않아요`로 안내하고 등록하지 않습니다.
 - `confidenceScore`는 신선도 분류 모델의 softmax max 확률이며, 단독 등록 차단 기준이 아닙니다.
 - `confidenceScore < 0.9`는 `확인 필요` UX로 표시합니다.
-- screenshot/UI false-positive 차단은 MVP 서버 계약에 없으며 Post-MVP rejection reason 후보입니다.
+- screenshot/UI false-positive 차단은 MVP 서버 계약에 없으며 Post-MVP rejection reason 후보입니다. 2026-05-23 기준 정상 generate 응답은 root-level `rejectionReason: null`과 단일 객체 `detections[]`를 내려줍니다.
 - API/code의 `Post`는 도메인 문서와 사용자-facing 문구에서 **나눔 식재료**로 번역합니다.
 
 ## 다음 작업 후보
 
 현재 검증 문서 기준 남은 주요 작업은 아래와 같습니다.
 
-- 실제 FCM 토큰이 있는 2대 기기로 `share_created`, `share_requested` 수신 QA
+- 백엔드 FCM priority/log/prefix 재배포 확인 후 실제 FCM 토큰이 있는 2대 기기로 `share_created`, `share_requested` 수신 QA
+- 운영자 권한/비권한 계정과 available/expired/requested 항목으로 operator inventory summary/items/dispose QA
 - Post-MVP AI rejection reason 계약 정리
 - 주변 공유 냉장고 없음 상태를 위한 백엔드 필터 또는 fixture 검증
 - 실제 환경 성취 지표 API와 계산식 정의
 - Inventory/QR PRD v0 기반 `pending_store`, 30분 임시 선점, QR 보관/수령 확인 설계
-- 냉장고 운영자 화면과 운영자 조정 기능 설계
 
 ## 문서 지도
 
