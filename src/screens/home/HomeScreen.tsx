@@ -57,6 +57,7 @@ const HomeScreen = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<RouteProp<MainTabParamList, 'Home'>>();
   const nearbyPostsRefreshToken = route.params?.nearbyPostsRefreshToken;
+  const completedPostId = route.params?.completedPostId;
   const feedRefreshToken = useFeedRefreshStore(
     state => state.nearbyPostsRefreshToken,
   );
@@ -160,6 +161,38 @@ const HomeScreen = () => {
     },
     [navigation],
   );
+  const currentAction = useMemo(() => {
+    if (requestedPostId != null) {
+      return {
+        title: '수령 QR 확인 필요',
+        description:
+          '방금 신청한 나눔은 상세 화면에서 남은 시간과 수령 QR 인증을 확인할 수 있어요.',
+        buttonLabel: '상세에서 확인',
+        icon: 'qrcode' as const,
+        onPress: () => openPostDetail(requestedPostId),
+      };
+    }
+
+    if (completedPostId != null) {
+      return {
+        title: '등록한 나눔 확인 중',
+        description:
+          '주변 이웃에게 알림을 보냈어요. 지도와 알림에서 신청 상태를 확인하세요.',
+        buttonLabel: '지도에서 보기',
+        icon: 'clipboard-list' as const,
+        onPress: () => navigation.navigate('Map'),
+      };
+    }
+
+    return {
+      title: '진행 중인 나눔 없음',
+      description:
+        '입고 QR, 수령 QR, 신청 상태처럼 지금 해야 할 일이 생기면 여기에 모입니다.',
+      buttonLabel: null,
+      icon: 'circle-check' as const,
+      onPress: undefined,
+    };
+  }, [completedPostId, navigation, openPostDetail, requestedPostId]);
 
   return (
     <View style={styles.container}>
@@ -234,6 +267,27 @@ const HomeScreen = () => {
             color="textOnPrimary"
             style={styles.heroIcon}
           />
+        </View>
+
+        <View style={styles.actionHub}>
+          <View style={styles.actionHubHeader}>
+            <Text style={styles.actionHubEyebrow}>진행 중인 나눔</Text>
+            <DSIcon name={currentAction.icon} size="medium" color="primary" />
+          </View>
+          <Text style={styles.actionHubTitle}>{currentAction.title}</Text>
+          <Text style={styles.actionHubDescription}>
+            {currentAction.description}
+          </Text>
+          {currentAction.buttonLabel && currentAction.onPress ? (
+            <TouchableOpacity
+              style={styles.actionHubButton}
+              onPress={currentAction.onPress}>
+              <Text style={styles.actionHubButtonText}>
+                {currentAction.buttonLabel}
+              </Text>
+              <DSIcon name="angle-right" size="xsmall" color="primary" />
+            </TouchableOpacity>
+          ) : null}
         </View>
 
         {/* 통계 카드 */}
@@ -479,6 +533,53 @@ const styles = StyleSheet.create({
     bottom: -8,
   },
   // 통계
+  actionHub: {
+    marginHorizontal: 24,
+    marginTop: 14,
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    backgroundColor: '#FFFFFF',
+  },
+  actionHubHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  actionHubEyebrow: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: colors.primary,
+  },
+  actionHubTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: colors.textPrimary,
+    marginBottom: 6,
+  },
+  actionHubDescription: {
+    fontSize: 13,
+    lineHeight: 19,
+    color: colors.textSecondary,
+  },
+  actionHubButton: {
+    marginTop: 12,
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: colors.primaryLight,
+  },
+  actionHubButtonText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: colors.primary,
+  },
   statsRow: {
     flexDirection: 'row',
     gap: 12,

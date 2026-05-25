@@ -241,6 +241,21 @@ describe('HomeScreen nearby post refresh', () => {
 
     expect(mockedGetNearbyPosts).toHaveBeenCalledTimes(2);
     expect(renderer?.root.findAllByProps({ children: '사과' })).toHaveLength(0);
+    expect(
+      renderer!.root.findAllByProps({ children: '진행 중인 나눔' }),
+    ).not.toHaveLength(0);
+    expect(
+      renderer!.root.findAllByProps({ children: '수령 QR 확인 필요' }),
+    ).not.toHaveLength(0);
+
+    const requestedActionButton = findButtonByText(renderer!, '상세에서 확인');
+    await ReactTestRenderer.act(async () => {
+      requestedActionButton?.props.onPress();
+    });
+
+    expect(mockParentNavigate).toHaveBeenCalledWith('PostDetail', {
+      postId: 10,
+    });
 
     await ReactTestRenderer.act(async () => {
       renderer?.unmount();
