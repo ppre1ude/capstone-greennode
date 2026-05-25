@@ -1736,6 +1736,36 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
 - 이메일 verification 전체 예외 케이스: 인증 메일/OTP 서버 계약이 없어 보류.
 - 냉장고 운영자 role 관리 UI와 role metadata: operator inventory runtime QA는 통과했지만, 실제 운영자 계정의 프로필 진입을 위해 `/auth/me` 운영자 힌트 또는 별도 operator-fridge 조회 API가 필요하다.
 
+## 2026-05-26 엔지니어링 우선순위 기준선
+
+- 분류: 다음 플랜 수립용 백로그 기준선
+- 배경: 2026-05-25까지 Android MVP 핵심 QA, FCM 실기기/에뮬레이터 QA, QR `pending_store` VM E2E, operator inventory runtime QA가 닫혔다. 현재 상태는 Android 기준 제한 베타 가능한 MVP에 가깝지만, 크로스플랫폼 production v1로 보려면 운영자 진입 정책, 사용자 내역, 알림 동기화, iOS evidence가 부족하다.
+- 현재 판단:
+  - Android MVP 핵심 흐름 완성도는 약 80~85%다.
+  - 전체 v1 제품 완성도는 약 60~65%다.
+  - “나눔 식재료 등록 -> 주변/지도 노출 -> 신청 -> 알림 -> QR 보관/수령”은 검증됐지만, “며칠 쓰는 제품”에 필요한 내역/취소/읽음/권한/운영 lifecycle은 아직 빈 곳이 있다.
+- 다음 엔지니어링 우선순위:
+  1. 운영자 role metadata 계약 확정 및 프로필 진입 정책 마감
+  2. 내 나눔/받은 나눔 화면
+  3. 알림 서버 목록/읽음 상태
+  4. iOS 시뮬레이터 기준 smoke QA
+  5. 신청 취소/만료/완료 lifecycle 확장
+  6. 검색/통계/AI rejection reason 확장
+- Acceptance Criteria:
+  - [ ] `/auth/me` 또는 별도 endpoint에서 `isOperator`, `operatorRole`, `operatorFridgeIds`, `roles` 중 합의된 운영자 힌트를 내려준다.
+  - [ ] 실제 운영자 계정만 프로필에서 운영자 콘솔 진입점을 볼 수 있다.
+  - [ ] 사용자가 내가 등록한 나눔 식재료와 내가 신청/수령한 나눔 식재료를 앱 안에서 확인할 수 있다.
+  - [ ] 알림 목록과 읽음 상태가 서버 기준으로 동기화된다.
+  - [ ] iOS 시뮬레이터에서 로그인, 위치 권한, 카메라/갤러리, 지도, 알림 권한, 홈/상세/신청 smoke QA evidence가 남는다.
+  - [ ] `requested` 이후 취소/만료/완료 전이에 대한 사용자-facing 정책과 API 계약이 확정된다.
+- 검증 방법:
+  - 운영자 권한: VM API matrix + 실제 앱 role-gated profile QA
+  - 내역 화면: API 계약 테스트 + React Native 화면 회귀 + Android/iOS smoke QA
+  - 알림 읽음: 서버 API contract test + foreground/background 수신 회귀
+  - iOS: iOS simulator smoke QA evidence 파일 기록
+  - lifecycle: 상태 전이 API matrix + 상세/목록 refresh 회귀 테스트
+- 관련 파일/화면/API: `ProfileScreen`, `FridgeOperatorConsoleScreen`, `ChatListScreen`, `PostDetailScreen`, `HomeScreen`, `/auth/me`, `/operator/*`, notification APIs, future user-history APIs
+
 ### Codex 작업 지시 예시
 
 ```text
