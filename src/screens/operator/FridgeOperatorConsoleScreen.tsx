@@ -278,6 +278,9 @@ const mapOperatorItemStatus = (
   return 'needsReview';
 };
 
+const canDisposeOperatorItem = (status: OperatorItemStatus): boolean =>
+  status === 'available' || status === 'discardCandidate';
+
 const mapOperatorInventoryItem = (
   item: OperatorInventoryItem,
 ): InspectionItem => {
@@ -571,7 +574,7 @@ const FridgeOperatorConsoleScreen = ({navigation, route}: Props) => {
                     <Text style={styles.rowText}>
                       권장 나눔 기한: {item.recommendedUntil}
                     </Text>
-                    {item.status === 'discardCandidate' ? (
+                    {canDisposeOperatorItem(item.status) ? (
                       <TouchableOpacity
                         disabled={disposingPostId === item.postId}
                         onPress={() => handleDispose(item)}

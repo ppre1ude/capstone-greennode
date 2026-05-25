@@ -301,6 +301,78 @@ describe('FridgeOperatorConsoleScreen', () => {
     });
   });
 
+  it('allows operator disposal for available items', async () => {
+    mockedDisposeOperatorItem.mockResolvedValue({
+      success: true,
+      message: '폐기 처분 완료',
+      data: {
+        postId: 121,
+        status: 'disposed',
+        disposedAt: '2026-05-20T09:00:00Z',
+      },
+    });
+    mockedGetOperatorInventoryItems.mockResolvedValueOnce({
+      success: true,
+      message: 'ok',
+      data: [
+        {
+          postId: 121,
+          labelCode: '#08',
+          itemName: '바나나',
+          status: 'available',
+          freshnessLabel: 'Fresh',
+          confidenceScore: 0.99,
+          storageZone: 'GENERAL',
+          storageDeadlineAt: '2026-05-22T00:00:00Z',
+        },
+      ],
+    });
+    mockedGetOperatorInventoryItems.mockResolvedValueOnce({
+      success: true,
+      message: 'ok',
+      data: [],
+    });
+
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(
+        <FridgeOperatorConsoleScreen
+          navigation={{goBack: jest.fn()} as any}
+          route={{params: undefined} as any}
+        />,
+      );
+      await Promise.resolve();
+    });
+
+    expect(renderer!.root.findAllByProps({children: '신청 가능'})).not.toHaveLength(
+      0,
+    );
+
+    await ReactTestRenderer.act(async () => {
+      findTouchableByText(renderer!, '폐기 처분 완료').props.onPress();
+      await Promise.resolve();
+    });
+
+    expect(mockedDisposeOperatorItem).not.toHaveBeenCalled();
+    expect(alertSpy).toHaveBeenCalledWith(
+      '폐기 처분 확인',
+      expect.stringContaining('바나나'),
+      expect.any(Array),
+    );
+
+    await ReactTestRenderer.act(async () => {
+      await pressAlertButton('폐기 처분');
+      await Promise.resolve();
+    });
+
+    expect(mockedDisposeOperatorItem).toHaveBeenCalledWith(121);
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
   it('re-syncs operator inventory after a successful dispose', async () => {
     mockedGetOperatorInventorySummary
       .mockResolvedValueOnce({
