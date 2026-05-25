@@ -122,7 +122,7 @@
 - background QA는 system notification 표시와 notification tap의 post detail 라우팅을 통과했다.
 - terminated surrogate QA는 부분 통과다. app process kill 이후 system notification은 표시됐지만 logcat에 `Background messages only work if the message priority is set to 'high'`가 남았고, terminated 상태의 notification tap 라우팅은 신뢰할 수 없었다.
 - true 2-device QA는 아직 막혀 있다. Windows는 USB Samsung device를 감지하지만 `adb devices`에는 `emulator-5554`만 보이므로, physical device ADB authorization/driver/debugging은 사용자 측 해결 후 재개한다.
-- 당시 남은 P0 backend handoff는 Android FCM priority `high`와 per-token FCM failure log였다. 2026-05-23 백엔드 회신에서 해당 항목은 구현 예정으로 답변됐고, 프론트 QA는 VM 재배포 후 재개한다. Android notification channel 정리는 별도 local Android polish 작업이며 backend blocker가 아니다.
+- 당시 남은 P0 backend handoff는 Android FCM priority `high`와 per-token FCM failure log였다. 2026-05-25 백엔드 VM 재배포 이후 실기기/에뮬레이터 2계정, debug/release, terminated/process-killed/lockscreen tap routing까지 재검증해 닫았다. Android notification channel 정리는 별도 local Android polish 작업이며 backend blocker가 아니다.
 
 ### 2026-05-20 Inventory/QR 프론트 선행 구현 업데이트
 
@@ -131,7 +131,7 @@
 - 운영자 폐기 성공 후에는 summary/items를 즉시 재조회해 폐기 대상 수, 만료 임박 수, 항목 상태를 서버 결과 기준으로 다시 맞춘다.
 - 운영자 inventory 조회가 401/403으로 거절되면 샘플 재고와 폐기 버튼을 숨기고 `운영자 권한이 필요합니다` 안내만 표시한다. 네트워크/배포 실패 fallback과 권한 실패를 분리했다.
 - 프로필의 `냉장고 운영자 콘솔 (실험)` 진입점은 `isOperator`, `operatorRole`, `operatorFridgeIds`, `roles` 중 하나로 운영자 힌트가 있는 계정에만 노출한다.
-- 검증: `operator.api`, `fridgeOperatorConsole.screen`, `fridgeSelect.qrFlow`, `inventoryQrPrototype.screen`, `postDetail.requestShare` 테스트와 전체 Jest/TypeScript 검증으로 프론트 계약을 고정했다. 실제 QR 스캔 기기 QA와 백엔드 런타임 QA는 백엔드 배포 후 필요하다.
+- 검증: `operator.api`, `fridgeOperatorConsole.screen`, `fridgeSelect.qrFlow`, `inventoryQrPrototype.screen`, `postDetail.requestShare` 테스트와 전체 Jest/TypeScript 검증으로 프론트 계약을 고정했다. Operator inventory VM runtime QA는 2026-05-25에 통과했고, 실제 QR 스캔 기기 QA는 후속이다.
 
 ### 2026-05-21 프론트 마무리 작업 업데이트
 
@@ -148,6 +148,14 @@
 - Multi-object: `POST /posts/generate`는 root-level 필드와 함께 `detections[]`를 내려주는 것으로 계약이 확정됐다. MVP에서는 단일 객체 배열 래핑(`detections[0]` = 대표 객체), `bbox: null`, `rejectionReason: null`이다. 실제 다중 객체 분리 등록과 non-null rejection reason/bbox는 Post-MVP다.
 - 서버 검색: MVP에서는 서버 검색 API를 포함하지 않고 홈/지도 로컬 필터를 유지한다. 향후 필요 시 기존 nearby API에 optional `q`, `skip`, `limit`를 추가하는 방식으로 확장한다.
 
+### 2026-05-25 Operator inventory VM QA 업데이트
+
+- VM `localhost:8080`에서 `optest@foodlink.com` 운영자 계정과 `codex_fcm_b_1779690163@example.com` 비운영자 계정으로 summary/items/dispose matrix를 검증했다.
+- 통과: 무인증 401, 비운영자 403, 운영자 fridge 1 summary/items 200, 운영자 fridge 3 empty summary `total=0` 및 items `[]`, 없는 fridge 404, `requested` dispose 409, `available`/`expired` dispose 200.
+- dispose 성공 후 summary는 `total` 감소 및 `disposedToday` 증가, operator items와 `/fridges/1/posts?status=available`에서는 disposed 항목이 제외됐다.
+- 프론트 보강: 서버 계약에 맞춰 운영자 콘솔에서 `available` 항목도 기존 `신청 가능` 라벨을 유지한 채 폐기 CTA를 노출한다. 회귀 테스트에 available dispose Alert/API 호출을 추가했다.
+- 남은 gap: `/auth/me` 응답에는 운영자 role hint가 없어 실제 운영자 계정도 프로필의 role-gated 진입점에 자동 노출되지 않는다. 백엔드가 role metadata나 운영 가능 냉장고 목록 API를 제공하기 전까지 운영자 화면 진입 정책은 후속 결정이다.
+
 ---
 
 ## 1. 현재 상태 요약
@@ -163,9 +171,9 @@
 | 나눔 식재료 상세/삭제/신청 | 부분 구현, 실제 기기 신청 QA 통과        | 실제 상세 응답의 `authorId` 기준으로 작성자 여부를 판단한다. 상세 화면은 `detectedFruitKo`, `freshnessLabel`, `confidenceScore`, `status`를 표시한다. `available` 나눔 식재료는 `requestShare(postId)`로 신청하고, 201/409 이후 `신청 접수` 상태로 CTA를 비활성화한다. 403은 작성자 본인 fallback 문구로 처리한다. |
 | 홈 주변 나눔 식재료        | 부분 구현, 실제 기기 홈 재조회 통과      | `/posts/nearby` 데이터를 카드로 표시한다. 홈 포커스와 등록 완료 refresh token 변경 시 재조회한다. 2026-05-21부터 현재 로딩된 nearby 목록에서 권장 수령일이 가까운 available 항목을 `오늘 가져가기 좋은 재료`로 로컬 추천한다. |
 | 지도/냉장고                | 부분 구현, 실제 기기 UI QA 통과          | `/fridges/nearby`, `/fridges/available` 조회와 지도 마커/냉장고 선택은 동작한다. 지도에서 냉장고를 선택하면 `GET /fridges/{id}/posts?status=available`로 내부 available 나눔 식재료를 조회하고, loading/error/empty/list 상태를 분리한다. |
-| 냉장고 운영자/QR           | 프론트 선행 구현, 백엔드 계약 확정       | `flow: "fridge_qr"` 등록, 보관 QR 인증, 수령 QR 인증, 운영자 폐기 요청을 실제 API 호출 경로로 연결했다. 2026-05-23 기준 operator summary/items/dispose 경로와 응답 shape가 확정됐고, 배포 후 권한/빈 목록/available·expired dispose/409 상태 QA가 필요하다. |
+| 냉장고 운영자/QR           | Operator VM QA 통과, QR lifecycle 후속   | `flow: "fridge_qr"` 등록, 보관 QR 인증, 수령 QR 인증, 운영자 폐기 요청을 실제 API 호출 경로로 연결했다. 2026-05-25 VM에서 operator summary/items/dispose 권한, 빈 목록, available/expired dispose, requested 409, 목록 제외를 확인했다. `/auth/me` 운영자 role hint와 role 관리 UI, QR 보관/수령 end-to-end는 후속이다. |
 | 나눔 신청                  | 프론트 코드 연동 완료, 실제 기기 QA 통과 | 프론트는 `requestShare(postId)`, 상세 CTA, 201/403/409 UX, 홈/지도 refresh store를 구현했다. 2026-05-08 실제 Android 기기에서 신청 완료 alert, 상세 `신청 접수` 전환, 지도 냉장고 내부 목록 즉시 제거를 확인했다. |
-| FCM                        | foreground/background 실수신 QA 통과, 백엔드 재배포 대기 | 2026-05-21 emulator QA에서 `share_created`, `share_requested` 실제 send success 1 / failure 0, foreground 수신/로컬 알림 탭 기록, background system notification 표시와 tap의 `PostDetail` 라우팅을 확인했다. 2026-05-23 백엔드가 Android `priority: high`, APNS priority, per-token log를 추가하기로 했으므로 VM 재배포 후 terminated tap routing과 physical 2-device QA를 재검증한다. |
+| FCM                        | debug/release/physical/emulator QA 통과 | 2026-05-21 emulator QA에서 `share_created`, `share_requested` 실제 send success 1 / failure 0, foreground 수신/로컬 알림 탭 기록, background system notification 표시와 tap의 `PostDetail` 라우팅을 확인했다. 2026-05-25 실기기+emulator 2계정 QA에서 debug foreground/background/terminated, 기존 task onNewIntent, fresh install, 로그아웃 후 로그인 defer, release background/process-killed/lockscreen tap routing, Android 14 API 34 Pixel AVD release background/stop-app tap routing을 확인했다. Android 13 또는 추가 OEM은 참고 매트릭스다. |
 | 채팅                       | 보류                                     | 정적 채팅 mock 데이터는 제거했다. WebSocket/API 계약은 없다. |
 | 통계/탄소 절감             | 정리됨                                   | 실제 지표 API가 없는 홈/프로필 mock 숫자는 제거하고 준비 중 상태로 표시한다. |
 | 검색                       | 부분 구현, 서버 검색 Post-MVP            | MVP 검색은 홈 나눔 식재료명/냉장고명 로컬 필터와 지도 공유 냉장고 이름/주소 로컬 필터로 제한했다. 2026-05-23 백엔드 회신 기준 서버 검색은 MVP 미포함이며, 필요 시 nearby API의 optional `q` 파라미터로 확장한다. |
@@ -290,8 +298,8 @@
 - WebSocket 기반 실시간 채팅
 - 소셜 로그인 전체 구현
 - 이메일 verification 전체 예외 케이스
-- 냉장고 내부 inventory 백엔드 런타임 QA. 프론트는 QR/inventory API 계약을 선행 구현했지만, 실제 서버 배포 후 보관/수령/운영자 목록/폐기 end-to-end 검증이 필요하다.
-- 운영자 권한/역할 관리 화면. 운영자 콘솔 진입점과 inventory 점검 화면은 있으나, operator role 부여/관리 UI는 후속이다.
+- QR 보관/수령 end-to-end QA. Operator summary/items/dispose VM runtime은 통과했지만, `pending_store` 기반 보관/수령 lifecycle은 별도 후속이다.
+- 운영자 권한/역할 관리 화면과 `/auth/me` role metadata. 운영자 콘솔 진입점과 inventory 점검 화면은 있으나, 실제 운영자 계정을 프로필에서 노출할 백엔드 힌트와 role 부여/관리 UI는 후속이다.
 
 ---
 
