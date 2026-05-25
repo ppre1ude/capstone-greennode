@@ -10,7 +10,15 @@ import React from 'react';
 import { View, StyleSheet, ScrollView, Alert, StatusBar } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuthStore } from '@/store/authStore';
-import { DSButton, DSCard, DSChip, DSListCell, DSText } from '@/design-system';
+import {
+  DSButton,
+  DSCard,
+  DSChip,
+  DSIcon,
+  DSListCell,
+  DSText,
+  type DSIconName,
+} from '@/design-system';
 import { colors } from '@/theme';
 import type { User } from '@/types';
 import { getHeaderTopPadding } from '@/utils/safeArea';
@@ -28,7 +36,7 @@ type ProfileMenuItemId =
 type ProfileMenuItem = {
   id: ProfileMenuItemId;
   title: string;
-  icon: string;
+  icon: DSIconName;
   availability?: 'ready' | 'coming-soon' | 'contract-needed';
 };
 
@@ -36,41 +44,46 @@ const MENU_ITEMS: ProfileMenuItem[] = [
   {
     id: 'location',
     title: '동네 위치 재설정',
-    icon: '📍',
+    icon: 'location-dot',
     availability: 'ready',
   },
   {
     id: 'operator-console',
-    title: '냉장고 운영자 콘솔 (실험)',
-    icon: '🧪',
+    title: '냉장고 운영자 콘솔',
+    icon: 'clipboard-list',
     availability: 'ready',
   },
   {
     id: 'inventory-qr-prototype',
-    title: '냉장고 QR 흐름 테스트',
-    icon: '▣',
+    title: '냉장고 QR 인증',
+    icon: 'qrcode',
     availability: 'ready',
   },
   {
     id: 'my-posts',
     title: '내 나눔 내역',
-    icon: '📝',
+    icon: 'clipboard-list',
     availability: 'contract-needed',
   },
   {
     id: 'bookmark',
     title: '관심 식재료',
-    icon: '❤️',
+    icon: 'heart',
     availability: 'contract-needed',
   },
   {
     id: 'history',
     title: '받은 나눔 내역',
-    icon: '🎁',
+    icon: 'gift',
     availability: 'contract-needed',
   },
-  { id: 'settings', title: '설정', icon: '⚙️', availability: 'coming-soon' },
-  { id: 'help', title: '고객센터', icon: '🎧', availability: 'coming-soon' },
+  { id: 'settings', title: '설정', icon: 'gear', availability: 'coming-soon' },
+  {
+    id: 'help',
+    title: '고객센터',
+    icon: 'headset',
+    availability: 'coming-soon',
+  },
 ];
 
 const OPERATOR_ROLES = new Set(['operator', 'admin', 'fridge_operator']);
@@ -240,7 +253,7 @@ const ProfileScreen = () => {
           <DSCard variant="plain" style={styles.trustBox}>
             <View style={styles.trustHeader}>
               <DSText variant="bodyBold" style={styles.trustTitle}>
-                신선도 온도 🌡️
+                신선도 온도
               </DSText>
               <DSChip
                 label="준비 중"
@@ -290,7 +303,14 @@ const ProfileScreen = () => {
             <DSListCell
               key={item.id}
               title={item.title}
-              leading={<DSText style={styles.menuIcon}>{item.icon}</DSText>}
+              leading={
+                <DSIcon
+                  name={item.icon}
+                  size="medium"
+                  color="primary"
+                  style={styles.menuIcon}
+                />
+              }
               trailing={
                 item.availability === 'contract-needed' ? (
                   <DSChip label="준비 중" tone="neutral" size="small" />

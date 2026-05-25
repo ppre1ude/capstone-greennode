@@ -34,7 +34,7 @@ const expectOperatorConsoleVisible = (
   visible: boolean,
 ) => {
   const matches = renderer.root.findAllByProps({
-    children: '냉장고 운영자 콘솔 (실험)',
+    children: '냉장고 운영자 콘솔',
   });
   expect(matches.length > 0).toBe(visible);
 };
@@ -76,10 +76,7 @@ describe('ProfileScreen operator console entry', () => {
     });
 
     await ReactTestRenderer.act(async () => {
-      findTouchableByText(
-        renderer!,
-        '냉장고 운영자 콘솔 (실험)',
-      ).props.onPress();
+      findTouchableByText(renderer!, '냉장고 운영자 콘솔').props.onPress();
     });
 
     expect(mockParentNavigate).toHaveBeenCalledWith('FridgeOperatorConsole');
@@ -155,7 +152,7 @@ describe('ProfileScreen operator console entry', () => {
     });
   });
 
-  it('opens the inventory QR prototype from profile', async () => {
+  it('opens QR verification from profile without prototype copy', async () => {
     let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
 
     await ReactTestRenderer.act(async () => {
@@ -163,7 +160,7 @@ describe('ProfileScreen operator console entry', () => {
     });
 
     await ReactTestRenderer.act(async () => {
-      findTouchableByText(renderer!, '냉장고 QR 흐름 테스트').props.onPress();
+      findTouchableByText(renderer!, '냉장고 QR 인증').props.onPress();
     });
 
     expect(mockParentNavigate).toHaveBeenCalledWith('InventoryQrPrototype');

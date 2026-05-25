@@ -86,7 +86,7 @@ describe('InventoryQrPrototypeScreen', () => {
     alertSpy.mockRestore();
   });
 
-  it('renders the QR and inventory prototype surface', async () => {
+  it('renders the QR and inventory verification surface without internal QA language', async () => {
     let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
 
     await ReactTestRenderer.act(async () => {
@@ -100,11 +100,16 @@ describe('InventoryQrPrototypeScreen', () => {
 
     const textContent = getTextContent(renderer!);
 
-    expect(textContent).toContain('냉장고 QR 흐름 테스트');
+    expect(textContent).toContain('냉장고 QR 인증');
     expect(textContent).toContain('광주역 앞 공유냉장고');
     expect(textContent).toContain('05:00');
     expect(textContent).toContain('등록 대기');
     expect(textContent).toContain('라벨은 보관 인증 후 표시');
+    expect(textContent).not.toContain('냉장고 QR 흐름 테스트');
+    expect(textContent).not.toContain('프로토타입');
+    expect(textContent).not.toContain('보관 QR 테스트');
+    expect(textContent).not.toContain('수령 QR 테스트');
+    expect(textContent).not.toContain('초기화');
 
     await ReactTestRenderer.act(async () => {
       renderer?.unmount();
@@ -124,7 +129,7 @@ describe('InventoryQrPrototypeScreen', () => {
     });
 
     await ReactTestRenderer.act(async () => {
-      findTouchableByText(renderer!, '보관 QR 테스트').props.onPress();
+      findTouchableByText(renderer!, '보관 QR 스캔').props.onPress();
       await Promise.resolve();
     });
 
@@ -159,7 +164,7 @@ describe('InventoryQrPrototypeScreen', () => {
     });
 
     await ReactTestRenderer.act(async () => {
-      findTouchableByText(renderer!, '다른 냉장고 QR').props.onPress();
+      findTouchableByText(renderer!, '다른 냉장고 스캔').props.onPress();
       await Promise.resolve();
     });
 
@@ -208,7 +213,7 @@ describe('InventoryQrPrototypeScreen', () => {
     });
 
     await ReactTestRenderer.act(async () => {
-      findTouchableByText(renderer!, '보관 QR 테스트').props.onPress();
+      findTouchableByText(renderer!, '보관 QR 스캔').props.onPress();
       await Promise.resolve();
       await Promise.resolve();
     });

@@ -1,4 +1,10 @@
-import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -8,8 +14,8 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import type {NativeStackScreenProps} from '@react-navigation/native-stack';
-import type {RootStackParamList} from '@/navigation/types';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '@/navigation/types';
 import {
   InventoryCountdownBadge,
   InventoryLabelInstructionCard,
@@ -24,13 +30,10 @@ import {
   getQrVerificationErrorMessage,
   type FridgeQrVerificationTarget,
 } from '@/features/qr';
-import {confirmPickup, confirmStore} from '@/api/inventory';
-import type {
-  ConfirmPickupResult,
-  ConfirmStoreResult,
-} from '@/api/inventory';
-import {useFeedRefreshStore} from '@/store/feedRefreshStore';
-import {colors} from '@/theme';
+import { confirmPickup, confirmStore } from '@/api/inventory';
+import type { ConfirmPickupResult, ConfirmStoreResult } from '@/api/inventory';
+import { useFeedRefreshStore } from '@/store/feedRefreshStore';
+import { colors } from '@/theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'InventoryQrPrototype'>;
 
@@ -74,7 +77,7 @@ const getErrorStatus = (error: unknown): number | null => {
     return null;
   }
 
-  const response = (error as {response?: {status?: unknown}}).response;
+  const response = (error as { response?: { status?: unknown } }).response;
   return typeof response?.status === 'number' ? response.status : null;
 };
 
@@ -86,7 +89,7 @@ const isValidDateInput = (value?: string): value is string => {
   return Number.isFinite(Date.parse(value));
 };
 
-const InventoryQrPrototypeScreen = ({navigation, route}: Props) => {
+const InventoryQrPrototypeScreen = ({ navigation, route }: Props) => {
   const params = route.params;
   const postId = params?.postId;
   const isApiBacked = typeof postId === 'number';
@@ -114,8 +117,8 @@ const InventoryQrPrototypeScreen = ({navigation, route}: Props) => {
   );
   const [scanMessage, setScanMessage] = useState(
     isApiBacked
-      ? '냉장고 QR을 스캔하면 실제 인증 API를 호출합니다.'
-      : '냉장고 QR을 스캔하면 이 화면에서 보관/수령 흐름을 확인할 수 있어요.',
+      ? '선택한 냉장고 앞에서 QR을 스캔해주세요.'
+      : '냉장고 QR을 스캔해 보관 또는 수령 인증을 확인할 수 있어요.',
   );
 
   useEffect(() => {
@@ -212,7 +215,9 @@ const InventoryQrPrototypeScreen = ({navigation, route}: Props) => {
 
             setScanMessage(response.message || '입고 인증에 실패했습니다.');
           } catch (error) {
-            const message = getQrVerificationErrorMessage(getErrorStatus(error));
+            const message = getQrVerificationErrorMessage(
+              getErrorStatus(error),
+            );
             setScanMessage(message);
             Alert.alert('QR 인증 실패', message);
           } finally {
@@ -228,7 +233,7 @@ const InventoryQrPrototypeScreen = ({navigation, route}: Props) => {
       }
 
       if (!storeConfirmed && !isApiBacked) {
-        setScanMessage('수령 테스트 전에 보관 인증을 먼저 완료해주세요.');
+        setScanMessage('수령 인증 전에 보관 인증을 먼저 완료해주세요.');
         return;
       }
 
@@ -281,8 +286,8 @@ const InventoryQrPrototypeScreen = ({navigation, route}: Props) => {
     setConfirmedPickupResult(null);
     setScanMessage(
       isApiBacked
-        ? '냉장고 QR을 스캔하면 실제 인증 API를 호출합니다.'
-        : '냉장고 QR을 스캔하면 이 화면에서 보관/수령 흐름을 확인할 수 있어요.',
+        ? '선택한 냉장고 앞에서 QR을 스캔해주세요.'
+        : '냉장고 QR을 스캔해 보관 또는 수령 인증을 확인할 수 있어요.',
     );
   };
 
@@ -306,9 +311,9 @@ const InventoryQrPrototypeScreen = ({navigation, route}: Props) => {
           <Text style={styles.backButtonText}>‹</Text>
         </TouchableOpacity>
         <View style={styles.headerText}>
-          <Text style={styles.title}>냉장고 QR 흐름 테스트</Text>
+          <Text style={styles.title}>냉장고 QR 인증</Text>
           <Text style={styles.subtitle}>
-            백엔드 계약 전 프론트 동작 검증용
+            보관과 수령을 냉장고 QR로 확인합니다
           </Text>
         </View>
       </View>
@@ -316,12 +321,12 @@ const InventoryQrPrototypeScreen = ({navigation, route}: Props) => {
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.notice}>
           <Text style={styles.noticeTitle}>
-            {isApiBacked ? '실제 API 연결' : '프로토타입'}
+            {isApiBacked ? 'QR 인증 준비' : 'QR 인증 확인'}
           </Text>
           <Text style={styles.noticeText}>
             {isApiBacked
-              ? 'QR 스캔 성공 시 백엔드 인증 API를 호출합니다. API가 아직 배포되지 않았다면 실패 Alert가 표시됩니다.'
-              : '실제 상태 저장이나 API 호출 없이 QR 파서, 30분 선점, 라벨 안내 UI만 연결합니다.'}
+              ? '선택한 냉장고의 QR을 스캔하면 보관 또는 수령 상태가 업데이트됩니다.'
+              : '냉장고 QR을 스캔해 보관 라벨, 선점 시간, 수령 인증 흐름을 확인합니다.'}
           </Text>
         </View>
 
@@ -374,7 +379,7 @@ const InventoryQrPrototypeScreen = ({navigation, route}: Props) => {
 
           <View style={styles.actionGrid}>
             <ActionButton
-              label="보관 QR 테스트"
+              label="보관 QR 스캔"
               onPress={() => {
                 setScanMode('store');
                 simulateScan(
@@ -386,7 +391,7 @@ const InventoryQrPrototypeScreen = ({navigation, route}: Props) => {
               }}
             />
             <ActionButton
-              label="수령 QR 테스트"
+              label="수령 QR 스캔"
               onPress={() => {
                 setScanMode('pickup');
                 simulateScan(
@@ -398,13 +403,13 @@ const InventoryQrPrototypeScreen = ({navigation, route}: Props) => {
               }}
             />
             <ActionButton
-              label="다른 냉장고 QR"
+              label="다른 냉장고 스캔"
               testID="inventory-qr-wrong-fridge-action"
               tone="warning"
               onPress={() => simulateScan(wrongFridgePayload)}
             />
             <ActionButton
-              label="초기화"
+              label="다시 시작"
               tone="secondary"
               onPress={resetPrototype}
             />
@@ -427,7 +432,8 @@ const InventoryQrPrototypeScreen = ({navigation, route}: Props) => {
               </Text>
               {SAMPLE_STORAGE_POLICY.needsReview ? (
                 <Text style={styles.policyReviewText}>
-                  운영자 확인 대상입니다. 이 기준은 서비스 노출과 회수 판단용입니다.
+                  운영자 확인 대상입니다. 이 기준은 서비스 노출과 회수
+                  판단용입니다.
                 </Text>
               ) : null}
             </View>
@@ -452,11 +458,12 @@ type ModeButtonProps = {
   onPress: () => void;
 };
 
-const ModeButton = ({active, label, onPress}: ModeButtonProps) => (
+const ModeButton = ({ active, label, onPress }: ModeButtonProps) => (
   <TouchableOpacity
     onPress={onPress}
     style={[styles.modeButton, active && styles.modeButtonActive]}>
-    <Text style={[styles.modeButtonText, active && styles.modeButtonTextActive]}>
+    <Text
+      style={[styles.modeButtonText, active && styles.modeButtonTextActive]}>
       {label}
     </Text>
   </TouchableOpacity>
