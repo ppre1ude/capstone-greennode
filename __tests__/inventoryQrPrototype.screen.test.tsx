@@ -1,10 +1,10 @@
 import React from 'react';
-import {Text, TouchableOpacity} from 'react-native';
+import { Alert, Text, TouchableOpacity } from 'react-native';
 import ReactTestRenderer from 'react-test-renderer';
-import {confirmPickup, confirmStore} from '@/api/inventory';
-import {QrScannerShell} from '@/features/qr';
+import { confirmPickup, confirmStore } from '@/api/inventory';
+import { QrScannerShell } from '@/features/qr';
 import InventoryQrPrototypeScreen from '@/screens/inventory/InventoryQrPrototypeScreen';
-import {useFeedRefreshStore} from '@/store/feedRefreshStore';
+import { useFeedRefreshStore } from '@/store/feedRefreshStore';
 
 jest.mock('@/api/inventory', () => ({
   confirmPickup: jest.fn(),
@@ -29,7 +29,9 @@ const flattenText = (value: unknown): string => {
 };
 
 const getTextContent = (renderer: ReactTestRenderer.ReactTestRenderer) =>
-  renderer.root.findAllByType(Text).map(node => flattenText(node.props.children));
+  renderer.root
+    .findAllByType(Text)
+    .map(node => flattenText(node.props.children));
 
 const findTouchableByText = (
   renderer: ReactTestRenderer.ReactTestRenderer,
@@ -38,7 +40,7 @@ const findTouchableByText = (
   const touchable = renderer.root.findAll(
     node =>
       node.type === TouchableOpacity &&
-      node.findAllByProps({children: text}).length > 0,
+      node.findAllByProps({ children: text }).length > 0,
   )[0];
 
   if (!touchable) {
@@ -62,13 +64,26 @@ const pressWrongFridgeQrAction = (
   wrongFridgeButton.props.onPress();
 };
 
+const apiError = (status: number) => ({
+  response: {
+    status,
+  },
+});
+
 describe('InventoryQrPrototypeScreen', () => {
+  let alertSpy: jest.SpyInstance;
+
   beforeEach(() => {
     jest.clearAllMocks();
+    alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
     useFeedRefreshStore.setState({
       nearbyPostsRefreshToken: 0,
       requestedPostId: null,
     });
+  });
+
+  afterEach(() => {
+    alertSpy.mockRestore();
   });
 
   it('renders the QR and inventory prototype surface', async () => {
@@ -77,8 +92,8 @@ describe('InventoryQrPrototypeScreen', () => {
     await ReactTestRenderer.act(async () => {
       renderer = ReactTestRenderer.create(
         <InventoryQrPrototypeScreen
-          navigation={{goBack: jest.fn()} as any}
-          route={{params: undefined} as any}
+          navigation={{ goBack: jest.fn() } as any}
+          route={{ params: undefined } as any}
         />,
       );
     });
@@ -102,8 +117,8 @@ describe('InventoryQrPrototypeScreen', () => {
     await ReactTestRenderer.act(async () => {
       renderer = ReactTestRenderer.create(
         <InventoryQrPrototypeScreen
-          navigation={{goBack: jest.fn()} as any}
-          route={{params: undefined} as any}
+          navigation={{ goBack: jest.fn() } as any}
+          route={{ params: undefined } as any}
         />,
       );
     });
@@ -115,7 +130,9 @@ describe('InventoryQrPrototypeScreen', () => {
 
     const textContent = getTextContent(renderer!);
 
-    expect(textContent).toContain('보관 인증 완료. 라벨 코드를 식재료에 붙여주세요.');
+    expect(textContent).toContain(
+      '보관 인증 완료. 라벨 코드를 식재료에 붙여주세요.',
+    );
     expect(textContent).toContain('#0042');
     expect(textContent).toContain('토마토');
     expect(textContent).toContain('일반 구역');
@@ -135,8 +152,8 @@ describe('InventoryQrPrototypeScreen', () => {
     await ReactTestRenderer.act(async () => {
       renderer = ReactTestRenderer.create(
         <InventoryQrPrototypeScreen
-          navigation={{goBack: jest.fn()} as any}
-          route={{params: undefined} as any}
+          navigation={{ goBack: jest.fn() } as any}
+          route={{ params: undefined } as any}
         />,
       );
     });
@@ -174,16 +191,18 @@ describe('InventoryQrPrototypeScreen', () => {
     await ReactTestRenderer.act(async () => {
       renderer = ReactTestRenderer.create(
         <InventoryQrPrototypeScreen
-          navigation={{goBack: jest.fn()} as any}
-          route={{
-            params: {
-              mode: 'store',
-              postId: 10,
-              fridgePublicCode: 'GJ-STATION-001',
-              fridgeName: '광주역 앞 공유냉장고',
-              fridgeLocation: '광주 북구 중흥동',
-            },
-          } as any}
+          navigation={{ goBack: jest.fn() } as any}
+          route={
+            {
+              params: {
+                mode: 'store',
+                postId: 10,
+                fridgePublicCode: 'GJ-STATION-001',
+                fridgeName: '광주역 앞 공유냉장고',
+                fridgeLocation: '광주 북구 중흥동',
+              },
+            } as any
+          }
         />,
       );
     });
@@ -225,14 +244,16 @@ describe('InventoryQrPrototypeScreen', () => {
     await ReactTestRenderer.act(async () => {
       renderer = ReactTestRenderer.create(
         <InventoryQrPrototypeScreen
-          navigation={{goBack: jest.fn()} as any}
-          route={{
-            params: {
-              mode: 'store',
-              postId: 10,
-              fridgePublicCode: 'GJ-STATION-001',
-            },
-          } as any}
+          navigation={{ goBack: jest.fn() } as any}
+          route={
+            {
+              params: {
+                mode: 'store',
+                postId: 10,
+                fridgePublicCode: 'GJ-STATION-001',
+              },
+            } as any
+          }
         />,
       );
     });
@@ -274,14 +295,16 @@ describe('InventoryQrPrototypeScreen', () => {
     await ReactTestRenderer.act(async () => {
       renderer = ReactTestRenderer.create(
         <InventoryQrPrototypeScreen
-          navigation={{goBack: jest.fn()} as any}
-          route={{
-            params: {
-              mode: 'pickup',
-              postId: 10,
-              fridgePublicCode: 'GJ-STATION-001',
-            },
-          } as any}
+          navigation={{ goBack: jest.fn() } as any}
+          route={
+            {
+              params: {
+                mode: 'pickup',
+                postId: 10,
+                fridgePublicCode: 'GJ-STATION-001',
+              },
+            } as any
+          }
         />,
       );
     });
@@ -305,6 +328,202 @@ describe('InventoryQrPrototypeScreen', () => {
     });
   });
 
+  it('keeps the pending-store state when confirm-store rejects', async () => {
+    mockedConfirmStore.mockRejectedValue(apiError(410));
+
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(
+        <InventoryQrPrototypeScreen
+          navigation={{ goBack: jest.fn() } as any}
+          route={
+            {
+              params: {
+                mode: 'store',
+                postId: 10,
+                fridgePublicCode: 'GJ-STATION-001',
+              },
+            } as any
+          }
+        />,
+      );
+    });
+
+    const previousToken =
+      useFeedRefreshStore.getState().nearbyPostsRefreshToken;
+
+    await ReactTestRenderer.act(async () => {
+      await renderer!.root.findByType(QrScannerShell).props.onValidScan({
+        fridgePublicCode: 'GJ-STATION-001',
+      });
+    });
+
+    expect(mockedConfirmStore).toHaveBeenCalledWith({
+      postId: 10,
+      fridgePublicCode: 'GJ-STATION-001',
+    });
+    expect(getTextContent(renderer!)).toContain(
+      '보관 기한이 만료된 식재료입니다.',
+    );
+    expect(getTextContent(renderer!)).toContain('라벨은 보관 인증 후 표시');
+    expect(useFeedRefreshStore.getState().nearbyPostsRefreshToken).toBe(
+      previousToken,
+    );
+    expect(alertSpy).toHaveBeenCalledWith(
+      'QR 인증 실패',
+      '보관 기한이 만료된 식재료입니다.',
+    );
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
+  it('keeps pickup unconfirmed when confirm-pickup rejects', async () => {
+    mockedConfirmPickup.mockRejectedValue(apiError(409));
+
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(
+        <InventoryQrPrototypeScreen
+          navigation={{ goBack: jest.fn() } as any}
+          route={
+            {
+              params: {
+                mode: 'pickup',
+                postId: 10,
+                fridgePublicCode: 'GJ-STATION-001',
+              },
+            } as any
+          }
+        />,
+      );
+    });
+
+    const previousToken =
+      useFeedRefreshStore.getState().nearbyPostsRefreshToken;
+
+    await ReactTestRenderer.act(async () => {
+      await renderer!.root.findByType(QrScannerShell).props.onValidScan({
+        fridgePublicCode: 'GJ-STATION-001',
+      });
+    });
+
+    expect(mockedConfirmPickup).toHaveBeenCalledWith({
+      postId: 10,
+      fridgePublicCode: 'GJ-STATION-001',
+    });
+    expect(getTextContent(renderer!)).toContain(
+      '이미 수거 완료된 식재료입니다.',
+    );
+    expect(getTextContent(renderer!)).not.toContain(
+      '수령 인증이 완료되었습니다.',
+    );
+    expect(useFeedRefreshStore.getState().nearbyPostsRefreshToken).toBe(
+      previousToken,
+    );
+    expect(useFeedRefreshStore.getState().requestedPostId).toBeNull();
+    expect(alertSpy).toHaveBeenCalledWith(
+      'QR 인증 실패',
+      '이미 수거 완료된 식재료입니다.',
+    );
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
+  it('runs a full API-backed store then pickup lifecycle', async () => {
+    mockedConfirmStore.mockResolvedValue({
+      success: true,
+      message: '입고 인증이 완료되었습니다.',
+      data: {
+        postId: 44,
+        status: 'available',
+        labelCode: '#44',
+        storageZone: 'GENERAL',
+        storageDeadlineAt: '2026-06-18T05:30:00Z',
+        storedAt: '2026-05-19T05:30:00Z',
+      },
+    });
+    mockedConfirmPickup.mockResolvedValue({
+      success: true,
+      message: '수령 인증이 완료되었습니다.',
+      data: {
+        postId: 44,
+        status: 'completed',
+        labelCode: '#44',
+        storageZone: 'GENERAL',
+        pickedUpAt: '2026-05-20T05:30:00Z',
+      },
+    });
+
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(
+        <InventoryQrPrototypeScreen
+          navigation={{ goBack: jest.fn() } as any}
+          route={
+            {
+              params: {
+                mode: 'store',
+                postId: 44,
+                fridgePublicCode: 'GJ-STATION-001',
+              },
+            } as any
+          }
+        />,
+      );
+    });
+
+    const initialToken = useFeedRefreshStore.getState().nearbyPostsRefreshToken;
+
+    await ReactTestRenderer.act(async () => {
+      await renderer!.root.findByType(QrScannerShell).props.onValidScan({
+        fridgePublicCode: 'GJ-STATION-001',
+      });
+    });
+
+    expect(mockedConfirmStore).toHaveBeenCalledWith({
+      postId: 44,
+      fridgePublicCode: 'GJ-STATION-001',
+    });
+    expect(getTextContent(renderer!)).toContain('입고 인증이 완료되었습니다.');
+    expect(getTextContent(renderer!)).toContain('#44');
+    expect(useFeedRefreshStore.getState().nearbyPostsRefreshToken).toBe(
+      initialToken + 1,
+    );
+    expect(useFeedRefreshStore.getState().requestedPostId).toBeNull();
+
+    await ReactTestRenderer.act(async () => {
+      findTouchableByText(renderer!, '수령 인증').props.onPress();
+      await Promise.resolve();
+    });
+
+    await ReactTestRenderer.act(async () => {
+      await renderer!.root.findByType(QrScannerShell).props.onValidScan({
+        fridgePublicCode: 'GJ-STATION-001',
+      });
+    });
+
+    expect(mockedConfirmPickup).toHaveBeenCalledWith({
+      postId: 44,
+      fridgePublicCode: 'GJ-STATION-001',
+    });
+    expect(getTextContent(renderer!)).toContain('수령 인증이 완료되었습니다.');
+    expect(useFeedRefreshStore.getState().nearbyPostsRefreshToken).toBe(
+      initialToken + 2,
+    );
+    expect(useFeedRefreshStore.getState().requestedPostId).toBe(44);
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
   it('renders an API-backed countdown from the route expiry and current time', async () => {
     const dateNowSpy = jest
       .spyOn(Date, 'now')
@@ -315,14 +534,16 @@ describe('InventoryQrPrototypeScreen', () => {
     await ReactTestRenderer.act(async () => {
       renderer = ReactTestRenderer.create(
         <InventoryQrPrototypeScreen
-          navigation={{goBack: jest.fn()} as any}
-          route={{
-            params: {
-              mode: 'store',
-              postId: 10,
-              pendingExpiresAt: '2026-05-20T00:07:30Z',
-            },
-          } as any}
+          navigation={{ goBack: jest.fn() } as any}
+          route={
+            {
+              params: {
+                mode: 'store',
+                postId: 10,
+                pendingExpiresAt: '2026-05-20T00:07:30Z',
+              },
+            } as any
+          }
         />,
       );
     });
@@ -347,14 +568,16 @@ describe('InventoryQrPrototypeScreen', () => {
     await ReactTestRenderer.act(async () => {
       renderer = ReactTestRenderer.create(
         <InventoryQrPrototypeScreen
-          navigation={{goBack: jest.fn()} as any}
-          route={{
-            params: {
-              mode: 'store',
-              postId: 10,
-              pendingExpiresAt: 'not-a-date',
-            },
-          } as any}
+          navigation={{ goBack: jest.fn() } as any}
+          route={
+            {
+              params: {
+                mode: 'store',
+                postId: 10,
+                pendingExpiresAt: 'not-a-date',
+              },
+            } as any
+          }
         />,
       );
     });
@@ -389,14 +612,16 @@ describe('InventoryQrPrototypeScreen', () => {
     await ReactTestRenderer.act(async () => {
       renderer = ReactTestRenderer.create(
         <InventoryQrPrototypeScreen
-          navigation={{goBack: jest.fn()} as any}
-          route={{
-            params: {
-              mode: 'store',
-              postId: 10,
-              pendingExpiresAt: '2030-01-01T00:05:00Z',
-            },
-          } as any}
+          navigation={{ goBack: jest.fn() } as any}
+          route={
+            {
+              params: {
+                mode: 'store',
+                postId: 10,
+                pendingExpiresAt: '2030-01-01T00:05:00Z',
+              },
+            } as any
+          }
         />,
       );
     });
@@ -435,14 +660,16 @@ describe('InventoryQrPrototypeScreen', () => {
     await ReactTestRenderer.act(async () => {
       renderer = ReactTestRenderer.create(
         <InventoryQrPrototypeScreen
-          navigation={{goBack: jest.fn()} as any}
-          route={{
-            params: {
-              mode: 'pickup',
-              postId: 10,
-              pendingExpiresAt: '2030-01-01T00:30:00Z',
-            },
-          } as any}
+          navigation={{ goBack: jest.fn() } as any}
+          route={
+            {
+              params: {
+                mode: 'pickup',
+                postId: 10,
+                pendingExpiresAt: '2030-01-01T00:30:00Z',
+              },
+            } as any
+          }
         />,
       );
     });
