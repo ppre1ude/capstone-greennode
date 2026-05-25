@@ -1740,18 +1740,39 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
 
 - 분류: 다음 플랜 수립용 백로그 기준선
 - 배경: 2026-05-25까지 Android MVP 핵심 QA, FCM 실기기/에뮬레이터 QA, QR `pending_store` VM E2E, operator inventory runtime QA가 닫혔다. 현재 상태는 Android 기준 제한 베타 가능한 MVP에 가깝지만, 크로스플랫폼 production v1로 보려면 운영자 진입 정책, 사용자 내역, 알림 동기화, iOS evidence가 부족하다.
+- CEO/제품 판단: 체류시간이 짧은 것 자체는 FoodLink의 핵심 문제가 아니다. 이 앱은 피드 소비보다 남는 식재료 처리, 신청, 수령, 완료를 빠르게 끝내는 작업형 앱이다. 진짜 gap은 사용자가 다시 돌아와 진행 중인 나눔 lifecycle을 추적하고 다음 행동을 마칠 표면이 부족하다는 점이다.
 - 현재 판단:
   - Android MVP 핵심 흐름 완성도는 약 80~85%다.
   - 전체 v1 제품 완성도는 약 60~65%다.
   - “나눔 식재료 등록 -> 주변/지도 노출 -> 신청 -> 알림 -> QR 보관/수령”은 검증됐지만, “며칠 쓰는 제품”에 필요한 내역/취소/읽음/권한/운영 lifecycle은 아직 빈 곳이 있다.
+  - 홈은 발견과 등록 진입에는 강하지만, 사용자가 다시 열었을 때 `입고 QR 필요`, `수령 QR 필요`, `30분 남음`, `신청 접수됨` 같은 현재 액션을 충분히 강하게 보여주지 않는다.
+- 디자인 리뷰 판단:
+  - 현재 UX/UI는 약 6/10이다. MVP 흐름은 이해되지만 반복 사용 제품으로 보이는 lifecycle 표면과 모바일 마감이 부족하다.
+  - 분석 결과, 등록 폼/냉장고 선택/완료 화면 계열에서 하단 CTA가 Android system navigation 영역과 겹치는 screenshot evidence가 있다.
+  - QR 화면은 실제 API 연결 상황에서도 `냉장고 QR 흐름 테스트`, `보관 QR 테스트`, `수령 QR 테스트` 같은 내부 실험 언어를 노출한다.
+  - 디자인 시스템은 emoji 사용 금지와 `DSIcon` 우선을 명시하지만, 지도 marker, 현재 위치, 알림 empty, 완료 화면, 상세 삭제/정보 아이콘 등에 emoji가 남아 있다.
+  - 지도 화면은 선택 냉장고 카드와 상세 sheet가 동시에 바닥을 차지해 정보 구조가 과밀하다.
 - 다음 엔지니어링 우선순위:
-  1. 운영자 role metadata 계약 확정 및 프로필 진입 정책 마감
-  2. 내 나눔/받은 나눔 화면
+  1. 내 진행 중인 나눔 허브: 홈 상단 또는 별도 화면에서 내가 등록한 나눔, 내가 신청한 나눔, QR 필요, 남은 시간, 신청 상태를 한 번에 보여준다.
+  2. 내 나눔/받은 나눔 API와 화면
   3. 알림 서버 목록/읽음 상태
-  4. iOS 시뮬레이터 기준 smoke QA
-  5. 신청 취소/만료/완료 lifecycle 확장
-  6. 검색/통계/AI rejection reason 확장
+  4. `requested` 이후 취소/만료/완료 lifecycle 확장
+  5. 운영자 role metadata 계약 확정 및 프로필 진입 정책 마감
+  6. iOS 시뮬레이터 기준 smoke QA
+  7. 검색/통계/AI rejection reason 확장
+- 다음 UI/UX 우선순위:
+  1. P0 fixed footer safe area: `AnalysisResultScreen`, `PostCreateScreen`, `FridgeSelectScreen`, `PostCompleteScreen`, `PostDetailScreen` 계열의 하단 CTA를 `useSafeAreaInsets()` 기반 공통 footer 패턴으로 통합한다.
+  2. P0 QR productization: `InventoryQrPrototypeScreen`의 사용자-facing 제목, 설명, CTA에서 `테스트`/`프로토타입` 언어와 QA 전용 action을 제거한다.
+  3. P1 icon migration: action/navigation/input/button slot의 emoji를 `DSIcon` 또는 asset으로 치환한다.
+  4. P1 map bottom surface 정리: 냉장고 선택 시 carousel과 상세 sheet 중 하나를 primary surface로 정하고, 지도 가시성과 다음 action을 보존한다.
+  5. P1 profile surface 정리: 준비 중 메뉴를 줄이고 내 나눔/받은 나눔/알림 작업 중 하나를 실제 lifecycle 관리 화면으로 승격한다.
 - Acceptance Criteria:
+  - [ ] 홈 또는 전용 허브에서 사용자가 지금 처리해야 할 나눔 action을 볼 수 있다.
+  - [ ] 진행 중인 action은 `입고 QR 필요`, `수령 QR 필요`, `신청 접수`, `수령 제한 시간`, `완료/만료/취소` 같은 사용자-facing 상태로 표시된다.
+  - [ ] Android emulator/실기기 screenshot에서 주요 fixed footer CTA가 system navigation bar와 겹치지 않는다.
+  - [ ] QR 보관/수령 화면의 사용자-facing copy에서 `테스트`, `프로토타입`, `초기화` 같은 내부 QA 언어가 제거된다.
+  - [ ] action/navigation/input/button slot에서 emoji 기반 아이콘이 제거되고 `DSIcon`/asset 기반으로 대체된다.
+  - [ ] 지도에서 냉장고 선택 시 하단 primary surface가 하나로 정리되어 지도와 냉장고 내부 목록의 위계가 명확하다.
   - [ ] `/auth/me` 또는 별도 endpoint에서 `isOperator`, `operatorRole`, `operatorFridgeIds`, `roles` 중 합의된 운영자 힌트를 내려준다.
   - [ ] 실제 운영자 계정만 프로필에서 운영자 콘솔 진입점을 볼 수 있다.
   - [ ] 사용자가 내가 등록한 나눔 식재료와 내가 신청/수령한 나눔 식재료를 앱 안에서 확인할 수 있다.
@@ -1759,12 +1780,17 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
   - [ ] iOS 시뮬레이터에서 로그인, 위치 권한, 카메라/갤러리, 지도, 알림 권한, 홈/상세/신청 smoke QA evidence가 남는다.
   - [ ] `requested` 이후 취소/만료/완료 전이에 대한 사용자-facing 정책과 API 계약이 확정된다.
 - 검증 방법:
+  - 진행 중인 나눔 허브: fixture/API 계약 테스트 + 홈/전용 화면 회귀 + QR pending/requested state QA
+  - fixed footer: Android emulator + 실기기 screenshot 비교, iOS simulator smoke에서 CTA clipping 여부 확인
+  - QR productization: 실제 API-backed route와 prototype-only route를 분리해 copy snapshot/화면 QA
+  - icon migration: `Text` emoji grep + 주요 탭/지도/상세/완료/알림 화면 screenshot QA
+  - map surface: 냉장고 선택/검색/빈 목록/신청 후 refresh 상태의 screenshot QA
   - 운영자 권한: VM API matrix + 실제 앱 role-gated profile QA
   - 내역 화면: API 계약 테스트 + React Native 화면 회귀 + Android/iOS smoke QA
   - 알림 읽음: 서버 API contract test + foreground/background 수신 회귀
   - iOS: iOS simulator smoke QA evidence 파일 기록
   - lifecycle: 상태 전이 API matrix + 상세/목록 refresh 회귀 테스트
-- 관련 파일/화면/API: `ProfileScreen`, `FridgeOperatorConsoleScreen`, `ChatListScreen`, `PostDetailScreen`, `HomeScreen`, `/auth/me`, `/operator/*`, notification APIs, future user-history APIs
+- 관련 파일/화면/API: `HomeScreen`, `ProfileScreen`, `FridgeOperatorConsoleScreen`, `ChatListScreen`, `PostDetailScreen`, `AnalysisResultScreen`, `PostCreateScreen`, `FridgeSelectScreen`, `PostCompleteScreen`, `MapScreen`, `InventoryQrPrototypeScreen`, `/auth/me`, `/operator/*`, notification APIs, future user-history APIs
 
 ### Codex 작업 지시 예시
 
