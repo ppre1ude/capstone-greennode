@@ -3,6 +3,7 @@ import {Alert, Text, TextInput, TouchableOpacity} from 'react-native';
 import ReactTestRenderer from 'react-test-renderer';
 import PostCreateScreen from '@/screens/post/PostCreateScreen';
 import type {GenerateResult} from '@/types';
+import {renderWithSafeArea} from '../test-utils/renderWithSafeArea';
 
 const lowConfidenceResult: GenerateResult = {
   detectedFruit: 'banana',
@@ -63,15 +64,17 @@ describe('PostCreateScreen review notice', () => {
 
     await ReactTestRenderer.act(async () => {
       renderer = ReactTestRenderer.create(
-        <PostCreateScreen
-          navigation={navigation as never}
-          route={{
-            params: {
-              result: lowConfidenceResult,
-              imageUri: 'file:///banana.jpg',
-            },
-          } as never}
-        />,
+        renderWithSafeArea(
+          <PostCreateScreen
+            navigation={navigation as never}
+            route={{
+              params: {
+                result: lowConfidenceResult,
+                imageUri: 'file:///banana.jpg',
+              },
+            } as never}
+          />,
+        ),
       );
     });
 
@@ -103,15 +106,17 @@ describe('PostCreateScreen review notice', () => {
 
     await ReactTestRenderer.act(async () => {
       renderer = ReactTestRenderer.create(
-        <PostCreateScreen
-          navigation={navigation as never}
-          route={{
-            params: {
-              result: lowConfidenceResult,
-              imageUri: 'file:///banana.jpg',
-            },
-          } as never}
-        />,
+        renderWithSafeArea(
+          <PostCreateScreen
+            navigation={navigation as never}
+            route={{
+              params: {
+                result: lowConfidenceResult,
+                imageUri: 'file:///banana.jpg',
+              },
+            } as never}
+          />,
+        ),
       );
     });
 
@@ -153,15 +158,17 @@ describe('PostCreateScreen review notice', () => {
 
     await ReactTestRenderer.act(async () => {
       renderer = ReactTestRenderer.create(
-        <PostCreateScreen
-          navigation={navigation as never}
-          route={{
-            params: {
-              result: lowConfidenceResult,
-              imageUri: 'file:///banana.jpg',
-            },
-          } as never}
-        />,
+        renderWithSafeArea(
+          <PostCreateScreen
+            navigation={navigation as never}
+            route={{
+              params: {
+                result: lowConfidenceResult,
+                imageUri: 'file:///banana.jpg',
+              },
+            } as never}
+          />,
+        ),
       );
     });
 
@@ -213,15 +220,17 @@ describe('PostCreateScreen review notice', () => {
 
     await ReactTestRenderer.act(async () => {
       renderer = ReactTestRenderer.create(
-        <PostCreateScreen
-          navigation={navigation as never}
-          route={{
-            params: {
-              result: multiObjectResult,
-              imageUri: 'file:///banana.jpg',
-            },
-          } as never}
-        />,
+        renderWithSafeArea(
+          <PostCreateScreen
+            navigation={navigation as never}
+            route={{
+              params: {
+                result: multiObjectResult,
+                imageUri: 'file:///banana.jpg',
+              },
+            } as never}
+          />,
+        ),
       );
     });
 

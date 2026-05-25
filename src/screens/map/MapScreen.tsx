@@ -15,7 +15,6 @@ import React, {
 } from 'react';
 import {
   View,
-  Text as RNText,
   StyleSheet,
   TouchableOpacity,
   FlatList,
@@ -515,7 +514,14 @@ const MapScreen = () => {
                 styles.markerWrapper,
                 selectedFridgeId === fridge.id && styles.markerWrapperSelected,
               ]}>
-              <RNText style={styles.markerEmoji}>🏢</RNText>
+              <DSIcon
+                name="building"
+                size="small"
+                color={
+                  selectedFridgeId === fridge.id ? 'textOnPrimary' : 'primary'
+                }
+                style={styles.markerIcon}
+              />
             </View>
           </Marker>
         ))}
@@ -527,7 +533,7 @@ const MapScreen = () => {
         onPress={() => {
           mapRef.current?.animateToRegion(initialRegion, 500);
         }}>
-        <RNText style={styles.myLocationIcon}>📍</RNText>
+        <DSIcon name="location-crosshairs" size="large" color="primary" />
       </TouchableOpacity>
 
       {/* 하단 냉장고 리스트 캐러셀 */}

@@ -2,6 +2,7 @@ import React from 'react';
 import {TouchableOpacity} from 'react-native';
 import ReactTestRenderer from 'react-test-renderer';
 import PostCompleteScreen from '@/screens/post/PostCompleteScreen';
+import {renderWithSafeArea} from '../test-utils/renderWithSafeArea';
 
 describe('PostCompleteScreen navigation', () => {
   it('returns home with a nearby post refresh token', async () => {
@@ -11,10 +12,12 @@ describe('PostCompleteScreen navigation', () => {
 
     await ReactTestRenderer.act(async () => {
       renderer = ReactTestRenderer.create(
-        <PostCompleteScreen
-          navigation={{reset} as any}
-          route={{params: {postId: 42}} as any}
-        />,
+        renderWithSafeArea(
+          <PostCompleteScreen
+            navigation={{reset} as any}
+            route={{params: {postId: 42}} as any}
+          />,
+        ),
       );
     });
 

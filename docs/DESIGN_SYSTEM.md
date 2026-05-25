@@ -1,6 +1,6 @@
 # FoodLink 디자인 시스템
 
-> **최종 수정일**: 2026-05-19
+> **최종 수정일**: 2026-05-26
 > **코드 토큰 파일**: [`src/theme/`](../src/theme/) 디렉토리 참고
 > **컴포넌트 레이어**: [`src/design-system/`](../src/design-system/) 디렉토리 참고
 
@@ -275,3 +275,29 @@ Montage Android/iOS는 GreenNode의 색상 팔레트 대체재가 아니라 **�
 - 지도 화면의 검색 입력, 냉장고 카드/시트, retry/refresh/detail/sheet 액션은 `DSTextField`, `DSCard`, `DSChip`, `DSButton`, `DSListCell` 조합으로 치환했다.
 - 액션 아이콘은 `DSIcon`을 `leading`/`trailing` slot에 넣고, 지도 마커와 현재 위치 버튼처럼 MapView 상호작용에 직접 연결된 화면 고유 glyph도 후속 마이그레이션에서 vector icon 또는 asset으로 치환한다.
 - `DSChip.selected`는 실제 선택 UI에만 사용하고, 지도 냉장고의 `운영중` 표시는 static status라 `tone="primary"`를 사용한다.
+
+### 2026-05-26 디자인 리뷰 후속 기준
+
+plan-design-review 기준 현재 앱의 UX/UI 완성도는 약 6/10이다. MVP 핵심 흐름은 보이지만 반복 사용 제품으로 보이려면 lifecycle action 노출과 모바일 마감 품질을 먼저 올린다.
+
+디자인 시스템 관점의 우선순위:
+
+1. Fixed footer safe area
+   - 하단 CTA는 Android/iOS system navigation 영역과 겹치면 안 된다.
+   - `AnalysisResultScreen`, `PostCreateScreen`, `FridgeSelectScreen`, `PostCompleteScreen`, `PostDetailScreen` 계열은 화면별 고정 `paddingBottom` 대신 `useSafeAreaInsets()` 기반 공통 footer 패턴으로 통합한다.
+   - 완료 기준은 Android emulator/실기기 screenshot에서 CTA가 잘리지 않고, iOS simulator에서도 home indicator와 적정 간격을 유지하는 것이다.
+2. QR productization
+   - 실제 사용자 route에서는 `테스트`, `프로토타입`, `초기화`, `보관 QR 테스트`, `수령 QR 테스트` 같은 내부 QA 문구를 노출하지 않는다.
+   - API-backed QR 보관/수령은 `냉장고 QR 인증`, `보관 인증`, `수령 인증` 같은 제품 언어로 표시한다.
+   - prototype-only 조작은 개발/QA 전용 route 또는 fixture 화면으로 분리한다.
+3. Emoji removal
+   - action, navigation, input, button slot에서 emoji를 제거하고 `DSIcon` 또는 image asset으로 치환한다.
+   - 대상 예시는 지도 marker/현재 위치, 상세 삭제/상태 아이콘, 알림 empty icon, 완료 화면 celebration icon, 프로필 메뉴 leading icon이다.
+   - 장식 목적의 illustration도 신규 추가 시 vector icon 또는 asset을 우선한다.
+4. Map bottom surface
+   - 냉장고 선택 시 carousel card와 상세 sheet가 동시에 primary surface가 되지 않게 한다.
+   - 선택 상태에서는 하나의 bottom sheet가 냉장고 요약, 내부 available 목록, refresh/detail action을 담당한다.
+   - 지도는 배경 장식이 아니라 탐색 surface이므로 하단 UI가 지도 가시성을 과도하게 가리지 않아야 한다.
+5. Lifecycle-first home/profile
+   - 홈 상단 또는 전용 허브에는 `입고 QR 필요`, `수령 QR 필요`, `30분 남음`, `신청 접수` 같은 현재 action을 compact card/list로 노출한다.
+   - 프로필은 `준비 중` 메뉴를 늘리는 곳이 아니라 내 나눔, 받은 나눔, 알림/작업 중 최소 하나를 실제 관리 surface로 승격하는 곳이다.

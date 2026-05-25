@@ -2,6 +2,7 @@ import React from 'react';
 import { Text } from 'react-native';
 import ReactTestRenderer from 'react-test-renderer';
 import PostCompleteScreen from '@/screens/post/PostCompleteScreen';
+import { renderWithSafeArea } from '../test-utils/renderWithSafeArea';
 
 const flattenText = (value: unknown): string => {
   if (Array.isArray(value)) {
@@ -19,10 +20,12 @@ describe('PostCompleteScreen notification copy', () => {
 
     await ReactTestRenderer.act(async () => {
       renderer = ReactTestRenderer.create(
-        <PostCompleteScreen
-          navigation={{reset: jest.fn()} as any}
-          route={{params: {postId: 10}} as any}
-        />,
+        renderWithSafeArea(
+          <PostCompleteScreen
+            navigation={{reset: jest.fn()} as any}
+            route={{params: {postId: 10}} as any}
+          />,
+        ),
       );
     });
 

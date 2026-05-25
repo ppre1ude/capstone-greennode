@@ -9,9 +9,9 @@ import {
 import Geolocation from 'react-native-geolocation-service';
 import ReactTestRenderer from 'react-test-renderer';
 import LocationSetupScreen from '@/screens/location/LocationSetupScreen';
-import {updateLocation} from '@/api/auth';
-import {getFcmToken} from '@/services/deviceRegistration';
-import {useAuthStore} from '@/store/authStore';
+import { updateLocation } from '@/api/auth';
+import { getFcmToken } from '@/services/deviceRegistration';
+import { useAuthStore } from '@/store/authStore';
 
 jest.mock('@/api/auth', () => ({
   updateLocation: jest.fn(),
@@ -51,8 +51,8 @@ describe('LocationSetupScreen notification permission flow', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    Object.defineProperty(Platform, 'OS', {get: () => 'android'});
-    Object.defineProperty(Platform, 'Version', {get: () => 35});
+    Object.defineProperty(Platform, 'OS', { get: () => 'android' });
+    Object.defineProperty(Platform, 'Version', { get: () => 35 });
     jest
       .spyOn(PermissionsAndroid, 'request')
       .mockResolvedValue(PermissionsAndroid.RESULTS.GRANTED);
@@ -102,7 +102,7 @@ describe('LocationSetupScreen notification permission flow', () => {
       renderer = ReactTestRenderer.create(
         <LocationSetupScreen
           navigation={navigation as never}
-          route={{params: {allowBack: false}} as never}
+          route={{ params: { allowBack: false } } as never}
         />,
       );
       await Promise.resolve();
@@ -111,10 +111,7 @@ describe('LocationSetupScreen notification permission flow', () => {
 
     expect(mockedGetFcmToken).not.toHaveBeenCalled();
 
-    const notificationButton = findButtonByText(
-      renderer!,
-      '나눔 알림 받기',
-    );
+    const notificationButton = findButtonByText(renderer!, '나눔 알림 받기');
     expect(notificationButton).toBeTruthy();
 
     await ReactTestRenderer.act(async () => {
@@ -124,7 +121,7 @@ describe('LocationSetupScreen notification permission flow', () => {
 
     expect(mockedGetFcmToken).toHaveBeenCalledTimes(1);
     expect(
-      renderer!.root.findAllByProps({children: '알림 받을 준비가 됐어요'}),
+      renderer!.root.findAllByProps({ children: '알림 받을 준비가 됐어요' }),
     ).not.toHaveLength(0);
 
     const submitButton = findButtonByText(renderer!, '이 위치로 설정하기');
@@ -153,7 +150,7 @@ describe('LocationSetupScreen notification permission flow', () => {
       renderer = ReactTestRenderer.create(
         <LocationSetupScreen
           navigation={navigation as never}
-          route={{params: {allowBack: false}} as never}
+          route={{ params: { allowBack: false } } as never}
         />,
       );
       await Promise.resolve();
@@ -162,7 +159,7 @@ describe('LocationSetupScreen notification permission flow', () => {
 
     expect(mockedGetCurrentPosition).not.toHaveBeenCalled();
     expect(
-      renderer!.root.findAllByProps({children: '위치 권한이 필요해요'}),
+      renderer!.root.findAllByProps({ children: '위치 권한이 필요해요' }),
     ).not.toHaveLength(0);
     expect(findButtonByText(renderer!, '권한 다시 요청')).toBeTruthy();
     expect(findButtonByText(renderer!, '설정 열기')).toBeTruthy();
@@ -198,7 +195,7 @@ describe('LocationSetupScreen notification permission flow', () => {
       renderer = ReactTestRenderer.create(
         <LocationSetupScreen
           navigation={navigation as never}
-          route={{params: {allowBack: false}} as never}
+          route={{ params: { allowBack: false } } as never}
         />,
       );
       await Promise.resolve();
@@ -216,7 +213,100 @@ describe('LocationSetupScreen notification permission flow', () => {
 
     expect(mockedGetCurrentPosition).toHaveBeenCalledTimes(1);
     expect(
-      renderer!.root.findAllByProps({children: '35.15950, 126.91320'}),
+      renderer!.root.findAllByProps({ children: '35.15950, 126.91320' }),
+    ).not.toHaveLength(0);
+  });
+
+  it('uses settings-first recovery when Android location permission is blocked', async () => {
+    jest
+      .spyOn(PermissionsAndroid, 'request')
+      .mockResolvedValueOnce(PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN)
+      .mockResolvedValueOnce(PermissionsAndroid.RESULTS.GRANTED);
+
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(
+        <LocationSetupScreen
+          navigation={navigation as never}
+          route={{ params: { allowBack: false } } as never}
+        />,
+      );
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(mockedGetCurrentPosition).not.toHaveBeenCalled();
+    expect(
+      renderer!.root.findAllByProps({
+        children: '설정에서 위치 권한을 켜주세요',
+      }),
+    ).not.toHaveLength(0);
+    expect(findButtonByText(renderer!, '설정 열기')).toBeTruthy();
+    expect(findButtonByText(renderer!, '다시 확인')).toBeTruthy();
+
+    await ReactTestRenderer.act(async () => {
+      findButtonByText(renderer!, '설정 열기')?.props.onPress();
+      await Promise.resolve();
+    });
+
+    expect(mockedOpenSettings).toHaveBeenCalledTimes(1);
+
+    await ReactTestRenderer.act(async () => {
+      findButtonByText(renderer!, '다시 확인')?.props.onPress();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(mockedGetCurrentPosition).toHaveBeenCalledTimes(1);
+    expect(
+      renderer!.root.findAllByProps({ children: '35.15950, 126.91320' }),
+    ).not.toHaveLength(0);
+  });
+
+  it('lets the user retry when geolocation cannot return coordinates', async () => {
+    mockedGetCurrentPosition
+      .mockImplementationOnce((_success, error) => {
+        error(new Error('position unavailable'));
+      })
+      .mockImplementationOnce(success => {
+        success({
+          coords: {
+            latitude: 35.1595,
+            longitude: 126.9132,
+          },
+        });
+      });
+
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(
+        <LocationSetupScreen
+          navigation={navigation as never}
+          route={{ params: { allowBack: false } } as never}
+        />,
+      );
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(
+      renderer!.root.findAllByProps({ children: '현재 위치를 찾지 못했어요' }),
+    ).not.toHaveLength(0);
+
+    const submitButton = findButtonByText(renderer!, '이 위치로 설정하기');
+    expect(submitButton?.props.disabled).toBe(true);
+
+    await ReactTestRenderer.act(async () => {
+      findButtonByText(renderer!, '위치 다시 찾기')?.props.onPress();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(mockedGetCurrentPosition).toHaveBeenCalledTimes(2);
+    expect(
+      renderer!.root.findAllByProps({ children: '35.15950, 126.91320' }),
     ).not.toHaveLength(0);
   });
 });

@@ -454,7 +454,7 @@ Authorization: Bearer {token}
 
 ### 4.8 나눔 신청하기
 
-상세 화면의 `나눔 신청하기` CTA는 이 API에 연결되어 있다. 백엔드는 구현 및 VM 검증이 완료됐고, 프론트는 API client, CTA, 성공/실패 상태, 홈 목록 갱신 신호를 코드에 반영했다. 실제 앱-VM 연결 QA는 별도로 수행한다.
+상세 화면의 `나눔 신청하기` CTA는 이 API에 연결되어 있다. 백엔드는 구현 및 VM 검증이 완료됐고, 프론트는 API client, CTA, 성공/실패 상태, 홈/지도 목록 갱신 신호를 코드에 반영했다. 2026-05-08 실제 Android UI QA에서 신청 후 `requested` 전환과 홈/지도 available 목록 제외를 확인했다.
 
 ```
 POST /api/v1/posts/{post_id}/requests
@@ -558,7 +558,8 @@ Authorization: Bearer {token}
 
 ### 4.13 운영자 Inventory API
 
-> 2026-05-23 백엔드 회신 기준. 상태는 **구현 예정 → VM 재배포 후 프론트 QA 가능**이다. 프론트는 선행 구현 상태이며 실제 runtime QA는 운영자 테스트 계정과 백엔드 배포 후 수행한다.
+> 2026-05-25 VM runtime QA 완료. `localhost:8080`에서 운영자/비운영자 권한, 빈 냉장고, `available`/`expired` dispose 성공, `requested` dispose 409, dispose 후 operator items 및 냉장고 available 목록 제외를 확인했다.
+> 남은 계약 gap: 현재 `/auth/me`의 `UserRead`는 `isOperator`, `operatorRole`, `operatorFridgeIds`, `roles` 같은 운영자 힌트를 내려주지 않는다. 앱 프로필 진입점이 실제 운영자 계정을 자동으로 노출하려면 백엔드 role metadata 또는 운영 가능 냉장고 조회 API가 필요하다.
 
 #### Inventory summary
 
@@ -645,6 +646,14 @@ Dispose 일관성 기준:
 3. items 재조회 시 disposed 항목 미포함.
 4. `/posts/nearby`와 `/fridges/{id}/posts`에서도 disposed 항목 미포함.
 
+2026-05-25 VM evidence:
+
+- 운영자 계정: `optest@foodlink.com`, fridge 1/3 권한.
+- 비운영자 계정: `codex_fcm_b_1779690163@example.com`.
+- 테스트 데이터: `QA3-A` available, `QA3-E` expired, `QA3-R` requested.
+- 결과: 무인증 summary 401, 비운영자 summary/items/dispose 403, fridge 3 summary `total=0` 및 items `[]`, fridge 999999 summary 404, requested dispose 409, available/expired dispose 200, disposed 항목은 operator items와 `/fridges/1/posts?status=available`에서 제외.
+- 원본 evidence: `temp/operator-inventory-vm-qa-20260525.json`.
+
 ---
 
 ## 5. 이미지 URL 처리
@@ -664,7 +673,7 @@ const imageFullUrl = `${BASE_URL}${post.imageUrl}`;
 
 현재 앱은 FCM 토큰을 받아 `/auth/me/location`에 등록하고, `share_created`, `share_requested` 수신 기록을 알림함에 저장한다. 백엔드는 나눔 식재료 등록 시 `share_created`, 나눔 신청 시 `share_requested` 알림을 발송한다. FCM 제약상 `data` payload의 모든 값은 문자열이며, 키는 camelCase다. 읽음 상태 API, 서버 알림 목록 API, 디버그 테스트 발송 API는 아직 없다.
 
-2026-05-23 백엔드 회신 기준으로 Android `priority: high`, iOS `apns-priority: 10`, per-token failure log, `[FCM:share_created]`/`[FCM:share_requested]` 로그 prefix가 구현 예정이다. VM 재배포 후 프론트는 foreground/background/terminated 2기기 QA를 재개한다.
+2026-05-25 QA 기준으로 Android `priority: high`, iOS `apns-priority: 10`, per-token failure log, `[FCM:share_created]`/`[FCM:share_requested]` 로그 prefix가 VM에 반영된 상태를 확인했다. 프론트는 실기기+에뮬레이터 2계정, debug/release, background/terminated/process-killed/lockscreen, Android 14/15 matrix에서 notification tap routing을 확인했다.
 
 발송 조건:
 
@@ -687,9 +696,9 @@ const imageFullUrl = `${BASE_URL}${post.imageUrl}`;
 
 FCM 실수신 QA를 하려면 클라이언트 설정 파일과 서버 발송 자격증명이 모두 필요하다. `google-services.json`만 있으면 앱 token 발급 경로를 확인할 수 있지만, `share_created`/`share_requested` 실제 수신까지 검증하려면 백엔드 VM이 Firebase Admin/service account credentials로 실제 발송해야 한다. VM에 credentials가 없으면 `[Mock FCM]` 계열 로그만 남을 수 있다.
 
-2026-05-21 QA note: Android client config `android/app/google-services.json`은 로컬에 있고 gitignored 상태다. Firebase project는 `greennode-94eae`, Android package는 `com.greennode`다. NHN Cloud VM Firebase Admin credentials도 `greennode-94eae`로 맞췄고 VM 경로는 `/home/ubuntu/foodlink/credentials/firebase-service-account.json`, API container mount 경로는 `/app/credentials/firebase-service-account.json`이다. credential 내용은 repo나 문서에 남기지 않는다. 정렬 이후 emulator QA에서 `share_created`, `share_requested` 실제 send가 backend log success 1 / failure 0으로 확인됐고, foreground는 로컬 알림 탭 기록, background는 system notification 표시와 post detail tap routing까지 확인했다. Terminated 상태는 backend Android FCM priority `high` 적용 후 재검증한다. 현재 logcat에는 `Background messages only work if the message priority is set to 'high'`가 남았고, terminated tap routing은 신뢰할 수 없었다.
+2026-05-21 QA note: Android client config `android/app/google-services.json`은 로컬에 있고 gitignored 상태다. Firebase project는 `greennode-94eae`, Android package는 `com.greennode`다. NHN Cloud VM Firebase Admin credentials도 `greennode-94eae`로 맞췄고 VM 경로는 `/home/ubuntu/foodlink/credentials/firebase-service-account.json`, API container mount 경로는 `/app/credentials/firebase-service-account.json`이다. credential 내용은 repo나 문서에 남기지 않는다. 정렬 이후 emulator QA에서 `share_created`, `share_requested` 실제 send가 backend log success 1 / failure 0으로 확인됐고, foreground는 로컬 알림 탭 기록, background는 system notification 표시와 post detail tap routing까지 확인했다. 2026-05-25에는 backend high priority 재배포 후 실기기/에뮬레이터 2계정과 release/process-killed/lockscreen tap routing을 재검증해 `PostDetail` 진입을 확인했다.
 
-2026-05-23 backend handoff: Android `priority: high`, iOS `apns-priority: 10`, per-token `response.responses` 순회 로그, FCM type별 prefix가 구현 예정이다. 프론트 최종 QA 가능 시점은 백엔드 VM 재배포 완료 알림 이후다.
+2026-05-23 backend handoff의 Android `priority: high`, iOS `apns-priority: 10`, per-token `response.responses` 순회 로그, FCM type별 prefix 항목은 2026-05-25 VM 재배포 후 프론트 QA에서 확인했다. Android 13 또는 추가 OEM 기기는 확보 시 참고 매트릭스로만 보강한다.
 
 ### 토큰 등록
 
@@ -718,7 +727,7 @@ type FoodLinkFcmPayload =
 - `AppNavigator`에서 foreground, opened-app, initial-notification handler를 등록한다.
 - handler는 `data` payload가 문자열 + camelCase인지 검증하고, 유효한 이벤트만 로컬 알림함에 저장한다.
 - foreground 수신은 즉시 화면을 이동하지 않고 알림함 기록만 남긴다.
-- background 상태에서 알림을 열면 대상 화면으로 이동한다. Terminated 상태의 tap routing reliability는 backend Android FCM priority `high` 적용 후 재검증한다.
+- background/terminated 상태에서 알림을 열면 대상 화면으로 이동한다. 2026-05-25 backend Android FCM priority `high` 적용 후 실기기, emulator, release/process-killed, Samsung lockscreen tap routing에서 `PostDetail` 진입을 재검증했다.
 
 수신 분기 기준:
 

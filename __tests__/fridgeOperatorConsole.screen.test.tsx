@@ -301,6 +301,115 @@ describe('FridgeOperatorConsoleScreen', () => {
     });
   });
 
+  it('allows operator disposal for available items', async () => {
+    mockedDisposeOperatorItem.mockResolvedValue({
+      success: true,
+      message: '폐기 처분 완료',
+      data: {
+        postId: 121,
+        status: 'disposed',
+        disposedAt: '2026-05-20T09:00:00Z',
+      },
+    });
+    mockedGetOperatorInventoryItems.mockResolvedValueOnce({
+      success: true,
+      message: 'ok',
+      data: [
+        {
+          postId: 121,
+          labelCode: '#08',
+          itemName: '바나나',
+          status: 'available',
+          freshnessLabel: 'Fresh',
+          confidenceScore: 0.99,
+          storageZone: 'GENERAL',
+          storageDeadlineAt: '2026-05-22T00:00:00Z',
+        },
+      ],
+    });
+    mockedGetOperatorInventoryItems.mockResolvedValueOnce({
+      success: true,
+      message: 'ok',
+      data: [],
+    });
+
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(
+        <FridgeOperatorConsoleScreen
+          navigation={{goBack: jest.fn()} as any}
+          route={{params: undefined} as any}
+        />,
+      );
+      await Promise.resolve();
+    });
+
+    expect(renderer!.root.findAllByProps({children: '신청 가능'})).not.toHaveLength(
+      0,
+    );
+
+    await ReactTestRenderer.act(async () => {
+      findTouchableByText(renderer!, '폐기 처분 완료').props.onPress();
+      await Promise.resolve();
+    });
+
+    expect(mockedDisposeOperatorItem).not.toHaveBeenCalled();
+    expect(alertSpy).toHaveBeenCalledWith(
+      '폐기 처분 확인',
+      expect.stringContaining('바나나'),
+      expect.any(Array),
+    );
+
+    await ReactTestRenderer.act(async () => {
+      await pressAlertButton('폐기 처분');
+      await Promise.resolve();
+    });
+
+    expect(mockedDisposeOperatorItem).toHaveBeenCalledWith(121);
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
+  it('keeps fallback inspection samples read-only when inventory fetch fails', async () => {
+    mockedGetOperatorInventorySummary.mockRejectedValue({
+      response: {
+        status: 500,
+        data: {message: 'inventory unavailable'},
+      },
+    });
+    mockedGetOperatorInventoryItems.mockRejectedValue({
+      response: {
+        status: 500,
+        data: {message: 'inventory unavailable'},
+      },
+    });
+
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(
+        <FridgeOperatorConsoleScreen
+          navigation={{goBack: jest.fn()} as any}
+          route={{params: undefined} as any}
+        />,
+      );
+      await Promise.resolve();
+    });
+
+    expect(
+      renderer!.root.findAllByProps({children: '폐기 처분 완료'}),
+    ).toHaveLength(0);
+    expect(mockedDisposeOperatorItem).not.toHaveBeenCalled();
+    expect(getRenderedText(renderer!)).toContain('inventory unavailable');
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
   it('re-syncs operator inventory after a successful dispose', async () => {
     mockedGetOperatorInventorySummary
       .mockResolvedValueOnce({
@@ -322,8 +431,8 @@ describe('FridgeOperatorConsoleScreen', () => {
         success: true,
         message: 'ok',
         data: {
-          totalItems: 1,
-          availableItems: 1,
+          totalItems: 0,
+          availableItems: 0,
           requestedItems: 0,
           expiringSoonItems: 0,
           expiredItems: 0,
@@ -353,18 +462,7 @@ describe('FridgeOperatorConsoleScreen', () => {
       .mockResolvedValueOnce({
         success: true,
         message: 'ok',
-        data: [
-          {
-            postId: 120,
-            labelCode: '#07',
-            itemName: '사과',
-            status: 'disposed',
-            freshnessLabel: 'Mid',
-            confidenceScore: 0.88,
-            storageZone: 'ETHYLENE_SEPARATED',
-            storageDeadlineAt: '2026-05-19T00:00:00Z',
-          },
-        ],
+        data: [],
       });
     mockedDisposeOperatorItem.mockResolvedValue({
       success: true,
@@ -404,9 +502,10 @@ describe('FridgeOperatorConsoleScreen', () => {
     expect(mockedDisposeOperatorItem).toHaveBeenCalledWith(120);
     expect(mockedGetOperatorInventorySummary).toHaveBeenCalledTimes(2);
     expect(mockedGetOperatorInventoryItems).toHaveBeenCalledTimes(2);
-    expect(renderer!.root.findAllByProps({children: '폐기 완료'})).not.toHaveLength(
-      0,
-    );
+    expect(renderer!.root.findAllByProps({children: '폐기 완료'})).toHaveLength(0);
+    expect(
+      renderer!.root.findAllByProps({children: '점검할 식재료가 없습니다'}),
+    ).not.toHaveLength(0);
     expect(getRenderedText(renderer!)).toContain('오늘 폐기\n1\ndisposedToday');
 
     await ReactTestRenderer.act(async () => {

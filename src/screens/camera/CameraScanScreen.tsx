@@ -9,7 +9,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   TouchableOpacity,
   StatusBar,
@@ -28,7 +27,7 @@ import {
   usePhotoOutput,
 } from 'react-native-vision-camera';
 import { launchImageLibrary } from 'react-native-image-picker';
-import { DSButton, DSChip, DSText } from '@/design-system';
+import { DSButton, DSChip, DSIcon, DSText } from '@/design-system';
 import { colors } from '@/theme';
 import { styles } from './CameraScanScreen.styles';
 import { generatePost } from '@/api/posts';
@@ -252,7 +251,7 @@ const CameraScanScreen = ({ navigation }: Props) => {
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           style={styles.headerButton}>
-          <Text style={styles.headerIcon}>✕</Text>
+          <DSIcon name="xmark" size="large" color="textOnPrimary" />
         </TouchableOpacity>
 
         {isAnalyzing ? (
@@ -279,7 +278,7 @@ const CameraScanScreen = ({ navigation }: Props) => {
         )}
 
         <TouchableOpacity style={styles.headerButton}>
-          <Text style={styles.headerIcon}>⚡️</Text>
+          <DSIcon name="bolt" size="large" color="textOnPrimary" />
         </TouchableOpacity>
       </View>
 
@@ -327,7 +326,7 @@ const CameraScanScreen = ({ navigation }: Props) => {
             style={styles.sideButton}
             onPress={handleGallery}
             disabled={isAnalyzing}>
-            <Text style={styles.sideButtonIcon}>🖼️</Text>
+            <DSIcon name="image" size="large" color="textOnPrimary" />
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -341,7 +340,7 @@ const CameraScanScreen = ({ navigation }: Props) => {
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.sideButton} disabled={isAnalyzing}>
-            <Text style={styles.sideButtonIcon}>🔄</Text>
+            <DSIcon name="arrows-rotate" size="large" color="textOnPrimary" />
           </TouchableOpacity>
         </View>
       </View>

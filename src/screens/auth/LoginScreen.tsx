@@ -5,8 +5,8 @@
  *
  * @wireframe wireframe-foodlink/login.html
  */
-import React from 'react';
-import { View, StyleSheet, StatusBar } from 'react-native';
+import React, { useState } from 'react';
+import { View, StyleSheet, StatusBar, TouchableOpacity } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AuthStackParamList } from '@/navigation/types';
 import { DSButton, DSIcon, DSText } from '@/design-system';
@@ -15,6 +15,8 @@ import { colors } from '@/theme';
 type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 
 const LoginScreen = ({ navigation }: Props) => {
+  const [hasAcceptedTerms, setHasAcceptedTerms] = useState(false);
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
@@ -41,21 +43,39 @@ const LoginScreen = ({ navigation }: Props) => {
               name="envelope"
               variant="regular"
               size="small"
-              color="textSecondary"
+              color={hasAcceptedTerms ? 'textSecondary' : 'textTertiary'}
             />
           }
-          style={styles.emailButton}
+          style={[
+            styles.emailButton,
+            !hasAcceptedTerms ? styles.emailButtonDisabled : null,
+          ]}
           contentStyle={styles.buttonContent}
-          textStyle={styles.emailText}
+          textStyle={[
+            styles.emailText,
+            !hasAcceptedTerms ? styles.emailTextDisabled : null,
+          ]}
+          disabled={!hasAcceptedTerms}
           onPress={() => navigation.navigate('LoginEmail')}
         />
       </View>
 
       {/* 하단 약관 + 지원 */}
       <View style={styles.termsSection}>
-        <View style={styles.termsRow}>
-          <View style={styles.checkbox}>
-            <DSIcon name="check" size="xsmall" color="#CBD5E1" />
+        <TouchableOpacity
+          style={styles.termsRow}
+          activeOpacity={0.82}
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: hasAcceptedTerms }}
+          onPress={() => setHasAcceptedTerms(value => !value)}>
+          <View
+            style={[
+              styles.checkbox,
+              hasAcceptedTerms ? styles.checkboxChecked : null,
+            ]}>
+            {hasAcceptedTerms ? (
+              <DSIcon name="check" size="xsmall" color="textOnPrimary" />
+            ) : null}
           </View>
           <DSText
             variant="caption"
@@ -64,7 +84,7 @@ const LoginScreen = ({ navigation }: Props) => {
             이용약관, 개인정보 처리방침, 위치기반 서비스 이용약관에 모두
             동의합니다.
           </DSText>
-        </View>
+        </TouchableOpacity>
 
         <DSButton
           label="로그인에 문제가 있나요?"
@@ -125,6 +145,14 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#475569',
   },
+  emailButtonDisabled: {
+    backgroundColor: colors.surface,
+    borderColor: colors.borderLight,
+    opacity: 0.6,
+  },
+  emailTextDisabled: {
+    color: colors.textTertiary,
+  },
   // 약관
   termsSection: {
     marginTop: 'auto',
@@ -135,6 +163,8 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: 12,
     marginBottom: 24,
+    minHeight: 44,
+    paddingVertical: 4,
   },
   checkbox: {
     width: 20,
@@ -145,6 +175,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 2,
+  },
+  checkboxChecked: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   termsText: {
     flex: 1,

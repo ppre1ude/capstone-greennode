@@ -202,14 +202,7 @@ export const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '700',
   },
-  footer: {
-    paddingHorizontal: 24,
-    paddingBottom: Platform.OS === 'ios' ? 40 : 24,
-    paddingTop: 16,
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: colors.borderLight,
-  },
+  footer: {},
   submitButton: {
     minHeight: 56,
     borderRadius: 12,

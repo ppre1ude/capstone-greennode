@@ -1,11 +1,12 @@
 import React from 'react';
-import {Text, TouchableOpacity} from 'react-native';
+import { Text, TouchableOpacity } from 'react-native';
 import ReactTestRenderer from 'react-test-renderer';
-import {getAvailableFridges} from '@/api/fridges';
-import {createPost} from '@/api/posts';
+import { getAvailableFridges } from '@/api/fridges';
+import { createPost } from '@/api/posts';
 import FridgeSelectScreen from '@/screens/post/FridgeSelectScreen';
-import {useAuthStore} from '@/store/authStore';
-import type {Fridge, Post} from '@/types';
+import { useAuthStore } from '@/store/authStore';
+import type { Fridge, Post } from '@/types';
+import { renderWithSafeArea } from '../test-utils/renderWithSafeArea';
 
 jest.mock('@/api/fridges', () => ({
   getAvailableFridges: jest.fn(),
@@ -32,6 +33,17 @@ const findButtonByText = (
         : children === label;
     }),
   );
+
+const hasText = (
+  renderer: ReactTestRenderer.ReactTestRenderer,
+  label: string,
+) =>
+  renderer.root.findAllByType(Text).some(textNode => {
+    const children = textNode.props.children;
+    return Array.isArray(children)
+      ? children.join('') === label
+      : children === label;
+  });
 
 const fridge: Fridge = {
   id: 1,
@@ -70,25 +82,29 @@ const renderScreen = async () => {
 
   await ReactTestRenderer.act(async () => {
     renderer = ReactTestRenderer.create(
-      <FridgeSelectScreen
-        navigation={navigation as never}
-        route={{
-          params: {
-            postData: {
-              imageToken: 'image-token',
-              expirationDate: '2026-05-24',
-            },
-            qualityCategory: 'Fresh',
-            qualityCanShare: true,
-          },
-        } as never}
-      />,
+      renderWithSafeArea(
+        <FridgeSelectScreen
+          navigation={navigation as never}
+          route={
+            {
+              params: {
+                postData: {
+                  imageToken: 'image-token',
+                  expirationDate: '2026-05-24',
+                },
+                qualityCategory: 'Fresh',
+                qualityCanShare: true,
+              },
+            } as never
+          }
+        />,
+      ),
     );
     await Promise.resolve();
     await Promise.resolve();
   });
 
-  return {navigation, renderer: renderer!};
+  return { navigation, renderer: renderer! };
 };
 
 const selectFridgeAndSubmitQr = async (
@@ -104,7 +120,7 @@ const selectFridgeAndSubmitQr = async (
 
   await ReactTestRenderer.act(async () => {
     renderer.root
-      .findByProps({testID: 'fridge-select-qr-submit'})
+      .findByProps({ testID: 'fridge-select-qr-submit' })
       .props.onPress();
     await Promise.resolve();
   });
@@ -142,7 +158,7 @@ describe('FridgeSelectScreen QR flow', () => {
   });
 
   it('creates a pending-store post and opens store QR confirmation with backend expiry', async () => {
-    const {navigation, renderer} = await renderScreen();
+    const { navigation, renderer } = await renderScreen();
 
     await selectFridgeAndSubmitQr(renderer);
 
@@ -166,6 +182,100 @@ describe('FridgeSelectScreen QR flow', () => {
     });
   });
 
+  it('renders an empty fridge picker separately from load failures', async () => {
+    mockedGetAvailableFridges.mockResolvedValue({
+      success: true,
+      message: 'ok',
+      data: [],
+    });
+    const { renderer } = await renderScreen();
+
+    expect(
+      renderer.root.findAllByProps({
+        children: '냉장고를 불러오지 못했습니다',
+      }),
+    ).toHaveLength(0);
+    expect(
+      hasText(renderer, '반경 2km 이내에\n사용 가능한 냉장고가 없습니다.'),
+    ).toBe(true);
+
+    await ReactTestRenderer.act(async () => {
+      renderer.unmount();
+    });
+  });
+
+  it('renders a retryable fridge picker error', async () => {
+    mockedGetAvailableFridges
+      .mockResolvedValueOnce({
+        success: false,
+        message: '등록 가능 냉장고 오류',
+        data: null,
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        message: 'ok',
+        data: [fridge],
+      });
+    const { renderer } = await renderScreen();
+
+    expect(
+      renderer.root.findAllByProps({
+        children: '냉장고를 불러오지 못했습니다',
+      }),
+    ).not.toHaveLength(0);
+    expect(
+      renderer.root.findAllByProps({ children: '등록 가능 냉장고 오류' }),
+    ).not.toHaveLength(0);
+
+    await ReactTestRenderer.act(async () => {
+      findButtonByText(renderer, '다시 시도')?.props.onPress();
+      await Promise.resolve();
+    });
+
+    expect(mockedGetAvailableFridges).toHaveBeenCalledTimes(2);
+    expect(
+      renderer.root.findAllByProps({ children: '광주역 앞 공유냉장고' }),
+    ).not.toHaveLength(0);
+
+    await ReactTestRenderer.act(async () => {
+      renderer.unmount();
+    });
+  });
+
+  it('guards fridge selection when the account has no registered location', async () => {
+    useAuthStore.setState(state => ({
+      user: state.user
+        ? {
+            ...state.user,
+            latitude: null,
+            longitude: null,
+          }
+        : state.user,
+      hasLocation: false,
+    }));
+    const { navigation, renderer } = await renderScreen();
+
+    expect(mockedGetAvailableFridges).not.toHaveBeenCalled();
+    expect(
+      renderer.root.findAllByProps({ children: '동네 위치를 설정해주세요' }),
+    ).not.toHaveLength(0);
+    expect(
+      renderer.root.findAllByProps({ testID: 'fridge-select-qr-submit' }),
+    ).toHaveLength(0);
+
+    await ReactTestRenderer.act(async () => {
+      findButtonByText(renderer, '위치 설정하기')?.props.onPress();
+    });
+
+    expect(navigation.navigate).toHaveBeenCalledWith('LocationSetup', {
+      allowBack: true,
+    });
+
+    await ReactTestRenderer.act(async () => {
+      renderer.unmount();
+    });
+  });
+
   it('derives store QR expiry from createdAt when the response omits storeExpiresAt', async () => {
     mockedCreatePost.mockResolvedValue({
       success: true,
@@ -175,7 +285,7 @@ describe('FridgeSelectScreen QR flow', () => {
         storeExpiresAt: null,
       },
     });
-    const {navigation, renderer} = await renderScreen();
+    const { navigation, renderer } = await renderScreen();
 
     await selectFridgeAndSubmitQr(renderer);
 
@@ -200,7 +310,7 @@ describe('FridgeSelectScreen QR flow', () => {
         storeExpiresAt: 'not-a-date',
       },
     });
-    const {navigation, renderer} = await renderScreen();
+    const { navigation, renderer } = await renderScreen();
 
     await selectFridgeAndSubmitQr(renderer);
 
@@ -226,7 +336,7 @@ describe('FridgeSelectScreen QR flow', () => {
         createdAt: 'also-not-a-date',
       },
     });
-    const {navigation, renderer} = await renderScreen();
+    const { navigation, renderer } = await renderScreen();
 
     await selectFridgeAndSubmitQr(renderer);
 

@@ -278,6 +278,9 @@ const mapOperatorItemStatus = (
   return 'needsReview';
 };
 
+const canDisposeOperatorItem = (status: OperatorItemStatus): boolean =>
+  status === 'available' || status === 'discardCandidate';
+
 const mapOperatorInventoryItem = (
   item: OperatorInventoryItem,
 ): InspectionItem => {
@@ -311,6 +314,8 @@ const FridgeOperatorConsoleScreen = ({navigation, route}: Props) => {
   const [isLoadingInventory, setIsLoadingInventory] = useState(false);
   const [inventoryError, setInventoryError] = useState<string | null>(null);
   const [isOperatorAccessDenied, setIsOperatorAccessDenied] = useState(false);
+  const [hasSyncedOperatorInventory, setHasSyncedOperatorInventory] =
+    useState(false);
 
   const summaryCards = useMemo(
     () => makeSummaryCards(inventorySummary),
@@ -319,6 +324,7 @@ const FridgeOperatorConsoleScreen = ({navigation, route}: Props) => {
 
   const fetchOperatorInventory = useCallback(async () => {
     setIsLoadingInventory(true);
+    setHasSyncedOperatorInventory(false);
     setInventoryError(null);
 
     try {
@@ -329,13 +335,21 @@ const FridgeOperatorConsoleScreen = ({navigation, route}: Props) => {
 
       setIsOperatorAccessDenied(false);
 
+      const didSyncOperatorInventory =
+        summaryResponse.success &&
+        Boolean(summaryResponse.data) &&
+        itemsResponse.success &&
+        Array.isArray(itemsResponse.data);
+
       if (summaryResponse.success && summaryResponse.data) {
         setInventorySummary(summaryResponse.data);
       }
 
-      if (itemsResponse.success && itemsResponse.data) {
+      if (itemsResponse.success && Array.isArray(itemsResponse.data)) {
         setInspectionItems(itemsResponse.data.map(mapOperatorInventoryItem));
       }
+
+      setHasSyncedOperatorInventory(didSyncOperatorInventory);
 
       if (!summaryResponse.success || !itemsResponse.success) {
         setInventoryError(
@@ -356,7 +370,7 @@ const FridgeOperatorConsoleScreen = ({navigation, route}: Props) => {
       setInventoryError(
         getApiErrorMessage(
           error,
-          '운영자 inventory API를 불러오지 못했습니다. 샘플 데이터를 표시합니다.',
+          '운영자 inventory API를 불러오지 못했습니다. 샘플 데이터를 읽기 전용으로 표시합니다.',
         ),
       );
     } finally {
@@ -571,7 +585,8 @@ const FridgeOperatorConsoleScreen = ({navigation, route}: Props) => {
                     <Text style={styles.rowText}>
                       권장 나눔 기한: {item.recommendedUntil}
                     </Text>
-                    {item.status === 'discardCandidate' ? (
+                    {hasSyncedOperatorInventory &&
+                    canDisposeOperatorItem(item.status) ? (
                       <TouchableOpacity
                         disabled={disposingPostId === item.postId}
                         onPress={() => handleDispose(item)}

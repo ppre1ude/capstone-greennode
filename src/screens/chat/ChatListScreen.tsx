@@ -9,14 +9,15 @@ import {
   Text,
   StyleSheet,
   StatusBar,
-  Platform,
   TouchableOpacity,
   ScrollView,
 } from 'react-native';
-import {colors} from '@/theme';
-import {useNotificationStore} from '@/store/notificationStore';
-import {openNotificationTarget} from '@/services/notifications';
-import type {NotificationRecord} from '@/types';
+import { colors } from '@/theme';
+import { DSIcon } from '@/design-system';
+import { useNotificationStore } from '@/store/notificationStore';
+import { openNotificationTarget } from '@/services/notifications';
+import type { NotificationRecord } from '@/types';
+import { getHeaderTopPadding } from '@/utils/safeArea';
 
 const formatNotificationTime = (receivedAt: string) => {
   const date = new Date(receivedAt);
@@ -53,8 +54,14 @@ const ChatListScreen = () => {
   const markNotificationRead = useNotificationStore(
     state => state.markNotificationRead,
   );
+  const markAllNotificationsRead = useNotificationStore(
+    state => state.markAllNotificationsRead,
+  );
+  const unreadCount = notifications.filter(
+    notification => !notification.readAt,
+  ).length;
 
-  const renderNotification = ({item}: {item: NotificationRecord}) => (
+  const renderNotification = ({ item }: { item: NotificationRecord }) => (
     <TouchableOpacity
       style={styles.notificationCard}
       activeOpacity={0.82}
@@ -77,7 +84,9 @@ const ChatListScreen = () => {
         <Text style={styles.notificationMeta}>
           {item.readAt ? '읽음' : '새 알림'}
         </Text>
-        <Text style={styles.notificationMeta}>{getSourceLabel(item.source)}</Text>
+        <Text style={styles.notificationMeta}>
+          {getSourceLabel(item.source)}
+        </Text>
         <Text style={styles.notificationMeta}>
           {item.fridgeName || '공유 냉장고'}
         </Text>
@@ -93,15 +102,26 @@ const ChatListScreen = () => {
         <View>
           <Text style={styles.headerTitle}>알림</Text>
           <Text style={styles.headerSubtitle}>
-            나눔 등록과 신청 수신 기록을 확인합니다
+            {unreadCount > 0
+              ? `새 알림 ${unreadCount}개가 있습니다`
+              : '나눔 등록과 신청 수신 기록을 확인합니다'}
           </Text>
         </View>
         {notifications.length > 0 ? (
-          <TouchableOpacity
-            style={styles.clearButton}
-            onPress={clearNotifications}>
-            <Text style={styles.clearButtonText}>비우기</Text>
-          </TouchableOpacity>
+          <View style={styles.headerActions}>
+            {unreadCount > 0 ? (
+              <TouchableOpacity
+                style={styles.markAllReadButton}
+                onPress={() => markAllNotificationsRead()}>
+                <Text style={styles.markAllReadButtonText}>모두 읽음</Text>
+              </TouchableOpacity>
+            ) : null}
+            <TouchableOpacity
+              style={styles.clearButton}
+              onPress={clearNotifications}>
+              <Text style={styles.clearButtonText}>비우기</Text>
+            </TouchableOpacity>
+          </View>
         ) : null}
       </View>
 
@@ -109,13 +129,18 @@ const ChatListScreen = () => {
         <ScrollView contentContainerStyle={styles.listContent}>
           {notifications.map(notification => (
             <View key={notification.id}>
-              {renderNotification({item: notification})}
+              {renderNotification({ item: notification })}
             </View>
           ))}
         </ScrollView>
       ) : (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyIcon}>🔔</Text>
+          <DSIcon
+            name="bell"
+            size={48}
+            color="accent"
+            style={styles.emptyIcon}
+          />
           <Text style={styles.emptyTitle}>아직 알림이 없습니다</Text>
           <Text style={styles.emptyText}>
             근처 나눔 등록과 나눔 신청 알림이 이곳에 기록됩니다.
@@ -136,7 +161,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 24,
-    paddingTop: Platform.OS === 'ios' ? 56 : 24,
+    paddingTop: getHeaderTopPadding(),
     paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: colors.borderLight,
@@ -161,6 +186,21 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: colors.textSecondary,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  markAllReadButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: colors.primaryLight,
+  },
+  markAllReadButtonText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.primary,
   },
   listContent: {
     padding: 20,
@@ -219,7 +259,6 @@ const styles = StyleSheet.create({
     paddingBottom: 80,
   },
   emptyIcon: {
-    fontSize: 48,
     marginBottom: 16,
   },
   emptyTitle: {

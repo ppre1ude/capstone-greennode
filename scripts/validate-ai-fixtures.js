@@ -87,6 +87,20 @@ const evaluateGenerateResponse = (fixture, status, body) => {
     };
   }
 
+  if (status === 401 || status === 403) {
+    return {
+      passed: false,
+      detail: `auth failed with ${status}: ${getServerMessage(body)}`,
+    };
+  }
+
+  if (status >= 500) {
+    return {
+      passed: false,
+      detail: `server error with ${status}: ${getServerMessage(body)}`,
+    };
+  }
+
   if (status >= 400) {
     return {
       passed:

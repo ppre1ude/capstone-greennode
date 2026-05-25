@@ -47,15 +47,16 @@ FoodLink는 사용자가 남는 식재료를 AI로 확인하고, 가까운 공�
 
 ## 현재 구현 상태
 
-2026-05-23 기준으로 핵심 앱 흐름은 실제 Android 기기와 VM API에서 재검증했고, 백엔드 주간 회신의 신규 계약을 문서에 반영했습니다.
+2026-05-25 기준으로 핵심 앱 흐름은 실제 Android 기기와 VM API에서 재검증했고, 백엔드 주간 회신의 신규 계약과 이후 runtime QA 결과를 문서에 반영했습니다.
 
 - `generate -> create -> home/detail/map -> request -> requested 제외` 흐름 통과
 - 백엔드 AI 메타데이터 sidecar 저장/복원 수정 반영
 - `POST /posts/{id}/requests` 신청 API 연동 완료
 - `GET /fridges/{id}/posts?status=available` 냉장고별 목록 연동 완료
 - Firebase 설정 파일이 없는 빌드에서도 앱 시작과 위치 등록이 크래시하지 않도록 guard 처리
-- 실제 FCM foreground/background는 emulator에서 확인했고, terminated/physical 2-device QA는 백엔드 FCM priority/log 재배포 후 재검증 예정
-- operator inventory summary/items/dispose API와 MVP `detections[]` 단일 객체 래핑 계약은 2026-05-23 백엔드 회신으로 확정
+- FCM debug/release, physical 2계정, Android 14/15 matrix에서 notification tap routing 확인
+- operator inventory summary/items/dispose API는 2026-05-25 VM에서 운영자/비운영자/빈 목록/available·expired dispose/requested 409까지 검증
+- MVP `detections[]` 단일 객체 래핑 계약은 2026-05-23 백엔드 회신으로 확정
 
 자세한 검증 결과와 남은 백로그는 [docs/VALIDATION_AND_BACKLOG.md](./docs/VALIDATION_AND_BACKLOG.md)를 기준으로 확인합니다.
 
@@ -182,12 +183,12 @@ npm run mock:api
 
 현재 검증 문서 기준 남은 주요 작업은 아래와 같습니다.
 
-- 백엔드 FCM priority/log/prefix 재배포 확인 후 실제 FCM 토큰이 있는 2대 기기로 `share_created`, `share_requested` 수신 QA
-- 운영자 권한/비권한 계정과 available/expired/requested 항목으로 operator inventory summary/items/dispose QA
+- 운영자 role metadata 계약: `/auth/me` 또는 별도 endpoint가 실제 운영자 계정의 냉장고 권한을 앱에 알려줘야 프로필 진입점을 안정적으로 노출할 수 있습니다.
+- Android 13 실기기 또는 추가 OEM 참고 매트릭스: 기기가 확보되면 Firebase 설정 포함 빌드와 2계정으로 background/terminated 수신을 보강합니다.
 - Post-MVP AI rejection reason 계약 정리
 - 주변 공유 냉장고 없음 상태를 위한 백엔드 필터 또는 fixture 검증
 - 실제 환경 성취 지표 API와 계산식 정의
-- Inventory/QR PRD v0 기반 `pending_store`, 30분 임시 선점, QR 보관/수령 확인 설계
+- Inventory/QR PRD v0 기반 실제 `pending_store`, 30분 임시 선점, QR 보관/수령 end-to-end QA
 
 ## 문서 지도
 

@@ -8,17 +8,16 @@
  * @wireframe wireframe-foodlink/scancomplete.html
  */
 import React, { useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  StatusBar,
-  Animated,
-  Platform,
-} from 'react-native';
+import { View, StyleSheet, StatusBar, Animated } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@/navigation/types';
-import { DSButton, DSCard, DSText } from '@/design-system';
+import {
+  DSButton,
+  DSCard,
+  DSIcon,
+  DSScreenFooter,
+  DSText,
+} from '@/design-system';
 import { colors } from '@/theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PostComplete'>;
@@ -73,7 +72,7 @@ const PostCompleteScreen = ({ route, navigation }: Props) => {
             styles.iconCircle,
             { transform: [{ scale: scaleAnim }], opacity: opacityAnim },
           ]}>
-          <Text style={styles.icon}>🎉</Text>
+          <DSIcon name="circle-check" size={56} color="primary" />
         </Animated.View>
 
         <Animated.View style={[styles.resultContent, { opacity: opacityAnim }]}>
@@ -91,7 +90,12 @@ const PostCompleteScreen = ({ route, navigation }: Props) => {
           {/* 알림 카드 */}
           <DSCard variant="elevated" padded={false} style={styles.pushCard}>
             <View style={styles.pushHeader}>
-              <Text style={styles.pushIcon}>🔔</Text>
+              <DSIcon
+                name="bell"
+                size="small"
+                color="textSecondary"
+                style={styles.pushIcon}
+              />
               <DSText
                 variant="caption"
                 color="textSecondary"
@@ -118,7 +122,7 @@ const PostCompleteScreen = ({ route, navigation }: Props) => {
         </Animated.View>
       </View>
 
-      <View style={styles.footer}>
+      <DSScreenFooter style={styles.footer}>
         <DSButton
           label="홈으로 돌아가기"
           color="assistive"
@@ -127,7 +131,7 @@ const PostCompleteScreen = ({ route, navigation }: Props) => {
           textStyle={styles.homeButtonText}
           style={styles.homeButton}
         />
-      </View>
+      </DSScreenFooter>
     </View>
   );
 };
@@ -156,9 +160,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 20,
     elevation: 10,
-  },
-  icon: {
-    fontSize: 56,
   },
   resultContent: {
     alignItems: 'center',
@@ -189,7 +190,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   pushIcon: {
-    fontSize: 14,
     marginRight: 6,
   },
   pushAppName: {
@@ -203,8 +203,8 @@ const styles = StyleSheet.create({
   },
   // 하단
   footer: {
-    paddingHorizontal: 24,
-    paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+    backgroundColor: colors.primary,
+    borderTopWidth: 0,
   },
   homeButton: {
     backgroundColor: '#FFFFFF',

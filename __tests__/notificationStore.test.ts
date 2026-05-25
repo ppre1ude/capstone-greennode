@@ -42,4 +42,30 @@ describe('notification store', () => {
       backgroundNotification,
     ]);
   });
+
+  it('marks all local notifications as read without replacing existing read timestamps', () => {
+    useNotificationStore.setState({
+      notifications: [
+        backgroundNotification,
+        {
+          ...backgroundNotification,
+          id: 'already-read-message',
+          readAt: '2026-05-10T00:10:00.000Z',
+        },
+      ],
+    });
+
+    useNotificationStore
+      .getState()
+      .markAllNotificationsRead('2026-05-10T00:20:00.000Z');
+
+    expect(useNotificationStore.getState().notifications).toEqual([
+      {...backgroundNotification, readAt: '2026-05-10T00:20:00.000Z'},
+      {
+        ...backgroundNotification,
+        id: 'already-read-message',
+        readAt: '2026-05-10T00:10:00.000Z',
+      },
+    ]);
+  });
 });

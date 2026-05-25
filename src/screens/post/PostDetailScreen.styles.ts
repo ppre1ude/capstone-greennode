@@ -32,17 +32,6 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  headerIcon: {
-    fontSize: 22,
-    color: '#FFFFFF',
-  },
-  headerDeleteIcon: {
-    fontSize: 20,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    padding: 8,
-    borderRadius: 20,
-    overflow: 'hidden',
-  },
   imageContainer: {
     height: 360,
     width: '100%',
@@ -94,7 +83,7 @@ export const styles = StyleSheet.create({
     gap: 12,
   },
   infoIcon: {
-    fontSize: 24,
+    width: 24,
   },
   infoLabel: {
     fontSize: 12,
@@ -122,13 +111,7 @@ export const styles = StyleSheet.create({
     color: colors.textSecondary,
     lineHeight: 24,
   },
-  footer: {
-    padding: 24,
-    paddingBottom: Platform.OS === 'ios' ? 40 : 24,
-    borderTopWidth: 1,
-    borderTopColor: colors.borderLight,
-    backgroundColor: '#FFFFFF',
-  },
+  footer: {},
   requestNotice: {
     marginBottom: 10,
     fontSize: 12,

@@ -7,39 +7,128 @@
  * @wireframe wireframe-foodlink/profile.html
  */
 import React from 'react';
-import {
-  View,
-  StyleSheet,
-  ScrollView,
-  Alert,
-  StatusBar,
-  Platform,
-} from 'react-native';
+import { View, StyleSheet, ScrollView, Alert, StatusBar } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuthStore } from '@/store/authStore';
-import { DSButton, DSCard, DSChip, DSListCell, DSText } from '@/design-system';
+import {
+  DSButton,
+  DSCard,
+  DSChip,
+  DSIcon,
+  DSListCell,
+  DSText,
+  type DSIconName,
+} from '@/design-system';
 import { colors } from '@/theme';
 import type { User } from '@/types';
+import { getHeaderTopPadding } from '@/utils/safeArea';
 
-const MENU_ITEMS = [
-  {id: 'location', title: '동네 위치 재설정', icon: '📍'},
-  {id: 'operator-console', title: '냉장고 운영자 콘솔 (실험)', icon: '🧪'},
-  {id: 'inventory-qr-prototype', title: '냉장고 QR 흐름 테스트', icon: '▣'},
-  {id: 'my-posts', title: '내 나눔 내역', icon: '📝'},
-  {id: 'bookmark', title: '관심 식재료', icon: '❤️'},
-  {id: 'history', title: '받은 나눔 내역', icon: '🎁'},
-  {id: 'settings', title: '설정', icon: '⚙️'},
-  {id: 'help', title: '고객센터', icon: '🎧'},
+type ProfileMenuItemId =
+  | 'location'
+  | 'operator-console'
+  | 'inventory-qr-prototype'
+  | 'my-posts'
+  | 'bookmark'
+  | 'history'
+  | 'settings'
+  | 'help';
+
+type ProfileMenuItem = {
+  id: ProfileMenuItemId;
+  title: string;
+  icon: DSIconName;
+  availability?: 'ready' | 'coming-soon' | 'contract-needed';
+};
+
+const MENU_ITEMS: ProfileMenuItem[] = [
+  {
+    id: 'location',
+    title: '동네 위치 재설정',
+    icon: 'location-dot',
+    availability: 'ready',
+  },
+  {
+    id: 'operator-console',
+    title: '냉장고 운영자 콘솔',
+    icon: 'clipboard-list',
+    availability: 'ready',
+  },
+  {
+    id: 'inventory-qr-prototype',
+    title: '냉장고 QR 인증',
+    icon: 'qrcode',
+    availability: 'ready',
+  },
+  {
+    id: 'my-posts',
+    title: '내 나눔 내역',
+    icon: 'clipboard-list',
+    availability: 'contract-needed',
+  },
+  {
+    id: 'bookmark',
+    title: '관심 식재료',
+    icon: 'heart',
+    availability: 'contract-needed',
+  },
+  {
+    id: 'history',
+    title: '받은 나눔 내역',
+    icon: 'gift',
+    availability: 'contract-needed',
+  },
+  { id: 'settings', title: '설정', icon: 'gear', availability: 'coming-soon' },
+  {
+    id: 'help',
+    title: '고객센터',
+    icon: 'headset',
+    availability: 'coming-soon',
+  },
 ];
 
 const OPERATOR_ROLES = new Set(['operator', 'admin', 'fridge_operator']);
+
+const BLOCKED_MENU_MESSAGES: Record<
+  Exclude<
+    ProfileMenuItemId,
+    'location' | 'operator-console' | 'inventory-qr-prototype'
+  >,
+  { title: string; message: string }
+> = {
+  'my-posts': {
+    title: '내 나눔 내역 준비 중',
+    message:
+      '내가 등록한 나눔 목록을 불러오는 서버 API가 준비되면 연결할 수 있습니다.',
+  },
+  bookmark: {
+    title: '관심 식재료 준비 중',
+    message: '관심 등록과 관심 목록 저장 API가 준비되면 연결할 수 있습니다.',
+  },
+  history: {
+    title: '받은 나눔 내역 준비 중',
+    message:
+      '내가 신청하거나 수령한 나눔 목록 API가 준비되면 연결할 수 있습니다.',
+  },
+  settings: {
+    title: '설정 준비 중',
+    message: '알림 설정과 계정 설정 항목은 후속 화면으로 분리할 예정입니다.',
+  },
+  help: {
+    title: '고객센터 준비 중',
+    message: '문의 접수 경로가 확정되면 연결하겠습니다.',
+  },
+};
 
 const canAccessOperatorConsole = (user: User | null): boolean => {
   if (!user) {
     return false;
   }
 
-  if (user.isOperator === true || user.operatorRole) {
+  if (
+    user.isOperator === true ||
+    (typeof user.operatorRole === 'string' &&
+      OPERATOR_ROLES.has(user.operatorRole))
+  ) {
     return true;
   }
 
@@ -77,7 +166,19 @@ const ProfileScreen = () => {
     ]);
   };
 
-  const handleMenuPress = (id: string) => {
+  const showBlockedMenuMessage = (id: keyof typeof BLOCKED_MENU_MESSAGES) => {
+    const message = BLOCKED_MENU_MESSAGES[id];
+    Alert.alert(message.title, message.message);
+  };
+
+  const handleProfileEditPress = () => {
+    Alert.alert(
+      '프로필 수정 준비 중',
+      '닉네임과 프로필 이미지를 저장하는 서버 API가 준비되면 연결할 수 있습니다.',
+    );
+  };
+
+  const handleMenuPress = (id: ProfileMenuItemId) => {
     if (id === 'location') {
       navigation.getParent()?.navigate('LocationSetup', { allowBack: true });
       return;
@@ -85,7 +186,10 @@ const ProfileScreen = () => {
 
     if (id === 'operator-console') {
       if (!canAccessOperatorConsole(user)) {
-        Alert.alert('운영자 권한 필요', '운영자로 등록된 계정만 사용할 수 있습니다.');
+        Alert.alert(
+          '운영자 권한 필요',
+          '운영자로 등록된 계정만 사용할 수 있습니다.',
+        );
         return;
       }
 
@@ -98,7 +202,7 @@ const ProfileScreen = () => {
       return;
     }
 
-    Alert.alert('준비 중', '아직 연결되지 않은 메뉴입니다.');
+    showBlockedMenuMessage(id);
   };
 
   return (
@@ -141,6 +245,7 @@ const ProfileScreen = () => {
               size="small"
               style={styles.editButton}
               textStyle={styles.editButtonText}
+              onPress={handleProfileEditPress}
             />
           </View>
 
@@ -148,7 +253,7 @@ const ProfileScreen = () => {
           <DSCard variant="plain" style={styles.trustBox}>
             <View style={styles.trustHeader}>
               <DSText variant="bodyBold" style={styles.trustTitle}>
-                신선도 온도 🌡️
+                신선도 온도
               </DSText>
               <DSChip
                 label="준비 중"
@@ -198,7 +303,19 @@ const ProfileScreen = () => {
             <DSListCell
               key={item.id}
               title={item.title}
-              leading={<DSText style={styles.menuIcon}>{item.icon}</DSText>}
+              leading={
+                <DSIcon
+                  name={item.icon}
+                  size="medium"
+                  color="primary"
+                  style={styles.menuIcon}
+                />
+              }
+              trailing={
+                item.availability === 'contract-needed' ? (
+                  <DSChip label="준비 중" tone="neutral" size="small" />
+                ) : undefined
+              }
               chevron
               divider={index !== visibleMenuItems.length - 1}
               verticalPadding="large"
@@ -230,7 +347,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 24,
-    paddingTop: Platform.OS === 'ios' ? 56 : 24,
+    paddingTop: getHeaderTopPadding(),
     paddingBottom: 16,
     backgroundColor: '#FFFFFF',
   },

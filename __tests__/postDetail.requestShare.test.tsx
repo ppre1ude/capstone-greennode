@@ -6,6 +6,7 @@ import { getPostDetail, requestShare } from '@/api/posts';
 import { useAuthStore } from '@/store/authStore';
 import { useFeedRefreshStore } from '@/store/feedRefreshStore';
 import type { Post } from '@/types';
+import { renderWithSafeArea } from '../test-utils/renderWithSafeArea';
 
 jest.mock('@/api/posts', () => ({
   getImageUrl: jest.fn(
@@ -47,10 +48,12 @@ const createScreen = async (
 
   await ReactTestRenderer.act(async () => {
     renderer = ReactTestRenderer.create(
-      <PostDetailScreen
-        navigation={navigation as any}
-        route={{ params: { postId: 10 } } as any}
-      />,
+      renderWithSafeArea(
+        <PostDetailScreen
+          navigation={navigation as any}
+          route={{ params: { postId: 10 } } as any}
+        />,
+      ),
     );
     await Promise.resolve();
   });
@@ -372,10 +375,12 @@ describe('PostDetailScreen share request', () => {
 
     await ReactTestRenderer.act(async () => {
       renderer.update(
-        <PostDetailScreen
-          navigation={{ goBack: jest.fn(), navigate: jest.fn() } as any}
-          route={{ params: { postId: 10 } } as any}
-        />,
+        renderWithSafeArea(
+          <PostDetailScreen
+            navigation={{ goBack: jest.fn(), navigate: jest.fn() } as any}
+            route={{ params: { postId: 10 } } as any}
+          />,
+        ),
       );
       await Promise.resolve();
     });

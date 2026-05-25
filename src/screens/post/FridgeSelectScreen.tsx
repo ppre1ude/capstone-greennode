@@ -28,7 +28,13 @@ import {
   LOCATION_REQUIRED_TITLE,
 } from '@/utils/locationGuard';
 import { isShareableCategory } from '@/utils/postPolicy';
-import { DSButton, DSCard, DSText } from '@/design-system';
+import {
+  DSButton,
+  DSCard,
+  DSIcon,
+  DSScreenFooter,
+  DSText,
+} from '@/design-system';
 import { colors } from '@/theme';
 import { styles } from './FridgeSelectScreen.styles';
 
@@ -135,7 +141,7 @@ const FridgeSelectScreen = ({ route, navigation }: Props) => {
       const response = await createPost({
         ...postData,
         fridgeId: selectedFridgeId,
-        ...(flow === 'fridge_qr' ? {flow} : {}),
+        ...(flow === 'fridge_qr' ? { flow } : {}),
       });
 
       if (response.success && response.data) {
@@ -281,7 +287,12 @@ const FridgeSelectScreen = ({ route, navigation }: Props) => {
           </View>
         ) : fridges.length === 0 ? (
           <View style={styles.centerBox}>
-            <Text style={styles.emptyEmoji}>🏢</Text>
+            <DSIcon
+              name="building"
+              size="xlarge"
+              color="accent"
+              style={styles.emptyIcon}
+            />
             <DSText
               variant="body"
               color="textSecondary"
@@ -302,7 +313,7 @@ const FridgeSelectScreen = ({ route, navigation }: Props) => {
       </View>
 
       {location ? (
-        <View style={styles.footer}>
+        <DSScreenFooter style={styles.footer}>
           <DSButton
             label="나눔 완료하기"
             fullWidth
@@ -324,7 +335,7 @@ const FridgeSelectScreen = ({ route, navigation }: Props) => {
             style={styles.qrSubmitButton}
             textStyle={styles.qrSubmitButtonText}
           />
-        </View>
+        </DSScreenFooter>
       ) : null}
     </View>
   );
