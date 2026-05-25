@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import {rootNavigationRef} from '@/navigation/rootNavigation';
 import {getMessagingOrNull} from '@/services/firebaseMessaging';
+import {useAuthStore} from '@/store/authStore';
 import {
   rehydrateNotificationStore,
   useNotificationStore,
@@ -147,6 +148,10 @@ const navigateToPayloadTarget = (payload: FoodLinkFcmPayload) => {
 };
 
 const shouldDeferNotificationNavigation = () => {
+  if (!useAuthStore.getState().isLoggedIn) {
+    return true;
+  }
+
   if (!rootNavigationRef.isReady()) {
     return true;
   }

@@ -10,6 +10,7 @@ import {
   registerNativeNotificationOpenHandler,
 } from '@/services/notifications';
 import {rootNavigationRef} from '@/navigation/rootNavigation';
+import {useAuthStore} from '@/store/authStore';
 import {useNotificationStore} from '@/store/notificationStore';
 import type {NotificationRecord} from '@/types';
 import {DeviceEventEmitter, NativeModules} from 'react-native';
@@ -17,6 +18,13 @@ import {DeviceEventEmitter, NativeModules} from 'react-native';
 describe('notification service', () => {
   beforeEach(() => {
     jest.restoreAllMocks();
+    useAuthStore.setState({
+      isLoggedIn: true,
+      token: 'test-token',
+      user: null,
+      hasLocation: true,
+      isLoading: false,
+    });
     useNotificationStore.setState({notifications: []});
   });
 
@@ -228,6 +236,35 @@ describe('notification service', () => {
     expect(dispatch).toHaveBeenCalledWith({
       type: 'NAVIGATE',
       payload: {name: 'PostDetail', params: {postId: 14}},
+    });
+  });
+
+  it('keeps opened notification navigation deferred until login finishes', () => {
+    useAuthStore.setState({isLoggedIn: false, token: null});
+    const dispatch = jest
+      .spyOn(rootNavigationRef, 'dispatch')
+      .mockImplementation(jest.fn());
+    jest.spyOn(rootNavigationRef, 'isReady').mockReturnValue(true);
+    jest
+      .spyOn(rootNavigationRef, 'getCurrentRoute')
+      .mockReturnValue({name: 'Main', key: 'Main'} as never);
+
+    openNotificationTarget({
+      type: 'share_created',
+      postId: '18',
+      fruitName: 'banana',
+      fridgeName: 'test fridge',
+    });
+    flushPendingNotificationNavigation();
+
+    expect(dispatch).not.toHaveBeenCalled();
+
+    useAuthStore.setState({isLoggedIn: true, token: 'fresh-token'});
+    flushPendingNotificationNavigation();
+
+    expect(dispatch).toHaveBeenCalledWith({
+      type: 'NAVIGATE',
+      payload: {name: 'PostDetail', params: {postId: 18}},
     });
   });
 
