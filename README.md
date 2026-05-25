@@ -188,7 +188,7 @@ npm run mock:api
 - Post-MVP AI rejection reason 계약 정리
 - 주변 공유 냉장고 없음 상태를 위한 백엔드 필터 또는 fixture 검증
 - 실제 환경 성취 지표 API와 계산식 정의
-- Inventory/QR PRD v0 기반 `pending_store`, 30분 임시 선점, QR 보관/수령 확인 설계
+- Inventory/QR PRD v0 기반 실제 `pending_store`, 30분 임시 선점, QR 보관/수령 end-to-end QA
 
 ## 문서 지도
 

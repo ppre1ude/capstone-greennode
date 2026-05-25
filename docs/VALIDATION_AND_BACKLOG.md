@@ -1650,13 +1650,19 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
   - 홈 주변 나눔은 `/posts/nearby` 빈 응답을 `아직 근처에 나눔이 없어요`로 표시하고, 네트워크 실패는 `목록을 불러오지 못했습니다`와 `다시 시도`로 분리한다.
   - 지도 냉장고 목록은 `/fridges/nearby` 빈 응답, API 오류, 재시도, 위치 미설정 CTA를 분리한다.
   - 냉장고 선택 화면은 `/fridges/available` 빈 응답, API 오류, 재시도, 위치 미설정 CTA를 분리하고 위치가 없으면 등록 footer를 숨긴다.
+  - 위치 설정 화면은 Android `NEVER_ASK_AGAIN`과 Geolocation 좌표 실패를 화면 상태로 분리하고, 설정/재시도 CTA로 복구한다.
+  - QR 인증 화면은 confirm-store/confirm-pickup 실패 시 성공 상태와 feed refresh를 발생시키지 않고, 성공 시 store -> pickup lifecycle을 이어간다.
 - Acceptance Criteria:
   - [x] 홈 empty/error/retry/location guard 회귀 테스트가 있다.
   - [x] 지도 냉장고 목록 empty/error/retry/location guard 회귀 테스트가 있다.
   - [x] 냉장고 선택 empty/error/retry/location guard 회귀 테스트가 있다.
+  - [x] 위치 권한 blocked/좌표 실패 복구 경로 회귀 테스트가 있다.
+  - [x] QR 인증 실패와 store -> pickup lifecycle 화면 회귀 테스트가 있다.
 - 2026-05-25 evidence:
   - `npm test -- --runInBand __tests__/home.nearbyRefresh.test.tsx __tests__/map.fridgePosts.test.tsx __tests__/fridgeSelect.qrFlow.test.tsx`
-- 관련 파일/화면/API: `HomeScreen`, `MapScreen`, `FridgeSelectScreen`, `/posts/nearby`, `/fridges/nearby`, `/fridges/available`
+  - `npm test -- --runInBand __tests__/locationSetup.notificationPermission.test.tsx`
+  - `npm test -- --runInBand __tests__/inventoryQrPrototype.screen.test.tsx`
+- 관련 파일/화면/API: `HomeScreen`, `MapScreen`, `FridgeSelectScreen`, `LocationSetupScreen`, `InventoryQrPrototypeScreen`, `/posts/nearby`, `/fridges/nearby`, `/fridges/available`, `/api/v1/inventory/confirm-store`, `/api/v1/inventory/confirm-pickup`
 
 ## Operator inventory runtime QA
 

@@ -279,7 +279,7 @@
 1. 완료: 홈/지도/냉장고 목록 실패 상태와 빈 상태 분리
 2. 완료: 위치 재설정 진입점 연결
 3. 완료: 위치 미설정 강제 진입 공통 가드와 위치 설정 CTA 정리
-4. 완료, 실제 기기 QA 필요: 위치 권한 거부/영구 거부/위치 탐색 실패 UX 보강. `LocationSetup`은 재시도/설정 열기 CTA를 제공하고 좌표가 없으면 위치 저장을 막는다.
+4. 완료, 추가 실기기 반복 QA 권장: 위치 권한 거부/영구 거부/위치 탐색 실패 UX 보강. `LocationSetup`은 재시도/설정 열기 CTA를 제공하고 좌표가 없으면 위치 저장을 막는다. 2026-05-25 무기기 회귀에서 `NEVER_ASK_AGAIN`과 Geolocation 실패 후 복구 경로를 고정했다.
 5. 완료, 실제 기기 QA 통과: 카메라 실패 시 `다시 촬영`/`갤러리 선택` 대안과 갤러리 fresh fixture 기반 등록 flow를 확인했다.
 6. 완료, Post-MVP AI 계약 필요: AI confidence 표시와 `확인 필요` 상태 도입. 제품 기준은 `confidenceScore < 0.9`이며 단독 등록 차단 기준은 아니다. `stale-or-rotten`, `screenshot-or-ui`, `low-quality` false-positive는 Post-MVP rejection/review reason 계약으로 분리한다.
 7. 완료, VM/API QA 통과: 나눔 신청하기 API 연동, 첫 신청 이후 추가 신청 차단, `available -> requested` 상태 전환, 403/409 처리
@@ -297,7 +297,7 @@
 - WebSocket 기반 실시간 채팅
 - 소셜 로그인 전체 구현
 - 이메일 verification 전체 예외 케이스
-- QR 보관/수령 end-to-end QA. Operator summary/items/dispose VM runtime은 통과했지만, `pending_store` 기반 보관/수령 lifecycle은 별도 후속이다.
+- QR 보관/수령 end-to-end QA. 화면 단위 confirm-store/confirm-pickup 성공·실패 lifecycle 회귀는 보강했지만, `pending_store` 기반 실제 API/현장 end-to-end는 별도 후속이다.
 - 운영자 권한/역할 관리 화면과 `/auth/me` role metadata. 운영자 콘솔 진입점과 inventory 점검 화면은 있으나, 실제 운영자 계정을 프로필에서 노출할 백엔드 힌트와 role 부여/관리 UI는 후속이다.
 
 ---
