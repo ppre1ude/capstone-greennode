@@ -12,7 +12,7 @@ export interface User {
   fcmToken: string | null;
   isActive: boolean;
   isOperator?: boolean | null;
-  operatorRole?: 'operator' | 'admin' | null;
+  operatorRole?: 'operator' | 'admin' | 'fridge_operator' | null;
   operatorFridgeIds?: number[] | null;
   roles?: string[] | null;
   createdAt: string;

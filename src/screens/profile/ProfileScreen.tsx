@@ -22,14 +22,14 @@ import { colors } from '@/theme';
 import type { User } from '@/types';
 
 const MENU_ITEMS = [
-  {id: 'location', title: '동네 위치 재설정', icon: '📍'},
-  {id: 'operator-console', title: '냉장고 운영자 콘솔 (실험)', icon: '🧪'},
-  {id: 'inventory-qr-prototype', title: '냉장고 QR 흐름 테스트', icon: '▣'},
-  {id: 'my-posts', title: '내 나눔 내역', icon: '📝'},
-  {id: 'bookmark', title: '관심 식재료', icon: '❤️'},
-  {id: 'history', title: '받은 나눔 내역', icon: '🎁'},
-  {id: 'settings', title: '설정', icon: '⚙️'},
-  {id: 'help', title: '고객센터', icon: '🎧'},
+  { id: 'location', title: '동네 위치 재설정', icon: '📍' },
+  { id: 'operator-console', title: '냉장고 운영자 콘솔 (실험)', icon: '🧪' },
+  { id: 'inventory-qr-prototype', title: '냉장고 QR 흐름 테스트', icon: '▣' },
+  { id: 'my-posts', title: '내 나눔 내역', icon: '📝' },
+  { id: 'bookmark', title: '관심 식재료', icon: '❤️' },
+  { id: 'history', title: '받은 나눔 내역', icon: '🎁' },
+  { id: 'settings', title: '설정', icon: '⚙️' },
+  { id: 'help', title: '고객센터', icon: '🎧' },
 ];
 
 const OPERATOR_ROLES = new Set(['operator', 'admin', 'fridge_operator']);
@@ -39,7 +39,11 @@ const canAccessOperatorConsole = (user: User | null): boolean => {
     return false;
   }
 
-  if (user.isOperator === true || user.operatorRole) {
+  if (
+    user.isOperator === true ||
+    (typeof user.operatorRole === 'string' &&
+      OPERATOR_ROLES.has(user.operatorRole))
+  ) {
     return true;
   }
 
@@ -85,7 +89,10 @@ const ProfileScreen = () => {
 
     if (id === 'operator-console') {
       if (!canAccessOperatorConsole(user)) {
-        Alert.alert('운영자 권한 필요', '운영자로 등록된 계정만 사용할 수 있습니다.');
+        Alert.alert(
+          '운영자 권한 필요',
+          '운영자로 등록된 계정만 사용할 수 있습니다.',
+        );
         return;
       }
 

@@ -1,14 +1,14 @@
 import React from 'react';
-import {TouchableOpacity} from 'react-native';
+import { TouchableOpacity } from 'react-native';
 import ReactTestRenderer from 'react-test-renderer';
 import ProfileScreen from '@/screens/profile/ProfileScreen';
-import {useAuthStore} from '@/store/authStore';
+import { useAuthStore } from '@/store/authStore';
 
 const mockParentNavigate = jest.fn();
 
 jest.mock('@react-navigation/native', () => ({
   useNavigation: jest.fn(() => ({
-    getParent: jest.fn(() => ({navigate: mockParentNavigate})),
+    getParent: jest.fn(() => ({ navigate: mockParentNavigate })),
   })),
 }));
 
@@ -19,7 +19,7 @@ const findTouchableByText = (
   const touchable = renderer.root.findAll(
     node =>
       node.type === TouchableOpacity &&
-      node.findAllByProps({children: text}).length > 0,
+      node.findAllByProps({ children: text }).length > 0,
   )[0];
 
   if (!touchable) {
@@ -27,6 +27,16 @@ const findTouchableByText = (
   }
 
   return touchable;
+};
+
+const expectOperatorConsoleVisible = (
+  renderer: ReactTestRenderer.ReactTestRenderer,
+  visible: boolean,
+) => {
+  const matches = renderer.root.findAllByProps({
+    children: '냉장고 운영자 콘솔 (실험)',
+  });
+  expect(matches.length > 0).toBe(visible);
 };
 
 describe('ProfileScreen operator console entry', () => {
@@ -79,6 +89,58 @@ describe('ProfileScreen operator console entry', () => {
     });
   });
 
+  it.each([
+    ['isOperator true', { isOperator: true }],
+    ['operatorRole admin', { operatorRole: 'admin' }],
+    ['operatorRole fridge_operator', { operatorRole: 'fridge_operator' }],
+    ['operatorFridgeIds present', { operatorFridgeIds: [1] }],
+    ['roles include fridge_operator', { roles: ['member', 'fridge_operator'] }],
+  ])('shows the operator entry for %s metadata', async (_label, metadata) => {
+    useAuthStore.setState({
+      user: {
+        ...useAuthStore.getState().user!,
+        ...(metadata as object),
+      },
+    });
+
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(<ProfileScreen />);
+    });
+
+    expectOperatorConsoleVisible(renderer!, true);
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
+  it.each([
+    ['empty operator fridge ids', { operatorFridgeIds: [] }],
+    ['regular roles only', { roles: ['member'] }],
+    ['unknown operator role', { operatorRole: 'viewer' }],
+  ])('hides the operator entry for %s metadata', async (_label, metadata) => {
+    useAuthStore.setState({
+      user: {
+        ...useAuthStore.getState().user!,
+        ...(metadata as object),
+      },
+    });
+
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(<ProfileScreen />);
+    });
+
+    expectOperatorConsoleVisible(renderer!, false);
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
   it('hides the operator console entry for regular users', async () => {
     let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
 
@@ -86,11 +148,7 @@ describe('ProfileScreen operator console entry', () => {
       renderer = ReactTestRenderer.create(<ProfileScreen />);
     });
 
-    expect(
-      renderer!.root.findAllByProps({
-        children: '냉장고 운영자 콘솔 (실험)',
-      }),
-    ).toHaveLength(0);
+    expectOperatorConsoleVisible(renderer!, false);
 
     await ReactTestRenderer.act(async () => {
       renderer?.unmount();
@@ -105,10 +163,7 @@ describe('ProfileScreen operator console entry', () => {
     });
 
     await ReactTestRenderer.act(async () => {
-      findTouchableByText(
-        renderer!,
-        '냉장고 QR 흐름 테스트',
-      ).props.onPress();
+      findTouchableByText(renderer!, '냉장고 QR 흐름 테스트').props.onPress();
     });
 
     expect(mockParentNavigate).toHaveBeenCalledWith('InventoryQrPrototype');
