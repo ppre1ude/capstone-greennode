@@ -7,19 +7,13 @@
  * @wireframe wireframe-foodlink/profile.html
  */
 import React from 'react';
-import {
-  View,
-  StyleSheet,
-  ScrollView,
-  Alert,
-  StatusBar,
-  Platform,
-} from 'react-native';
+import { View, StyleSheet, ScrollView, Alert, StatusBar } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuthStore } from '@/store/authStore';
 import { DSButton, DSCard, DSChip, DSListCell, DSText } from '@/design-system';
 import { colors } from '@/theme';
-import type {User} from '@/types';
+import type { User } from '@/types';
+import { getHeaderTopPadding } from '@/utils/safeArea';
 
 type ProfileMenuItemId =
   | 'location'
@@ -39,7 +33,12 @@ type ProfileMenuItem = {
 };
 
 const MENU_ITEMS: ProfileMenuItem[] = [
-  {id: 'location', title: '동네 위치 재설정', icon: '📍', availability: 'ready'},
+  {
+    id: 'location',
+    title: '동네 위치 재설정',
+    icon: '📍',
+    availability: 'ready',
+  },
   {
     id: 'operator-console',
     title: '냉장고 운영자 콘솔 (실험)',
@@ -70,19 +69,23 @@ const MENU_ITEMS: ProfileMenuItem[] = [
     icon: '🎁',
     availability: 'contract-needed',
   },
-  {id: 'settings', title: '설정', icon: '⚙️', availability: 'coming-soon'},
-  {id: 'help', title: '고객센터', icon: '🎧', availability: 'coming-soon'},
+  { id: 'settings', title: '설정', icon: '⚙️', availability: 'coming-soon' },
+  { id: 'help', title: '고객센터', icon: '🎧', availability: 'coming-soon' },
 ];
 
 const OPERATOR_ROLES = new Set(['operator', 'admin', 'fridge_operator']);
 
 const BLOCKED_MENU_MESSAGES: Record<
-  Exclude<ProfileMenuItemId, 'location' | 'operator-console' | 'inventory-qr-prototype'>,
-  {title: string; message: string}
+  Exclude<
+    ProfileMenuItemId,
+    'location' | 'operator-console' | 'inventory-qr-prototype'
+  >,
+  { title: string; message: string }
 > = {
   'my-posts': {
     title: '내 나눔 내역 준비 중',
-    message: '내가 등록한 나눔 목록을 불러오는 서버 API가 준비되면 연결할 수 있습니다.',
+    message:
+      '내가 등록한 나눔 목록을 불러오는 서버 API가 준비되면 연결할 수 있습니다.',
   },
   bookmark: {
     title: '관심 식재료 준비 중',
@@ -90,7 +93,8 @@ const BLOCKED_MENU_MESSAGES: Record<
   },
   history: {
     title: '받은 나눔 내역 준비 중',
-    message: '내가 신청하거나 수령한 나눔 목록 API가 준비되면 연결할 수 있습니다.',
+    message:
+      '내가 신청하거나 수령한 나눔 목록 API가 준비되면 연결할 수 있습니다.',
   },
   settings: {
     title: '설정 준비 중',
@@ -149,9 +153,7 @@ const ProfileScreen = () => {
     ]);
   };
 
-  const showBlockedMenuMessage = (
-    id: keyof typeof BLOCKED_MENU_MESSAGES,
-  ) => {
+  const showBlockedMenuMessage = (id: keyof typeof BLOCKED_MENU_MESSAGES) => {
     const message = BLOCKED_MENU_MESSAGES[id];
     Alert.alert(message.title, message.message);
   };
@@ -325,7 +327,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 24,
-    paddingTop: Platform.OS === 'ios' ? 56 : 24,
+    paddingTop: getHeaderTopPadding(),
     paddingBottom: 16,
     backgroundColor: '#FFFFFF',
   },

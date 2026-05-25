@@ -20,7 +20,6 @@ import {
   RefreshControl,
   StatusBar,
   ActivityIndicator,
-  Platform,
 } from 'react-native';
 import {
   useFocusEffect,
@@ -44,6 +43,7 @@ import {
 import { selectHomeRecommendations } from '@/utils/homeRecommendations';
 import { DSIcon } from '@/design-system';
 import { colors } from '@/theme';
+import { getHeaderTopPadding } from '@/utils/safeArea';
 
 const HomeScreen = () => {
   const [posts, setPosts] = useState<PostNearbyRead[]>([]);
@@ -389,7 +389,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 24,
-    paddingTop: Platform.OS === 'ios' ? 56 : 16,
+    paddingTop: getHeaderTopPadding(),
     paddingBottom: 16,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,

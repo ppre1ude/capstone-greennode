@@ -1,5 +1,6 @@
 import { StyleSheet, Platform } from 'react-native';
 import { colors } from '@/theme';
+import { getHeaderTopPadding } from '@/utils/safeArea';
 
 export const styles = StyleSheet.create({
   container: {
@@ -8,7 +9,7 @@ export const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 24,
-    paddingTop: Platform.OS === 'ios' ? 56 : 16,
+    paddingTop: getHeaderTopPadding(),
     paddingBottom: 16,
     flexDirection: 'row',
     alignItems: 'center',

@@ -9,14 +9,14 @@ import {
   Text,
   StyleSheet,
   StatusBar,
-  Platform,
   TouchableOpacity,
   ScrollView,
 } from 'react-native';
-import {colors} from '@/theme';
-import {useNotificationStore} from '@/store/notificationStore';
-import {openNotificationTarget} from '@/services/notifications';
-import type {NotificationRecord} from '@/types';
+import { colors } from '@/theme';
+import { useNotificationStore } from '@/store/notificationStore';
+import { openNotificationTarget } from '@/services/notifications';
+import type { NotificationRecord } from '@/types';
+import { getHeaderTopPadding } from '@/utils/safeArea';
 
 const formatNotificationTime = (receivedAt: string) => {
   const date = new Date(receivedAt);
@@ -60,7 +60,7 @@ const ChatListScreen = () => {
     notification => !notification.readAt,
   ).length;
 
-  const renderNotification = ({item}: {item: NotificationRecord}) => (
+  const renderNotification = ({ item }: { item: NotificationRecord }) => (
     <TouchableOpacity
       style={styles.notificationCard}
       activeOpacity={0.82}
@@ -83,7 +83,9 @@ const ChatListScreen = () => {
         <Text style={styles.notificationMeta}>
           {item.readAt ? '읽음' : '새 알림'}
         </Text>
-        <Text style={styles.notificationMeta}>{getSourceLabel(item.source)}</Text>
+        <Text style={styles.notificationMeta}>
+          {getSourceLabel(item.source)}
+        </Text>
         <Text style={styles.notificationMeta}>
           {item.fridgeName || '공유 냉장고'}
         </Text>
@@ -126,7 +128,7 @@ const ChatListScreen = () => {
         <ScrollView contentContainerStyle={styles.listContent}>
           {notifications.map(notification => (
             <View key={notification.id}>
-              {renderNotification({item: notification})}
+              {renderNotification({ item: notification })}
             </View>
           ))}
         </ScrollView>
@@ -153,7 +155,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 24,
-    paddingTop: Platform.OS === 'ios' ? 56 : 24,
+    paddingTop: getHeaderTopPadding(),
     paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: colors.borderLight,
