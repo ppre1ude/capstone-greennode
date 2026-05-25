@@ -1,4 +1,9 @@
 import type {FirebaseMessagingTypes} from '@react-native-firebase/messaging';
+import {
+  DeviceEventEmitter,
+  NativeModules,
+  type EmitterSubscription,
+} from 'react-native';
 import {rootNavigationRef} from '@/navigation/rootNavigation';
 import {getMessagingOrNull} from '@/services/firebaseMessaging';
 import {
@@ -13,13 +18,26 @@ import type {
 } from '@/types';
 
 type RemoteMessage = FirebaseMessagingTypes.RemoteMessage;
+interface GreennodeNotificationNativeModule {
+  consumeInitialNotificationPayload?: () => Promise<FcmStringDataPayload | null>;
+}
 
 let foregroundUnsubscribe: (() => void) | null = null;
 let openedUnsubscribe: (() => void) | null = null;
+let nativeOpenSubscription: EmitterSubscription | null = null;
 let backgroundHandlerRegistered = false;
 let pendingNavigationPayload: FoodLinkFcmPayload | null = null;
+const handledOpenedMessageIds = new Set<string>();
 
 const KNOWN_TYPES = new Set(['share_created', 'share_requested']);
+const NOTIFICATION_NAVIGATION_DEFER_ROUTES = new Set([
+  'Auth',
+  'Splash',
+  'Onboarding',
+  'Login',
+  'Signup',
+  'LocationSetup',
+]);
 const CAMEL_CASE_KEY_PATTERN = /^[a-z][A-Za-z0-9]*$/;
 
 const isCamelCaseKey = (key: string) => CAMEL_CASE_KEY_PATTERN.test(key);
@@ -128,6 +146,15 @@ const navigateToPayloadTarget = (payload: FoodLinkFcmPayload) => {
   rootNavigationRef.dispatch(buildNotificationNavigationAction(payload));
 };
 
+const shouldDeferNotificationNavigation = () => {
+  if (!rootNavigationRef.isReady()) {
+    return true;
+  }
+
+  const currentRoute = rootNavigationRef.getCurrentRoute();
+  return NOTIFICATION_NAVIGATION_DEFER_ROUTES.has(currentRoute?.name ?? '');
+};
+
 export const openNotificationTarget = (
   notification: FoodLinkFcmPayload | NotificationRecord,
 ) => {
@@ -147,7 +174,7 @@ export const openNotificationTarget = (
           fridgeName: notification.fridgeName,
         };
 
-  if (!rootNavigationRef.isReady()) {
+  if (shouldDeferNotificationNavigation()) {
     pendingNavigationPayload = payload;
     return;
   }
@@ -156,13 +183,25 @@ export const openNotificationTarget = (
 };
 
 export const flushPendingNotificationNavigation = () => {
-  if (!pendingNavigationPayload || !rootNavigationRef.isReady()) {
+  if (!pendingNavigationPayload || shouldDeferNotificationNavigation()) {
     return;
   }
 
   const payload = pendingNavigationPayload;
   pendingNavigationPayload = null;
   navigateToPayloadTarget(payload);
+};
+
+const getRemoteMessageId = (message: RemoteMessage) => {
+  if (message.messageId) {
+    return message.messageId;
+  }
+
+  if (isFcmStringDataPayload(message.data)) {
+    return message.data.messageId;
+  }
+
+  return undefined;
 };
 
 export const handleRemoteNotification = async (
@@ -175,18 +214,74 @@ export const handleRemoteNotification = async (
     return null;
   }
 
-  const record = createNotificationRecord(payload, source, message.messageId);
+  const messageId = getRemoteMessageId(message);
+  if (
+    source === 'opened' &&
+    messageId &&
+    handledOpenedMessageIds.has(messageId)
+  ) {
+    return null;
+  }
+
+  const record = createNotificationRecord(payload, source, messageId);
   if (source === 'background') {
     await rehydrateNotificationStore();
   }
 
   useNotificationStore.getState().addNotification(record);
+  if (source === 'opened' && messageId) {
+    handledOpenedMessageIds.add(messageId);
+  }
 
   if (openTarget) {
     openNotificationTarget(payload);
   }
 
   return record;
+};
+
+export const handleInitialNotificationPayload = async (
+  payload: FcmStringDataPayload | null | undefined,
+) => {
+  if (!payload) {
+    return null;
+  }
+
+  const {messageId, ...data} = payload;
+  return handleRemoteNotification(
+    {messageId, data} as unknown as RemoteMessage,
+    'opened',
+    true,
+  );
+};
+
+export const consumePendingNativeNotificationPayload = async () => {
+  const module = NativeModules.GreennodeNotification as
+    | GreennodeNotificationNativeModule
+    | undefined;
+
+  const payload = await module?.consumeInitialNotificationPayload?.();
+  return handleInitialNotificationPayload(payload);
+};
+
+export const registerNativeNotificationOpenHandler = () => {
+  if (nativeOpenSubscription) {
+    return () => undefined;
+  }
+
+  nativeOpenSubscription = DeviceEventEmitter.addListener(
+    'greennodeNotificationOpened',
+    (payload: FcmStringDataPayload) => {
+      handleInitialNotificationPayload(payload).catch(error => {
+        console.warn('Native notification open handling failed:', error);
+      });
+    },
+  );
+
+  return () => {
+    nativeOpenSubscription?.remove();
+    nativeOpenSubscription = null;
+  };
 };
 
 export const registerBackgroundNotificationHandler = () => {

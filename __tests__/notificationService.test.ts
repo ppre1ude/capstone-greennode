@@ -1,14 +1,22 @@
 import {
   buildNotificationNavigationAction,
+  flushPendingNotificationNavigation,
+  handleInitialNotificationPayload,
   handleRemoteNotification,
   isFcmStringDataPayload,
+  openNotificationTarget,
   parseFoodLinkFcmPayload,
+  consumePendingNativeNotificationPayload,
+  registerNativeNotificationOpenHandler,
 } from '@/services/notifications';
+import {rootNavigationRef} from '@/navigation/rootNavigation';
 import {useNotificationStore} from '@/store/notificationStore';
 import type {NotificationRecord} from '@/types';
+import {DeviceEventEmitter, NativeModules} from 'react-native';
 
 describe('notification service', () => {
   beforeEach(() => {
+    jest.restoreAllMocks();
     useNotificationStore.setState({notifications: []});
   });
 
@@ -134,5 +142,214 @@ describe('notification service', () => {
       type: 'NAVIGATE',
       payload: {name: 'PostDetail', params: {postId: 10}},
     });
+  });
+
+  it('defers opened notification navigation while auth restoration is active', () => {
+    const dispatch = jest
+      .spyOn(rootNavigationRef, 'dispatch')
+      .mockImplementation(jest.fn());
+    jest.spyOn(rootNavigationRef, 'isReady').mockReturnValue(true);
+    const getCurrentRoute = jest
+      .spyOn(rootNavigationRef, 'getCurrentRoute')
+      .mockReturnValue({name: 'Auth', key: 'Auth'} as never);
+
+    openNotificationTarget({
+      type: 'share_created',
+      postId: '12',
+      fruitName: 'banana',
+      fridgeName: 'test fridge',
+    });
+
+    expect(dispatch).not.toHaveBeenCalled();
+
+    getCurrentRoute.mockReturnValue({name: 'Main', key: 'Main'} as never);
+    flushPendingNotificationNavigation();
+
+    expect(dispatch).toHaveBeenCalledWith({
+      type: 'NAVIGATE',
+      payload: {name: 'PostDetail', params: {postId: 12}},
+    });
+  });
+
+  it('defers opened notification navigation while nested auth splash is active', () => {
+    const dispatch = jest
+      .spyOn(rootNavigationRef, 'dispatch')
+      .mockImplementation(jest.fn());
+    jest.spyOn(rootNavigationRef, 'isReady').mockReturnValue(true);
+    const getCurrentRoute = jest
+      .spyOn(rootNavigationRef, 'getCurrentRoute')
+      .mockReturnValue({name: 'Splash', key: 'Splash'} as never);
+
+    openNotificationTarget({
+      type: 'share_created',
+      postId: '17',
+      fruitName: 'banana',
+      fridgeName: 'test fridge',
+    });
+
+    expect(dispatch).not.toHaveBeenCalled();
+
+    getCurrentRoute.mockReturnValue({name: 'Main', key: 'Main'} as never);
+    flushPendingNotificationNavigation();
+
+    expect(dispatch).toHaveBeenCalledWith({
+      type: 'NAVIGATE',
+      payload: {name: 'PostDetail', params: {postId: 17}},
+    });
+  });
+
+  it('keeps pending navigation deferred when the container becomes ready on Auth', () => {
+    const dispatch = jest
+      .spyOn(rootNavigationRef, 'dispatch')
+      .mockImplementation(jest.fn());
+    const isReady = jest
+      .spyOn(rootNavigationRef, 'isReady')
+      .mockReturnValue(false);
+    const getCurrentRoute = jest
+      .spyOn(rootNavigationRef, 'getCurrentRoute')
+      .mockReturnValue({name: 'Auth', key: 'Auth'} as never);
+
+    openNotificationTarget({
+      type: 'share_created',
+      postId: '14',
+      fruitName: 'banana',
+      fridgeName: 'test fridge',
+    });
+
+    isReady.mockReturnValue(true);
+    flushPendingNotificationNavigation();
+
+    expect(dispatch).not.toHaveBeenCalled();
+
+    getCurrentRoute.mockReturnValue({name: 'Main', key: 'Main'} as never);
+    flushPendingNotificationNavigation();
+
+    expect(dispatch).toHaveBeenCalledTimes(1);
+    expect(dispatch).toHaveBeenCalledWith({
+      type: 'NAVIGATE',
+      payload: {name: 'PostDetail', params: {postId: 14}},
+    });
+  });
+
+  it('handles native initial notification payloads once by message id', async () => {
+    const dispatch = jest
+      .spyOn(rootNavigationRef, 'dispatch')
+      .mockImplementation(jest.fn());
+    jest.spyOn(rootNavigationRef, 'isReady').mockReturnValue(true);
+    jest
+      .spyOn(rootNavigationRef, 'getCurrentRoute')
+      .mockReturnValue({name: 'Main', key: 'Main'} as never);
+
+    await handleInitialNotificationPayload({
+      type: 'share_created',
+      postId: '13',
+      fruitName: 'banana',
+      fridgeName: 'test fridge',
+      messageId: 'native-message-13',
+    });
+    await handleInitialNotificationPayload({
+      type: 'share_created',
+      postId: '13',
+      fruitName: 'banana',
+      fridgeName: 'test fridge',
+      messageId: 'native-message-13',
+    });
+
+    expect(useNotificationStore.getState().notifications).toMatchObject([
+      {
+        id: 'native-message-13',
+        source: 'opened',
+        postId: '13',
+      },
+    ]);
+    expect(dispatch).toHaveBeenCalledTimes(1);
+    expect(dispatch).toHaveBeenCalledWith({
+      type: 'NAVIGATE',
+      payload: {name: 'PostDetail', params: {postId: 13}},
+    });
+  });
+
+  it('handles native notification open events from an existing Android task', async () => {
+    const dispatch = jest
+      .spyOn(rootNavigationRef, 'dispatch')
+      .mockImplementation(jest.fn());
+    jest.spyOn(rootNavigationRef, 'isReady').mockReturnValue(true);
+    jest
+      .spyOn(rootNavigationRef, 'getCurrentRoute')
+      .mockReturnValue({name: 'Main', key: 'Main'} as never);
+
+    const remove = jest.fn();
+    const listeners: Array<(payload: Record<string, string>) => void> = [];
+    const addListener = jest
+      .spyOn(DeviceEventEmitter, 'addListener')
+      .mockImplementation((eventType, listener) => {
+        expect(eventType).toBe('greennodeNotificationOpened');
+        listeners.push(listener as (payload: Record<string, string>) => void);
+        return {remove} as never;
+      });
+
+    const unregister = registerNativeNotificationOpenHandler();
+    listeners[0]({
+      type: 'share_created',
+      postId: '15',
+      fruitName: 'banana',
+      fridgeName: 'test fridge',
+      messageId: 'native-open-message-15',
+    });
+    await Promise.resolve();
+
+    expect(useNotificationStore.getState().notifications).toMatchObject([
+      {
+        id: 'native-open-message-15',
+        source: 'opened',
+        postId: '15',
+      },
+    ]);
+    expect(dispatch).toHaveBeenCalledWith({
+      type: 'NAVIGATE',
+      payload: {name: 'PostDetail', params: {postId: 15}},
+    });
+
+    unregister();
+
+    expect(remove).toHaveBeenCalledTimes(1);
+    addListener.mockRestore();
+  });
+
+  it('consumes pending native notification payloads after cold start', async () => {
+    const dispatch = jest
+      .spyOn(rootNavigationRef, 'dispatch')
+      .mockImplementation(jest.fn());
+    jest.spyOn(rootNavigationRef, 'isReady').mockReturnValue(true);
+    jest
+      .spyOn(rootNavigationRef, 'getCurrentRoute')
+      .mockReturnValue({name: 'Main', key: 'Main'} as never);
+
+    const originalModule = NativeModules.GreennodeNotification;
+    NativeModules.GreennodeNotification = {
+      consumeInitialNotificationPayload: jest.fn().mockResolvedValue({
+        type: 'share_created',
+        postId: '16',
+        fruitName: 'banana',
+        fridgeName: 'test fridge',
+        messageId: 'native-pending-message-16',
+      }),
+    };
+
+    await consumePendingNativeNotificationPayload();
+
+    expect(useNotificationStore.getState().notifications).toMatchObject([
+      {
+        id: 'native-pending-message-16',
+        source: 'opened',
+        postId: '16',
+      },
+    ]);
+    expect(dispatch).toHaveBeenCalledWith({
+      type: 'NAVIGATE',
+      payload: {name: 'PostDetail', params: {postId: 16}},
+    });
+
+    NativeModules.GreennodeNotification = originalModule;
   });
 });
