@@ -1,6 +1,6 @@
 # AI QA Fixtures and Camera Checklist
 
-> 기준일: 2026-05-23
+> 기준일: 2026-05-25
 > 목적: AI 분석 실패 UX, false-positive 정책, 실제 기기 카메라 검증을 반복 가능하게 만든다.
 
 ## Fixture Set
@@ -41,6 +41,7 @@ FOODLINK_API_BASE_URL=http://localhost:8080 FOODLINK_ACCESS_TOKEN=<token> npm ru
 ```
 
 - report-only mode는 같은 결과를 출력하지만 fixture 실패가 있어도 exit code `0`으로 종료한다.
+- `FOODLINK_ACCESS_TOKEN`은 필수다. 토큰 누락/만료로 401/403이 내려오면 AI rejection 성공으로 보지 않고 인증 실패로 기록한다.
 - 백엔드/AI 수정 후 acceptance gate로 검증할 때는 strict mode를 사용한다. 단, `screenshot-or-ui`는 2026-05-08 백엔드 답변 기준 MVP 허용 케이스이므로 Post-MVP rejection enum 도입 전까지 report-only 관찰 대상으로 둔다.
 - fixture 파일이 없으면 해당 항목은 `skipped`로 기록된다.
 - 실패/검토 케이스는 generate 400, 나눔 기준 미충족 category, 낮은 confidence, 또는 검토 사유 enum 중 하나를 기대한다. MVP에서 screenshot/UI는 예외적으로 통과할 수 있다.
@@ -138,4 +139,5 @@ FOODLINK_API_BASE_URL=http://localhost:8080 FOODLINK_ACCESS_TOKEN=<token> npm ru
   - `screenshot-or-ui`: report-only 실패. `바나나`, `Fresh`, confidence `1`.
   - `low-quality`: report-only 실패. `바나나`, `Fresh`, confidence `0.9794`.
   - `large-image`: skipped. 로컬 전용 업로드 크기 guard fixture다.
-- 남은 실제 기기 QA: 실제 FCM foreground/background/terminated 수신. `stale-or-rotten`, `screenshot-or-ui`, `low-quality` 차단은 MVP blocker가 아니라 Post-MVP AI/rejection contract 항목이다.
+- 2026-05-25 VM 재검증도 같은 판정이다. `temp/ai-fixtures-report-only-2026-05-25T13-21-33-141Z.txt`에서 `fresh-single`, `not-food`, `multi-object`는 통과했고, `stale-or-rotten`, `screenshot-or-ui`, `low-quality`는 report-only 실패로 남았다.
+- FCM 실제 기기 foreground/background/terminated 수신 QA는 2026-05-25에 닫혔다. `stale-or-rotten`, `screenshot-or-ui`, `low-quality` 차단은 MVP blocker가 아니라 Post-MVP AI/rejection contract 항목이다.
