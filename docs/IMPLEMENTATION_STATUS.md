@@ -47,7 +47,7 @@
 
 - VM 접근: SSH tunnel `localhost:8080 -> NHN-Cloud-Server:80`로 `GET /health` 정상 응답을 확인했다.
 - 통과: QA 계정 생성/로그인/위치 저장, 주변 냉장고 조회, `generate -> create -> nearby/fridge posts 포함 -> request -> requested 전환 -> nearby/fridge posts 제외`, 작성자 본인 신청 403, 첫 신청 201, 중복 신청 409, 무효 `imageToken` create 400을 확인했다.
-- 상태 변경: 나눔 신청 API와 냉장고별 available 나눔 식재료 조회는 프론트 코드 연동, VM/API 런타임 QA, 실제 Android UI 조작 QA를 통과했다. 실제 기기 FCM QA는 Firebase 설정 부재로 별도다.
+- 상태 변경: 나눔 신청 API와 냉장고별 available 나눔 식재료 조회는 프론트 코드 연동, VM/API 런타임 QA, 실제 Android UI 조작 QA를 통과했다. 실제 기기 FCM QA는 당시 Firebase 설정 부재로 별도였고, 2026-05-25 실기기+emulator 2계정 QA로 닫았다.
 - 발견한 충돌: 백엔드 Phase 1.5 요약과 API 문서는 Post가 `detectedFruitKo/freshnessLabel/confidenceScore`를 저장한다고 설명하지만, live VM에서 생성한 Post id `2`의 상세 응답은 `detectedFruit/detectedFruitKo/freshnessLabel/confidenceScore=null`이었다. 판단 기준은 live VM API와 `GET /openapi.json`이며, 상세 증거와 후속 P0는 [VALIDATION_AND_BACKLOG.md](./VALIDATION_AND_BACKLOG.md)에 기록했다.
 
 ### 2026-05-06 실제 Android 기기 QA 업데이트
@@ -71,7 +71,7 @@
 - 발견한 충돌: `AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md`와 `docs/qa-fixtures/manifest.json`은 `screenshot-or-ui`를 400 또는 `확인 필요`로 기대했지만, live VM API는 `temp/real-device-camera-screen.png`를 `바나나/Fresh/confidence=0.5377/imageToken`으로 통과시켰다. 판단 기준은 2026-05-07 live VM API다. 2026-05-08 백엔드 답변으로 이 케이스는 MVP 허용, Post-MVP rejection 목표로 재분류했다.
 - 수정: `CameraScanScreen`의 무기기 fallback 경로와 `AnalysisResultScreen`의 등록 차단/확인 필요 정책을 회귀 테스트로 고정했다. 회귀 테스트는 `__tests__/cameraScan.fallback.test.tsx`, `__tests__/analysisResult.fallback.test.tsx`다.
 - 통과: 전체 Jest 20 suites / 85 tests, TypeScript `--noEmit`, ESLint `--quiet`, `scripts/validate-ai-fixtures.js`를 실제 기기 없이 통과했다.
-- 남은 검증: 이 시점에는 커밋 가능한 fixture 이미지가 부족했으나, 이후 `docs/qa-fixtures/`에 fixture를 추가해 VM/API report-only 검증까지 진행했다. 최신 판정은 `stale-or-rotten`, `screenshot-or-ui`, `low-quality`가 MVP blocker가 아니라 Post-MVP AI false-positive/계약 항목이라는 것이다. 실제 카메라/generate/create/request/exclusion은 2026-05-08 실기기 closeout으로 닫혔고, 실제 FCM 수신만 Firebase 환경 준비 후 검증한다.
+- 남은 검증: 이 시점에는 커밋 가능한 fixture 이미지가 부족했으나, 이후 `docs/qa-fixtures/`에 fixture를 추가해 VM/API report-only 검증까지 진행했다. 최신 판정은 `stale-or-rotten`, `screenshot-or-ui`, `low-quality`가 MVP blocker가 아니라 Post-MVP AI false-positive/계약 항목이라는 것이다. 실제 카메라/generate/create/request/exclusion은 2026-05-08 실기기 closeout으로 닫혔고, 실제 FCM 수신도 2026-05-25 실기기+emulator 2계정 QA로 닫았다.
 
 ### 2026-05-07 Android emulator 지도 UI QA 업데이트
 
@@ -104,14 +104,14 @@
 ### 2026-05-08 백엔드 답변 반영 업데이트
 
 - P0 Post AI 메타데이터 null은 백엔드 버그로 확정됐고, `imageToken` sidecar AI 메타데이터 저장/복원 방식으로 수정되어 VM에 재배포됐다. 프론트는 구현을 바꾸지 않고 `imageToken`, `fridgeId`, `expirationDate`만 전송한다. 2026-05-08 VM/API 재검증에서 생성 응답과 `GET /posts/{id}`의 AI 메타데이터 non-null, `PostNearbyRead` 카드 필드, requested 후 available 목록 제외를 확인했다. 같은 날 실제 Android 기기에서 홈/상세/지도 내부 목록의 신규 Post 표시명/상태가 fallback 없이 보이고, 신청 후 상세와 지도 목록이 `requested` 전환을 반영하는 것을 확인했다.
-- MVP flow closeout: 2026-05-08 실제 Android 기기에서 카메라 generate 400 실패 Alert(`다시 촬영`/`갤러리 선택`), 갤러리 fresh fixture 선택, `generate -> create -> home/detail/map`, 다른 테스트 계정의 신청 후 nearby/fridge available 제외까지 재검증했다. 생성된 Post id `8`은 `바나나 / Fresh / confidence 100%`로 저장됐고, 신청 후 `requested`로 전환되어 홈/지도 목록에서 제외됐다. 실제 FCM 수신은 Firebase 설정 파일과 2기기/2계정 token 환경 부재로 남아 있다.
+- MVP flow closeout: 2026-05-08 실제 Android 기기에서 카메라 generate 400 실패 Alert(`다시 촬영`/`갤러리 선택`), 갤러리 fresh fixture 선택, `generate -> create -> home/detail/map`, 다른 테스트 계정의 신청 후 nearby/fridge available 제외까지 재검증했다. 생성된 Post id `8`은 `바나나 / Fresh / confidence 100%`로 저장됐고, 신청 후 `requested`로 전환되어 홈/지도 목록에서 제외됐다. 당시 남았던 실제 FCM 수신은 2026-05-25 실기기+emulator 2계정 QA로 닫았다.
 - 기존 null Post 데이터는 마이그레이션하지 않는다. 홈/상세/지도 내부 목록의 fallback은 기존 데이터 대응으로 유지한다.
 - generate 400에서 안정적으로 읽을 필드는 FastAPI `detail`이다. `message`, `analysisMessage`는 400 계약 필드가 아니다.
 - screenshot/UI false-positive는 MVP 허용으로 재분류했다. 현재 서버/AI는 screenshot/UI 판별 모델이 없으며, `Fresh + imageToken`이면 낮은 confidence에서도 등록 가능하다. 앱은 `confidenceScore < 0.9`에서 `확인 필요`만 표시한다.
 - `GET /fridges/{id}/posts`는 `/posts/nearby`와 같은 `PostNearbyRead` 카드 요약 스키마이며, `confidenceScore`를 포함하지 않는다.
 - 프론트 타입과 테스트도 `PostNearbyRead`를 분리해 카드 요약 응답에는 `confidenceScore`, `authorId`, `updatedAt`이 없고 `fridgeName`이 있다는 계약에 맞췄다. generate 400은 `detail`을 우선 읽도록 보강했다.
 - FCM payload는 문자열 + camelCase로 확정했고, `share_created`는 반경 2km 내 FCM 토큰이 등록된 다른 사용자에게, `share_requested`는 공급자 FCM 토큰이 있을 때 발송된다.
-- 스프린트 종료 판정: `camera/gallery -> generate -> create -> home/detail/map -> request -> requested available 제외` core flow와 FCM 프론트 구현은 닫았다. 실제 FCM 수신 QA는 `android/app/google-services.json`, NHN Cloud VM Firebase Admin/service account credentials, 2 Android client/2계정/2 FCM token 환경이 필요하므로 다음 스프린트 P0로 이월한다. `2026-GreenNode.pem`은 SSH 터널용 키라 Firebase 자격증명을 대체하지 않는다.
+- 스프린트 종료 판정: `camera/gallery -> generate -> create -> home/detail/map -> request -> requested available 제외` core flow와 FCM 프론트 구현은 닫았다. 당시 이월했던 실제 FCM 수신 QA는 `android/app/google-services.json`, NHN Cloud VM Firebase Admin/service account credentials, 2 Android client/2계정/2 FCM token 환경을 갖춘 뒤 2026-05-25에 닫았다. `2026-GreenNode.pem`은 SSH 터널용 키라 Firebase 자격증명을 대체하지 않는다.
 
 ### 2026-05-21 FCM QA 업데이트
 
@@ -247,7 +247,7 @@
 
 ### Phase 6: 알림 및 내 정보
 
-- 상태: 프론트 코드 연동 완료, 실제 기기 QA 필요
+- 상태: 알림/Firebase QA 완료, 후속 메뉴/API 남음
 - 완료:
   - 프로필 기본 정보 표시
   - 로그아웃
@@ -261,7 +261,6 @@
   - 알림 열기와 알림함 항목 탭 시 `PostDetail` fallback 라우팅
 - 남은 작업:
   - 프로필 수정/내 나눔/관심/받은 나눔 메뉴 연결
-  - 실제 기기 FCM foreground/background/terminated 수신 QA
   - 알림 읽음 상태/API 계약 구현
   - 실제 활동 지표 API 계약 구현
 
@@ -289,7 +288,7 @@
 ### P2
 
 1. 완료: 검색 MVP 범위는 지도 공유 냉장고 이름/주소 로컬 필터로 결정
-2. 완료, 실제 기기 QA 필요: FCM 수신 handler와 알림함. `share_created`/`share_requested` foreground/background/opened/initial 수신 기록, 문자열 + camelCase payload 검증, 상세 fallback 라우팅, 로컬 읽음 표시를 구현했다. 서버 읽음 상태 API는 후속이다.
+2. 완료, 실제 기기 QA 통과: FCM 수신 handler와 알림함. `share_created`/`share_requested` foreground/background/opened/initial 수신 기록, 문자열 + camelCase payload 검증, 상세 fallback 라우팅, 로컬 읽음 표시를 구현했다. 2026-05-25 실기기+emulator 2계정 및 release/process-killed/lockscreen tap QA를 통과했다. 서버 읽음 상태 API는 후속이다.
 3. 완료: 홈/프로필 목업 통계 숫자 제거
 4. multi-object detection 계약 연구
 

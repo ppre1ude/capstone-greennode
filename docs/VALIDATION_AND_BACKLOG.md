@@ -153,7 +153,7 @@
   - MVP에서 `reserved`, `cancelled`, `expired`는 코드/계약에 없고, `completed`는 DB에 있지만 전환 API가 없다.
   - 신청 후 `/posts/nearby`와 `/fridges/{id}/posts?status=available`에서 제외되는 것이 최종 계약이다.
 
-프론트 후속 재검증 범위: `generate -> create -> GET /posts/{id} -> /posts/nearby -> /fridges/{id}/posts?status=available -> request -> requested 제외`, generate 400/detail, 무효 `imageToken`, screenshot fixture MVP 허용은 2026-05-08 VM/API에서 재검증했다. 홈/상세/지도/신청의 실제 Android UI는 2026-05-08 실기기에서 재검증했다. 실제 FCM 수신은 남아 있다.
+프론트 후속 재검증 범위: `generate -> create -> GET /posts/{id} -> /posts/nearby -> /fridges/{id}/posts?status=available -> request -> requested 제외`, generate 400/detail, 무효 `imageToken`, screenshot fixture MVP 허용은 2026-05-08 VM/API에서 재검증했다. 홈/상세/지도/신청의 실제 Android UI는 2026-05-08 실기기에서 재검증했다. 당시 남았던 실제 FCM 수신은 2026-05-25 실기기+emulator 2계정 QA로 닫았다.
 
 ## 2026-05-08 백엔드 답변 기반 VM/API 재검증 결과
 
@@ -203,7 +203,7 @@
   - 실기기 재확인: QA용 localhost release APK로 id `7` 신청 후 뒤로 돌아온 지도 내부 목록에서 방금 신청한 항목이 수동 새로고침 없이 즉시 제거되고, 남은 available 항목 `id 5`, 기존 fallback `id 3`만 표시되는 것을 확인했다.
 - 후속:
   - 이 섹션의 P0 후속 UI 검증은 VM API fixture 생성 게시글 기반이었다. 이후 아래 `MVP flow closeout QA`에서 실제 앱 갤러리 선택 기반 `generate -> create -> home/detail/map -> request exclusion`을 끝까지 재검증했다.
-  - 실제 FCM 수신은 Firebase 설정 파일과 실제 토큰이 있는 2기기/2계정 환경이 필요하다.
+  - 실제 FCM 수신은 당시 Firebase 설정 파일과 실제 토큰이 있는 2기기/2계정 환경이 필요했다. 이후 2026-05-25 실기기+emulator 2계정 QA로 닫았다.
 
 ## 2026-05-08 MVP flow closeout QA 결과
 
@@ -238,7 +238,7 @@
   - 실제 FCM foreground/background/terminated 수신 QA는 이 환경에서 불가하다. Firebase 설정 포함 빌드, 알림 권한 허용, FCM token이 등록된 2기기/2계정, VM Firebase credentials 또는 발송 로그가 필요하다.
 - MVP closeout 판단:
   - `camera/gallery -> generate -> create -> home/detail/map -> request -> requested available 제외` core flow는 닫았다.
-  - 실제 FCM 수신은 제품 알림 claim의 별도 blocker로 남긴다.
+  - 당시 실제 FCM 수신은 제품 알림 claim의 별도 blocker로 남겼고, 이후 2026-05-25 실기기+emulator 2계정 QA로 닫았다.
 
 ## 2026-05-08 스프린트 종료 결정
 
@@ -250,7 +250,7 @@
   - 검색 MVP 범위: 지도 공유 냉장고 이름/주소 로컬 필터.
   - 홈/프로필 mock 통계 숫자 제거.
 - 이월 범위:
-  - FCM 실수신 QA. 이월 사유는 구현 미완성이 아니라 외부 Firebase/NHN Cloud 환경 blocker다.
+  - 당시 이월 범위: FCM 실수신 QA. 이월 사유는 구현 미완성이 아니라 외부 Firebase/NHN Cloud 환경 blocker였고, 2026-05-25에 닫았다.
   - 현재 blocker: `android/app/google-services.json` 부재, NHN Cloud VM의 Firebase Admin/service account credentials 설정 여부 미확인, 실제 FCM 발송 로그와 Mock FCM 로그 구분 미확인, 2 Android client/2계정/2 FCM token 환경 미준비.
   - `2026-GreenNode.pem`은 NHN Cloud SSH 터널/접속용 키이며 Firebase 앱 초기화나 FCM 발송 권한을 대신하지 않는다.
 - 관리자 요청 항목:
@@ -295,8 +295,8 @@
 | 홈 주변 나눔 목록 | 구현됨 | 등록 후 홈 재조회, requested 제외 검증. 2026-05-18 식재료명/냉장고명 로컬 검색 추가. 2026-05-21 `오늘 가져가기 좋은 재료` 로컬 추천 섹션 추가 | 서버 검색/추천/랭킹 API는 없음 |
 | 나눔 상세/신청 | 구현됨 | 201/403/409, `available -> requested`, 중복 신청 방어 검증 | `reserved/completed/cancelled/expired` 흐름 없음 |
 | 공유 냉장고 지도 | 구현됨 | 지도 마커, 냉장고 선택, 내부 available 목록, 상세 이동 검증. 2026-05-18 선택 카드와 내부 목록을 단일 bottom sheet로 정리 | 냉장고 없음 fixture/API 검증 추가 필요 |
-| 공유 냉장고별 나눔 목록 | 구현됨 | 신청 후 내부 목록에서 즉시 제거되는 것까지 실기기 재검증 | 냉장고 inventory 개념은 없음 |
-| FCM/알림함 | 프론트 구현됨 | payload parsing, fallback, 로컬 알림함 테스트됨 | 실제 FCM 수신 QA 미완료. 다음 스프린트 P0 |
+| 공유 냉장고별 나눔 목록 | 구현됨 | 신청 후 내부 목록에서 즉시 제거되는 것까지 실기기 재검증 | operator inventory 자체는 VM QA 통과. 남은 것은 role metadata와 QR 보관/수령 lifecycle |
+| FCM/알림함 | QA 완료, 읽음 API 후속 | payload parsing, fallback, 로컬 알림함, 실기기+emulator 2계정, release/process-killed/lockscreen tap 검증 | Android 13 실기기 또는 추가 OEM은 확보 시 참고 매트릭스 |
 | 검색 | 최소 구현 | 홈 나눔 식재료명/냉장고명 로컬 필터, 지도 공유 냉장고 이름/주소 로컬 필터 | 서버 검색 없음 |
 | 채팅 | 알림함으로 축소 | mock 채팅 제거됨 | WebSocket 채팅은 보류 |
 | 통계/탄소 절감 | 목업 제거/정리됨 | 준비 중 상태 | 실제 지표 API/계산식 없음 |
@@ -331,9 +331,9 @@
 
 현재 부족한 점:
 
-1. 공유 냉장고 자체 운영 기능은 아직 없다. 예: 냉장고 inventory 확인, 냉장고 운영자 확인, 보관 확인, 현장 조정.
+1. 공유 냉장고 운영자 inventory는 VM API QA와 앱 폐기 액션 보강까지 통과했다. 남은 것은 `/auth/me` role metadata와 보관/수령 QR lifecycle이다.
 2. `주변에 공유 냉장고 없음` 상태와 거리/지역 edge case는 추가 검증이 필요하다.
-3. 공유 냉장고와 연결된 실제 알림 claim은 FCM 실수신 QA가 끝나야 완료로 볼 수 있다.
+3. 공유 냉장고와 연결된 실제 알림 claim은 2026-05-25 FCM 실수신 QA로 닫혔다. 서버 읽음 상태/API 계약은 후속이다.
 
 ### 2026-05-19 Montage 기반 디자인 시스템 컴포넌트 레이어
 
@@ -353,7 +353,7 @@
 
 ### 이번 주 목표
 
-- 지난 스프린트에서 MVP core flow는 대부분 해결 완료했다. 단, 제품 알림 claim은 2기기/2계정 FCM 실수신 QA까지 끝나야 완료로 본다.
+- 지난 스프린트에서 MVP core flow는 대부분 해결 완료했고, 제품 알림 claim도 2026-05-25 2계정 FCM 실수신 QA로 닫았다.
 - 이번 주는 기능을 넓히되, 사용자가 실제로 쓸 수 있는 세로 흐름 1~2개를 검증까지 완료한다.
 - 동시에 OCR, Auth 확장, 냉장고 inventory처럼 큰 기능은 이번 주에 API/DB/UX 계약을 먼저 합의한다.
 
@@ -378,8 +378,8 @@
 - emulator QA에서 계정 A 등록 시 `share_created`, 계정 B 신청 시 `share_requested` 실제 FCM send가 backend log success 1 / failure 0으로 확인됐다.
 - foreground에서는 두 이벤트가 emulator에 수신되고 로컬 알림 탭에 기록됐다.
 - background에서는 system notification 표시와 tap의 `PostDetail` 라우팅이 확인됐다.
-- terminated surrogate에서는 app process kill 후 system notification 표시는 확인됐지만, logcat의 `Background messages only work if the message priority is set to 'high'` 때문에 tap routing reliability는 미완료로 둔다.
-- true 2-device QA에서 계정 A/B가 실제 physical devices로 `share_created`, `share_requested`를 foreground/background/terminated에서 수신한다.
+- 2026-05-25 backend high priority 재배포 후 release/process-killed와 lockscreen notification tap routing은 `PostDetail` 진입까지 확인했다.
+- true 2-device와 동등한 2계정 실기기+emulator QA에서 `share_created`, `share_requested` foreground/background/terminated 수신을 확인했다.
 - 백엔드 로그에서 실제 발송, mock 발송, 반경 내 대상 없음, token 없음, per-token 발송 실패를 `[FCM:share_created]`/`[FCM:share_requested]` prefix로 구분할 수 있다.
 
 ### P1: 나눔 등록 flow 개선
@@ -602,7 +602,7 @@ DB/API 초안:
   - `temp/real-device-detail-after-share-create.png`
 - 후속:
   - P0 `Post AI 메타데이터 저장 계약 불일치 정리`를 백엔드 수정 대상으로 유지한다.
-  - 실제 FCM foreground/background/terminated 수신 QA는 아직 미완료다. 다만 Firebase 설정 파일이 없는 release QA 빌드에서 앱이 크래시하지 않도록 알림 handler와 FCM 토큰 등록 경로에 프론트 guard와 회귀 테스트를 추가했다.
+  - 실제 FCM foreground/background/terminated 수신 QA는 당시 미완료였다. 다만 Firebase 설정 파일이 없는 release QA 빌드에서 앱이 크래시하지 않도록 알림 handler와 FCM 토큰 등록 경로에 프론트 guard와 회귀 테스트를 추가했고, 실제 수신 QA는 2026-05-25에 닫았다.
   - 당시에는 실제 `Stale`, `not-food`, `low-quality` fixture를 아직 확보하지 못했다. 이후 2026-05-07 fixture를 추가했고, 2026-05-08 기준 false-positive 결과는 Post-MVP AI 계약 항목으로 재분류했다.
 
 ## 2026-05-06 무기기 자동 QA 결과
@@ -648,7 +648,7 @@ DB/API 초안:
 - 남은 QA:
   - 이 시점에는 커밋 가능한 실제 fixture 이미지가 부족해 `Stale`, `not-food`, `low-quality`, `multi-object`의 AI 판정 품질을 닫지 못했다. 이후 fixture 기반 report-only 검증을 수행했고 최신 판정은 2026-05-08 closeout 섹션을 따른다.
   - `screenshot-or-ui`는 실제 API false-positive로 재현됐지만, 2026-05-08 답변 기준 MVP에서는 차단하지 않는다. Post-MVP rejection enum 도입 전까지 report-only로 관찰한다.
-  - 당시에는 실제 카메라 센서 촬영과 실제 FCM 수신을 실기기 QA로 남겼다. 이후 2026-05-08 closeout에서 카메라/generate/create/request flow는 재검증했고, 실제 FCM 수신만 남아 있다.
+  - 당시에는 실제 카메라 센서 촬영과 실제 FCM 수신을 실기기 QA로 남겼다. 이후 2026-05-08 closeout에서 카메라/generate/create/request flow를 재검증했고, 2026-05-25에 실제 FCM 수신도 닫았다.
 
 ## 2026-05-07 Android emulator 지도 냉장고 내부 목록 UI QA 결과
 
@@ -1270,7 +1270,7 @@ docs/VALIDATION_AND_BACKLOG.md의 "4. 한 장 촬영 UX와 multi-object 정책 �
 | 유저 통계                 | 정리됨                         | 신선도 온도, 포인트, 탄소 절감량의 하드코딩 숫자를 제거하고 `준비 중` 상태로 표시한다.                                                                                                                                                                               | 실제 지표를 넣으려면 계산식과 API 계약을 먼저 정의.                                                       |
 | 냉장고별 나눔 식재료 조회 | 프론트 코드 연동 완료, VM/API QA 및 Android UI 재확인 통과 | 지도에서 특정 냉장고를 선택하면 `GET /fridges/{id}/posts?status=available`로 내부 available 목록을 조회한다. loading/error/empty/list 상태를 분리하고 항목 탭 시 상세로 이동한다. 2026-05-08 VM/API에서 `PostNearbyRead` 카드 필드와 requested 제외를 재확인했고, 실제 Android UI에서 신규 Post 표시명/상태와 신청 후 즉시 제거를 확인했다. 2026-05-23 기준 별도 operator inventory API는 `/api/v1/operator/fridges/{fridgeId}/inventory/*`로 분리된다. | operator inventory 자체는 2026-05-25 VM QA 통과. 남은 것은 운영자 role metadata/진입 정책이다. |
 | 냉장고 운영자 inventory | VM API QA 통과, 앱 폐기 액션 보강 | `GET /api/v1/operator/fridges/{fridgeId}/inventory/summary`, `GET /api/v1/operator/fridges/{fridgeId}/inventory/items`, `PATCH /api/v1/operator/items/{postId}/dispose`를 실제 VM에서 검증했다. 운영자 200, 비운영자 403, 빈 냉장고 `total=0/items=[]`, requested dispose 409, available/expired dispose 200, disposed 항목의 operator items 및 냉장고 available 목록 제외를 확인했다. | `/auth/me`가 운영자 힌트를 내려주지 않아 실제 운영자 계정의 프로필 진입점 자동 노출은 후속 계약 필요. |
-| 지도 근처 냉장고 조회     | 구현됨                         | `MapScreen`이 `/fridges/nearby`, `FridgeSelectScreen`이 `/fridges/available`을 호출한다. 1번 검증에서 실제 냉장고 목록 표시를 확인했다.                                                                                                                              | 위치 미설정 기본 좌표 fallback과 API 실패 UI 보강.                                                        |
+| 지도 근처 냉장고 조회     | 구현됨                         | `MapScreen`이 `/fridges/nearby`, `FridgeSelectScreen`이 `/fridges/available`을 호출한다. 1번 검증에서 실제 냉장고 목록 표시를 확인했고, 2026-05-25 무기기 회귀에서 empty/error/retry/location guard를 고정했다.                                                         | 주변 공유 냉장고 없음/거리 필터 fixture 또는 백엔드 QA 보강.                                             |
 | 채팅 탭                   | 알림함으로 축소/구현됨         | `ChatListScreen`의 `MOCK_CHATS`를 제거하고 탭 라벨을 `알림`으로 바꿨다. 현재는 FCM 수신 기록/빈 상태를 보여준다. WebSocket, 채팅방 상세, 메시지 송수신 API는 없다.                                                                                                 | MVP에서는 알림함으로 유지하고 WebSocket 채팅은 보류.                                                      |
 | WebSocket 채팅            | 미구현/보류 권장               | 코드와 OpenAPI 모두 실시간 채팅 계약이 없다. 구현/검증 비용이 크다.                                                                                                                                                                                                  | 다음 스프린트에서는 단순 문의/예약 CTA 또는 알림함으로 축소한다.                                          |
 
@@ -1640,6 +1640,23 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
   - API34 Pixel release: `temp/pixel-api34-auth-me-after-token-retry.json`, `temp/pixel-api34-release-background-share-created-opened-summary.txt`, `temp/pixel-api34-release-background-share-created-after-tap-logcat.txt`, `temp/pixel-api34-release-stop-app-share-created-pids.json`, `temp/pixel-api34-release-stop-app-share-created-shade-summary.txt`, `temp/pixel-api34-release-stop-app-share-created-opened-summary.txt`, `temp/pixel-api34-release-stop-app-share-created-after-tap-logcat.txt`.
 - 검증 방법: FCM 테스트 메시지 수신 QA, 앱 foreground/background/terminated 확인, backend FCM send log 확인, `npx jest __tests__/notificationService.test.ts __tests__/appNavigator.notificationFlush.test.tsx __tests__/deviceRegistration.notificationPermission.test.ts --runInBand`, `npx tsc --noEmit`, `.\gradlew.bat :app:assembleRelease -PreactNativeArchitectures=arm64-v8a --console=plain`, `.\gradlew.bat :app:assembleRelease -PreactNativeArchitectures=x86_64 --console=plain`, `.\gradlew.bat :app:assembleDebugOptimized -PreactNativeArchitectures=x86_64 --console=plain`
 - 관련 파일/화면/API: `notifications.ts`, `deviceRegistration.ts`, `firebaseMessaging.ts`, `notificationStore.ts`, `ChatListScreen`, `index.js`, `AppNavigator`, Firebase Messaging
+
+## 2026-05-25 무기기 예외 상태 회귀 QA
+
+- 분류: 무기기 자동 회귀
+- 우선순위: P1
+- 배경: 실기기 FCM과 operator inventory QA가 닫힌 뒤에도 네트워크 실패/빈 상태/위치 미설정 계정의 화면 분기가 문서상 잔여 QA로 남아 있었다.
+- 현재 동작:
+  - 홈 주변 나눔은 `/posts/nearby` 빈 응답을 `아직 근처에 나눔이 없어요`로 표시하고, 네트워크 실패는 `목록을 불러오지 못했습니다`와 `다시 시도`로 분리한다.
+  - 지도 냉장고 목록은 `/fridges/nearby` 빈 응답, API 오류, 재시도, 위치 미설정 CTA를 분리한다.
+  - 냉장고 선택 화면은 `/fridges/available` 빈 응답, API 오류, 재시도, 위치 미설정 CTA를 분리하고 위치가 없으면 등록 footer를 숨긴다.
+- Acceptance Criteria:
+  - [x] 홈 empty/error/retry/location guard 회귀 테스트가 있다.
+  - [x] 지도 냉장고 목록 empty/error/retry/location guard 회귀 테스트가 있다.
+  - [x] 냉장고 선택 empty/error/retry/location guard 회귀 테스트가 있다.
+- 2026-05-25 evidence:
+  - `npm test -- --runInBand __tests__/home.nearbyRefresh.test.tsx __tests__/map.fridgePosts.test.tsx __tests__/fridgeSelect.qrFlow.test.tsx`
+- 관련 파일/화면/API: `HomeScreen`, `MapScreen`, `FridgeSelectScreen`, `/posts/nearby`, `/fridges/nearby`, `/fridges/available`
 
 ## Operator inventory runtime QA
 

@@ -454,7 +454,7 @@ Authorization: Bearer {token}
 
 ### 4.8 나눔 신청하기
 
-상세 화면의 `나눔 신청하기` CTA는 이 API에 연결되어 있다. 백엔드는 구현 및 VM 검증이 완료됐고, 프론트는 API client, CTA, 성공/실패 상태, 홈 목록 갱신 신호를 코드에 반영했다. 실제 앱-VM 연결 QA는 별도로 수행한다.
+상세 화면의 `나눔 신청하기` CTA는 이 API에 연결되어 있다. 백엔드는 구현 및 VM 검증이 완료됐고, 프론트는 API client, CTA, 성공/실패 상태, 홈/지도 목록 갱신 신호를 코드에 반영했다. 2026-05-08 실제 Android UI QA에서 신청 후 `requested` 전환과 홈/지도 available 목록 제외를 확인했다.
 
 ```
 POST /api/v1/posts/{post_id}/requests
@@ -727,7 +727,7 @@ type FoodLinkFcmPayload =
 - `AppNavigator`에서 foreground, opened-app, initial-notification handler를 등록한다.
 - handler는 `data` payload가 문자열 + camelCase인지 검증하고, 유효한 이벤트만 로컬 알림함에 저장한다.
 - foreground 수신은 즉시 화면을 이동하지 않고 알림함 기록만 남긴다.
-- background 상태에서 알림을 열면 대상 화면으로 이동한다. Terminated 상태의 tap routing reliability는 backend Android FCM priority `high` 적용 후 재검증한다.
+- background/terminated 상태에서 알림을 열면 대상 화면으로 이동한다. 2026-05-25 backend Android FCM priority `high` 적용 후 실기기, emulator, release/process-killed, Samsung lockscreen tap routing에서 `PostDetail` 진입을 재검증했다.
 
 수신 분기 기준:
 
