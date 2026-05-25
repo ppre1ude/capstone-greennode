@@ -54,8 +54,7 @@ export const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 15,
   },
-  emptyEmoji: {
-    fontSize: 48,
+  emptyIcon: {
     marginBottom: 16,
   },
   emptyText: {
@@ -134,13 +133,7 @@ export const styles = StyleSheet.create({
     borderRadius: 6,
     backgroundColor: '#FFFFFF',
   },
-  footer: {
-    paddingHorizontal: 24,
-    paddingBottom: Platform.OS === 'ios' ? 40 : 24,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: colors.borderLight,
-  },
+  footer: {},
   submitButton: {
     height: 56,
     backgroundColor: colors.primary,

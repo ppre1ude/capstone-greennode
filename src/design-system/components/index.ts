@@ -23,6 +23,8 @@ export type {
 } from './Icon';
 export { DSListCell } from './ListCell';
 export type { DSListCellPadding, DSListCellProps } from './ListCell';
+export { DSScreenFooter } from './ScreenFooter';
+export type { DSScreenFooterProps } from './ScreenFooter';
 export { DSText } from './Text';
 export type { DSTextProps, DSTextVariant } from './Text';
 export { DSTextField } from './TextField';

@@ -20,7 +20,14 @@ import {
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@/navigation/types';
-import { DSButton, DSCard, DSChip, DSText } from '@/design-system';
+import {
+  DSButton,
+  DSCard,
+  DSChip,
+  DSIcon,
+  DSScreenFooter,
+  DSText,
+} from '@/design-system';
 import {
   getPostDetail,
   deletePost,
@@ -240,14 +247,13 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
   const isRequestHoldExpired = requestExpiresAt
     ? isInventoryHoldExpired(requestExpiresAt, currentTimeMs)
     : false;
-  const requestHoldNotice =
-    requestExpiresAt
-      ? isRequestHoldExpired
-        ? '수령 제한 시간이 지났어요. 목록을 새로고침하면 상태가 갱신됩니다.'
-        : `수령까지 남은 시간 ${formatInventoryHoldRemaining(
-            getInventoryHoldRemainingMs(requestExpiresAt, currentTimeMs),
-          )}`
-      : null;
+  const requestHoldNotice = requestExpiresAt
+    ? isRequestHoldExpired
+      ? '수령 제한 시간이 지났어요. 목록을 새로고침하면 상태가 갱신됩니다.'
+      : `수령까지 남은 시간 ${formatInventoryHoldRemaining(
+          getInventoryHoldRemainingMs(requestExpiresAt, currentTimeMs),
+        )}`
+    : null;
   const canConfirmPickup =
     !isMyPost && post.status === 'requested' && !isRequestHoldExpired;
   const daysLeft = Math.ceil(
@@ -269,11 +275,14 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
           <TouchableOpacity
             onPress={() => navigation.goBack()}
             style={styles.headerButton}>
-            <Text style={styles.headerIcon}>←</Text>
+            <DSIcon name="angle-left" size="large" color="textOnPrimary" />
           </TouchableOpacity>
           {isMyPost && (
-            <TouchableOpacity onPress={handleDelete} disabled={isDeleting}>
-              <Text style={styles.headerDeleteIcon}>🗑️</Text>
+            <TouchableOpacity
+              onPress={handleDelete}
+              disabled={isDeleting}
+              style={styles.headerButton}>
+              <DSIcon name="trash-can" size="medium" color="textOnPrimary" />
             </TouchableOpacity>
           )}
         </View>
@@ -306,7 +315,12 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
           {/* 주요 정보 박스 */}
           <DSCard variant="plain" padded={false} style={styles.infoBox}>
             <View style={styles.infoItem}>
-              <Text style={styles.infoIcon}>⏱️</Text>
+              <DSIcon
+                name="clock"
+                size="large"
+                color="primary"
+                style={styles.infoIcon}
+              />
               <View>
                 <Text style={styles.infoLabel}>남은 기한</Text>
                 <Text style={styles.infoValue}>
@@ -316,7 +330,12 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
             </View>
             <View style={styles.dividerVertical} />
             <View style={styles.infoItem}>
-              <Text style={styles.infoIcon}>✓</Text>
+              <DSIcon
+                name="circle-check"
+                size="large"
+                color="primary"
+                style={styles.infoIcon}
+              />
               <View>
                 <Text style={styles.infoLabel}>상태 안내</Text>
                 <Text style={styles.infoValue}>{quality.label}</Text>
@@ -335,7 +354,7 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
 
       {/* 하단 CTA (내가 쓴 글이 아닐 경우 채팅하기 등) */}
       {!isMyPost && (
-        <View style={styles.footer}>
+        <DSScreenFooter style={styles.footer}>
           {requestNotice && (
             <Text style={styles.requestNotice}>{requestNotice}</Text>
           )}
@@ -378,7 +397,7 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
               textStyle={styles.pickupQrButtonText}
             />
           ) : null}
-        </View>
+        </DSScreenFooter>
       )}
     </View>
   );

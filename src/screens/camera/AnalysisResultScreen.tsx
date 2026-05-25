@@ -21,7 +21,14 @@ import {
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@/navigation/types';
-import { DSButton, DSCard, DSChip, DSText } from '@/design-system';
+import {
+  DSButton,
+  DSCard,
+  DSChip,
+  DSIcon,
+  DSScreenFooter,
+  DSText,
+} from '@/design-system';
 import { colors } from '@/theme';
 import {
   getDetectionName,
@@ -76,7 +83,7 @@ const AnalysisResultScreen = ({ route, navigation }: Props) => {
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           style={styles.headerButton}>
-          <Text style={styles.headerIcon}>←</Text>
+          <DSIcon name="angle-left" size="large" color="primary" />
         </TouchableOpacity>
         <DSText
           variant="bodyBold"
@@ -104,9 +111,21 @@ const AnalysisResultScreen = ({ route, navigation }: Props) => {
               }
               size="large"
               leading={
-                <Text style={styles.resultBadgeIcon}>
-                  {quality.canShare && !needsReview ? 'OK' : '!'}
-                </Text>
+                <DSIcon
+                  name={
+                    quality.canShare && !needsReview
+                      ? 'circle-check'
+                      : 'circle-exclamation'
+                  }
+                  size="small"
+                  color={
+                    !quality.canShare
+                      ? 'error'
+                      : needsReview
+                      ? 'warning'
+                      : 'primary'
+                  }
+                />
               }
               style={styles.resultBadge}
             />
@@ -241,7 +260,7 @@ const AnalysisResultScreen = ({ route, navigation }: Props) => {
       </ScrollView>
 
       {/* CTA (하단 고정) */}
-      <View style={styles.footer}>
+      <DSScreenFooter style={styles.footer}>
         <DSButton
           label="다시 촬영"
           variant="outlined"
@@ -263,7 +282,7 @@ const AnalysisResultScreen = ({ route, navigation }: Props) => {
             });
           }}
         />
-      </View>
+      </DSScreenFooter>
     </View>
   );
 };
@@ -470,11 +489,6 @@ const styles = StyleSheet.create({
   // 하단 버튼
   footer: {
     flexDirection: 'row',
-    padding: 24,
-    paddingBottom: Platform.OS === 'ios' ? 40 : 24,
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: colors.borderLight,
     gap: 12,
   },
   retakeButton: {

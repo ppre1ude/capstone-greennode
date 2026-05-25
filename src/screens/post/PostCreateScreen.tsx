@@ -21,7 +21,14 @@ import {
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@/navigation/types';
-import { DSButton, DSCard, DSChip, DSTextField } from '@/design-system';
+import {
+  DSButton,
+  DSCard,
+  DSChip,
+  DSIcon,
+  DSScreenFooter,
+  DSTextField,
+} from '@/design-system';
 import {
   getDetectionName,
   getDetectionSummary,
@@ -148,7 +155,7 @@ const PostCreateScreen = ({ route, navigation }: Props) => {
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           style={styles.headerButton}>
-          <Text style={styles.headerIcon}>←</Text>
+          <DSIcon name="angle-left" size="large" color="primary" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>나눔 등록</Text>
         <View style={styles.headerSpacer} />
@@ -162,7 +169,13 @@ const PostCreateScreen = ({ route, navigation }: Props) => {
             label="AI 분석 완료"
             tone="primary"
             style={styles.aiBadge}
-            leading={<Text style={styles.aiBadgeIcon}>✨</Text>}
+            leading={
+              <DSIcon
+                name="wand-magic-sparkles"
+                size="xsmall"
+                color="primary"
+              />
+            }
           />
         </View>
 
@@ -203,7 +216,8 @@ const PostCreateScreen = ({ route, navigation }: Props) => {
               style={styles.detectionCard}>
               <Text style={styles.detectionTitle}>감지된 식재료 후보</Text>
               <Text style={styles.detectionHint}>
-                백엔드 분리 등록 계약 전까지는 대표 식재료 1개 기준으로 등록합니다.
+                백엔드 분리 등록 계약 전까지는 대표 식재료 1개 기준으로
+                등록합니다.
               </Text>
               {detections.map((detection, index) => (
                 <View
@@ -244,7 +258,7 @@ const PostCreateScreen = ({ route, navigation }: Props) => {
       </ScrollView>
 
       {/* 하단 버튼 */}
-      <View style={styles.footer}>
+      <DSScreenFooter style={styles.footer}>
         <DSButton
           label={quality.canShare ? '다음 단계로' : '나눔 기준 미충족'}
           onPress={handleNext}
@@ -252,7 +266,7 @@ const PostCreateScreen = ({ route, navigation }: Props) => {
           style={styles.submitButton}
           textStyle={styles.submitButtonText}
         />
-      </View>
+      </DSScreenFooter>
     </KeyboardAvoidingView>
   );
 };
