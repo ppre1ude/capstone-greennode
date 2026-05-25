@@ -3,6 +3,7 @@ import {Text, TouchableOpacity} from 'react-native';
 import ReactTestRenderer from 'react-test-renderer';
 import AnalysisResultScreen from '@/screens/camera/AnalysisResultScreen';
 import type {GenerateResult} from '@/types';
+import {renderWithSafeArea} from '../test-utils/renderWithSafeArea';
 
 const baseResult: GenerateResult = {
   detectedFruit: 'apple',
@@ -31,10 +32,12 @@ const createScreen = async (result: GenerateResult) => {
 
   await ReactTestRenderer.act(async () => {
     renderer = ReactTestRenderer.create(
-      <AnalysisResultScreen
-        navigation={navigation as never}
-        route={{params: {result, imageUri: 'file:///scan.jpg'}} as never}
-      />,
+      renderWithSafeArea(
+        <AnalysisResultScreen
+          navigation={navigation as never}
+          route={{params: {result, imageUri: 'file:///scan.jpg'}} as never}
+        />,
+      ),
     );
   });
 

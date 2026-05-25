@@ -6,6 +6,7 @@ import { createPost } from '@/api/posts';
 import FridgeSelectScreen from '@/screens/post/FridgeSelectScreen';
 import { useAuthStore } from '@/store/authStore';
 import type { Fridge, Post } from '@/types';
+import { renderWithSafeArea } from '../test-utils/renderWithSafeArea';
 
 jest.mock('@/api/fridges', () => ({
   getAvailableFridges: jest.fn(),
@@ -81,21 +82,23 @@ const renderScreen = async () => {
 
   await ReactTestRenderer.act(async () => {
     renderer = ReactTestRenderer.create(
-      <FridgeSelectScreen
-        navigation={navigation as never}
-        route={
-          {
-            params: {
-              postData: {
-                imageToken: 'image-token',
-                expirationDate: '2026-05-24',
+      renderWithSafeArea(
+        <FridgeSelectScreen
+          navigation={navigation as never}
+          route={
+            {
+              params: {
+                postData: {
+                  imageToken: 'image-token',
+                  expirationDate: '2026-05-24',
+                },
+                qualityCategory: 'Fresh',
+                qualityCanShare: true,
               },
-              qualityCategory: 'Fresh',
-              qualityCanShare: true,
-            },
-          } as never
-        }
-      />,
+            } as never
+          }
+        />,
+      ),
     );
     await Promise.resolve();
     await Promise.resolve();

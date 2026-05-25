@@ -4,6 +4,10 @@
 import React from 'react';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
 import {StyleSheet} from 'react-native';
+import {
+  initialWindowMetrics,
+  SafeAreaProvider,
+} from 'react-native-safe-area-context';
 import AppNavigator from '@/navigation/AppNavigator';
 import {
   consumePendingNativeNotificationPayload,
@@ -15,6 +19,11 @@ import type {FcmStringDataPayload} from '@/types';
 interface AppProps {
   initialNotificationPayload?: FcmStringDataPayload;
 }
+
+const initialSafeAreaMetrics = initialWindowMetrics ?? {
+  frame: {x: 0, y: 0, width: 0, height: 0},
+  insets: {top: 0, right: 0, bottom: 0, left: 0},
+};
 
 function App({initialNotificationPayload}: AppProps) {
   React.useEffect(() => {
@@ -30,7 +39,9 @@ function App({initialNotificationPayload}: AppProps) {
 
   return (
     <GestureHandlerRootView style={styles.root}>
-      <AppNavigator />
+      <SafeAreaProvider initialMetrics={initialSafeAreaMetrics}>
+        <AppNavigator />
+      </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }

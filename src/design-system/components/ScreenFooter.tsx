@@ -1,4 +1,4 @@
-import React, { ReactNode, useContext } from 'react';
+import React, { ReactNode } from 'react';
 import {
   StyleProp,
   StyleSheet,
@@ -6,7 +6,7 @@ import {
   ViewProps,
   ViewStyle,
 } from 'react-native';
-import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '@/theme';
 
 export interface DSScreenFooterProps extends ViewProps {
@@ -23,12 +23,7 @@ export const DSScreenFooter = ({
   style,
   ...props
 }: DSScreenFooterProps) => {
-  const insets = useContext(SafeAreaInsetsContext) ?? {
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
-  };
+  const insets = useSafeAreaInsets();
   const paddingBottom = Math.max(
     insets.bottom + bottomInsetGap,
     minBottomPadding,

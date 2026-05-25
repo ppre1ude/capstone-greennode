@@ -1,21 +1,24 @@
 import React from 'react';
 import { View } from 'react-native';
 import ReactTestRenderer from 'react-test-renderer';
-import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { DSScreenFooter } from '@/design-system';
 
 const renderWithBottomInset = (bottom: number) => (
-  <SafeAreaInsetsContext.Provider
-    value={{
-      top: 0,
-      right: 0,
-      bottom,
-      left: 0,
+  <SafeAreaProvider
+    initialMetrics={{
+      frame: { x: 0, y: 0, width: 390, height: 844 },
+      insets: {
+        top: 0,
+        right: 0,
+        bottom,
+        left: 0,
+      },
     }}>
     <DSScreenFooter testID="screen-footer">
       <View />
     </DSScreenFooter>
-  </SafeAreaInsetsContext.Provider>
+  </SafeAreaProvider>
 );
 
 const flattenStyle = (style: unknown) =>
