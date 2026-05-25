@@ -28,6 +28,7 @@ let openedUnsubscribe: (() => void) | null = null;
 let nativeOpenSubscription: EmitterSubscription | null = null;
 let backgroundHandlerRegistered = false;
 let pendingNavigationPayload: FoodLinkFcmPayload | null = null;
+const MAX_HANDLED_OPENED_MESSAGE_IDS = 200;
 const handledOpenedMessageIds = new Set<string>();
 
 const KNOWN_TYPES = new Set(['share_created', 'share_requested']);
@@ -198,15 +199,26 @@ export const flushPendingNotificationNavigation = () => {
 };
 
 const getRemoteMessageId = (message: RemoteMessage) => {
-  if (message.messageId) {
-    return message.messageId;
+  const dataMessageId = message.data?.messageId;
+  return (
+    message.messageId ||
+    (typeof dataMessageId === 'string' ? dataMessageId : undefined)
+  );
+};
+
+const rememberHandledOpenedMessageId = (messageId: string) => {
+  if (handledOpenedMessageIds.has(messageId)) {
+    return;
   }
 
-  if (isFcmStringDataPayload(message.data)) {
-    return message.data.messageId;
+  if (handledOpenedMessageIds.size >= MAX_HANDLED_OPENED_MESSAGE_IDS) {
+    const oldestMessageId = handledOpenedMessageIds.values().next().value;
+    if (oldestMessageId) {
+      handledOpenedMessageIds.delete(oldestMessageId);
+    }
   }
 
-  return undefined;
+  handledOpenedMessageIds.add(messageId);
 };
 
 export const handleRemoteNotification = async (
@@ -235,7 +247,7 @@ export const handleRemoteNotification = async (
 
   useNotificationStore.getState().addNotification(record);
   if (source === 'opened' && messageId) {
-    handledOpenedMessageIds.add(messageId);
+    rememberHandledOpenedMessageId(messageId);
   }
 
   if (openTarget) {

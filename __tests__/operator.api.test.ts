@@ -134,4 +134,19 @@ describe('operator API contract', () => {
     expect(response.data?.[0]?.itemName).toBe('사과');
     expect(response.data?.[0]?.labelCode).toBe('#07');
   });
+
+  it('falls back to an empty operator inventory list for malformed item payloads', async () => {
+    mockedApiClient.get.mockResolvedValue({
+      data: {
+        success: true,
+        message: 'ok',
+        data: {unexpected: 'shape'},
+      },
+    });
+
+    const response = await getOperatorInventoryItems(1);
+
+    expect(response.success).toBe(true);
+    expect(response.data).toEqual([]);
+  });
 });

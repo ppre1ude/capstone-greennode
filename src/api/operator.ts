@@ -171,6 +171,6 @@ export const getOperatorInventoryItems = async (
     `${OPERATOR_PREFIX}/fridges/${fridgeId}/inventory/items`,
   );
   return normalizeApiResponse(response.data, items =>
-    items.map(normalizeOperatorItem),
+    Array.isArray(items) ? items.map(normalizeOperatorItem) : [],
   );
 };

@@ -389,4 +389,42 @@ describe('notification service', () => {
 
     NativeModules.GreennodeNotification = originalModule;
   });
+
+  it('bounds opened notification message id dedupe cache', async () => {
+    const makeOpenedMessage = (messageId: string) =>
+      ({
+        messageId,
+        data: {
+          type: 'share_created',
+          postId: '19',
+          fruitName: 'banana',
+          fridgeName: 'test fridge',
+        },
+      } as never);
+
+    for (let index = 0; index < 205; index += 1) {
+      await handleRemoteNotification(
+        makeOpenedMessage(`bounded-open-message-${index}`),
+        'opened',
+      );
+    }
+
+    await expect(
+      handleRemoteNotification(
+        makeOpenedMessage('bounded-open-message-204'),
+        'opened',
+      ),
+    ).resolves.toBeNull();
+
+    await expect(
+      handleRemoteNotification(
+        makeOpenedMessage('bounded-open-message-0'),
+        'opened',
+      ),
+    ).resolves.toMatchObject({
+      id: 'bounded-open-message-0',
+      source: 'opened',
+      postId: '19',
+    });
+  });
 });
