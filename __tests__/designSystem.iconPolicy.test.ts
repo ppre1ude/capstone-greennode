@@ -9,7 +9,15 @@ const iconPolicyFiles = [
   'src/design-system/catalog/DesignSystemCatalog.tsx',
   'src/navigation/MainTab.tsx',
   'src/screens/auth/LoginScreen.tsx',
+  'src/screens/camera/CameraScanScreen.tsx',
+  'src/screens/chat/ChatListScreen.tsx',
   'src/screens/home/HomeScreen.tsx',
+  'src/screens/map/MapScreen.tsx',
+  'src/screens/post/FridgeSelectScreen.tsx',
+  'src/screens/post/PostCompleteScreen.tsx',
+  'src/screens/post/PostCreateScreen.tsx',
+  'src/screens/post/PostDetailScreen.tsx',
+  'src/screens/profile/ProfileScreen.tsx',
 ];
 
 const fontAwesome6Fonts = [

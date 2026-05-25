@@ -56,8 +56,8 @@ export const styles = StyleSheet.create({
     borderColor: '#FFFFFF',
     transform: [{ scale: 1.2 }],
   },
-  markerEmoji: {
-    fontSize: 20,
+  markerIcon: {
+    width: 20,
   },
   myLocationButton: {
     position: 'absolute',
@@ -75,9 +75,6 @@ export const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 6,
     zIndex: 10,
-  },
-  myLocationIcon: {
-    fontSize: 20,
   },
   bottomCarousel: {
     position: 'absolute',

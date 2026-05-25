@@ -13,6 +13,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { colors } from '@/theme';
+import { DSIcon } from '@/design-system';
 import { useNotificationStore } from '@/store/notificationStore';
 import { openNotificationTarget } from '@/services/notifications';
 import type { NotificationRecord } from '@/types';
@@ -134,7 +135,12 @@ const ChatListScreen = () => {
         </ScrollView>
       ) : (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyIcon}>🔔</Text>
+          <DSIcon
+            name="bell"
+            size={48}
+            color="accent"
+            style={styles.emptyIcon}
+          />
           <Text style={styles.emptyTitle}>아직 알림이 없습니다</Text>
           <Text style={styles.emptyText}>
             근처 나눔 등록과 나눔 신청 알림이 이곳에 기록됩니다.
@@ -253,7 +259,6 @@ const styles = StyleSheet.create({
     paddingBottom: 80,
   },
   emptyIcon: {
-    fontSize: 48,
     marginBottom: 16,
   },
   emptyTitle: {
