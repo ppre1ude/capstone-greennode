@@ -1265,7 +1265,7 @@ docs/VALIDATION_AND_BACKLOG.md의 "4. 한 장 촬영 UX와 multi-object 정책 �
 | 홈 데이터 없음 상태       | 구현됨                         | 나눔 식재료가 없으면 `아직 근처에 나눔이 없어요` 빈 상태를 표시한다.                                                                                                                                                                                                 | API 실패와 진짜 빈 상태를 구분하는 에러 UI 추가.                                                          |
 | 검색 기능                 | 부분 구현, 서버 검색 Post-MVP | 홈은 현재 불러온 주변 나눔 식재료를 식재료명/냉장고명으로 로컬 필터링한다. 홈 지도 아이콘은 지도 탭으로 이동하고, 지도 검색 입력은 공유 냉장고 이름/주소 로컬 필터로 동작한다. 2026-05-23 백엔드 회신 기준 서버 검색은 MVP 미포함이며 향후 nearby API optional `q`로 확장한다. | 서버 검색/독립 검색 화면은 후속 범위로 분리.                                                             |
 | 검색 결과 없음            | 구현됨                         | 홈 나눔 식재료 로컬 검색과 지도 공유 냉장고 로컬 검색 모두 결과 없음 상태와 검색 초기화를 제공한다.                                                                                                                                                                  | 서버 검색/독립 검색 화면은 후속 범위로 분리.                                                             |
-| 푸쉬 알림                 | emulator foreground/background 실수신 QA 통과, 백엔드 재배포 대기 | Firebase Messaging 의존성, Android 알림 권한, FCM 토큰 등록이 있다. `share_created`, `share_requested` foreground/background/opened/initial handler를 구현했고, payload는 문자열 + camelCase(`type`, `postId`, `requestId`, `fruitName`, `fridgeName`)로 검증한다. Firebase 설정이 없는 QA/release 빌드에서는 알림 handler와 FCM 토큰 등록을 안전하게 건너뛴다. 2026-05-21 emulator QA에서 `greennode-94eae` client/Admin project 정렬 후 실제 send success 1 / failure 0, foreground 로컬 알림 탭 기록, background system notification 표시와 tap의 `PostDetail` 라우팅을 확인했다. 2026-05-23 백엔드가 Android `priority: high`, APNS priority, per-token log, type별 prefix를 구현 예정으로 회신했다. 알림함은 로컬 수신 기록/빈 상태 중심이며 읽음 상태 API는 없다. | 백엔드 VM 재배포 후 terminated routing과 physical 2-device/2-account QA를 재개한다. |
+| 푸쉬 알림                 | 2계정 debug QA 통과, release terminated blocker 남음 | Firebase Messaging 의존성, Android 알림 권한, FCM 토큰 등록이 있다. `share_created`, `share_requested` foreground/background/opened/initial handler를 구현했고, payload는 문자열 + camelCase(`type`, `postId`, `requestId`, `fruitName`, `fridgeName`)로 검증한다. Firebase 설정이 없는 QA/release 빌드에서는 알림 handler와 FCM 토큰 등록을 안전하게 건너뛴다. 2026-05-21 emulator QA에서 `greennode-94eae` client/Admin project 정렬 후 실제 send success 1 / failure 0, foreground 로컬 알림 탭 기록, background system notification 표시와 tap의 `PostDetail` 라우팅을 확인했다. 2026-05-25 실기기+emulator 2계정 QA에서 debug foreground/background/terminated, 기존 task onNewIntent, fresh install, 로그아웃 후 로그인 defer 경로를 확인했다. release build는 background tap은 통과했지만 process-killed notification tap에서 blank RN root가 재현됐다. 알림함은 로컬 수신 기록/빈 상태 중심이며 읽음 상태 API는 없다. | release process-killed tap blank root 원인 조사와 잠금화면 수동 tap 확인이 남아 있다. |
 | 유저 프로필               | 부분 구현                      | 닉네임/이메일은 실제 유저 정보를 표시한다. 프로필 수정, 메뉴 이동, 내 나눔/관심/받은 나눔은 연결되어 있지 않다.                                                                                                                                                      | 프로필 수정 또는 내 나눔 내역 중 하나만 우선 연결.                                                        |
 | 유저 통계                 | 정리됨                         | 신선도 온도, 포인트, 탄소 절감량의 하드코딩 숫자를 제거하고 `준비 중` 상태로 표시한다.                                                                                                                                                                               | 실제 지표를 넣으려면 계산식과 API 계약을 먼저 정의.                                                       |
 | 냉장고별 나눔 식재료 조회 | 프론트 코드 연동 완료, VM/API QA 및 Android UI 재확인 통과 | 지도에서 특정 냉장고를 선택하면 `GET /fridges/{id}/posts?status=available`로 내부 available 목록을 조회한다. loading/error/empty/list 상태를 분리하고 항목 탭 시 상세로 이동한다. 2026-05-08 VM/API에서 `PostNearbyRead` 카드 필드와 requested 제외를 재확인했고, 실제 Android UI에서 신규 Post 표시명/상태와 신청 후 즉시 제거를 확인했다. 2026-05-23 기준 별도 operator inventory API는 `/api/v1/operator/fridges/{fridgeId}/inventory/*`로 분리된다. | operator inventory는 백엔드 VM 재배포 후 권한/빈 목록/dispose QA를 진행한다. |
@@ -1275,9 +1275,9 @@ docs/VALIDATION_AND_BACKLOG.md의 "4. 한 장 촬영 UX와 multi-object 정책 �
 
 #### 다음 스프린트 우선순위 제안
 
-1. Backend FCM 배포 확인: 2026-05-23 회신의 Android `priority: high`, APNS priority, per-token log, type별 prefix 구현이 VM에 재배포됐는지 확인한다.
-2. Terminated FCM 재검증: backend `high` priority 적용 후 terminated notification tap routing reliability를 다시 확인한다.
-3. Physical 2-device QA: ADB가 실제 Samsung device를 인식하면 Firebase 설정 포함 빌드와 FCM token이 등록된 두 테스트 계정/기기에서 `share_created`, `share_requested` foreground/background/terminated 수신을 확인한다.
+1. Release terminated FCM 조사: `app-release.apk`에서 process-killed notification tap 후 blank RN root가 뜨는 원인을 native launch/RN bundle/navigation 초기화 순서까지 좁힌다.
+2. 잠금화면 수동 QA: Samsung 패턴 잠금 상태에서 Greennode 알림 tap -> 잠금해제 -> `PostDetail` 진입을 사람이 확인한다.
+3. 기기 매트릭스 보강: Android 13/14 또는 Pixel 계열 기기에서 Firebase 설정 포함 빌드와 FCM token이 등록된 두 테스트 계정으로 background/terminated 수신을 한 번 더 확인한다.
 4. Operator inventory QA: summary/items/dispose 확정 계약을 실제 운영자/비운영자/빈 냉장고/available·expired·requested 항목으로 검증한다.
 5. Post-MVP AI/rejection contract: `stale-or-rotten`, `screenshot-or-ui`, `low-quality` false-positive를 rejection reason 또는 review-required 계약으로 승격할지 백엔드/AI와 결정한다.
 
@@ -1592,7 +1592,7 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
 - 분류: 기능 구현
 - 우선순위: P2
 - 배경: FCM 토큰 등록과 로컬 알림함 수신 처리는 구현됐지만, 서버 알림 목록/읽음 상태 API는 없다.
-- 현재 동작: FCM token은 사용자가 위치 설정 화면의 `나눔 알림 받기` CTA를 눌렀을 때 권한 요청 후 `/auth/me/location`으로 등록한다. 위치 설정 진입과 기존 유저의 위치 자동 갱신만으로는 알림 권한을 요청하지 않으며, Android 13+ `POST_NOTIFICATIONS` 거부 시 Firebase permission/register/getToken을 호출하지 않고 `fcmToken` 없이 위치 등록을 계속한다. `share_created`, `share_requested` handler는 foreground/background/opened/initial 메시지를 로컬 알림함에 기록한다. 알림 열기와 알림함 항목 탭은 `PostDetail`로 이동하며, `share_requested`는 내 나눔 관리 화면이 없으므로 상세 fallback을 쓴다. Firebase 앱이 설정되지 않은 QA/release 빌드에서는 Messaging 인스턴스 생성 실패를 잡고 handler 등록과 FCM 토큰 조회를 건너뛰어 앱 시작/위치 갱신 크래시를 막는다. 2026-05-21 emulator QA에서 Firebase client/Admin project를 `greennode-94eae`로 맞춘 뒤 `share_created`, `share_requested` 실제 FCM send와 foreground/background 수신은 확인됐다. terminated surrogate는 system notification 표시까지만 확인됐다. 2026-05-23 백엔드는 Android `priority: high`, iOS `apns-priority: 10`, per-token log, type별 prefix 구현 예정으로 회신했다. 2026-05-25 실기기 `SM-S928N` + Android emulator `Medium_Phone_API_36.1` + NHN Cloud VM에서 2계정 foreground/background FCM QA를 통과했다. `share_created`는 수요자 emulator에 foreground 알림함 기록과 background system notification을 남겼고, `share_requested`는 공급자 실기기에 foreground 알림함 기록과 background system notification을 남겼다. VM 로그는 `[FCM:share_created]`와 `[FCM:share_requested]` type prefix, per-token OK/FAIL, 실제 send success를 구분했다. terminated tap routing은 아직 별도 재검증 대상으로 남긴다.
+- 현재 동작: FCM token은 사용자가 위치 설정 화면의 `나눔 알림 받기` CTA를 눌렀을 때 권한 요청 후 `/auth/me/location`으로 등록한다. 위치 설정 진입과 기존 유저의 위치 자동 갱신만으로는 알림 권한을 요청하지 않으며, Android 13+ `POST_NOTIFICATIONS` 거부 시 Firebase permission/register/getToken을 호출하지 않고 `fcmToken` 없이 위치 등록을 계속한다. `share_created`, `share_requested` handler는 foreground/background/opened/initial 메시지를 로컬 알림함에 기록한다. 알림 열기와 알림함 항목 탭은 `PostDetail`로 이동하며, `share_requested`는 내 나눔 관리 화면이 없으므로 상세 fallback을 쓴다. Firebase 앱이 설정되지 않은 QA/release 빌드에서는 Messaging 인스턴스 생성 실패를 잡고 handler 등록과 FCM 토큰 조회를 건너뛰어 앱 시작/위치 갱신 크래시를 막는다. 2026-05-25 실기기 `SM-S928N` + Android emulator `Medium_Phone_API_36.1` + NHN Cloud VM에서 2계정 foreground/background/debug terminated FCM QA를 통과했다. VM 로그는 `[FCM:share_created]`와 `[FCM:share_requested]` type prefix, per-token OK/FAIL, 실제 send success를 구분했다. release build는 background tap은 통과했지만 process-killed notification tap에서 blank RN root가 재현되어 release blocker로 남긴다.
 - 기대 동작: MVP에서는 WebSocket 채팅 대신 알림함과 단순 신청 흐름으로 축소한다. 읽음 상태 API는 후속으로 분리한다.
 - Acceptance Criteria:
   - [x] foreground/background 알림 수신 handler가 정의된다.
@@ -1614,8 +1614,14 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
   - [x] 2026-05-25 실기기 + Android emulator 2계정 background에서 `share_created`, `share_requested` system notification 표시를 확인한다.
   - [x] 2026-05-23 백엔드 회신의 FCM priority/log/prefix 변경이 VM에 재배포된 상태를 확인한다.
   - [x] `docker logs foodlink-api-1 | grep FCM`에서 실제 성공, 실패, token 없음, 대상 없음, invalid/expired token을 type별 prefix로 구분한다.
-  - [ ] terminated 상태 notification tap routing reliability를 `high` priority 적용 후 재검증한다.
+  - [x] 2026-05-25 debug process-killed 상태에서 `share_created`, `share_requested` notification tap이 `PostDetail`로 진입한다.
   - [x] physical device + Android emulator 2-account QA를 `adb devices`가 두 대상을 인식한 상태에서 수행한다.
+  - [x] 2026-05-25 app이 background/alive 상태인 기존 task onNewIntent 경로에서 `share_created`, `share_requested` tap이 `PostDetail`로 진입한다.
+  - [x] 2026-05-25 fresh install에서 로그인, 위치/알림 권한 허용, FCM token 등록, `share_created` background 수신과 tap routing을 확인한다.
+  - [x] 2026-05-25 로그아웃 상태에서 notification tap 시 navigation을 로그인 완료 전까지 defer하고, 로그인 후 의도한 `PostDetail`로 이어진다.
+  - [x] 2026-05-25 Android 15 real device release background와 API 36 emulator debugOptimized background에서 `share_created` notification tap이 `PostDetail`로 진입한다.
+  - [ ] 2026-05-25 release process-killed 상태의 notification tap은 blank RN root로 재현됐다. 배포 claim 전 원인 조사가 필요하다.
+  - [ ] Samsung 패턴 잠금화면에서 notification tap -> 잠금해제 -> 상세 진입은 자동화 제약 때문에 수동 확인으로 남긴다.
 - 2026-05-25 evidence:
   - 환경: 실기기 `SM-S928N` Android 15/API 35 serial `R3CX203CV8X`, Android emulator `emulator-5554` (`Medium_Phone_API_36.1`), NHN Cloud VM API `localhost:8080`, Metro debug build.
   - 계정: 공급자 `codex_fcm_a_1779690163@example.com`, 수요자 `codex_fcm_b_1779690163@example.com`.
@@ -1623,7 +1629,13 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
   - foreground FCM/UI: `temp/twoqa-emu-alerts-after-share-created.png`, `temp/twoqa-emu-request-result.png`, `temp/twoqa-real-app-alerts-after-share-requested-3.png`.
   - background FCM/system notification: `temp/twoqa-emu-background-share-created-shade.png`, `temp/twoqa-real-background-share-requested-shade.png`.
   - logcat: `temp/twoqa-emu-share-created-logcat.txt`, `temp/twoqa-real-share-requested-logcat.txt`, `temp/twoqa-emu-background-share-created-logcat.txt`, `temp/twoqa-real-background-share-requested-logcat.txt`.
-- 검증 방법: FCM 테스트 메시지 수신 QA, 앱 foreground/background/terminated 확인, backend FCM send log 확인, `notificationService.firebaseFallback.test.ts`, `deviceRegistration.firebaseFallback.test.ts`, `deviceRegistration.notificationPermission.test.ts`, `locationSetup.notificationPermission.test.tsx`
+  - debug terminated/process-killed: `temp/twoqa-real-authleaf-process-killed-share-created-opened-summary.txt`, `temp/twoqa-real-share-requested-process-killed-opened-summary.txt`.
+  - 기존 task onNewIntent: `temp/twoqa-real-existingtask-valid-share-created-opened-summary.txt`, `temp/twoqa-real-existingtask-valid-share-requested-opened-summary.txt`.
+  - fresh install: `temp/fresh-install-auth-me.json`, `temp/fresh-install-dumpsys-package.txt`, `temp/fresh-install-appops.txt`, `temp/fresh-install-share-created-opened-summary.txt`.
+  - 권한/토큰/로그아웃 예외: `temp/loggedout-fix-after-notification-open-summary.txt`, `temp/loggedout-fix-after-login-opened-summary.txt`, `temp/loggedout-fix-after-login-opened-logcat.txt`.
+  - release: `temp/release-real-after-install-launch-summary.txt`, `temp/release-real-background-share-created-opened-summary.txt`, `temp/release-real-process-killed-share-created-opened-late-summary.txt`, `temp/release-real-process-killed-share-created-after-tap-late-logcat.txt`.
+  - API36 debugOptimized: `temp/emu-api36-debugoptimized-force-launch-metro-summary.txt`, `temp/emu-api36-debugoptimized-auth-me.json`, `temp/emu-api36-debugoptimized-background-share-created-opened-summary.txt`, `temp/emu-api36-debugoptimized-background-share-created-after-tap-logcat.txt`.
+- 검증 방법: FCM 테스트 메시지 수신 QA, 앱 foreground/background/terminated 확인, backend FCM send log 확인, `npx jest __tests__/notificationService.test.ts __tests__/appNavigator.notificationFlush.test.tsx __tests__/deviceRegistration.notificationPermission.test.ts --runInBand`, `npx tsc --noEmit`, `.\gradlew.bat :app:assembleRelease -PreactNativeArchitectures=arm64-v8a --console=plain`, `.\gradlew.bat :app:assembleDebugOptimized -PreactNativeArchitectures=x86_64 --console=plain`
 - 관련 파일/화면/API: `notifications.ts`, `deviceRegistration.ts`, `firebaseMessaging.ts`, `notificationStore.ts`, `ChatListScreen`, `index.js`, `AppNavigator`, Firebase Messaging
 
 ## multi-object detection 연구/계약 초안
