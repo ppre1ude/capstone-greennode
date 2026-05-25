@@ -9,6 +9,7 @@ interface NotificationState {
   notifications: NotificationRecord[];
   addNotification: (notification: NotificationRecord) => void;
   markNotificationRead: (notificationId: string, readAt?: string) => void;
+  markAllNotificationsRead: (readAt?: string) => void;
   clearNotifications: () => void;
 }
 
@@ -40,6 +41,13 @@ export const useNotificationStore = create<NotificationState>()(
             notification.id === notificationId
               ? {...notification, readAt}
               : notification,
+          ),
+        }));
+      },
+      markAllNotificationsRead: (readAt = new Date().toISOString()) => {
+        set(state => ({
+          notifications: state.notifications.map(notification =>
+            notification.readAt ? notification : {...notification, readAt},
           ),
         }));
       },

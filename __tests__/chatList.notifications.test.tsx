@@ -135,4 +135,56 @@ describe('ChatListScreen notifications', () => {
       expect.objectContaining({id: 'message-2', postId: '11'}),
     );
   });
+
+  it('marks every local notification as read without clearing the inbox', async () => {
+    useNotificationStore.setState({
+      notifications: [
+        {
+          id: 'message-3',
+          type: 'share_created',
+          postId: '12',
+          fruitName: '사과',
+          fridgeName: '전남대 공유 냉장고',
+          title: '근처에 나눔이 등록됐어요',
+          body: '전남대 공유 냉장고에 사과 나눔이 등록됐어요.',
+          receivedAt: '2026-05-06T00:00:00.000Z',
+          source: 'foreground',
+        },
+        {
+          id: 'message-4',
+          type: 'share_requested',
+          postId: '13',
+          requestId: '100',
+          fruitName: '바나나',
+          fridgeName: '광주역 공유 냉장고',
+          title: '나눔 신청이 도착했어요',
+          body: '바나나 나눔에 신청이 들어왔어요.',
+          receivedAt: '2026-05-06T00:01:00.000Z',
+          source: 'background',
+        },
+      ],
+    });
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(<ChatListScreen />);
+    });
+
+    expect(
+      renderer!.root.findAllByProps({children: '새 알림 2개가 있습니다'}),
+    ).not.toHaveLength(0);
+
+    await ReactTestRenderer.act(async () => {
+      findTouchableByText(renderer!, '모두 읽음').props.onPress();
+    });
+
+    expect(
+      useNotificationStore
+        .getState()
+        .notifications.every(notification => Boolean(notification.readAt)),
+    ).toBe(true);
+    expect(renderer!.root.findAllByProps({children: '새 알림'})).toHaveLength(0);
+    expect(
+      renderer!.root.findAllByProps({children: '나눔 신청이 도착했어요'}),
+    ).not.toHaveLength(0);
+  });
 });

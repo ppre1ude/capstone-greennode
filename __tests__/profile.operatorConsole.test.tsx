@@ -1,5 +1,5 @@
 import React from 'react';
-import { TouchableOpacity } from 'react-native';
+import { Alert, TouchableOpacity } from 'react-native';
 import ReactTestRenderer from 'react-test-renderer';
 import ProfileScreen from '@/screens/profile/ProfileScreen';
 import { useAuthStore } from '@/store/authStore';
@@ -167,6 +167,59 @@ describe('ProfileScreen operator console entry', () => {
     });
 
     expect(mockParentNavigate).toHaveBeenCalledWith('InventoryQrPrototype');
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
+  it('explains contract-needed profile menus instead of showing a generic placeholder', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(<ProfileScreen />);
+    });
+
+    await ReactTestRenderer.act(async () => {
+      findTouchableByText(renderer!, '내 나눔 내역').props.onPress();
+    });
+
+    expect(alertSpy).toHaveBeenCalledWith(
+      '내 나눔 내역 준비 중',
+      expect.stringContaining('서버 API'),
+    );
+
+    await ReactTestRenderer.act(async () => {
+      findTouchableByText(renderer!, '받은 나눔 내역').props.onPress();
+    });
+
+    expect(alertSpy).toHaveBeenCalledWith(
+      '받은 나눔 내역 준비 중',
+      expect.stringContaining('나눔 목록 API'),
+    );
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
+  it('explains that profile editing needs a backend save contract', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(<ProfileScreen />);
+    });
+
+    await ReactTestRenderer.act(async () => {
+      findTouchableByText(renderer!, '프로필 수정').props.onPress();
+    });
+
+    expect(alertSpy).toHaveBeenCalledWith(
+      '프로필 수정 준비 중',
+      expect.stringContaining('프로필 이미지를 저장하는 서버 API'),
+    );
 
     await ReactTestRenderer.act(async () => {
       renderer?.unmount();

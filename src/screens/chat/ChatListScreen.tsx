@@ -53,6 +53,12 @@ const ChatListScreen = () => {
   const markNotificationRead = useNotificationStore(
     state => state.markNotificationRead,
   );
+  const markAllNotificationsRead = useNotificationStore(
+    state => state.markAllNotificationsRead,
+  );
+  const unreadCount = notifications.filter(
+    notification => !notification.readAt,
+  ).length;
 
   const renderNotification = ({item}: {item: NotificationRecord}) => (
     <TouchableOpacity
@@ -93,15 +99,26 @@ const ChatListScreen = () => {
         <View>
           <Text style={styles.headerTitle}>알림</Text>
           <Text style={styles.headerSubtitle}>
-            나눔 등록과 신청 수신 기록을 확인합니다
+            {unreadCount > 0
+              ? `새 알림 ${unreadCount}개가 있습니다`
+              : '나눔 등록과 신청 수신 기록을 확인합니다'}
           </Text>
         </View>
         {notifications.length > 0 ? (
-          <TouchableOpacity
-            style={styles.clearButton}
-            onPress={clearNotifications}>
-            <Text style={styles.clearButtonText}>비우기</Text>
-          </TouchableOpacity>
+          <View style={styles.headerActions}>
+            {unreadCount > 0 ? (
+              <TouchableOpacity
+                style={styles.markAllReadButton}
+                onPress={() => markAllNotificationsRead()}>
+                <Text style={styles.markAllReadButtonText}>모두 읽음</Text>
+              </TouchableOpacity>
+            ) : null}
+            <TouchableOpacity
+              style={styles.clearButton}
+              onPress={clearNotifications}>
+              <Text style={styles.clearButtonText}>비우기</Text>
+            </TouchableOpacity>
+          </View>
         ) : null}
       </View>
 
@@ -161,6 +178,21 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: colors.textSecondary,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  markAllReadButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: colors.primaryLight,
+  },
+  markAllReadButtonText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.primary,
   },
   listContent: {
     padding: 20,
