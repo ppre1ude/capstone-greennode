@@ -7,10 +7,28 @@ import type {ApiResponse, User, LoginResponse, SignupRequest, LocationUpdateRequ
 
 const AUTH_PREFIX = '/api/v1/auth';
 
+type BackendUser = User & {
+  is_operator?: boolean | null;
+  operator_role?: User['operatorRole'];
+  operator_fridge_ids?: number[] | null;
+};
+
+const normalizeUser = (user: BackendUser): User => ({
+  ...user,
+  isOperator: user.isOperator ?? user.is_operator ?? null,
+  operatorRole: user.operatorRole ?? user.operator_role ?? null,
+  operatorFridgeIds:
+    user.operatorFridgeIds ?? user.operator_fridge_ids ?? null,
+});
+
 /** 회원가입 — POST /api/v1/auth/signup */
 export const signup = async (data: SignupRequest): Promise<ApiResponse<User>> => {
   const response = await apiClient.post(`${AUTH_PREFIX}/signup`, data);
-  return response.data;
+  const payload = response.data as ApiResponse<BackendUser>;
+  return {
+    ...payload,
+    data: payload.data ? normalizeUser(payload.data) : payload.data,
+  };
 };
 
 /**
@@ -37,7 +55,11 @@ export const login = async (
 /** 내 정보 조회 — GET /api/v1/auth/me */
 export const getMe = async (): Promise<ApiResponse<User>> => {
   const response = await apiClient.get(`${AUTH_PREFIX}/me`);
-  return response.data;
+  const payload = response.data as ApiResponse<BackendUser>;
+  return {
+    ...payload,
+    data: payload.data ? normalizeUser(payload.data) : payload.data,
+  };
 };
 
 /** 위치 + FCM 토큰 갱신 — PUT /api/v1/auth/me/location */
@@ -45,5 +67,9 @@ export const updateLocation = async (
   data: LocationUpdateRequest,
 ): Promise<ApiResponse<User>> => {
   const response = await apiClient.put(`${AUTH_PREFIX}/me/location`, data);
-  return response.data;
+  const payload = response.data as ApiResponse<BackendUser>;
+  return {
+    ...payload,
+    data: payload.data ? normalizeUser(payload.data) : payload.data,
+  };
 };

@@ -116,7 +116,11 @@ export interface PostCreateData {
   flow?: PostCreateFlow;
 }
 
-export type ShareRequestStatus = 'requested';
+export type ShareRequestStatus =
+  | 'requested'
+  | 'completed'
+  | 'cancelled'
+  | 'expired';
 
 export interface ShareRequest {
   id: number;
@@ -130,6 +134,20 @@ export interface ShareRequestResult {
   request: ShareRequest;
   post: Post;
 }
+
+export interface UserShareRequestItem {
+  request: ShareRequest;
+  post: Post;
+  fridge?: {
+    id?: number;
+    name?: string;
+    address?: string;
+    publicCode?: string | null;
+  } | null;
+}
+
+export type UserPostStatusFilter = PostStatus | 'all';
+export type UserShareRequestStatusFilter = ShareRequestStatus | 'all';
 
 export interface Fridge {
   id: number;

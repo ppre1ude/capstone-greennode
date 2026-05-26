@@ -86,6 +86,36 @@ export const requestShare = async (
   return response.data;
 };
 
+export const cancelPost = async (
+  postId: number,
+): Promise<ApiResponse<Post>> => {
+  const response = await apiClient.post(`${POSTS_PREFIX}/${postId}/cancel`);
+  return response.data;
+};
+
+export const completePost = async (
+  postId: number,
+): Promise<ApiResponse<Post>> => {
+  const response = await apiClient.post(`${POSTS_PREFIX}/${postId}/complete`);
+  return response.data;
+};
+
+export const expirePost = async (
+  postId: number,
+): Promise<ApiResponse<Post>> => {
+  const response = await apiClient.post(`${POSTS_PREFIX}/${postId}/expire`);
+  return response.data;
+};
+
+export const cancelShareRequest = async (
+  requestId: number,
+): Promise<ApiResponse<ShareRequestResult>> => {
+  const response = await apiClient.post(
+    `/api/v1/share-requests/${requestId}/cancel`,
+  );
+  return response.data;
+};
+
 /** 나눔 식재료 삭제 — DELETE /api/v1/posts/{id} */
 export const deletePost = async (
   postId: number,

@@ -1,6 +1,10 @@
 import apiClient from '@/api/client';
 import {
+  cancelPost,
+  cancelShareRequest,
+  completePost,
   createPost,
+  expirePost,
   generatePost,
   getImageUrl,
   requestShare,
@@ -317,6 +321,38 @@ describe('posts API contract', () => {
     expect(response.data?.post.status).toBe('requested');
     expect(response.data?.post.requestExpiresAt).toBe(
       '2026-05-19T14:00:00Z',
+    );
+  });
+
+  it('calls lifecycle mutation endpoints for requested follow-up actions', async () => {
+    mockedApiClient.post.mockResolvedValue({
+      data: {
+        success: true,
+        message: 'ok',
+        data: { id: 10, status: 'cancelled' },
+      },
+    });
+
+    await cancelPost(10);
+    await completePost(10);
+    await expirePost(10);
+    await cancelShareRequest(99);
+
+    expect(mockedApiClient.post).toHaveBeenNthCalledWith(
+      1,
+      '/api/v1/posts/10/cancel',
+    );
+    expect(mockedApiClient.post).toHaveBeenNthCalledWith(
+      2,
+      '/api/v1/posts/10/complete',
+    );
+    expect(mockedApiClient.post).toHaveBeenNthCalledWith(
+      3,
+      '/api/v1/posts/10/expire',
+    );
+    expect(mockedApiClient.post).toHaveBeenNthCalledWith(
+      4,
+      '/api/v1/share-requests/99/cancel',
     );
   });
 
