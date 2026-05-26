@@ -3,8 +3,9 @@
  *
  * 실시간 채팅은 MVP 범위에서 보류하고, 나눔 이벤트 알림함으로 축소한다.
  */
-import React from 'react';
+import React, { useCallback, useState } from 'react';
 import {
+  ActivityIndicator,
   View,
   Text,
   StyleSheet,
@@ -12,10 +13,17 @@ import {
   TouchableOpacity,
   ScrollView,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { colors } from '@/theme';
 import { DSIcon } from '@/design-system';
 import { useNotificationStore } from '@/store/notificationStore';
 import { openNotificationTarget } from '@/services/notifications';
+import {
+  deleteServerNotification,
+  getNotifications,
+  markAllServerNotificationsRead,
+  markServerNotificationRead,
+} from '@/api/notifications';
 import type { NotificationRecord } from '@/types';
 import { getHeaderTopPadding } from '@/utils/safeArea';
 
@@ -41,13 +49,19 @@ const getSourceLabel = (source: NotificationRecord['source']) => {
       return '백그라운드 수신';
     case 'opened':
       return '알림 열기';
+    case 'server':
+      return '계정 동기화';
     default:
       return '수신 기록';
   }
 };
 
 const ChatListScreen = () => {
+  const [isSyncing, setIsSyncing] = useState(false);
   const notifications = useNotificationStore(state => state.notifications);
+  const syncNotifications = useNotificationStore(
+    state => state.syncNotifications,
+  );
   const clearNotifications = useNotificationStore(
     state => state.clearNotifications,
   );
@@ -61,14 +75,69 @@ const ChatListScreen = () => {
     notification => !notification.readAt,
   ).length;
 
+  const syncServerNotifications = useCallback(async () => {
+    setIsSyncing(true);
+    try {
+      const response = await getNotifications(false, 0, 50);
+      if (response.success && response.data) {
+        syncNotifications(response.data);
+      }
+    } catch (error) {
+      console.warn('Failed to sync server notifications:', error);
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [syncNotifications]);
+
+  useFocusEffect(
+    useCallback(() => {
+      syncServerNotifications();
+    }, [syncServerNotifications]),
+  );
+
+  const handleOpenNotification = (item: NotificationRecord) => {
+    markNotificationRead(item.id);
+    if (item.source === 'server') {
+      markServerNotificationRead(item.id).catch(error => {
+        console.warn('Failed to mark server notification read:', error);
+      });
+    }
+    openNotificationTarget(item);
+  };
+
+  const handleMarkAllRead = () => {
+    const hasServerNotifications = notifications.some(
+      notification => notification.source === 'server',
+    );
+    markAllNotificationsRead();
+    if (!hasServerNotifications) {
+      return;
+    }
+
+    markAllServerNotificationsRead().catch(error => {
+      console.warn('Failed to mark all server notifications read:', error);
+    });
+  };
+
+  const handleClearNotifications = () => {
+    const serverNotificationIds = notifications
+      .filter(notification => notification.source === 'server')
+      .map(notification => notification.id);
+    clearNotifications();
+    Promise.all(
+      serverNotificationIds.map(notificationId =>
+        deleteServerNotification(notificationId),
+      ),
+    ).catch(error => {
+      console.warn('Failed to delete server notifications:', error);
+    });
+  };
+
   const renderNotification = ({ item }: { item: NotificationRecord }) => (
     <TouchableOpacity
       style={styles.notificationCard}
       activeOpacity={0.82}
-      onPress={() => {
-        markNotificationRead(item.id);
-        openNotificationTarget(item);
-      }}>
+      onPress={() => handleOpenNotification(item)}>
       <View style={styles.notificationHeader}>
         <Text style={styles.notificationTitle} numberOfLines={1}>
           {item.title}
@@ -112,13 +181,13 @@ const ChatListScreen = () => {
             {unreadCount > 0 ? (
               <TouchableOpacity
                 style={styles.markAllReadButton}
-                onPress={() => markAllNotificationsRead()}>
+                onPress={handleMarkAllRead}>
                 <Text style={styles.markAllReadButtonText}>모두 읽음</Text>
               </TouchableOpacity>
             ) : null}
             <TouchableOpacity
               style={styles.clearButton}
-              onPress={clearNotifications}>
+              onPress={handleClearNotifications}>
               <Text style={styles.clearButtonText}>비우기</Text>
             </TouchableOpacity>
           </View>
@@ -127,6 +196,12 @@ const ChatListScreen = () => {
 
       {notifications.length > 0 ? (
         <ScrollView contentContainerStyle={styles.listContent}>
+          {isSyncing ? (
+            <View style={styles.syncRow}>
+              <ActivityIndicator size="small" color={colors.primary} />
+              <Text style={styles.syncText}>서버 알림 동기화 중</Text>
+            </View>
+          ) : null}
           {notifications.map(notification => (
             <View key={notification.id}>
               {renderNotification({ item: notification })}
@@ -135,12 +210,16 @@ const ChatListScreen = () => {
         </ScrollView>
       ) : (
         <View style={styles.emptyContainer}>
-          <DSIcon
-            name="bell"
-            size={48}
-            color="accent"
-            style={styles.emptyIcon}
-          />
+          {isSyncing ? (
+            <ActivityIndicator color={colors.primary} style={styles.emptyIcon} />
+          ) : (
+            <DSIcon
+              name="bell"
+              size={48}
+              color="accent"
+              style={styles.emptyIcon}
+            />
+          )}
           <Text style={styles.emptyTitle}>아직 알림이 없습니다</Text>
           <Text style={styles.emptyText}>
             근처 나눔 등록과 나눔 신청 알림이 이곳에 기록됩니다.
@@ -205,6 +284,20 @@ const styles = StyleSheet.create({
   listContent: {
     padding: 20,
     gap: 12,
+  },
+  syncRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: colors.surface,
+  },
+  syncText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.textSecondary,
   },
   notificationCard: {
     backgroundColor: '#FFFFFF',
