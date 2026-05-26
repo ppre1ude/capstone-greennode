@@ -170,8 +170,7 @@ describe('ProfileScreen operator console entry', () => {
     });
   });
 
-  it('explains contract-needed profile menus instead of showing a generic placeholder', async () => {
-    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
+  it('opens account-level lifecycle screens from profile history entries', async () => {
     let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
 
     await ReactTestRenderer.act(async () => {
@@ -182,19 +181,17 @@ describe('ProfileScreen operator console entry', () => {
       findTouchableByText(renderer!, '내 나눔 내역').props.onPress();
     });
 
-    expect(alertSpy).toHaveBeenCalledWith(
-      '내 나눔 내역 준비 중',
-      expect.stringContaining('서버 API'),
-    );
+    expect(mockParentNavigate).toHaveBeenCalledWith('MyShares', {
+      initialTab: 'posted',
+    });
 
     await ReactTestRenderer.act(async () => {
       findTouchableByText(renderer!, '받은 나눔 내역').props.onPress();
     });
 
-    expect(alertSpy).toHaveBeenCalledWith(
-      '받은 나눔 내역 준비 중',
-      expect.stringContaining('나눔 목록 API'),
-    );
+    expect(mockParentNavigate).toHaveBeenCalledWith('MyShares', {
+      initialTab: 'received',
+    });
 
     await ReactTestRenderer.act(async () => {
       renderer?.unmount();

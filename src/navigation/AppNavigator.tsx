@@ -30,6 +30,7 @@ import PostCreateScreen from '@/screens/post/PostCreateScreen';
 import FridgeSelectScreen from '@/screens/post/FridgeSelectScreen';
 import PostCompleteScreen from '@/screens/post/PostCompleteScreen';
 import PostDetailScreen from '@/screens/post/PostDetailScreen';
+import MySharesScreen from '@/screens/profile/MySharesScreen';
 import FridgeOperatorConsoleScreen from '@/screens/operator/FridgeOperatorConsoleScreen';
 import InventoryQrPrototypeScreen from '@/screens/inventory/InventoryQrPrototypeScreen';
 
@@ -123,6 +124,10 @@ const AppNavigator = () => {
         <Stack.Screen
           name="PostDetail"
           component={PostDetailScreen}
+        />
+        <Stack.Screen
+          name="MyShares"
+          component={MySharesScreen}
         />
         <Stack.Screen
           name="FridgeOperatorConsole"

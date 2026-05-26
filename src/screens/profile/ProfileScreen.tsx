@@ -63,7 +63,7 @@ const MENU_ITEMS: ProfileMenuItem[] = [
     id: 'my-posts',
     title: '내 나눔 내역',
     icon: 'clipboard-list',
-    availability: 'contract-needed',
+    availability: 'ready',
   },
   {
     id: 'bookmark',
@@ -75,7 +75,7 @@ const MENU_ITEMS: ProfileMenuItem[] = [
     id: 'history',
     title: '받은 나눔 내역',
     icon: 'gift',
-    availability: 'contract-needed',
+    availability: 'ready',
   },
   { id: 'settings', title: '설정', icon: 'gear', availability: 'coming-soon' },
   {
@@ -199,6 +199,16 @@ const ProfileScreen = () => {
 
     if (id === 'inventory-qr-prototype') {
       navigation.getParent()?.navigate('InventoryQrPrototype');
+      return;
+    }
+
+    if (id === 'my-posts') {
+      navigation.getParent()?.navigate('MyShares', { initialTab: 'posted' });
+      return;
+    }
+
+    if (id === 'history') {
+      navigation.getParent()?.navigate('MyShares', { initialTab: 'received' });
       return;
     }
 

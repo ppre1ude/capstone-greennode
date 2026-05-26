@@ -38,6 +38,11 @@ export type RootStackParamList = {
   PostCreate: {result: GenerateResult; imageUri: string};
   PostComplete: {postId: number};
   PostDetail: {postId: number};
+  MyShares:
+    | {
+        initialTab?: 'posted' | 'received';
+      }
+    | undefined;
   FridgeOperatorConsole:
     | {
         fridgeId?: number;
