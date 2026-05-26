@@ -1896,3 +1896,11 @@ GET /api/v1/fridges/available?latitude=35.1595&longitude=126.9136&radius_km=2.0
 - 범위: `MapScreen`의 검색 입력, retry/refresh/detail/sheet 액션, 냉장고 카드/선택 시트, 냉장고 내부 목록 item을 DS primitive로 치환했다. API 호출, 필터링, 선택, navigation target은 변경하지 않는다.
 - 자동 검증: `npm test -- --runInBand __tests__/map.fridgePosts.test.tsx __tests__/designSystem.catalog.test.tsx`.
 - 남은 QA: 이번 pass에서는 실제 Android 기기 또는 에뮬레이터 시각 QA를 수행하지 않는다. 지도 overlay 위치, 하단 sheet 높이, 실제 Google Map 위 터치 영역은 Task 4의 adb/emulator 가능 여부 확인 또는 별도 실기기 QA에서 검증한다.
+
+## 2026-05-26 Lifecycle UX 구현 메모
+
+- 범위: `GET /users/me/posts`, `GET /users/me/share-requests`, `/notifications` 서버 목록/읽음, `/posts/{id}/cancel|complete|expire`, `/share-requests/{id}/cancel` 계약에 맞춘 프론트 API client와 화면을 추가했다.
+- 사용자 표면: 홈의 `진행 중인 나눔` 허브가 계정 단위 내 나눔/받은 나눔 목록을 확인해 `입고 QR`, `수령 QR`, `신청된 나눔`을 우선 노출한다. 프로필의 `내 나눔 내역`, `받은 나눔 내역`은 `MyShares` 관리 화면으로 진입한다.
+- 알림 표면: 알림 탭은 로컬 FCM 기록을 유지하면서 서버 알림 목록을 merge하고, 단건/전체 읽음은 서버 API를 호출하되 실패 시 로컬 읽음 fallback을 유지한다.
+- 운영자 metadata: `/auth/me` 응답에서 camelCase와 snake_case 운영자 힌트를 모두 앱의 `User` shape로 정규화한다.
+- 남은 QA: 백엔드 live VM에 신규 endpoint가 배포되면 실제 계정으로 my posts/share requests, server notification read, lifecycle mutation 200/403/409 matrix를 재검증해야 한다.
