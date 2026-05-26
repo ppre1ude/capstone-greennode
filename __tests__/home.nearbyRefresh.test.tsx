@@ -3,6 +3,7 @@ import { Text, TextInput, TouchableOpacity } from 'react-native';
 import ReactTestRenderer from 'react-test-renderer';
 import HomeScreen from '@/screens/home/HomeScreen';
 import { getNearbyPosts } from '@/api/posts';
+import { getMyPosts, getMyShareRequests } from '@/api/users';
 import { useAuthStore } from '@/store/authStore';
 import { useFeedRefreshStore } from '@/store/feedRefreshStore';
 
@@ -34,8 +35,17 @@ jest.mock('@/api/posts', () => ({
   getNearbyPosts: jest.fn(),
 }));
 
+jest.mock('@/api/users', () => ({
+  getMyPosts: jest.fn(),
+  getMyShareRequests: jest.fn(),
+}));
+
 const mockedGetNearbyPosts = getNearbyPosts as jest.MockedFunction<
   typeof getNearbyPosts
+>;
+const mockedGetMyPosts = getMyPosts as jest.MockedFunction<typeof getMyPosts>;
+const mockedGetMyShareRequests = getMyShareRequests as jest.MockedFunction<
+  typeof getMyShareRequests
 >;
 
 const findButtonByText = (
@@ -57,6 +67,16 @@ describe('HomeScreen nearby post refresh', () => {
     jest.setSystemTime(new Date('2026-05-21T12:00:00Z'));
     mockRouteParams = undefined;
     mockedGetNearbyPosts.mockResolvedValue({
+      success: true,
+      message: 'ok',
+      data: [],
+    });
+    mockedGetMyPosts.mockResolvedValue({
+      success: true,
+      message: 'ok',
+      data: [],
+    });
+    mockedGetMyShareRequests.mockResolvedValue({
       success: true,
       message: 'ok',
       data: [],
@@ -255,6 +275,123 @@ describe('HomeScreen nearby post refresh', () => {
 
     expect(mockParentNavigate).toHaveBeenCalledWith('PostDetail', {
       postId: 10,
+    });
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
+  it('renders multiple account lifecycle actions in the home hub', async () => {
+    mockedGetMyPosts.mockResolvedValue({
+      success: true,
+      message: 'ok',
+      data: [
+        {
+          id: 21,
+          fridgeId: 1,
+          authorId: 1,
+          detectedFruit: 'banana',
+          detectedFruitKo: '바나나',
+          freshnessLabel: 'Fresh',
+          confidenceScore: 0.9,
+          imageUrl: '/static/posts/21.jpg',
+          expirationDate: '2026-05-27',
+          status: 'pending_store',
+          storeExpiresAt: '2026-05-21T12:30:00Z',
+          createdAt: '2026-05-21T12:00:00Z',
+          updatedAt: '2026-05-21T12:00:00Z',
+        },
+        {
+          id: 22,
+          fridgeId: 1,
+          authorId: 1,
+          detectedFruit: 'tomato',
+          detectedFruitKo: '토마토',
+          freshnessLabel: 'Fresh',
+          confidenceScore: 0.9,
+          imageUrl: '/static/posts/22.jpg',
+          expirationDate: '2026-05-27',
+          status: 'requested',
+          requestExpiresAt: '2026-05-21T12:45:00Z',
+          createdAt: '2026-05-21T12:00:00Z',
+          updatedAt: '2026-05-21T12:00:00Z',
+        },
+      ],
+    });
+    mockedGetMyShareRequests.mockResolvedValue({
+      success: true,
+      message: 'ok',
+      data: [
+        {
+          request: {
+            id: 91,
+            postId: 31,
+            requesterId: 1,
+            status: 'requested',
+            createdAt: '2026-05-21T12:00:00Z',
+          },
+          post: {
+            id: 31,
+            fridgeId: 2,
+            authorId: 2,
+            detectedFruit: 'apple',
+            detectedFruitKo: '사과',
+            freshnessLabel: 'Fresh',
+            confidenceScore: 0.9,
+            imageUrl: '/static/posts/31.jpg',
+            expirationDate: '2026-05-27',
+            status: 'requested',
+            requestExpiresAt: '2026-05-21T12:20:00Z',
+            createdAt: '2026-05-21T12:00:00Z',
+            updatedAt: '2026-05-21T12:00:00Z',
+          },
+        },
+      ],
+    });
+
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(<HomeScreen />);
+      await Promise.resolve();
+    });
+
+    expect(
+      renderer!.root.findAllByProps({ children: '수령 QR 확인 필요' }),
+    ).not.toHaveLength(0);
+    expect(
+      renderer!.root.findAllByProps({ children: '입고 QR 인증 필요' }),
+    ).not.toHaveLength(0);
+    expect(
+      renderer!.root.findAllByProps({ children: '신청된 나눔 확인 필요' }),
+    ).not.toHaveLength(0);
+    expect(renderer!.root.findAllByProps({ children: '3건' })).not.toHaveLength(
+      0,
+    );
+
+    await ReactTestRenderer.act(async () => {
+      findButtonByText(renderer!, '수령 QR 열기')?.props.onPress();
+    });
+    expect(mockParentNavigate).toHaveBeenCalledWith('InventoryQrPrototype', {
+      mode: 'pickup',
+      postId: 31,
+      pendingExpiresAt: '2026-05-21T12:20:00Z',
+    });
+
+    await ReactTestRenderer.act(async () => {
+      findButtonByText(renderer!, '입고 QR 열기')?.props.onPress();
+    });
+    expect(mockParentNavigate).toHaveBeenCalledWith('InventoryQrPrototype', {
+      mode: 'store',
+      postId: 21,
+    });
+
+    await ReactTestRenderer.act(async () => {
+      findButtonByText(renderer!, '내 나눔 관리')?.props.onPress();
+    });
+    expect(mockParentNavigate).toHaveBeenCalledWith('MyShares', {
+      initialTab: 'posted',
     });
 
     await ReactTestRenderer.act(async () => {
