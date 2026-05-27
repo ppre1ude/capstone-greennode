@@ -1739,53 +1739,53 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
 ## 2026-05-26 엔지니어링 우선순위 기준선
 
 - 분류: 다음 플랜 수립용 백로그 기준선
-- 배경: 2026-05-25까지 Android MVP 핵심 QA, FCM 실기기/에뮬레이터 QA, QR `pending_store` VM E2E, operator inventory runtime QA가 닫혔다. 2026-05-27 백엔드 feature contract 연결로 운영자 진입 정책과 사용자 내역은 코드에 반영됐다. 크로스플랫폼 production v1로 보려면 최신 VM E2E 재검증, iOS evidence, Post-MVP 지표/검색/알림 서버 저장 결정이 남아 있다.
+- 배경: 2026-05-25까지 Android MVP 핵심 QA, FCM 실기기/에뮬레이터 QA, QR `pending_store` VM E2E, operator inventory runtime QA가 닫혔다. 2026-05-27 백엔드 feature contract 연결로 운영자 진입 정책과 사용자 내역은 코드에 반영됐다. 크로스플랫폼 production v1로 보려면 최신 VM E2E 재검증, iOS evidence, Post-MVP 지표/검색/알림 서버 저장 설계가 남아 있다.
 - CEO/제품 판단: 체류시간이 짧은 것 자체는 FoodLink의 핵심 문제가 아니다. 이 앱은 피드 소비보다 남는 식재료 처리, 신청, 수령, 완료를 빠르게 끝내는 작업형 앱이다. 진짜 gap은 사용자가 다시 돌아와 진행 중인 나눔 lifecycle을 추적하고 다음 행동을 마칠 표면이 부족하다는 점이다.
 - 현재 판단:
   - Android MVP 핵심 흐름 완성도는 약 80~85%다.
   - 전체 v1 제품 완성도는 약 60~65%다.
-  - “나눔 식재료 등록 -> 주변/지도 노출 -> 신청 -> 알림 -> QR 보관/수령”은 검증됐지만, “며칠 쓰는 제품”에 필요한 내역/취소/읽음/권한/운영 lifecycle은 아직 빈 곳이 있다.
+  - “나눔 식재료 등록 -> 주변/지도 노출 -> 신청 -> 알림 -> QR 보관/수령”은 검증됐고 내역/취소/완료 계약도 연결됐다. 남은 빈 곳은 서버 저장형 읽음 상태, 운영자 role 관리 UI, iOS evidence 쪽이다.
   - 홈은 발견과 등록 진입에는 강하지만, 사용자가 다시 열었을 때 `입고 QR 필요`, `수령 QR 필요`, `30분 남음`, `신청 접수됨` 같은 현재 액션을 충분히 강하게 보여주지 않는다.
 - 디자인 리뷰 판단:
   - 현재 UX/UI는 약 6/10이다. MVP 흐름은 이해되지만 반복 사용 제품으로 보이는 lifecycle 표면과 모바일 마감이 부족하다.
   - 분석 결과, 등록 폼/냉장고 선택/완료 화면 계열에서 하단 CTA가 Android system navigation 영역과 겹치는 screenshot evidence가 있다.
-  - QR 화면은 실제 API 연결 상황에서도 `냉장고 QR 흐름 테스트`, `보관 QR 테스트`, `수령 QR 테스트` 같은 내부 실험 언어를 노출한다.
-  - 디자인 시스템은 emoji 사용 금지와 `DSIcon` 우선을 명시하지만, 지도 marker, 현재 위치, 알림 empty, 완료 화면, 상세 삭제/정보 아이콘 등에 emoji가 남아 있다.
+  - QR 화면의 `테스트`/`프로토타입`/`초기화` copy는 회귀 테스트로 제거됐지만, route와 화면 구조는 여전히 `InventoryQrPrototypeScreen` 중심이라 실제 스캔 화면과 QA용 시뮬레이션 action의 경계를 더 명확히 나눌 필요가 있다.
+  - 디자인 시스템은 emoji 사용 금지와 `DSIcon` 우선을 명시한다. 로그인/회원가입/위치 설정 화면은 정책 테스트 범위에 들어갔고, 남은 대표 debt는 `FridgeSelectScreen` 뒤로가기 Text glyph, Onboarding 일러스트 emoji, 일부 테스트 fixture의 Text check 등이다.
   - 지도 화면은 선택 냉장고 카드와 상세 sheet가 동시에 바닥을 차지해 정보 구조가 과밀하다.
 - 다음 엔지니어링 우선순위:
   1. 내 진행 중인 나눔 허브: 홈 상단 또는 별도 화면에서 내가 등록한 나눔, 내가 신청한 나눔, QR 필요, 남은 시간, 신청 상태를 한 번에 보여준다.
-  2. 최신 VM E2E 재검증: profile PATCH, my posts/share requests, lifecycle mutation, operator role metadata
+  2. 최신 VM E2E 재검증: profile PATCH, my posts/share requests, lifecycle mutation, operator role-gated profile
   3. iOS 시뮬레이터 기준 smoke QA
   4. 검색/통계/AI rejection reason 확장
   5. 알림 서버 목록/읽음 상태는 Post-MVP 저장형으로 별도 설계
 - 다음 UI/UX 우선순위:
   1. P0 fixed footer safe area: `AnalysisResultScreen`, `PostCreateScreen`, `FridgeSelectScreen`, `PostCompleteScreen`, `PostDetailScreen` 계열의 하단 CTA를 `useSafeAreaInsets()` 기반 공통 footer 패턴으로 통합한다.
-  2. P0 QR productization: `InventoryQrPrototypeScreen`의 사용자-facing 제목, 설명, CTA에서 `테스트`/`프로토타입` 언어와 QA 전용 action을 제거한다.
-  3. P1 icon migration: action/navigation/input/button slot의 emoji를 `DSIcon` 또는 asset으로 치환한다.
+  2. P0 QR productization: `InventoryQrPrototypeScreen`의 실제 스캔 경로와 QA용 시뮬레이션 action을 분리하고 production-facing route/screen 명명으로 정리한다.
+  3. P1 icon migration 잔여 정리: 로그인/회원가입/위치 설정은 `DSIcon` 정책 테스트에 포함됐고, 남은 Text glyph/fixture emoji debt를 화면별로 줄인다.
   4. P1 map bottom surface 정리: 냉장고 선택 시 carousel과 상세 sheet 중 하나를 primary surface로 정하고, 지도 가시성과 다음 action을 보존한다.
   5. P1 profile surface 정리: 준비 중 메뉴를 줄이고 내 나눔/받은 나눔/알림 작업 중 하나를 실제 lifecycle 관리 화면으로 승격한다.
 - Acceptance Criteria:
   - [ ] 홈 또는 전용 허브에서 사용자가 지금 처리해야 할 나눔 action을 볼 수 있다.
   - [ ] 진행 중인 action은 `입고 QR 필요`, `수령 QR 필요`, `신청 접수`, `수령 제한 시간`, `완료/만료/취소` 같은 사용자-facing 상태로 표시된다.
   - [ ] Android emulator/실기기 screenshot에서 주요 fixed footer CTA가 system navigation bar와 겹치지 않는다.
-  - [ ] QR 보관/수령 화면의 사용자-facing copy에서 `테스트`, `프로토타입`, `초기화` 같은 내부 QA 언어가 제거된다.
-  - [ ] action/navigation/input/button slot에서 emoji 기반 아이콘이 제거되고 `DSIcon`/asset 기반으로 대체된다.
+  - [x] QR 보관/수령 화면의 사용자-facing copy에서 `테스트`, `프로토타입`, `초기화` 같은 내부 QA 언어가 제거된다.
+  - [ ] 로그인/회원가입/위치 설정은 `DSIcon` 정책 테스트 범위에 들어갔고, 남은 Text glyph/emoji fixture debt를 화면별로 추적한다.
   - [ ] 지도에서 냉장고 선택 시 하단 primary surface가 하나로 정리되어 지도와 냉장고 내부 목록의 위계가 명확하다.
   - [x] `/auth/me`에서 `isOperator`, `operatorRole`, `operatorFridgeIds` 운영자 힌트를 내려준다.
   - [x] 실제 운영자 계정만 프로필에서 운영자 콘솔 진입점을 볼 수 있다.
   - [x] 사용자가 내가 등록한 나눔 식재료와 내가 신청/수령한 나눔 식재료를 앱 안에서 확인할 수 있다.
-  - [ ] 알림 목록과 읽음 상태는 MVP에서 로컬 기준으로 유지하고, 서버 저장형은 Post-MVP 설계로 분리한다.
+  - [x] 알림함은 MVP에서 FCM 수신 기록과 로컬 AsyncStorage 읽음 상태로 유지하고, 서버 저장형 목록/읽음 API는 Post-MVP 설계로 분리한다.
   - [ ] iOS 시뮬레이터에서 로그인, 위치 권한, 카메라/갤러리, 지도, 알림 권한, 홈/상세/신청 smoke QA evidence가 남는다.
   - [x] `requested` 이후 취소/완료 전이에 대한 사용자-facing 정책과 API 계약이 확정된다. 만료는 서버 배치로 처리한다.
 - 검증 방법:
   - 진행 중인 나눔 허브: fixture/API 계약 테스트 + 홈/전용 화면 회귀 + QR pending/requested state QA
   - fixed footer: Android emulator + 실기기 screenshot 비교, iOS simulator smoke에서 CTA clipping 여부 확인
   - QR productization: 실제 API-backed route와 prototype-only route를 분리해 copy snapshot/화면 QA
-  - icon migration: `Text` emoji grep + 주요 탭/지도/상세/완료/알림 화면 screenshot QA
+  - icon migration 잔여: `Text` glyph/emoji grep + `FridgeSelectScreen`, Onboarding, 관련 fixture 중심 screenshot/정책 테스트
   - map surface: 냉장고 선택/검색/빈 목록/신청 후 refresh 상태의 screenshot QA
   - 운영자 권한: VM API matrix + 실제 앱 role-gated profile QA
   - 내역 화면: API 계약 테스트 + React Native 화면 회귀 + Android/iOS smoke QA
-  - 알림 읽음: 서버 API contract test + foreground/background 수신 회귀
+  - MVP 알림함: 로컬 AsyncStorage 읽음 상태 회귀 + foreground/background 수신 회귀. 서버 저장형 알림 API 계약은 Post-MVP 설계 검증으로 분리
   - iOS: iOS simulator smoke QA evidence 파일 기록
   - lifecycle: 상태 전이 API matrix + 상세/목록 refresh 회귀 테스트
 - 관련 파일/화면/API: `HomeScreen`, `ProfileScreen`, `FridgeOperatorConsoleScreen`, `ChatListScreen`, `PostDetailScreen`, `AnalysisResultScreen`, `PostCreateScreen`, `FridgeSelectScreen`, `PostCompleteScreen`, `MapScreen`, `InventoryQrPrototypeScreen`, `/auth/me`, `/operator/*`, notification APIs, future user-history APIs

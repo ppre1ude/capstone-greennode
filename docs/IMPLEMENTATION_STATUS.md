@@ -297,7 +297,7 @@
 - WebSocket 기반 실시간 채팅
 - 소셜 로그인 전체 구현
 - 이메일 verification 전체 예외 케이스
-- QR 보관/수령 end-to-end QA. 화면 단위 confirm-store/confirm-pickup 성공·실패 lifecycle 회귀는 보강했지만, `pending_store` 기반 실제 API/현장 end-to-end는 별도 후속이다.
+- QR 보관/수령 최신 VM 회귀 및 현장 QA. `pending_store` 기반 VM E2E는 2026-05-25 통과했지만, 최신 배포와 실제 QR 스캔 환경 재확인은 후속이다.
 - 운영자 권한/역할 관리 화면. `/auth/me` role metadata와 운영자 콘솔 진입점은 연결됐지만, 실제 운영자 권한을 부여/관리하는 제품 UI는 후속이다.
 
 ---
