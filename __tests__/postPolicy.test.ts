@@ -1,16 +1,30 @@
 import {
   canShareAnalysisResult,
+  canCancelPost,
+  canCompletePost,
+  canExpirePost,
   CONFIDENCE_REVIEW_THRESHOLD_PERCENT,
+  formatPostLifecycleDate,
   getAnalysisQualityMeta,
   getConfidencePercent,
   getGenerateResultQualityMeta,
+  getPostLifecycleDeadlineLabel,
   getPostAuthorId,
   getPostDisplayName,
   getPostRelativeTimeLabel,
   getPostStatusLabel,
   getQualityMeta,
+  getShareRequestStatusLabel,
+  HOME_POST_LIFECYCLE_STATUSES,
+  HOME_SHARE_REQUEST_LIFECYCLE_STATUSES,
+  isPostAwaitingPickupConfirmation,
+  isPostAwaitingStoreQr,
   isPostAuthoredByUser,
+  isPostInLifecycleSummary,
+  isShareRequestAwaitingPickup,
   isShareableCategory,
+  MY_POST_LIFECYCLE_STATUSES,
+  MY_SHARE_REQUEST_LIFECYCLE_STATUSES,
   needsAnalysisReview,
 } from '@/utils/postPolicy';
 
@@ -180,6 +194,115 @@ describe('post policy', () => {
     expect(getPostStatusLabel('expired')).toBe('보관 만료');
     expect(getPostStatusLabel('disposed')).toBe('폐기 완료');
     expect(getPostStatusLabel('cancelled')).toBe('등록 취소');
+    expect(getShareRequestStatusLabel('requested')).toBe('신청 접수');
+    expect(getShareRequestStatusLabel('completed')).toBe('수령 완료');
+    expect(getShareRequestStatusLabel('cancelled')).toBe('신청 취소');
+    expect(getShareRequestStatusLabel('expired')).toBe('수령 만료');
+  });
+
+  it('keeps lifecycle status filters behind the post policy interface', () => {
+    expect([...HOME_POST_LIFECYCLE_STATUSES]).toEqual([
+      'pending_store',
+      'available',
+      'requested',
+      'completed',
+    ]);
+    expect([...HOME_SHARE_REQUEST_LIFECYCLE_STATUSES]).toEqual([
+      'requested',
+      'completed',
+    ]);
+    expect([...MY_POST_LIFECYCLE_STATUSES]).toEqual([
+      'pending_store',
+      'available',
+      'requested',
+      'completed',
+      'cancelled',
+      'expired',
+    ]);
+    expect([...MY_SHARE_REQUEST_LIFECYCLE_STATUSES]).toEqual([
+      'requested',
+      'completed',
+      'cancelled',
+      'expired',
+    ]);
+  });
+
+  it('answers post lifecycle predicates without leaking status combinations to screens', () => {
+    expect(isPostInLifecycleSummary({ status: 'pending_store' })).toBe(true);
+    expect(isPostInLifecycleSummary({ status: 'available' })).toBe(true);
+    expect(isPostInLifecycleSummary({ status: 'requested' })).toBe(true);
+    expect(isPostInLifecycleSummary({ status: 'completed' })).toBe(false);
+
+    expect(isPostAwaitingStoreQr({ status: 'pending_store' })).toBe(true);
+    expect(isPostAwaitingStoreQr({ status: 'available' })).toBe(false);
+    expect(isPostAwaitingPickupConfirmation({ status: 'requested' })).toBe(
+      true,
+    );
+    expect(isPostAwaitingPickupConfirmation({ status: 'available' })).toBe(
+      false,
+    );
+
+    expect(canCancelPost({ status: 'pending_store' })).toBe(true);
+    expect(canCancelPost({ status: 'available' })).toBe(true);
+    expect(canCancelPost({ status: 'requested' })).toBe(false);
+    expect(canCompletePost({ status: 'requested' })).toBe(true);
+    expect(canCompletePost({ status: 'available' })).toBe(false);
+    expect(canExpirePost({ status: 'available' })).toBe(true);
+    expect(canExpirePost({ status: 'requested' })).toBe(true);
+    expect(canExpirePost({ status: 'completed' })).toBe(false);
+  });
+
+  it('derives share request pickup readiness from both request and post lifecycle state', () => {
+    expect(
+      isShareRequestAwaitingPickup({
+        request: { status: 'requested' },
+        post: { status: 'requested' },
+      }),
+    ).toBe(true);
+    expect(
+      isShareRequestAwaitingPickup({
+        request: { status: 'cancelled' },
+        post: { status: 'requested' },
+      }),
+    ).toBe(false);
+    expect(
+      isShareRequestAwaitingPickup({
+        request: { status: 'requested' },
+        post: { status: 'available' },
+      }),
+    ).toBe(false);
+  });
+
+  it('formats lifecycle dates and deadline labels consistently', () => {
+    expect(formatPostLifecycleDate(null)).toBe('일정 확인 필요');
+    expect(formatPostLifecycleDate('not-a-date', '마감 시간 확인 필요')).toBe(
+      '마감 시간 확인 필요',
+    );
+    expect(
+      getPostLifecycleDeadlineLabel({
+        status: 'pending_store',
+        storeExpiresAt: 'not-a-date',
+      }),
+    ).toBe('입고 QR 만료 일정 확인 필요');
+    expect(
+      getPostLifecycleDeadlineLabel({
+        status: 'requested',
+        requestExpiresAt: null,
+      }),
+    ).toBe('수령 QR 만료 일정 확인 필요');
+    expect(
+      getPostLifecycleDeadlineLabel({
+        status: 'completed',
+        pickedUpAt: null,
+        updatedAt: 'not-a-date',
+      }),
+    ).toBe('완료 일정 확인 필요');
+    expect(
+      getPostLifecycleDeadlineLabel({
+        status: 'available',
+        expirationDate: '2026-05-31',
+      }),
+    ).toBe('권장 수령일 2026-05-31');
   });
 
   it('normalizes confidence scores and flags confidence below 90% for review', () => {

@@ -1,4 +1,9 @@
-import type { AiAnalysis, GenerateResult } from '@/types';
+import type {
+  AiAnalysis,
+  GenerateResult,
+  PostStatus,
+  ShareRequestStatus,
+} from '@/types';
 
 type PostOwnershipFields = {
   authorId?: number | null;
@@ -10,10 +15,54 @@ type PostDisplayFields = {
   detectedFruitKo?: string | null;
 };
 
+type PostLifecycleFields = {
+  status?: PostStatus | string | null;
+  expirationDate?: string | null;
+  requestExpiresAt?: string | null;
+  storeExpiresAt?: string | null;
+  pickedUpAt?: string | null;
+  updatedAt?: string | null;
+};
+
+type ShareRequestLifecycleFields = {
+  request: {
+    status?: ShareRequestStatus | string | null;
+  };
+  post: PostLifecycleFields;
+};
+
 export type QualityMeta = {
   label: string;
   canShare: boolean;
 };
+
+export const HOME_POST_LIFECYCLE_STATUSES = [
+  'pending_store',
+  'available',
+  'requested',
+  'completed',
+] as const satisfies readonly PostStatus[];
+
+export const HOME_SHARE_REQUEST_LIFECYCLE_STATUSES = [
+  'requested',
+  'completed',
+] as const satisfies readonly ShareRequestStatus[];
+
+export const MY_POST_LIFECYCLE_STATUSES = [
+  'pending_store',
+  'available',
+  'requested',
+  'completed',
+  'cancelled',
+  'expired',
+] as const satisfies readonly PostStatus[];
+
+export const MY_SHARE_REQUEST_LIFECYCLE_STATUSES = [
+  'requested',
+  'completed',
+  'cancelled',
+  'expired',
+] as const satisfies readonly ShareRequestStatus[];
 
 const SHAREABLE_CATEGORIES = new Set([
   'fresh',
@@ -92,10 +141,10 @@ const getRejectionReasonQualityMeta = (
   }
 
   if (meta.label === REVIEW_LABEL) {
-    return {...meta, canShare: false};
+    return { ...meta, canShare: false };
   }
 
-  return {label: '사진으로 상태를 확인하기 어려워요', canShare: false};
+  return { label: '사진으로 상태를 확인하기 어려워요', canShare: false };
 };
 
 export const getAnalysisQualityMeta = (
@@ -252,4 +301,86 @@ export const getPostStatusLabel = (status?: string | null): string => {
     default:
       return '상태 확인 중';
   }
+};
+
+export const getShareRequestStatusLabel = (
+  status?: ShareRequestStatus | string | null,
+): string => {
+  switch (status) {
+    case 'requested':
+      return '신청 접수';
+    case 'completed':
+      return '수령 완료';
+    case 'cancelled':
+      return '신청 취소';
+    case 'expired':
+      return '수령 만료';
+    default:
+      return status ? String(status) : '상태 확인 중';
+  }
+};
+
+export const isPostInLifecycleSummary = (post: PostLifecycleFields): boolean =>
+  post.status === 'pending_store' ||
+  post.status === 'available' ||
+  post.status === 'requested';
+
+export const isPostAwaitingStoreQr = (post: PostLifecycleFields): boolean =>
+  post.status === 'pending_store';
+
+export const isPostAwaitingPickupConfirmation = (
+  post: PostLifecycleFields,
+): boolean => post.status === 'requested';
+
+export const isShareRequestAwaitingPickup = (
+  item: ShareRequestLifecycleFields,
+): boolean =>
+  item.request.status === 'requested' && item.post.status === 'requested';
+
+export const canCancelPost = (post: PostLifecycleFields): boolean =>
+  post.status === 'pending_store' || post.status === 'available';
+
+export const canCompletePost = (post: PostLifecycleFields): boolean =>
+  post.status === 'requested';
+
+export const canExpirePost = (post: PostLifecycleFields): boolean =>
+  post.status === 'requested' || post.status === 'available';
+
+export const formatPostLifecycleDate = (
+  value?: string | null,
+  fallback = '일정 확인 필요',
+): string => {
+  if (!value) {
+    return fallback;
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return fallback;
+  }
+
+  return date.toLocaleString('ko-KR', {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};
+
+export const getPostLifecycleDeadlineLabel = (
+  post: PostLifecycleFields,
+): string => {
+  if (post.status === 'pending_store') {
+    return `입고 QR 만료 ${formatPostLifecycleDate(post.storeExpiresAt)}`;
+  }
+
+  if (post.status === 'requested') {
+    return `수령 QR 만료 ${formatPostLifecycleDate(post.requestExpiresAt)}`;
+  }
+
+  if (post.status === 'completed') {
+    return `완료 ${formatPostLifecycleDate(post.pickedUpAt ?? post.updatedAt)}`;
+  }
+
+  return `권장 수령일 ${post.expirationDate ?? '일정 확인 필요'}`;
 };

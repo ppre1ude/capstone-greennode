@@ -11,13 +11,7 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import {
-  DSButton,
-  DSCard,
-  DSChip,
-  DSIcon,
-  DSText,
-} from '@/design-system';
+import { DSButton, DSCard, DSChip, DSIcon, DSText } from '@/design-system';
 import type { RootStackParamList } from '@/navigation/types';
 import {
   cancelPost,
@@ -28,80 +22,26 @@ import {
 import { getMyPosts, getMyShareRequests } from '@/api/users';
 import { useFeedRefreshStore } from '@/store/feedRefreshStore';
 import type { Post, UserShareRequestItem } from '@/types';
-import { getPostDisplayName, getPostStatusLabel } from '@/utils/postPolicy';
+import {
+  canCancelPost,
+  canCompletePost,
+  canExpirePost,
+  getPostDisplayName,
+  getPostLifecycleDeadlineLabel,
+  getPostStatusLabel,
+  getShareRequestStatusLabel,
+  isPostAwaitingStoreQr,
+  isPostInLifecycleSummary,
+  isShareRequestAwaitingPickup,
+  MY_POST_LIFECYCLE_STATUSES,
+  MY_SHARE_REQUEST_LIFECYCLE_STATUSES,
+} from '@/utils/postPolicy';
 import { getApiErrorMessage } from '@/utils/apiError';
 import { getHeaderTopPadding } from '@/utils/safeArea';
 import { colors } from '@/theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'MyShares'>;
 type TabKey = 'posted' | 'received';
-
-const ACTIVE_POST_STATUSES = [
-  'pending_store',
-  'available',
-  'requested',
-  'completed',
-  'cancelled',
-  'expired',
-] as const;
-
-const ACTIVE_REQUEST_STATUSES = [
-  'requested',
-  'completed',
-  'cancelled',
-  'expired',
-] as const;
-
-const formatDate = (value?: string | null) => {
-  if (!value) {
-    return '일정 확인 필요';
-  }
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return '일정 확인 필요';
-  }
-
-  return date.toLocaleString('ko-KR', {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-};
-
-const getDeadlineCopy = (post: Post) => {
-  if (post.status === 'pending_store') {
-    return `입고 QR 만료 ${formatDate(post.storeExpiresAt)}`;
-  }
-
-  if (post.status === 'requested') {
-    return `수령 QR 만료 ${formatDate(post.requestExpiresAt)}`;
-  }
-
-  if (post.status === 'completed') {
-    return `완료 ${formatDate(post.pickedUpAt ?? post.updatedAt)}`;
-  }
-
-  return `권장 수령일 ${post.expirationDate}`;
-};
-
-const getShareRequestStatusLabel = (
-  status: UserShareRequestItem['request']['status'] | string,
-) => {
-  switch (status) {
-    case 'requested':
-      return '신청 접수';
-    case 'completed':
-      return '수령 완료';
-    case 'cancelled':
-      return '신청 취소';
-    case 'expired':
-      return '수령 만료';
-    default:
-      return String(status);
-  }
-};
 
 const MySharesScreen = ({ route, navigation }: Props) => {
   const initialTab = route.params?.initialTab ?? 'posted';
@@ -126,8 +66,8 @@ const MySharesScreen = ({ route, navigation }: Props) => {
     setErrorMessage(null);
     try {
       const [postsResponse, requestsResponse] = await Promise.all([
-        getMyPosts([...ACTIVE_POST_STATUSES], 0, 50),
-        getMyShareRequests([...ACTIVE_REQUEST_STATUSES], 0, 50),
+        getMyPosts([...MY_POST_LIFECYCLE_STATUSES], 0, 50),
+        getMyShareRequests([...MY_SHARE_REQUEST_LIFECYCLE_STATUSES], 0, 50),
       ]);
 
       setPostedItems(postsResponse.data ?? []);
@@ -200,26 +140,25 @@ const MySharesScreen = ({ route, navigation }: Props) => {
 
   const postedCount = postedItems.length;
   const receivedCount = receivedItems.length;
-  const visibleEmpty = activeTab === 'posted' ? postedCount === 0 : receivedCount === 0;
+  const visibleEmpty =
+    activeTab === 'posted' ? postedCount === 0 : receivedCount === 0;
 
   const summaryCopy = useMemo(() => {
-    const activePosted = postedItems.filter(post =>
-      ['pending_store', 'available', 'requested'].includes(post.status),
-    ).length;
+    const activePosted = postedItems.filter(isPostInLifecycleSummary).length;
     const activeReceived = receivedItems.filter(
-      item =>
-        item.request.status === 'requested' &&
-        item.post.status === 'requested',
+      isShareRequestAwaitingPickup,
     ).length;
 
-    return `진행 중 ${activePosted + activeReceived}건 · 등록 ${postedCount}건 · 받은 나눔 ${receivedCount}건`;
+    return `진행 중 ${
+      activePosted + activeReceived
+    }건 · 등록 ${postedCount}건 · 받은 나눔 ${receivedCount}건`;
   }, [postedItems, postedCount, receivedItems, receivedCount]);
 
   const renderPostCard = (post: Post) => {
     const actionKeyPrefix = `post-${post.id}`;
-    const canCancel = post.status === 'pending_store' || post.status === 'available';
-    const canComplete = post.status === 'requested';
-    const canExpire = post.status === 'requested' || post.status === 'available';
+    const canCancel = canCancelPost(post);
+    const canComplete = canCompletePost(post);
+    const canExpire = canExpirePost(post);
 
     return (
       <DSCard
@@ -233,7 +172,7 @@ const MySharesScreen = ({ route, navigation }: Props) => {
               {getPostDisplayName(post)}
             </DSText>
             <DSText variant="small" color="textSecondary">
-              냉장고 #{post.fridgeId} · {getDeadlineCopy(post)}
+              냉장고 #{post.fridgeId} · {getPostLifecycleDeadlineLabel(post)}
             </DSText>
           </View>
           <DSChip label={getPostStatusLabel(post.status)} size="small" />
@@ -245,9 +184,11 @@ const MySharesScreen = ({ route, navigation }: Props) => {
             variant="outlined"
             color="assistive"
             size="small"
-            onPress={() => navigation.navigate('PostDetail', { postId: post.id })}
+            onPress={() =>
+              navigation.navigate('PostDetail', { postId: post.id })
+            }
           />
-          {post.status === 'pending_store' ? (
+          {isPostAwaitingStoreQr(post) ? (
             <DSButton
               label="입고 QR"
               size="small"
@@ -329,8 +270,7 @@ const MySharesScreen = ({ route, navigation }: Props) => {
   const renderReceivedCard = (item: UserShareRequestItem) => {
     const { post, request } = item;
     const actionKeyPrefix = `request-${request.id}`;
-    const canPickup =
-      request.status === 'requested' && post.status === 'requested';
+    const canPickup = isShareRequestAwaitingPickup(item);
 
     return (
       <DSCard
@@ -344,9 +284,9 @@ const MySharesScreen = ({ route, navigation }: Props) => {
               {getPostDisplayName(post)}
             </DSText>
             <DSText variant="small" color="textSecondary">
-              {(item.fridge?.name || `냉장고 #${post.fridgeId}`)} ·{' '}
+              {item.fridge?.name || `냉장고 #${post.fridgeId}`} ·{' '}
               {getShareRequestStatusLabel(request.status)} ·{' '}
-              {getDeadlineCopy(post)}
+              {getPostLifecycleDeadlineLabel(post)}
             </DSText>
           </View>
           <DSChip
@@ -361,7 +301,9 @@ const MySharesScreen = ({ route, navigation }: Props) => {
             variant="outlined"
             color="assistive"
             size="small"
-            onPress={() => navigation.navigate('PostDetail', { postId: post.id })}
+            onPress={() =>
+              navigation.navigate('PostDetail', { postId: post.id })
+            }
           />
           {canPickup ? (
             <>
@@ -455,7 +397,10 @@ const MySharesScreen = ({ route, navigation }: Props) => {
       {isLoading ? (
         <View style={styles.centerBox}>
           <ActivityIndicator color={colors.primary} />
-          <DSText variant="small" color="textSecondary" style={styles.centerText}>
+          <DSText
+            variant="small"
+            color="textSecondary"
+            style={styles.centerText}>
             내 나눔 상태를 불러오는 중입니다.
           </DSText>
         </View>
@@ -473,7 +418,10 @@ const MySharesScreen = ({ route, navigation }: Props) => {
           {errorMessage ? (
             <DSCard variant="outlined" style={styles.noticeCard}>
               <DSText variant="bodyBold">동기화가 필요합니다</DSText>
-              <DSText variant="small" color="textSecondary" style={styles.noticeText}>
+              <DSText
+                variant="small"
+                color="textSecondary"
+                style={styles.noticeText}>
                 {errorMessage}
               </DSText>
               <DSButton

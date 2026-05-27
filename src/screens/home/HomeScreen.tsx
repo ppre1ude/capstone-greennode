@@ -9,7 +9,13 @@
  *
  * @wireframe wireframe-foodlink/homescreen.html + temp/screen-home.html
  */
-import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import React, {
+  useEffect,
+  useState,
+  useCallback,
+  useMemo,
+  useRef,
+} from 'react';
 import {
   View,
   Text,
@@ -43,6 +49,14 @@ import {
 } from '@/utils/locationGuard';
 import { selectHomeRecommendations } from '@/utils/homeRecommendations';
 import { DSIcon, type DSIconName } from '@/design-system';
+import {
+  formatPostLifecycleDate,
+  HOME_POST_LIFECYCLE_STATUSES,
+  HOME_SHARE_REQUEST_LIFECYCLE_STATUSES,
+  isPostAwaitingPickupConfirmation,
+  isPostAwaitingStoreQr,
+  isShareRequestAwaitingPickup,
+} from '@/utils/postPolicy';
 import { colors } from '@/theme';
 import { getHeaderTopPadding } from '@/utils/safeArea';
 
@@ -53,24 +67,6 @@ type HomeAction = {
   buttonLabel: string | null;
   icon: DSIconName;
   onPress?: () => void;
-};
-
-const formatLifecycleTime = (value?: string | null) => {
-  if (!value) {
-    return '마감 시간 확인 필요';
-  }
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return '마감 시간 확인 필요';
-  }
-
-  return date.toLocaleString('ko-KR', {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
 };
 
 const HomeScreen = () => {
@@ -173,12 +169,8 @@ const HomeScreen = () => {
 
     try {
       const [postsResponse, requestsResponse] = await Promise.all([
-        getMyPosts(
-          ['pending_store', 'available', 'requested', 'completed'],
-          0,
-          20,
-        ),
-        getMyShareRequests(['requested', 'completed'], 0, 20),
+        getMyPosts([...HOME_POST_LIFECYCLE_STATUSES], 0, 20),
+        getMyShareRequests([...HOME_SHARE_REQUEST_LIFECYCLE_STATUSES], 0, 20),
       ]);
 
       setMyPosts(postsResponse.data ?? []);
@@ -244,72 +236,65 @@ const HomeScreen = () => {
   const currentActions = useMemo<HomeAction[]>(() => {
     const actions: HomeAction[] = [];
 
-    myShareRequests
-      .filter(
-        item =>
-          item.request.status === 'requested' &&
-          item.post.status === 'requested',
-      )
-      .forEach(item => {
-        actions.push({
-          key: `pickup-${item.request.id}`,
-          title: '수령 QR 확인 필요',
-          description: `${
-            item.post.detectedFruitKo ?? '나눔 식재료'
-          } 수령 QR이 열려 있습니다. ${formatLifecycleTime(
-            item.post.requestExpiresAt,
-          )} 전까지 인증을 완료하세요.`,
-          buttonLabel: '수령 QR 열기',
-          icon: 'qrcode',
-          onPress: () =>
-            navigation.getParent()?.navigate('InventoryQrPrototype', {
-              mode: 'pickup',
-              postId: item.post.id,
-              pendingExpiresAt: item.post.requestExpiresAt ?? undefined,
-            }),
-        });
+    myShareRequests.filter(isShareRequestAwaitingPickup).forEach(item => {
+      actions.push({
+        key: `pickup-${item.request.id}`,
+        title: '수령 QR 확인 필요',
+        description: `${
+          item.post.detectedFruitKo ?? '나눔 식재료'
+        } 수령 QR이 열려 있습니다. ${formatPostLifecycleDate(
+          item.post.requestExpiresAt,
+          '마감 시간 확인 필요',
+        )} 전까지 인증을 완료하세요.`,
+        buttonLabel: '수령 QR 열기',
+        icon: 'qrcode',
+        onPress: () =>
+          navigation.getParent()?.navigate('InventoryQrPrototype', {
+            mode: 'pickup',
+            postId: item.post.id,
+            pendingExpiresAt: item.post.requestExpiresAt ?? undefined,
+          }),
       });
+    });
 
-    myPosts
-      .filter(post => post.status === 'pending_store')
-      .forEach(post => {
-        actions.push({
-          key: `store-${post.id}`,
-          title: '입고 QR 인증 필요',
-          description: `${
-            post.detectedFruitKo ?? '나눔 식재료'
-          }는 입고 QR 인증 전이라 주변 목록에 노출되지 않습니다. ${formatLifecycleTime(
-            post.storeExpiresAt,
-          )} 전까지 입고를 완료하세요.`,
-          buttonLabel: '입고 QR 열기',
-          icon: 'qrcode',
-          onPress: () =>
-            navigation.getParent()?.navigate('InventoryQrPrototype', {
-              mode: 'store',
-              postId: post.id,
-            }),
-        });
+    myPosts.filter(isPostAwaitingStoreQr).forEach(post => {
+      actions.push({
+        key: `store-${post.id}`,
+        title: '입고 QR 인증 필요',
+        description: `${
+          post.detectedFruitKo ?? '나눔 식재료'
+        }는 입고 QR 인증 전이라 주변 목록에 노출되지 않습니다. ${formatPostLifecycleDate(
+          post.storeExpiresAt,
+          '마감 시간 확인 필요',
+        )} 전까지 입고를 완료하세요.`,
+        buttonLabel: '입고 QR 열기',
+        icon: 'qrcode',
+        onPress: () =>
+          navigation.getParent()?.navigate('InventoryQrPrototype', {
+            mode: 'store',
+            postId: post.id,
+          }),
       });
+    });
 
-    myPosts
-      .filter(post => post.status === 'requested')
-      .forEach(post => {
-        actions.push({
-          key: `posted-requested-${post.id}`,
-          title: '신청된 나눔 확인 필요',
-          description: `${
-            post.detectedFruitKo ?? '나눔 식재료'
-          } 신청이 접수됐습니다. ${formatLifecycleTime(
-            post.requestExpiresAt,
-          )} 전까지 수령 상태를 확인하세요.`,
-          buttonLabel: '내 나눔 관리',
-          icon: 'clipboard-list',
-          onPress: () =>
-            navigation.getParent()?.navigate('MyShares', {
-              initialTab: 'posted',
-            }),
-        });
+    myPosts.filter(isPostAwaitingPickupConfirmation).forEach(post => {
+      actions.push({
+        key: `posted-requested-${post.id}`,
+        title: '신청된 나눔 확인 필요',
+        description: `${
+          post.detectedFruitKo ?? '나눔 식재료'
+        } 신청이 접수됐습니다. ${formatPostLifecycleDate(
+          post.requestExpiresAt,
+          '마감 시간 확인 필요',
+        )} 전까지 수령 상태를 확인하세요.`,
+        buttonLabel: '내 나눔 관리',
+        icon: 'clipboard-list',
+        onPress: () =>
+          navigation.getParent()?.navigate('MyShares', {
+            initialTab: 'posted',
+          }),
       });
+    });
 
     if (actions.length > 0) {
       return actions.slice(0, 3);
@@ -365,13 +350,9 @@ const HomeScreen = () => {
 
   const activeActionCount = useMemo(() => {
     const accountActionCount =
-      myShareRequests.filter(
-        item =>
-          item.request.status === 'requested' &&
-          item.post.status === 'requested',
-      ).length +
-      myPosts.filter(post => post.status === 'pending_store').length +
-      myPosts.filter(post => post.status === 'requested').length;
+      myShareRequests.filter(isShareRequestAwaitingPickup).length +
+      myPosts.filter(isPostAwaitingStoreQr).length +
+      myPosts.filter(isPostAwaitingPickupConfirmation).length;
 
     if (accountActionCount > 0) {
       return accountActionCount;
