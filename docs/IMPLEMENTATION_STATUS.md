@@ -154,7 +154,7 @@
 - 통과: 무인증 401, 비운영자 403, 운영자 fridge 1 summary/items 200, 운영자 fridge 3 empty summary `total=0` 및 items `[]`, 없는 fridge 404, `requested` dispose 409, `available`/`expired` dispose 200.
 - dispose 성공 후 summary는 `total` 감소 및 `disposedToday` 증가, operator items와 `/fridges/1/posts?status=available`에서는 disposed 항목이 제외됐다.
 - 프론트 보강: 서버 계약에 맞춰 운영자 콘솔에서 `available` 항목도 기존 `신청 가능` 라벨을 유지한 채 폐기 CTA를 노출한다. 회귀 테스트에 available dispose Alert/API 호출을 추가했다.
-- 남은 gap: `/auth/me` 응답에는 운영자 role hint가 없어 실제 운영자 계정도 프로필의 role-gated 진입점에 자동 노출되지 않는다. 백엔드가 role metadata나 운영 가능 냉장고 목록 API를 제공하기 전까지 운영자 화면 진입 정책은 후속 결정이다.
+- 2026-05-27 백엔드 회신으로 `/auth/me` 응답의 `isOperator`, `operatorRole`, `operatorFridgeIds`가 확정됐다. 프론트는 해당 metadata를 정규화해 실제 운영자 계정에만 프로필 운영자 콘솔 진입점을 노출한다.
 
 ---
 
@@ -171,7 +171,7 @@
 | 나눔 식재료 상세/삭제/신청 | 부분 구현, 실제 기기 신청 QA 통과        | 실제 상세 응답의 `authorId` 기준으로 작성자 여부를 판단한다. 상세 화면은 `detectedFruitKo`, `freshnessLabel`, `confidenceScore`, `status`를 표시한다. `available` 나눔 식재료는 `requestShare(postId)`로 신청하고, 201/409 이후 `신청 접수` 상태로 CTA를 비활성화한다. 403은 작성자 본인 fallback 문구로 처리한다. |
 | 홈 주변 나눔 식재료        | 부분 구현, 실제 기기 홈 재조회 통과      | `/posts/nearby` 데이터를 카드로 표시한다. 홈 포커스와 등록 완료 refresh token 변경 시 재조회한다. 2026-05-21부터 현재 로딩된 nearby 목록에서 권장 수령일이 가까운 available 항목을 `오늘 가져가기 좋은 재료`로 로컬 추천한다. |
 | 지도/냉장고                | 부분 구현, 실제 기기 UI QA 통과          | `/fridges/nearby`, `/fridges/available` 조회와 지도 마커/냉장고 선택은 동작한다. 지도에서 냉장고를 선택하면 `GET /fridges/{id}/posts?status=available`로 내부 available 나눔 식재료를 조회하고, loading/error/empty/list 상태를 분리한다. |
-| 냉장고 운영자/QR           | Operator VM QA 통과, QR lifecycle 후속   | `flow: "fridge_qr"` 등록, 보관 QR 인증, 수령 QR 인증, 운영자 폐기 요청을 실제 API 호출 경로로 연결했다. 2026-05-25 VM에서 operator summary/items/dispose 권한, 빈 목록, available/expired dispose, requested 409, 목록 제외를 확인했다. `/auth/me` 운영자 role hint와 role 관리 UI, QR 보관/수령 end-to-end는 후속이다. |
+| 냉장고 운영자/QR           | Operator VM QA 통과, QR lifecycle 연결   | `flow: "fridge_qr"` 등록, 보관 QR 인증, 수령 QR 인증, 운영자 폐기 요청을 실제 API 호출 경로로 연결했다. 2026-05-25 VM에서 operator summary/items/dispose 권한, 빈 목록, available/expired dispose, requested 409, 목록 제외를 확인했다. 2026-05-27 백엔드 회신으로 `/auth/me` 운영자 role metadata가 확정되어 프로필 운영자 콘솔 진입 정책에 연결했다. |
 | 나눔 신청                  | 프론트 코드 연동 완료, 실제 기기 QA 통과 | 프론트는 `requestShare(postId)`, 상세 CTA, 201/403/409 UX, 홈/지도 refresh store를 구현했다. 2026-05-08 실제 Android 기기에서 신청 완료 alert, 상세 `신청 접수` 전환, 지도 냉장고 내부 목록 즉시 제거를 확인했다. |
 | FCM                        | debug/release/physical/emulator QA 통과 | 2026-05-21 emulator QA에서 `share_created`, `share_requested` 실제 send success 1 / failure 0, foreground 수신/로컬 알림 탭 기록, background system notification 표시와 tap의 `PostDetail` 라우팅을 확인했다. 2026-05-25 실기기+emulator 2계정 QA에서 debug foreground/background/terminated, 기존 task onNewIntent, fresh install, 로그아웃 후 로그인 defer, release background/process-killed/lockscreen tap routing, Android 14 API 34 Pixel AVD release background/stop-app tap routing을 확인했다. Android 13 또는 추가 OEM은 참고 매트릭스다. |
 | 채팅                       | 보류                                     | 정적 채팅 mock 데이터는 제거했다. WebSocket/API 계약은 없다. |
@@ -298,7 +298,7 @@
 - 소셜 로그인 전체 구현
 - 이메일 verification 전체 예외 케이스
 - QR 보관/수령 end-to-end QA. 화면 단위 confirm-store/confirm-pickup 성공·실패 lifecycle 회귀는 보강했지만, `pending_store` 기반 실제 API/현장 end-to-end는 별도 후속이다.
-- 운영자 권한/역할 관리 화면과 `/auth/me` role metadata. 운영자 콘솔 진입점과 inventory 점검 화면은 있으나, 실제 운영자 계정을 프로필에서 노출할 백엔드 힌트와 role 부여/관리 UI는 후속이다.
+- 운영자 권한/역할 관리 화면. `/auth/me` role metadata와 운영자 콘솔 진입점은 연결됐지만, 실제 운영자 권한을 부여/관리하는 제품 UI는 후속이다.
 
 ---
 

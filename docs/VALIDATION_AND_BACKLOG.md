@@ -99,9 +99,9 @@
 ### 후속 결정 필요
 
 - `stale`, `not_food`, `low_quality`, `screenshot`, `multi_object_review` 등 rejection reason enum은 Post-MVP에서 백엔드와 확정한다. 앱은 기존 호환 enum인 `ui_screenshot`, `review_required`, `non_food`도 방어적으로 유지한다.
-- 백엔드 Phase 1.5의 Post 구조 변경(`title/description/category` 제거, `detectedFruitKo/freshnessLabel/confidenceScore` 추가)은 프론트 코드 반영과 VM/API 런타임 QA를 진행했다. 2026-05-06에는 실제 VM `POST /posts`/`GET /posts/{id}` 응답에서 AI 메타데이터가 `null`로 저장되는 계약 불일치를 발견했고, 2026-05-08 백엔드가 버그로 인정해 sidecar 저장/복원 방식으로 수정 및 VM 재배포했다. 2026-05-08 VM/API 재검증과 실제 Android MVP flow 재검증은 통과했다. 2026-05-25 기준 FCM debug/release/physical/emulator QA, operator inventory runtime QA, QR `pending_store` 보관/수령 VM E2E, 저장 위치 기반 no-fridge fixture QA도 닫혔다. Android 13/OEM FCM 추가 매트릭스, operator role metadata, Post-MVP AI rejection contract는 후속이다.
+- 백엔드 Phase 1.5의 Post 구조 변경(`title/description/category` 제거, `detectedFruitKo/freshnessLabel/confidenceScore` 추가)은 프론트 코드 반영과 VM/API 런타임 QA를 진행했다. 2026-05-06에는 실제 VM `POST /posts`/`GET /posts/{id}` 응답에서 AI 메타데이터가 `null`로 저장되는 계약 불일치를 발견했고, 2026-05-08 백엔드가 버그로 인정해 sidecar 저장/복원 방식으로 수정 및 VM 재배포했다. 2026-05-08 VM/API 재검증과 실제 Android MVP flow 재검증은 통과했다. 2026-05-25 기준 FCM debug/release/physical/emulator QA, operator inventory runtime QA, QR `pending_store` 보관/수령 VM E2E, 저장 위치 기반 no-fridge fixture QA도 닫혔다. 2026-05-27 기준 operator role metadata와 계정 lifecycle API 계약은 프론트에 연결됐고, Android 13/OEM FCM 추가 매트릭스와 Post-MVP AI rejection contract는 후속이다.
 - 프론트는 백엔드가 구현한 `POST /posts/{id}/requests`와 `GET /fridges/{id}/posts?status=available`를 연동했다. 둘 다 2026-05-06 VM/API 런타임 QA에서 상태 전환과 available 제외 동작을 확인했다.
-- `requested` 이후 `reserved`, `completed`, `cancelled`, `expired` 흐름은 후속 버전에서 설계한다.
+- `requested` 이후 작성자 완료/취소, 신청자 취소, 서버 배치 만료 흐름은 2026-05-27 백엔드 회신 기준으로 프론트에 연결했다. `reserved` 상태는 사용하지 않는다.
 
 ## 2026-05-06 백엔드 Phase 1.5 반영 상태
 
@@ -293,14 +293,14 @@
 | AI 촬영/갤러리 분석 | 부분 구현, MVP 흐름 가능 | 실기기에서 `generate` 성공/실패 경로 검증 | false-positive는 서버/AI 계약 한계로 Post-MVP |
 | 나눔 식재료 등록 | 구현됨 | 실기기에서 `generate -> create -> home/detail/map` 검증. 2026-05-18 등록 화면에서 권장 수령일 확인/수정과 지난 날짜 차단 추가 | OCR, 최대 허용 기간 등 백엔드 날짜 정책은 없음 |
 | 홈 주변 나눔 목록 | 구현됨 | 등록 후 홈 재조회, requested 제외 검증. 2026-05-18 식재료명/냉장고명 로컬 검색 추가. 2026-05-21 `오늘 가져가기 좋은 재료` 로컬 추천 섹션 추가 | 서버 검색/추천/랭킹 API는 없음 |
-| 나눔 상세/신청 | 구현됨 | 201/403/409, `available -> requested`, 중복 신청 방어 검증 | `reserved/completed/cancelled/expired` 흐름 없음 |
+| 나눔 상세/신청 | 구현됨 | 201/403/409, `available -> requested`, 중복 신청 방어 검증. 2026-05-27 계약으로 작성자 취소/완료와 신청자 취소 경로를 앱에 연결 | live VM에서 lifecycle mutation 200/403/409 matrix 재검증 필요 |
 | 공유 냉장고 지도 | 구현됨 | 지도 마커, 냉장고 선택, 내부 available 목록, 상세 이동 검증. 2026-05-18 선택 카드와 내부 목록을 단일 bottom sheet로 정리 | 냉장고 없음 fixture/API 검증 추가 필요 |
-| 공유 냉장고별 나눔 목록 | 구현됨 | 신청 후 내부 목록에서 즉시 제거되는 것까지 실기기 재검증. 2026-05-25 QR `pending_store -> available -> requested -> completed` VM E2E도 통과 | operator inventory 자체는 VM QA 통과. 남은 것은 role metadata와 프로필 진입 정책 |
+| 공유 냉장고별 나눔 목록 | 구현됨 | 신청 후 내부 목록에서 즉시 제거되는 것까지 실기기 재검증. 2026-05-25 QR `pending_store -> available -> requested -> completed` VM E2E도 통과 | operator inventory와 role metadata는 프론트 연결 완료. live VM에서 실제 운영자 계정 진입 재검증 필요 |
 | FCM/알림함 | QA 완료, 읽음 API 후속 | payload parsing, fallback, 로컬 알림함, 실기기+emulator 2계정, release/process-killed/lockscreen tap 검증 | Android 13 실기기 또는 추가 OEM은 확보 시 참고 매트릭스 |
 | 검색 | 최소 구현 | 홈 나눔 식재료명/냉장고명 로컬 필터, 지도 공유 냉장고 이름/주소 로컬 필터 | 서버 검색 없음 |
 | 채팅 | 알림함으로 축소 | mock 채팅 제거됨 | WebSocket 채팅은 보류 |
 | 통계/탄소 절감 | 목업 제거/정리됨 | 준비 중 상태 | 실제 지표 API/계산식 없음 |
-| 냉장고 운영자 기능 | VM API QA 통과, 진입 role hint gap 있음 | 프로필 임시 진입점, operator summary/items 조회, dispose 호출, 권한 실패/빈 목록/상태 label UX 구현. 2026-05-25 VM에서 운영자/비운영자/빈 냉장고/available·expired dispose/requested 409를 확인했고 available 폐기 CTA를 보강했다. | `/auth/me` 운영자 role metadata와 운영자 role 관리 UI는 없음 |
+| 냉장고 운영자 기능 | VM API QA 통과, role metadata 연결 | 프로필 진입점, operator summary/items 조회, dispose 호출, 권한 실패/빈 목록/상태 label UX 구현. 2026-05-25 VM에서 운영자/비운영자/빈 냉장고/available·expired dispose/requested 409를 확인했고 available 폐기 CTA를 보강했다. 2026-05-27 `/auth/me` 운영자 metadata를 프로필 진입 정책에 연결했다. | 운영자 role 부여/관리 UI는 없음. live VM에서 실제 운영자 계정 진입 재검증 필요 |
 
 현재 검증 완료된 공유 냉장고 관련 흐름:
 
@@ -331,7 +331,7 @@
 
 현재 부족한 점:
 
-1. 공유 냉장고 운영자 inventory는 VM API QA와 앱 폐기 액션 보강까지 통과했다. 남은 것은 `/auth/me` role metadata와 보관/수령 QR lifecycle이다.
+1. 공유 냉장고 운영자 inventory는 VM API QA와 앱 폐기 액션 보강까지 통과했고 `/auth/me` role metadata도 프로필 진입 정책에 연결했다. 남은 것은 최신 VM 실제 운영자 계정 재검증과 role 관리 UI다.
 2. `주변에 공유 냉장고 없음` 상태와 거리/지역 edge case는 추가 검증이 필요하다.
 3. 공유 냉장고와 연결된 실제 알림 claim은 2026-05-25 FCM 실수신 QA로 닫혔다. 서버 읽음 상태/API 계약은 후속이다.
 
@@ -1266,17 +1266,17 @@ docs/VALIDATION_AND_BACKLOG.md의 "4. 한 장 촬영 UX와 multi-object 정책 �
 | 검색 기능                 | 부분 구현, 서버 검색 Post-MVP | 홈은 현재 불러온 주변 나눔 식재료를 식재료명/냉장고명으로 로컬 필터링한다. 홈 지도 아이콘은 지도 탭으로 이동하고, 지도 검색 입력은 공유 냉장고 이름/주소 로컬 필터로 동작한다. 2026-05-23 백엔드 회신 기준 서버 검색은 MVP 미포함이며 향후 nearby API optional `q`로 확장한다. | 서버 검색/독립 검색 화면은 후속 범위로 분리.                                                             |
 | 검색 결과 없음            | 구현됨                         | 홈 나눔 식재료 로컬 검색과 지도 공유 냉장고 로컬 검색 모두 결과 없음 상태와 검색 초기화를 제공한다.                                                                                                                                                                  | 서버 검색/독립 검색 화면은 후속 범위로 분리.                                                             |
 | 푸쉬 알림                 | 2계정 debug/release QA 및 Android 14/15 매트릭스 통과 | Firebase Messaging 의존성, Android 알림 권한, FCM 토큰 등록이 있다. `share_created`, `share_requested` foreground/background/opened/initial handler를 구현했고, payload는 문자열 + camelCase(`type`, `postId`, `requestId`, `fruitName`, `fridgeName`)로 검증한다. Firebase 설정이 없는 QA/release 빌드에서는 알림 handler와 FCM 토큰 등록을 안전하게 건너뛴다. 2026-05-21 emulator QA에서 `greennode-94eae` client/Admin project 정렬 후 실제 send success 1 / failure 0, foreground 로컬 알림 탭 기록, background system notification 표시와 tap의 `PostDetail` 라우팅을 확인했다. 2026-05-25 실기기+emulator 2계정 QA에서 debug foreground/background/terminated, 기존 task onNewIntent, fresh install, 로그아웃 후 로그인 defer 경로를 확인했다. release build는 background tap, process-killed notification tap, Samsung 패턴 잠금화면 notification tap 모두 `PostDetail` 진입을 확인했다. Android 14/API 34 Pixel 7 AVD release에서도 background와 `cmd activity stop-app` 종료 상태의 `share_created` notification tap이 `PostDetail`로 진입했다. process-killed release blank RN root는 notification payload 수신 시 Headless JS를 먼저 띄우지 않도록 native receiver를 분리해 해소했다. 알림함은 로컬 수신 기록/빈 상태 중심이며 읽음 상태 API는 없다. | Android 13 실기기 또는 추가 OEM 기기는 확보 시 참고 매트릭스로만 보강한다. |
-| 유저 프로필               | 부분 구현                      | 닉네임/이메일은 실제 유저 정보를 표시한다. 프로필 수정, 메뉴 이동, 내 나눔/관심/받은 나눔은 연결되어 있지 않다.                                                                                                                                                      | 프로필 수정 또는 내 나눔 내역 중 하나만 우선 연결.                                                        |
+| 유저 프로필               | 부분 구현                      | 닉네임/이메일은 실제 유저 정보를 표시한다. 프로필 수정은 `PATCH /auth/me`, 내 나눔/받은 나눔은 계정 단위 lifecycle API로 연결했다. 관심 식재료, 통계/탄소/포인트는 Post-MVP다. | live VM에서 profile PATCH와 계정 lifecycle 화면을 실제 계정으로 재검증한다. |
 | 유저 통계                 | 정리됨                         | 신선도 온도, 포인트, 탄소 절감량의 하드코딩 숫자를 제거하고 `준비 중` 상태로 표시한다.                                                                                                                                                                               | 실제 지표를 넣으려면 계산식과 API 계약을 먼저 정의.                                                       |
-| 냉장고별 나눔 식재료 조회 | 프론트 코드 연동 완료, VM/API QA 및 Android UI 재확인 통과 | 지도에서 특정 냉장고를 선택하면 `GET /fridges/{id}/posts?status=available`로 내부 available 목록을 조회한다. loading/error/empty/list 상태를 분리하고 항목 탭 시 상세로 이동한다. 2026-05-08 VM/API에서 `PostNearbyRead` 카드 필드와 requested 제외를 재확인했고, 실제 Android UI에서 신규 Post 표시명/상태와 신청 후 즉시 제거를 확인했다. 2026-05-23 기준 별도 operator inventory API는 `/api/v1/operator/fridges/{fridgeId}/inventory/*`로 분리된다. | operator inventory 자체는 2026-05-25 VM QA 통과. 남은 것은 운영자 role metadata/진입 정책이다. |
-| 냉장고 운영자 inventory | VM API QA 통과, 앱 폐기 액션 보강 | `GET /api/v1/operator/fridges/{fridgeId}/inventory/summary`, `GET /api/v1/operator/fridges/{fridgeId}/inventory/items`, `PATCH /api/v1/operator/items/{postId}/dispose`를 실제 VM에서 검증했다. 운영자 200, 비운영자 403, 빈 냉장고 `total=0/items=[]`, requested dispose 409, available/expired dispose 200, disposed 항목의 operator items 및 냉장고 available 목록 제외를 확인했다. | `/auth/me`가 운영자 힌트를 내려주지 않아 실제 운영자 계정의 프로필 진입점 자동 노출은 후속 계약 필요. |
+| 냉장고별 나눔 식재료 조회 | 프론트 코드 연동 완료, VM/API QA 및 Android UI 재확인 통과 | 지도에서 특정 냉장고를 선택하면 `GET /fridges/{id}/posts?status=available`로 내부 available 목록을 조회한다. loading/error/empty/list 상태를 분리하고 항목 탭 시 상세로 이동한다. 2026-05-08 VM/API에서 `PostNearbyRead` 카드 필드와 requested 제외를 재확인했고, 실제 Android UI에서 신규 Post 표시명/상태와 신청 후 즉시 제거를 확인했다. 2026-05-23 기준 별도 operator inventory API는 `/api/v1/operator/fridges/{fridgeId}/inventory/*`로 분리된다. | operator inventory와 role metadata는 연결 완료. 최신 VM에서 실제 운영자 계정 진입을 재검증한다. |
+| 냉장고 운영자 inventory | VM API QA 통과, 앱 폐기 액션 보강 | `GET /api/v1/operator/fridges/{fridgeId}/inventory/summary`, `GET /api/v1/operator/fridges/{fridgeId}/inventory/items`, `PATCH /api/v1/operator/items/{postId}/dispose`를 실제 VM에서 검증했다. 운영자 200, 비운영자 403, 빈 냉장고 `total=0/items=[]`, requested dispose 409, available/expired dispose 200, disposed 항목의 operator items 및 냉장고 available 목록 제외를 확인했다. `/auth/me` 운영자 힌트도 확정되어 프로필 진입점에 연결했다. | live VM에서 실제 운영자 계정으로 role metadata와 콘솔 진입을 재검증한다. |
 | 지도 근처 냉장고 조회     | 구현됨, VM no-fridge QA 통과                         | `MapScreen`이 `/fridges/nearby`, `FridgeSelectScreen`이 `/fridges/available`을 호출한다. 1번 검증에서 실제 냉장고 목록 표시를 확인했고, 2026-05-25 무기기 회귀에서 empty/error/retry/location guard를 고정했다. 같은 날 VM에서 저장 위치를 `0,0`, 제주, 부산, 뉴욕으로 바꿔 nearby/available 냉장고 0건을 확인했다. | query parameter 기반 거리 필터는 OpenAPI 계약에 없으므로 백엔드 계약 확정 시에만 별도 검증한다.                                             |
 | 채팅 탭                   | 알림함으로 축소/구현됨         | `ChatListScreen`의 `MOCK_CHATS`를 제거하고 탭 라벨을 `알림`으로 바꿨다. 현재는 FCM 수신 기록/빈 상태를 보여준다. WebSocket, 채팅방 상세, 메시지 송수신 API는 없다.                                                                                                 | MVP에서는 알림함으로 유지하고 WebSocket 채팅은 보류.                                                      |
 | WebSocket 채팅            | 미구현/보류 권장               | 코드와 OpenAPI 모두 실시간 채팅 계약이 없다. 구현/검증 비용이 크다.                                                                                                                                                                                                  | 다음 스프린트에서는 단순 문의/예약 CTA 또는 알림함으로 축소한다.                                          |
 
 #### 다음 스프린트 우선순위 제안
 
-1. Operator role metadata: `/auth/me` 또는 별도 operator endpoint에서 실제 운영자 계정의 냉장고 권한을 앱이 알 수 있게 계약을 정한다.
+1. Backend contract E2E: 최신 VM에서 profile PATCH, `/users/me/posts`, `/users/me/share-requests`, lifecycle mutation의 200/403/409 matrix를 실제 계정으로 재검증한다.
 2. Android 13 실기기 또는 추가 OEM 참고 매트릭스: 기기가 확보되면 Firebase 설정 포함 빌드와 FCM token이 등록된 두 테스트 계정으로 background/terminated 수신을 보강한다.
 3. Post-MVP AI/rejection contract: `stale-or-rotten`, `screenshot-or-ui`, `low-quality` false-positive를 rejection reason 또는 review-required 계약으로 승격할지 백엔드/AI와 결정한다.
 
@@ -1702,14 +1702,14 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
   - [x] `requested` dispose는 409로 거절된다.
   - [x] dispose 후 operator items와 `/fridges/1/posts?status=available`에서 disposed 항목이 제외된다.
   - [x] 앱 운영자 콘솔에서 `available` 항목에도 폐기 CTA가 노출된다.
-  - [ ] `/auth/me` 또는 별도 endpoint가 운영자 role hint를 제공해 실제 운영자 계정이 프로필 진입점을 볼 수 있다.
+  - [x] `/auth/me`가 운영자 role hint를 제공하고 앱이 실제 운영자 계정용 프로필 진입점에 사용할 수 있다.
 - 2026-05-25 evidence:
   - 환경: NHN Cloud VM API `localhost:8080`, SSH tunnel `localhost:8080 -> NHN-Cloud-Server:80`.
   - 계정: 운영자 `optest@foodlink.com`, 비운영자 `codex_fcm_b_1779690163@example.com`.
   - QA 데이터: `QA3-A` available post id `46`, `QA3-E` expired post id `47`, `QA3-R` requested post id `48`, empty fridge id `3`.
   - 결과 파일: `temp/operator-inventory-vm-qa-20260525.json`, seed 로그 `temp/operator-inventory-seed3-20260525.txt`.
-  - 발견한 gap: `/auth/me` `UserRead`에는 `isOperator`, `operatorRole`, `operatorFridgeIds`, `roles`가 없어 프로필의 role-gated 운영자 콘솔 진입점이 실제 운영자 계정을 자동 노출하지 못한다.
-  - 추가 확인: 현재 live OpenAPI `UserRead` schema에도 role hint 필드가 없다. 이번 세션에서 공개된 credential로 `optest@foodlink.com` 재로그인은 401로 실패했으므로, 실제 운영자 계정 role 재검증은 기존 evidence와 schema 기준으로 gap을 유지한다.
+  - 2026-05-27 후속 계약: `/auth/me` `UserRead`에 `isOperator`, `operatorRole`, `operatorFridgeIds`가 포함된다. 프론트는 이 metadata로 프로필의 role-gated 운영자 콘솔 진입점을 노출한다.
+  - 추가 확인 필요: 최신 VM 배포 후 실제 운영자 계정으로 `/auth/me` role metadata와 프로필 진입을 재검증한다.
 - 검증 방법: VM API matrix, operator console Jest regression
 - 관련 파일/화면/API: `src/api/operator.ts`, `src/screens/operator/FridgeOperatorConsoleScreen.tsx`, `src/screens/profile/ProfileScreen.tsx`, `__tests__/operator.api.test.ts`, `__tests__/fridgeOperatorConsole.screen.test.tsx`, `/api/v1/operator/fridges/{fridgeId}/inventory/*`, `/api/v1/operator/items/{postId}/dispose`
 
@@ -1734,12 +1734,12 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
 - WebSocket 기반 실시간 채팅: 서버 계약과 앱 구조가 없으므로 보류. `알림함` 또는 `나눔 신청하기`로 축소한다.
 - 소셜 로그인 전체 구현: 이메일 로그인 MVP가 동작하므로 우선순위 낮음. 현재 앱에서는 소셜 버튼을 숨기고 이메일 로그인만 노출한다.
 - 이메일 verification 전체 예외 케이스: 인증 메일/OTP 서버 계약이 없어 보류.
-- 냉장고 운영자 role 관리 UI와 role metadata: operator inventory runtime QA는 통과했지만, 실제 운영자 계정의 프로필 진입을 위해 `/auth/me` 운영자 힌트 또는 별도 operator-fridge 조회 API가 필요하다.
+- 냉장고 운영자 role 관리 UI: operator inventory runtime QA와 `/auth/me` role metadata 프론트 연결은 통과했지만, 운영자 권한을 부여/관리하는 제품 UI는 아직 없다.
 
 ## 2026-05-26 엔지니어링 우선순위 기준선
 
 - 분류: 다음 플랜 수립용 백로그 기준선
-- 배경: 2026-05-25까지 Android MVP 핵심 QA, FCM 실기기/에뮬레이터 QA, QR `pending_store` VM E2E, operator inventory runtime QA가 닫혔다. 현재 상태는 Android 기준 제한 베타 가능한 MVP에 가깝지만, 크로스플랫폼 production v1로 보려면 운영자 진입 정책, 사용자 내역, 알림 동기화, iOS evidence가 부족하다.
+- 배경: 2026-05-25까지 Android MVP 핵심 QA, FCM 실기기/에뮬레이터 QA, QR `pending_store` VM E2E, operator inventory runtime QA가 닫혔다. 2026-05-27 백엔드 feature contract 연결로 운영자 진입 정책과 사용자 내역은 코드에 반영됐다. 크로스플랫폼 production v1로 보려면 최신 VM E2E 재검증, iOS evidence, Post-MVP 지표/검색/알림 서버 저장 결정이 남아 있다.
 - CEO/제품 판단: 체류시간이 짧은 것 자체는 FoodLink의 핵심 문제가 아니다. 이 앱은 피드 소비보다 남는 식재료 처리, 신청, 수령, 완료를 빠르게 끝내는 작업형 앱이다. 진짜 gap은 사용자가 다시 돌아와 진행 중인 나눔 lifecycle을 추적하고 다음 행동을 마칠 표면이 부족하다는 점이다.
 - 현재 판단:
   - Android MVP 핵심 흐름 완성도는 약 80~85%다.
@@ -1754,12 +1754,10 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
   - 지도 화면은 선택 냉장고 카드와 상세 sheet가 동시에 바닥을 차지해 정보 구조가 과밀하다.
 - 다음 엔지니어링 우선순위:
   1. 내 진행 중인 나눔 허브: 홈 상단 또는 별도 화면에서 내가 등록한 나눔, 내가 신청한 나눔, QR 필요, 남은 시간, 신청 상태를 한 번에 보여준다.
-  2. 내 나눔/받은 나눔 API와 화면
-  3. 알림 서버 목록/읽음 상태
-  4. `requested` 이후 취소/만료/완료 lifecycle 확장
-  5. 운영자 role metadata 계약 확정 및 프로필 진입 정책 마감
-  6. iOS 시뮬레이터 기준 smoke QA
-  7. 검색/통계/AI rejection reason 확장
+  2. 최신 VM E2E 재검증: profile PATCH, my posts/share requests, lifecycle mutation, operator role metadata
+  3. iOS 시뮬레이터 기준 smoke QA
+  4. 검색/통계/AI rejection reason 확장
+  5. 알림 서버 목록/읽음 상태는 Post-MVP 저장형으로 별도 설계
 - 다음 UI/UX 우선순위:
   1. P0 fixed footer safe area: `AnalysisResultScreen`, `PostCreateScreen`, `FridgeSelectScreen`, `PostCompleteScreen`, `PostDetailScreen` 계열의 하단 CTA를 `useSafeAreaInsets()` 기반 공통 footer 패턴으로 통합한다.
   2. P0 QR productization: `InventoryQrPrototypeScreen`의 사용자-facing 제목, 설명, CTA에서 `테스트`/`프로토타입` 언어와 QA 전용 action을 제거한다.
@@ -1773,12 +1771,12 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
   - [ ] QR 보관/수령 화면의 사용자-facing copy에서 `테스트`, `프로토타입`, `초기화` 같은 내부 QA 언어가 제거된다.
   - [ ] action/navigation/input/button slot에서 emoji 기반 아이콘이 제거되고 `DSIcon`/asset 기반으로 대체된다.
   - [ ] 지도에서 냉장고 선택 시 하단 primary surface가 하나로 정리되어 지도와 냉장고 내부 목록의 위계가 명확하다.
-  - [ ] `/auth/me` 또는 별도 endpoint에서 `isOperator`, `operatorRole`, `operatorFridgeIds`, `roles` 중 합의된 운영자 힌트를 내려준다.
-  - [ ] 실제 운영자 계정만 프로필에서 운영자 콘솔 진입점을 볼 수 있다.
-  - [ ] 사용자가 내가 등록한 나눔 식재료와 내가 신청/수령한 나눔 식재료를 앱 안에서 확인할 수 있다.
-  - [ ] 알림 목록과 읽음 상태가 서버 기준으로 동기화된다.
+  - [x] `/auth/me`에서 `isOperator`, `operatorRole`, `operatorFridgeIds` 운영자 힌트를 내려준다.
+  - [x] 실제 운영자 계정만 프로필에서 운영자 콘솔 진입점을 볼 수 있다.
+  - [x] 사용자가 내가 등록한 나눔 식재료와 내가 신청/수령한 나눔 식재료를 앱 안에서 확인할 수 있다.
+  - [ ] 알림 목록과 읽음 상태는 MVP에서 로컬 기준으로 유지하고, 서버 저장형은 Post-MVP 설계로 분리한다.
   - [ ] iOS 시뮬레이터에서 로그인, 위치 권한, 카메라/갤러리, 지도, 알림 권한, 홈/상세/신청 smoke QA evidence가 남는다.
-  - [ ] `requested` 이후 취소/만료/완료 전이에 대한 사용자-facing 정책과 API 계약이 확정된다.
+  - [x] `requested` 이후 취소/완료 전이에 대한 사용자-facing 정책과 API 계약이 확정된다. 만료는 서버 배치로 처리한다.
 - 검증 방법:
   - 진행 중인 나눔 허브: fixture/API 계약 테스트 + 홈/전용 화면 회귀 + QR pending/requested state QA
   - fixed footer: Android emulator + 실기기 screenshot 비교, iOS simulator smoke에서 CTA clipping 여부 확인
@@ -1897,10 +1895,11 @@ GET /api/v1/fridges/available?latitude=35.1595&longitude=126.9136&radius_km=2.0
 - 자동 검증: `npm test -- --runInBand __tests__/map.fridgePosts.test.tsx __tests__/designSystem.catalog.test.tsx`.
 - 남은 QA: 이번 pass에서는 실제 Android 기기 또는 에뮬레이터 시각 QA를 수행하지 않는다. 지도 overlay 위치, 하단 sheet 높이, 실제 Google Map 위 터치 영역은 Task 4의 adb/emulator 가능 여부 확인 또는 별도 실기기 QA에서 검증한다.
 
-## 2026-05-26 Lifecycle UX 구현 메모
+## 2026-05-27 Backend feature contract 연결 메모
 
-- 범위: `GET /users/me/posts`, `GET /users/me/share-requests`, `/notifications` 서버 목록/읽음, `/posts/{id}/cancel|complete|expire`, `/share-requests/{id}/cancel` 계약에 맞춘 프론트 API client와 화면을 추가했다.
-- 사용자 표면: 홈의 `진행 중인 나눔` 허브가 계정 단위 내 나눔/받은 나눔 목록을 확인해 `입고 QR`, `수령 QR`, `신청된 나눔`을 우선 노출한다. 프로필의 `내 나눔 내역`, `받은 나눔 내역`은 `MyShares` 관리 화면으로 진입한다.
-- 알림 표면: 알림 탭은 로컬 FCM 기록을 유지하면서 서버 알림 목록을 merge하고, 단건/전체 읽음은 서버 API를 호출하되 실패 시 로컬 읽음 fallback을 유지한다.
-- 운영자 metadata: `/auth/me` 응답에서 camelCase와 snake_case 운영자 힌트를 모두 앱의 `User` shape로 정규화한다.
-- 남은 QA: 백엔드 live VM에 신규 endpoint가 배포되면 실제 계정으로 my posts/share requests, server notification read, lifecycle mutation 200/403/409 matrix를 재검증해야 한다.
+- 범위: `GET /users/me/posts`, `GET /users/me/share-requests`, `PATCH /auth/me`, `/posts/{id}/cancel|complete`, `/users/me/share-requests/{id}/cancel` 확정 계약에 맞춰 프론트 API client와 화면을 갱신했다.
+- 사용자 표면: 홈의 `진행 중인 나눔` 허브가 계정 단위 내 나눔/받은 나눔 목록을 확인해 `입고 QR`, `수령 QR`, `신청된 나눔`을 우선 노출한다. 프로필의 `내 나눔 내역`, `받은 나눔 내역`은 `MyShares` 관리 화면으로 진입하고, `프로필 수정`은 닉네임/프로필 이미지 URL 저장 폼으로 연결됐다.
+- 알림 표면: 백엔드가 서버 알림 목록/읽음을 Post-MVP로 확정했으므로 알림 탭은 FCM 수신 기록과 로컬 AsyncStorage 읽음 상태만 사용한다. `/notifications` 서버 sync/read/delete 호출은 MVP 화면에서 사용하지 않는다.
+- 운영자 metadata: `/auth/me` 응답의 `isOperator`, `operatorRole`, `operatorFridgeIds`를 앱의 `User` shape로 정규화한다. 기존 fixture 호환을 위해 snake_case와 `fridge_operator` role도 방어적으로 처리한다.
+- lifecycle 정책: 내 나눔 목록에는 `disposed`를 포함한다. 작성자 취소는 `available/requested/pending_store`, 작성자 완료는 `requested`, 신청자 취소는 `users/me/share-requests/{id}/cancel`에 연결한다. 수동 expire API는 사용하지 않고 서버 배치 만료를 따른다.
+- 남은 QA: 백엔드 live VM 최신 배포에서 실제 계정으로 my posts/share requests, profile PATCH, lifecycle mutation 200/403/409 matrix를 재검증해야 한다.

@@ -127,19 +127,25 @@ Host NHN-Cloud-Server
 | 1   | POST   | /api/v1/auth/signup         | 회원가입                  | ❌   |
 | 2   | POST   | /api/v1/auth/login          | 로그인                    | ❌   |
 | 3   | GET    | /api/v1/auth/me             | 내 정보 조회              | ✅   |
-| 4   | PUT    | /api/v1/auth/me/location    | 위치+FCM 토큰 갱신        | ✅   |
-| 5   | POST   | /api/v1/posts               | 나눔 식재료 등록          | ✅   |
-| 6   | POST   | /api/v1/posts/generate      | AI 나눔 식재료 미리보기   | ✅   |
-| 7   | GET    | /api/v1/posts/nearby        | 근처 나눔 식재료 목록     | ✅   |
-| 8   | GET    | /api/v1/posts/{id}          | 나눔 식재료 상세          | ✅   |
-| 9   | DELETE | /api/v1/posts/{id}          | 나눔 식재료 삭제          | ✅   |
-| 10  | POST   | /api/v1/posts/{id}/requests | 나눔 신청                 | ✅   |
-| 11  | GET    | /api/v1/fridges/nearby      | 근처 냉장고 현황          | ✅   |
-| 12  | GET    | /api/v1/fridges/available   | 등록 가능 냉장고          | ✅   |
-| 13  | GET    | /api/v1/fridges/{id}/posts  | 냉장고별 나눔 식재료 조회 | ✅   |
-| 14  | GET    | /api/v1/operator/fridges/{fridgeId}/inventory/summary | 운영자 inventory 요약 | ✅ |
-| 15  | GET    | /api/v1/operator/fridges/{fridgeId}/inventory/items | 운영자 inventory 품목 조회 | ✅ |
-| 16  | PATCH  | /api/v1/operator/items/{postId}/dispose | 운영자 폐기 처분 | ✅ |
+| 4   | PATCH  | /api/v1/auth/me             | 프로필 수정               | ✅   |
+| 5   | PUT    | /api/v1/auth/me/location    | 위치+FCM 토큰 갱신        | ✅   |
+| 6   | POST   | /api/v1/posts               | 나눔 식재료 등록          | ✅   |
+| 7   | POST   | /api/v1/posts/generate      | AI 나눔 식재료 미리보기   | ✅   |
+| 8   | GET    | /api/v1/posts/nearby        | 근처 나눔 식재료 목록     | ✅   |
+| 9   | GET    | /api/v1/posts/{id}          | 나눔 식재료 상세          | ✅   |
+| 10  | DELETE | /api/v1/posts/{id}          | 나눔 식재료 삭제          | ✅   |
+| 11  | POST   | /api/v1/posts/{id}/requests | 나눔 신청                 | ✅   |
+| 12  | POST   | /api/v1/posts/{id}/cancel   | 작성자 나눔 취소          | ✅   |
+| 13  | POST   | /api/v1/posts/{id}/complete | 작성자 직거래 완료        | ✅   |
+| 14  | GET    | /api/v1/users/me/posts      | 내 나눔 목록              | ✅   |
+| 15  | GET    | /api/v1/users/me/share-requests | 받은 나눔/신청 목록   | ✅   |
+| 16  | POST   | /api/v1/users/me/share-requests/{id}/cancel | 신청자 취소 | ✅ |
+| 17  | GET    | /api/v1/fridges/nearby      | 근처 냉장고 현황          | ✅   |
+| 18  | GET    | /api/v1/fridges/available   | 등록 가능 냉장고          | ✅   |
+| 19  | GET    | /api/v1/fridges/{id}/posts  | 냉장고별 나눔 식재료 조회 | ✅   |
+| 20  | GET    | /api/v1/operator/fridges/{fridgeId}/inventory/summary | 운영자 inventory 요약 | ✅ |
+| 21  | GET    | /api/v1/operator/fridges/{fridgeId}/inventory/items | 운영자 inventory 품목 조회 | ✅ |
+| 22  | PATCH  | /api/v1/operator/items/{postId}/dispose | 운영자 폐기 처분 | ✅ |
 
 ### 백엔드 구현 완료, 프론트 연동 필요
 
@@ -237,6 +243,49 @@ const result = await response.json();
   }
 }
 ```
+
+### 4.2-A 내 정보 조회/프로필 수정
+
+`GET /api/v1/auth/me`는 로그인 사용자 정보와 운영자 진입 힌트를 함께 내려준다. 프론트는 camelCase를 canonical로 사용하되 구형/중간 응답 호환을 위해 snake_case도 정규화한다.
+
+운영자 권한이 없는 유저:
+
+```json
+{
+  "isOperator": false,
+  "operatorRole": null,
+  "operatorFridgeIds": []
+}
+```
+
+운영자 권한이 있는 유저:
+
+```json
+{
+  "isOperator": true,
+  "operatorRole": "operator",
+  "operatorFridgeIds": [1]
+}
+```
+
+`operatorRole`은 `"operator"` 또는 `"admin"`이다. 프론트는 기존 fixture 호환을 위해 `"fridge_operator"`도 운영자 역할로 인정한다.
+
+프로필 수정:
+
+```text
+PATCH /api/v1/auth/me
+Authorization: Bearer {token}
+Content-Type: application/json
+```
+
+```json
+{
+  "nickname": "공급자A_수정",
+  "profileImageUrl": "/static/uploads/profile/avatar.jpg"
+}
+```
+
+닉네임은 2~50자이며 중복 닉네임은 허용된다. MVP에서는 multipart 업로드가 아니라 `profileImageUrl` 문자열을 저장한다. 응답은 `UserRead`와 동일한 shape이며 앱은 저장 성공 후 auth store의 user를 갱신한다.
 
 ### 4.3 위치 + FCM 토큰 등록
 
@@ -446,7 +495,7 @@ Authorization: Bearer {token}
 
 > 서버 `message`에 구형 표현인 `게시글`이 남아 있을 수 있다. 실제 서버 응답 증거로는 기록하되, 앱 UI와 제품 문서에서는 **나눔 식재료**로 번역한다.
 >
-> `status: "available"`은 현재 검증된 **나눔 상태**다. MVP 목표 상태 흐름은 `available -> requested`다. `requested`는 수요자의 나눔 신청이 접수된 상태이며 예약 확정이 아니다. `reserved`, `completed`, `cancelled`, `expired`는 후속 상태다.
+> `status: "available"`은 현재 검증된 **나눔 상태**다. 일반 흐름은 `available -> requested -> completed`이며, 작성자/신청자 취소는 `cancelled`, 서버 배치 만료는 `expired`로 전이된다. `requested`는 수요자의 나눔 신청이 접수된 상태이며 예약 확정이 아니다. `reserved`는 사용하지 않는다.
 >
 > 작성자 여부 판단은 `authorId` 기준으로 처리한다. 구형 fixture의 `userId`는 호환용 fallback으로만 본다.
 >
@@ -518,6 +567,47 @@ Authorization: Bearer {token}
 
 > 작성자 본인만 삭제 가능 (403 반환)
 
+### 4.9-A 계정 단위 나눔 lifecycle
+
+내 나눔 목록:
+
+```text
+GET /api/v1/users/me/posts?status=available,requested,completed,cancelled,expired,pending_store,disposed&skip=0&limit=20
+Authorization: Bearer {token}
+```
+
+응답은 `PostRead[]`이며 `fridgeName`이 포함된다. 작성자가 삭제한 Post는 hard delete되어 목록에 남지 않는다. 운영자 폐기 항목은 작성자가 사유를 인지할 수 있도록 `disposed` 상태로 목록에 포함한다. `pending_store` 입고 만료는 서버 배치/lazy-expire로 `cancelled` 전이되며, 프론트는 별도 만료 API를 호출하지 않는다. 화면에서 입고/보관 deadline을 표시할 때는 `storageDeadlineAt`을 사용하고, 구형 fixture의 `storeExpiresAt`은 호환 fallback으로만 본다.
+
+받은 나눔/신청 목록:
+
+```text
+GET /api/v1/users/me/share-requests?status=requested,completed,cancelled,expired&skip=0&limit=20
+Authorization: Bearer {token}
+```
+
+응답은 `{ request, post }[]` 중첩 구조다. `post.fridgeName`, `post.labelCode`, `post.storageZone`, `post.requestExpiresAt`, `post.imageUrl`, `post.expirationDate`를 화면 표시와 QR 재진입에 사용한다. 목록 API는 fridge `publicCode`를 노출하지 않는다.
+
+작성자 lifecycle mutation:
+
+```text
+POST /api/v1/posts/{post_id}/cancel
+POST /api/v1/posts/{post_id}/complete
+Authorization: Bearer {token}
+```
+
+- cancel: `available`, `requested`, `pending_store`에서 작성자 본인만 가능하다. `requested` 취소 시 연결된 `ShareRequest`도 `cancelled`가 된다.
+- complete: 일반 직거래 나눔에서 작성자가 `requested -> completed`로 완료 처리한다.
+- expire: 사용자 호출 API를 사용하지 않는다. 만료는 서버 배치가 처리한다.
+
+신청자 취소:
+
+```text
+POST /api/v1/users/me/share-requests/{request_id}/cancel
+Authorization: Bearer {token}
+```
+
+신청자 본인의 `requested` 신청만 취소할 수 있다. 성공 시 `ShareRequest.status = cancelled`, 묶여 있던 `Post.status = available`로 복원된다.
+
 ### 4.10 근처 냉장고 조회
 
 ```
@@ -559,7 +649,7 @@ Authorization: Bearer {token}
 ### 4.13 운영자 Inventory API
 
 > 2026-05-25 VM runtime QA 완료. `localhost:8080`에서 운영자/비운영자 권한, 빈 냉장고, `available`/`expired` dispose 성공, `requested` dispose 409, dispose 후 operator items 및 냉장고 available 목록 제외를 확인했다.
-> 남은 계약 gap: 현재 `/auth/me`의 `UserRead`는 `isOperator`, `operatorRole`, `operatorFridgeIds`, `roles` 같은 운영자 힌트를 내려주지 않는다. 앱 프로필 진입점이 실제 운영자 계정을 자동으로 노출하려면 백엔드 role metadata 또는 운영 가능 냉장고 조회 API가 필요하다.
+> 2026-05-27 백엔드 회신 기준 `/auth/me`가 `isOperator`, `operatorRole`, `operatorFridgeIds`를 내려준다. 앱 프로필 진입점은 이 metadata로 운영자 콘솔을 노출한다.
 
 #### Inventory summary
 
