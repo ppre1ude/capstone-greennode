@@ -26,10 +26,6 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'flex-start',
   },
-  headerBackText: {
-    fontSize: 22,
-    color: colors.primary,
-  },
   // 지도 영역
   mapArea: {
     flex: 1,

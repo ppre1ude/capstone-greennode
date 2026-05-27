@@ -23,6 +23,8 @@ export type DSIconName =
   | 'clipboard-list'
   | 'comment'
   | 'envelope'
+  | 'eye'
+  | 'eye-slash'
   | 'flask'
   | 'gear'
   | 'gift'

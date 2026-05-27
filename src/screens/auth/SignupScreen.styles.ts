@@ -25,10 +25,6 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'flex-start',
   },
-  backIcon: {
-    fontSize: 22,
-    color: colors.primary,
-  },
   headerTitle: {
     fontSize: 17,
     fontWeight: '700',

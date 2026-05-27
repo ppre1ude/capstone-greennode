@@ -8,10 +8,13 @@ const emojiPattern = /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}]/u;
 const iconPolicyFiles = [
   'src/design-system/catalog/DesignSystemCatalog.tsx',
   'src/navigation/MainTab.tsx',
+  'src/screens/auth/LoginEmailScreen.tsx',
   'src/screens/auth/LoginScreen.tsx',
+  'src/screens/auth/SignupScreen.tsx',
   'src/screens/camera/CameraScanScreen.tsx',
   'src/screens/chat/ChatListScreen.tsx',
   'src/screens/home/HomeScreen.tsx',
+  'src/screens/location/LocationSetupScreen.tsx',
   'src/screens/map/MapScreen.tsx',
   'src/screens/post/FridgeSelectScreen.tsx',
   'src/screens/post/PostCompleteScreen.tsx',
