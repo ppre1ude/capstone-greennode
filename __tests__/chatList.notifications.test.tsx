@@ -105,6 +105,7 @@ describe('ChatListScreen notifications', () => {
       renderer = ReactTestRenderer.create(<ChatListScreen />);
     });
 
+    expect(mockedGetNotifications).not.toHaveBeenCalled();
     expect(
       renderer!.root.findAllByProps({children: '아직 알림이 없습니다'}),
     ).not.toHaveLength(0);
@@ -192,7 +193,7 @@ describe('ChatListScreen notifications', () => {
     expect(mockedMarkServerNotificationRead).not.toHaveBeenCalled();
   });
 
-  it('marks server notifications read on the server when opened', async () => {
+  it('treats persisted server-source notification records as local-only entries', async () => {
     useNotificationStore.setState({
       notifications: [
         {
@@ -219,8 +220,9 @@ describe('ChatListScreen notifications', () => {
       await Promise.resolve();
     });
 
-    expect(mockedMarkServerNotificationRead).toHaveBeenCalledWith(
-      'server-message-2',
+    expect(mockedMarkServerNotificationRead).not.toHaveBeenCalled();
+    expect(mockedOpenNotificationTarget).toHaveBeenCalledWith(
+      expect.objectContaining({id: 'server-message-2', postId: '11'}),
     );
   });
 
@@ -277,7 +279,7 @@ describe('ChatListScreen notifications', () => {
     expect(mockedMarkAllServerNotificationsRead).not.toHaveBeenCalled();
   });
 
-  it('marks server notifications read on the server when using read all', async () => {
+  it('marks server-source notifications as read locally when using read all', async () => {
     useNotificationStore.setState({
       notifications: [
         {
@@ -303,10 +305,15 @@ describe('ChatListScreen notifications', () => {
       await Promise.resolve();
     });
 
-    expect(mockedMarkAllServerNotificationsRead).toHaveBeenCalledTimes(1);
+    expect(mockedMarkAllServerNotificationsRead).not.toHaveBeenCalled();
+    expect(
+      useNotificationStore
+        .getState()
+        .notifications.every(notification => Boolean(notification.readAt)),
+    ).toBe(true);
   });
 
-  it('merges server notification records into the local inbox on focus', async () => {
+  it('does not fetch server notification records on focus during MVP', async () => {
     mockedGetNotifications.mockResolvedValueOnce({
       success: true,
       message: 'ok',
@@ -331,16 +338,14 @@ describe('ChatListScreen notifications', () => {
       await Promise.resolve();
     });
 
-    expect(mockedGetNotifications).toHaveBeenCalledWith(false, 0, 50);
+    expect(mockedGetNotifications).not.toHaveBeenCalled();
     expect(
       renderer!.root.findAllByProps({children: '서버 알림'}),
-    ).not.toHaveLength(0);
-    expect(useNotificationStore.getState().notifications[0].source).toBe(
-      'server',
-    );
+    ).toHaveLength(0);
+    expect(useNotificationStore.getState().notifications).toEqual([]);
   });
 
-  it('deletes only server-backed notifications when clearing the inbox', async () => {
+  it('clears local inbox records without deleting server-backed records', async () => {
     useNotificationStore.setState({
       notifications: [
         {
@@ -379,9 +384,6 @@ describe('ChatListScreen notifications', () => {
     });
 
     expect(useNotificationStore.getState().notifications).toEqual([]);
-    expect(mockedDeleteServerNotification).toHaveBeenCalledTimes(1);
-    expect(mockedDeleteServerNotification).toHaveBeenCalledWith(
-      'message-server',
-    );
+    expect(mockedDeleteServerNotification).not.toHaveBeenCalled();
   });
 });
