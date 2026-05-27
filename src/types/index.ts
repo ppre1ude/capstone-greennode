@@ -4,6 +4,7 @@ export type {
   LoginResponse,
   SignupRequest,
   LocationUpdateRequest,
+  UserProfileUpdateRequest,
 } from './auth';
 export type {
   Post,

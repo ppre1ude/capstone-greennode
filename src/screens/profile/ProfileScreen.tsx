@@ -6,10 +6,11 @@
  *
  * @wireframe wireframe-foodlink/profile.html
  */
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, ScrollView, Alert, StatusBar } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuthStore } from '@/store/authStore';
+import { updateProfile } from '@/api/auth';
 import {
   DSButton,
   DSCard,
@@ -17,6 +18,7 @@ import {
   DSIcon,
   DSListCell,
   DSText,
+  DSTextField,
   type DSIconName,
 } from '@/design-system';
 import { colors } from '@/theme';
@@ -147,11 +149,27 @@ const canAccessOperatorConsole = (user: User | null): boolean => {
 
 const ProfileScreen = () => {
   const user = useAuthStore(state => state.user);
+  const setUser = useAuthStore(state => state.setUser);
   const logoutStore = useAuthStore(state => state.logout);
   const navigation = useNavigation<any>();
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [draftNickname, setDraftNickname] = useState(user?.nickname ?? '');
+  const [draftProfileImageUrl, setDraftProfileImageUrl] = useState(
+    user?.profileImageUrl ?? '',
+  );
   const visibleMenuItems = MENU_ITEMS.filter(
     item => item.id !== 'operator-console' || canAccessOperatorConsole(user),
   );
+
+  useEffect(() => {
+    if (isEditingProfile) {
+      return;
+    }
+
+    setDraftNickname(user?.nickname ?? '');
+    setDraftProfileImageUrl(user?.profileImageUrl ?? '');
+  }, [isEditingProfile, user?.nickname, user?.profileImageUrl]);
 
   const handleLogout = () => {
     Alert.alert('로그아웃', '정말 로그아웃 하시겠습니까?', [
@@ -172,10 +190,49 @@ const ProfileScreen = () => {
   };
 
   const handleProfileEditPress = () => {
-    Alert.alert(
-      '프로필 수정 준비 중',
-      '닉네임과 프로필 이미지를 저장하는 서버 API가 준비되면 연결할 수 있습니다.',
-    );
+    setDraftNickname(user?.nickname ?? '');
+    setDraftProfileImageUrl(user?.profileImageUrl ?? '');
+    setIsEditingProfile(true);
+  };
+
+  const handleCancelProfileEdit = () => {
+    setDraftNickname(user?.nickname ?? '');
+    setDraftProfileImageUrl(user?.profileImageUrl ?? '');
+    setIsEditingProfile(false);
+  };
+
+  const handleSaveProfile = async () => {
+    const nickname = draftNickname.trim();
+    const profileImageUrl = draftProfileImageUrl.trim() || null;
+
+    if (nickname.length < 2 || nickname.length > 50) {
+      Alert.alert('닉네임 확인', '닉네임은 2~50자로 입력해 주세요.');
+      return;
+    }
+
+    setIsSavingProfile(true);
+    try {
+      const response = await updateProfile({ nickname, profileImageUrl });
+      if (response.success && response.data) {
+        setUser(response.data);
+        setIsEditingProfile(false);
+        Alert.alert('프로필 수정 완료', '변경된 프로필을 저장했습니다.');
+        return;
+      }
+
+      Alert.alert(
+        '프로필 수정 실패',
+        response.message || '프로필을 저장하지 못했습니다.',
+      );
+    } catch (error) {
+      console.warn('Failed to update profile:', error);
+      Alert.alert(
+        '프로필 수정 실패',
+        '서버에서 프로필을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.',
+      );
+    } finally {
+      setIsSavingProfile(false);
+    }
   };
 
   const handleMenuPress = (id: ProfileMenuItemId) => {
@@ -255,9 +312,54 @@ const ProfileScreen = () => {
               size="small"
               style={styles.editButton}
               textStyle={styles.editButtonText}
+              disabled={isEditingProfile}
               onPress={handleProfileEditPress}
             />
           </View>
+
+          {isEditingProfile ? (
+            <View style={styles.profileEditBox}>
+              <DSTextField
+                label="닉네임"
+                value={draftNickname}
+                onChangeText={setDraftNickname}
+                maxLength={50}
+                status={
+                  draftNickname.trim().length >= 2 &&
+                  draftNickname.trim().length <= 50
+                    ? 'normal'
+                    : 'error'
+                }
+                caption="2~50자까지 사용할 수 있습니다."
+                returnKeyType="next"
+              />
+              <DSTextField
+                label="프로필 이미지 URL"
+                value={draftProfileImageUrl}
+                onChangeText={setDraftProfileImageUrl}
+                autoCapitalize="none"
+                autoCorrect={false}
+                placeholder="/static/uploads/profile/avatar.jpg"
+                caption="이미지 주소를 비우면 기본 아바타를 사용합니다."
+              />
+              <View style={styles.profileEditActions}>
+                <DSButton
+                  label="취소"
+                  variant="outlined"
+                  color="assistive"
+                  size="small"
+                  disabled={isSavingProfile}
+                  onPress={handleCancelProfileEdit}
+                />
+                <DSButton
+                  label="저장"
+                  size="small"
+                  loading={isSavingProfile}
+                  onPress={handleSaveProfile}
+                />
+              </View>
+            </View>
+          ) : null}
 
           {/* 신뢰도 온도 (프로그레스) */}
           <DSCard variant="plain" style={styles.trustBox}>
@@ -405,6 +507,15 @@ const styles = StyleSheet.create({
   },
   editButtonText: {
     fontSize: 12,
+  },
+  profileEditBox: {
+    gap: 12,
+    marginBottom: 24,
+  },
+  profileEditActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 8,
   },
   trustBox: {
     backgroundColor: colors.surface,

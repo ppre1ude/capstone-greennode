@@ -3,7 +3,14 @@
  * @see docs/API_INTEGRATION_CONTRACT.md § 4.1~4.3
  */
 import apiClient from './client';
-import type {ApiResponse, User, LoginResponse, SignupRequest, LocationUpdateRequest} from '@/types';
+import type {
+  ApiResponse,
+  User,
+  LoginResponse,
+  SignupRequest,
+  LocationUpdateRequest,
+  UserProfileUpdateRequest,
+} from '@/types';
 
 const AUTH_PREFIX = '/api/v1/auth';
 
@@ -55,6 +62,18 @@ export const login = async (
 /** 내 정보 조회 — GET /api/v1/auth/me */
 export const getMe = async (): Promise<ApiResponse<User>> => {
   const response = await apiClient.get(`${AUTH_PREFIX}/me`);
+  const payload = response.data as ApiResponse<BackendUser>;
+  return {
+    ...payload,
+    data: payload.data ? normalizeUser(payload.data) : payload.data,
+  };
+};
+
+/** 프로필 수정 — PATCH /api/v1/auth/me */
+export const updateProfile = async (
+  data: UserProfileUpdateRequest,
+): Promise<ApiResponse<User>> => {
+  const response = await apiClient.patch(`${AUTH_PREFIX}/me`, data);
   const payload = response.data as ApiResponse<BackendUser>;
   return {
     ...payload,

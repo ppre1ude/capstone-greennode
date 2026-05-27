@@ -1,8 +1,9 @@
 import React from 'react';
-import { Alert, TouchableOpacity } from 'react-native';
+import { Alert, TextInput, TouchableOpacity } from 'react-native';
 import ReactTestRenderer from 'react-test-renderer';
 import ProfileScreen from '@/screens/profile/ProfileScreen';
 import { useAuthStore } from '@/store/authStore';
+import { updateProfile } from '@/api/auth';
 
 const mockParentNavigate = jest.fn();
 
@@ -11,6 +12,14 @@ jest.mock('@react-navigation/native', () => ({
     getParent: jest.fn(() => ({ navigate: mockParentNavigate })),
   })),
 }));
+
+jest.mock('@/api/auth', () => ({
+  updateProfile: jest.fn(),
+}));
+
+const mockedUpdateProfile = updateProfile as jest.MockedFunction<
+  typeof updateProfile
+>;
 
 const findTouchableByText = (
   renderer: ReactTestRenderer.ReactTestRenderer,
@@ -57,6 +66,16 @@ describe('ProfileScreen operator console entry', () => {
       },
       isLoggedIn: true,
       hasLocation: true,
+    });
+    mockedUpdateProfile.mockResolvedValue({
+      success: true,
+      message: '사용자 조회 성공',
+      data: {
+        ...useAuthStore.getState().user!,
+        nickname: '테스터 수정',
+        profileImageUrl: '/static/uploads/profile/avatar.jpg',
+        updatedAt: '2026-05-27T00:00:00Z',
+      },
     });
   });
 
@@ -198,7 +217,7 @@ describe('ProfileScreen operator console entry', () => {
     });
   });
 
-  it('explains that profile editing needs a backend save contract', async () => {
+  it('updates nickname and profile image URL through the backend contract', async () => {
     const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
     let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
 
@@ -210,9 +229,30 @@ describe('ProfileScreen operator console entry', () => {
       findTouchableByText(renderer!, '프로필 수정').props.onPress();
     });
 
+    const [nicknameInput, profileImageInput] =
+      renderer!.root.findAllByType(TextInput);
+
+    await ReactTestRenderer.act(async () => {
+      nicknameInput.props.onChangeText('테스터 수정');
+      profileImageInput.props.onChangeText('/static/uploads/profile/avatar.jpg');
+    });
+
+    await ReactTestRenderer.act(async () => {
+      findTouchableByText(renderer!, '저장').props.onPress();
+      await Promise.resolve();
+    });
+
+    expect(mockedUpdateProfile).toHaveBeenCalledWith({
+      nickname: '테스터 수정',
+      profileImageUrl: '/static/uploads/profile/avatar.jpg',
+    });
+    expect(useAuthStore.getState().user).toMatchObject({
+      nickname: '테스터 수정',
+      profileImageUrl: '/static/uploads/profile/avatar.jpg',
+    });
     expect(alertSpy).toHaveBeenCalledWith(
-      '프로필 수정 준비 중',
-      expect.stringContaining('프로필 이미지를 저장하는 서버 API'),
+      '프로필 수정 완료',
+      '변경된 프로필을 저장했습니다.',
     );
 
     await ReactTestRenderer.act(async () => {
