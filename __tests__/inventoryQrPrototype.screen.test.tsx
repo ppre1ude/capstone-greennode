@@ -2,9 +2,41 @@ import React from 'react';
 import { Alert, Text, TouchableOpacity } from 'react-native';
 import ReactTestRenderer from 'react-test-renderer';
 import { confirmPickup, confirmStore } from '@/api/inventory';
-import { QrScannerShell } from '@/features/qr';
 import InventoryQrPrototypeScreen from '@/screens/inventory/InventoryQrPrototypeScreen';
 import { useFeedRefreshStore } from '@/store/feedRefreshStore';
+
+let mockOnObjectsScanned:
+  | ((objects: Array<{ type: string; value?: string }>) => void)
+  | undefined;
+
+jest.mock('react-native-vision-camera', () => {
+  const ReactForMock = require('react');
+  const { View: MockView } = require('react-native');
+
+  return {
+    Camera: ReactForMock.forwardRef((props: unknown, ref: React.Ref<unknown>) =>
+      ReactForMock.createElement(MockView, { ...(props as object), ref }),
+    ),
+    isScannedCode: (object: { value?: unknown }) => 'value' in object,
+    useCameraDevice: jest.fn(() => ({ id: 'back' })),
+    useCameraPermission: jest.fn(() => ({
+      hasPermission: true,
+      requestPermission: jest.fn(),
+    })),
+    useObjectOutput: jest.fn(
+      ({
+        onObjectsScanned,
+      }: {
+        onObjectsScanned?: (
+          objects: Array<{ type: string; value?: string }>,
+        ) => void;
+      }) => {
+        mockOnObjectsScanned = onObjectsScanned;
+        return { testID: 'mock-object-output' };
+      },
+    ),
+  };
+});
 
 jest.mock('@/api/inventory', () => ({
   confirmPickup: jest.fn(),
@@ -50,31 +82,30 @@ const findTouchableByText = (
   return touchable;
 };
 
-const pressWrongFridgeQrAction = (
-  renderer: ReactTestRenderer.ReactTestRenderer,
-) => {
-  const wrongFridgeButton = renderer.root.findByProps({
-    testID: 'inventory-qr-wrong-fridge-action',
-  });
-
-  if (!wrongFridgeButton) {
-    throw new Error('Wrong fridge QR action not found');
-  }
-
-  wrongFridgeButton.props.onPress();
-};
-
 const apiError = (status: number) => ({
   response: {
     status,
   },
 });
 
+const scanNativeQrValue = async (value: string, type = 'qr') => {
+  if (!mockOnObjectsScanned) {
+    throw new Error('Native QR scanner callback was not registered');
+  }
+
+  await ReactTestRenderer.act(async () => {
+    mockOnObjectsScanned?.([{ type, value }]);
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+};
+
 describe('InventoryQrPrototypeScreen', () => {
   let alertSpy: jest.SpyInstance;
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockOnObjectsScanned = undefined;
     alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
     useFeedRefreshStore.setState({
       nearbyPostsRefreshToken: 0,
@@ -105,11 +136,112 @@ describe('InventoryQrPrototypeScreen', () => {
     expect(textContent).toContain('05:00');
     expect(textContent).toContain('등록 대기');
     expect(textContent).toContain('라벨은 보관 인증 후 표시');
+    expect(textContent).toContain('보관 QR 스캔');
+    expect(textContent).toContain('수령 QR 스캔');
+    expect(textContent).toContain('다른 냉장고 스캔');
+    expect(textContent).toContain('다시 시작');
     expect(textContent).not.toContain('냉장고 QR 흐름 테스트');
     expect(textContent).not.toContain('프로토타입');
     expect(textContent).not.toContain('보관 QR 테스트');
     expect(textContent).not.toContain('수령 QR 테스트');
     expect(textContent).not.toContain('초기화');
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
+  it('does not expose simulation actions on a post-backed QR scan route', async () => {
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(
+        <InventoryQrPrototypeScreen
+          navigation={{ goBack: jest.fn() } as any}
+          route={
+            {
+              params: {
+                mode: 'store',
+                postId: 10,
+                fridgePublicCode: 'GJ-STATION-001',
+              },
+            } as any
+          }
+        />,
+      );
+    });
+
+    const textContent = getTextContent(renderer!);
+
+    expect(textContent).not.toContain('보관 QR 스캔');
+    expect(textContent).not.toContain('수령 QR 스캔');
+    expect(textContent).not.toContain('다른 냉장고 스캔');
+    expect(textContent).not.toContain('다시 시작');
+    expect(textContent).not.toContain('다시 스캔');
+    expect(
+      renderer!.root.findAllByProps({
+        testID: 'inventory-qr-wrong-fridge-action',
+      }),
+    ).toHaveLength(0);
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
+  it('lets the user retry the same store QR after a failed confirmation', async () => {
+    mockedConfirmStore
+      .mockRejectedValueOnce(apiError(410))
+      .mockResolvedValueOnce({
+        success: true,
+        message: 'ok',
+        data: {
+          postId: 10,
+          status: 'available',
+          labelCode: '#03',
+          storageZone: 'GENERAL',
+          storageDeadlineAt: '2026-06-18T05:30:00Z',
+          storedAt: '2026-05-19T05:30:00Z',
+        },
+      });
+
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(
+        <InventoryQrPrototypeScreen
+          navigation={{ goBack: jest.fn() } as any}
+          route={
+            {
+              params: {
+                mode: 'store',
+                postId: 10,
+                fridgePublicCode: 'GJ-STATION-001',
+              },
+            } as any
+          }
+        />,
+      );
+    });
+
+    await scanNativeQrValue('foodlink://fridges/GJ-STATION-001/verify');
+
+    expect(mockedConfirmStore).toHaveBeenCalledTimes(1);
+    expect(getTextContent(renderer!)).toContain('다시 스캔');
+
+    await ReactTestRenderer.act(async () => {
+      findTouchableByText(renderer!, '다시 스캔').props.onPress();
+      await Promise.resolve();
+    });
+
+    await scanNativeQrValue('foodlink://fridges/GJ-STATION-001/verify');
+
+    expect(mockedConfirmStore).toHaveBeenCalledTimes(2);
+    expect(mockedConfirmStore).toHaveBeenLastCalledWith({
+      postId: 10,
+      fridgePublicCode: 'GJ-STATION-001',
+    });
+    expect(getTextContent(renderer!)).toContain('#03');
 
     await ReactTestRenderer.act(async () => {
       renderer?.unmount();
@@ -212,11 +344,7 @@ describe('InventoryQrPrototypeScreen', () => {
       );
     });
 
-    await ReactTestRenderer.act(async () => {
-      findTouchableByText(renderer!, '보관 QR 스캔').props.onPress();
-      await Promise.resolve();
-      await Promise.resolve();
-    });
+    await scanNativeQrValue('foodlink://fridges/GJ-STATION-001/verify');
 
     expect(mockedConfirmStore).toHaveBeenCalledWith({
       postId: 10,
@@ -266,11 +394,7 @@ describe('InventoryQrPrototypeScreen', () => {
     const previousToken =
       useFeedRefreshStore.getState().nearbyPostsRefreshToken;
 
-    await ReactTestRenderer.act(async () => {
-      await renderer!.root.findByType(QrScannerShell).props.onValidScan({
-        fridgePublicCode: 'GJ-STATION-001',
-      });
-    });
+    await scanNativeQrValue('foodlink://fridges/GJ-STATION-001/verify');
 
     expect(useFeedRefreshStore.getState().requestedPostId).toBeNull();
     expect(useFeedRefreshStore.getState().nearbyPostsRefreshToken).toBe(
@@ -317,11 +441,7 @@ describe('InventoryQrPrototypeScreen', () => {
     const previousToken =
       useFeedRefreshStore.getState().nearbyPostsRefreshToken;
 
-    await ReactTestRenderer.act(async () => {
-      await renderer!.root.findByType(QrScannerShell).props.onValidScan({
-        fridgePublicCode: 'GJ-STATION-001',
-      });
-    });
+    await scanNativeQrValue('foodlink://fridges/GJ-STATION-001/verify');
 
     expect(useFeedRefreshStore.getState().requestedPostId).toBe(43);
     expect(useFeedRefreshStore.getState().nearbyPostsRefreshToken).toBe(
@@ -358,11 +478,7 @@ describe('InventoryQrPrototypeScreen', () => {
     const previousToken =
       useFeedRefreshStore.getState().nearbyPostsRefreshToken;
 
-    await ReactTestRenderer.act(async () => {
-      await renderer!.root.findByType(QrScannerShell).props.onValidScan({
-        fridgePublicCode: 'GJ-STATION-001',
-      });
-    });
+    await scanNativeQrValue('foodlink://fridges/GJ-STATION-001/verify');
 
     expect(mockedConfirmStore).toHaveBeenCalledWith({
       postId: 10,
@@ -414,11 +530,7 @@ describe('InventoryQrPrototypeScreen', () => {
     const previousToken =
       useFeedRefreshStore.getState().nearbyPostsRefreshToken;
 
-    await ReactTestRenderer.act(async () => {
-      await renderer!.root.findByType(QrScannerShell).props.onValidScan({
-        fridgePublicCode: 'GJ-STATION-001',
-      });
-    });
+    await scanNativeQrValue('foodlink://fridges/GJ-STATION-001/verify');
 
     expect(getTextContent(renderer!)).toContain('입고 인증에 실패했습니다.');
     expect(getTextContent(renderer!)).toContain('라벨은 보관 인증 후 표시');
@@ -457,11 +569,7 @@ describe('InventoryQrPrototypeScreen', () => {
     const previousToken =
       useFeedRefreshStore.getState().nearbyPostsRefreshToken;
 
-    await ReactTestRenderer.act(async () => {
-      await renderer!.root.findByType(QrScannerShell).props.onValidScan({
-        fridgePublicCode: 'GJ-STATION-001',
-      });
-    });
+    await scanNativeQrValue('foodlink://fridges/GJ-STATION-001/verify');
 
     expect(mockedConfirmPickup).toHaveBeenCalledWith({
       postId: 10,
@@ -516,11 +624,7 @@ describe('InventoryQrPrototypeScreen', () => {
     const previousToken =
       useFeedRefreshStore.getState().nearbyPostsRefreshToken;
 
-    await ReactTestRenderer.act(async () => {
-      await renderer!.root.findByType(QrScannerShell).props.onValidScan({
-        fridgePublicCode: 'GJ-STATION-001',
-      });
-    });
+    await scanNativeQrValue('foodlink://fridges/GJ-STATION-001/verify');
 
     expect(getTextContent(renderer!)).toContain('수령 인증에 실패했습니다.');
     expect(getTextContent(renderer!)).not.toContain(
@@ -583,11 +687,7 @@ describe('InventoryQrPrototypeScreen', () => {
 
     const initialToken = useFeedRefreshStore.getState().nearbyPostsRefreshToken;
 
-    await ReactTestRenderer.act(async () => {
-      await renderer!.root.findByType(QrScannerShell).props.onValidScan({
-        fridgePublicCode: 'GJ-STATION-001',
-      });
-    });
+    await scanNativeQrValue('foodlink://fridges/GJ-STATION-001/verify');
 
     expect(mockedConfirmStore).toHaveBeenCalledWith({
       postId: 44,
@@ -605,11 +705,7 @@ describe('InventoryQrPrototypeScreen', () => {
       await Promise.resolve();
     });
 
-    await ReactTestRenderer.act(async () => {
-      await renderer!.root.findByType(QrScannerShell).props.onValidScan({
-        fridgePublicCode: 'GJ-STATION-001',
-      });
-    });
+    await scanNativeQrValue('foodlink://fridges/GJ-STATION-001/verify');
 
     expect(mockedConfirmPickup).toHaveBeenCalledWith({
       postId: 44,
@@ -728,11 +824,7 @@ describe('InventoryQrPrototypeScreen', () => {
       );
     });
 
-    await ReactTestRenderer.act(async () => {
-      pressWrongFridgeQrAction(renderer!);
-      await Promise.resolve();
-      await Promise.resolve();
-    });
+    await scanNativeQrValue('foodlink://fridges/GJ-WRONG-999/verify', 'micro-qr');
 
     expect(mockedConfirmStore).toHaveBeenCalledWith({
       postId: 10,
@@ -776,11 +868,7 @@ describe('InventoryQrPrototypeScreen', () => {
       );
     });
 
-    await ReactTestRenderer.act(async () => {
-      pressWrongFridgeQrAction(renderer!);
-      await Promise.resolve();
-      await Promise.resolve();
-    });
+    await scanNativeQrValue('foodlink://fridges/GJ-WRONG-999/verify');
 
     expect(mockedConfirmPickup).toHaveBeenCalledWith({
       postId: 10,

@@ -108,6 +108,8 @@ const InventoryQrPrototypeScreen = ({ navigation, route }: Props) => {
   const [storeConfirmed, setStoreConfirmed] = useState(false);
   const [pickupConfirmed, setPickupConfirmed] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
+  const [scanRetryAvailable, setScanRetryAvailable] = useState(false);
+  const [scannerSession, setScannerSession] = useState(0);
   const [confirmedStoreResult, setConfirmedStoreResult] =
     useState<ConfirmStoreResult | null>(null);
   const [confirmedPickupResult, setConfirmedPickupResult] =
@@ -184,11 +186,18 @@ const InventoryQrPrototypeScreen = ({ navigation, route }: Props) => {
 
   const handleValidScan = useCallback(
     async (target: FridgeQrVerificationTarget) => {
+      if (isApiBacked) {
+        setScanRetryAvailable(false);
+      }
+
       if (
         expectedFridgePublicCode &&
         target.fridgePublicCode !== expectedFridgePublicCode
       ) {
         setScanMessage('선택한 냉장고 QR이 아닙니다. 다시 확인해주세요.');
+        if (isApiBacked) {
+          setScanRetryAvailable(true);
+        }
         return;
       }
 
@@ -214,11 +223,13 @@ const InventoryQrPrototypeScreen = ({ navigation, route }: Props) => {
             }
 
             setScanMessage(response.message || '입고 인증에 실패했습니다.');
+            setScanRetryAvailable(true);
           } catch (error) {
             const message = getQrVerificationErrorMessage(
               getErrorStatus(error),
             );
             setScanMessage(message);
+            setScanRetryAvailable(true);
             Alert.alert('QR 인증 실패', message);
           } finally {
             setIsConfirming(false);
@@ -254,9 +265,11 @@ const InventoryQrPrototypeScreen = ({ navigation, route }: Props) => {
           }
 
           setScanMessage(response.message || '수령 인증에 실패했습니다.');
+          setScanRetryAvailable(true);
         } catch (error) {
           const message = getQrVerificationErrorMessage(getErrorStatus(error));
           setScanMessage(message);
+          setScanRetryAvailable(true);
           Alert.alert('QR 인증 실패', message);
         } finally {
           setIsConfirming(false);
@@ -277,9 +290,16 @@ const InventoryQrPrototypeScreen = ({ navigation, route }: Props) => {
     ],
   );
 
+  const handleRetryScan = useCallback(() => {
+    setScanRetryAvailable(false);
+    setScannerSession(session => session + 1);
+    setScanMessage('냉장고 QR을 다시 스캔해주세요.');
+  }, []);
+
   const resetPrototype = () => {
     setScanMode('store');
     setLastScannedValue(null);
+    setScanRetryAvailable(false);
     setStoreConfirmed(false);
     setPickupConfirmed(false);
     setConfirmedStoreResult(null);
@@ -364,6 +384,8 @@ const InventoryQrPrototypeScreen = ({ navigation, route }: Props) => {
           </View>
 
           <QrScannerShell
+            enableNativeScanner={isApiBacked}
+            key={`${scanMode}-${scannerSession}`}
             lastScannedValue={lastScannedValue}
             onValidScan={handleValidScan}
             testID="inventory-qr-scanner"
@@ -377,43 +399,54 @@ const InventoryQrPrototypeScreen = ({ navigation, route }: Props) => {
             </View>
           ) : null}
 
-          <View style={styles.actionGrid}>
-            <ActionButton
-              label="보관 QR 스캔"
-              onPress={() => {
-                setScanMode('store');
-                simulateScan(
-                  buildFridgeQrVerificationUrl(
-                    'https://foodlink.app',
-                    simulatedFridgePublicCode,
-                  ),
-                );
-              }}
-            />
-            <ActionButton
-              label="수령 QR 스캔"
-              onPress={() => {
-                setScanMode('pickup');
-                simulateScan(
-                  buildFridgeQrVerificationUrl(
-                    'https://foodlink.app',
-                    simulatedFridgePublicCode,
-                  ),
-                );
-              }}
-            />
-            <ActionButton
-              label="다른 냉장고 스캔"
-              testID="inventory-qr-wrong-fridge-action"
-              tone="warning"
-              onPress={() => simulateScan(wrongFridgePayload)}
-            />
-            <ActionButton
-              label="다시 시작"
-              tone="secondary"
-              onPress={resetPrototype}
-            />
-          </View>
+          {isApiBacked && scanRetryAvailable && !isConfirming ? (
+            <TouchableOpacity
+              testID="inventory-qr-retry-scan-action"
+              onPress={handleRetryScan}
+              style={styles.retryScanButton}>
+              <Text style={styles.retryScanButtonText}>다시 스캔</Text>
+            </TouchableOpacity>
+          ) : null}
+
+          {!isApiBacked ? (
+            <View style={styles.actionGrid}>
+              <ActionButton
+                label="보관 QR 스캔"
+                onPress={() => {
+                  setScanMode('store');
+                  simulateScan(
+                    buildFridgeQrVerificationUrl(
+                      'https://foodlink.app',
+                      simulatedFridgePublicCode,
+                    ),
+                  );
+                }}
+              />
+              <ActionButton
+                label="수령 QR 스캔"
+                onPress={() => {
+                  setScanMode('pickup');
+                  simulateScan(
+                    buildFridgeQrVerificationUrl(
+                      'https://foodlink.app',
+                      simulatedFridgePublicCode,
+                    ),
+                  );
+                }}
+              />
+              <ActionButton
+                label="다른 냉장고 스캔"
+                testID="inventory-qr-wrong-fridge-action"
+                tone="warning"
+                onPress={() => simulateScan(wrongFridgePayload)}
+              />
+              <ActionButton
+                label="다시 시작"
+                tone="secondary"
+                onPress={resetPrototype}
+              />
+            </View>
+          ) : null}
         </View>
 
         {storeConfirmed ? (
@@ -655,6 +688,24 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 13,
     fontWeight: '700',
+  },
+  retryScanButton: {
+    minHeight: 44,
+    marginTop: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.background,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  retryScanButtonText: {
+    color: colors.primary,
+    fontSize: 13,
+    fontWeight: '800',
+    textAlign: 'center',
   },
   actionGrid: {
     flexDirection: 'row',

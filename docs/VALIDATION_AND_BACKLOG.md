@@ -1749,7 +1749,7 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
 - 디자인 리뷰 판단:
   - 현재 UX/UI는 약 6/10이다. MVP 흐름은 이해되지만 반복 사용 제품으로 보이는 lifecycle 표면과 모바일 마감이 부족하다.
   - 분석 결과, 등록 폼/냉장고 선택/완료 화면 계열에서 하단 CTA가 Android system navigation 영역과 겹치는 screenshot evidence가 있다.
-  - QR 화면의 `테스트`/`프로토타입`/`초기화` copy는 회귀 테스트로 제거됐지만, route와 화면 구조는 여전히 `InventoryQrPrototypeScreen` 중심이라 실제 스캔 화면과 QA용 시뮬레이션 action의 경계를 더 명확히 나눌 필요가 있다.
+  - QR 화면의 `테스트`/`프로토타입`/`초기화` copy 제거, API-backed 실제 스캔 경로의 QA용 시뮬레이션 action 미노출, 실패 후 같은 QR 재스캔 복구, 카메라 권한/후면 카메라 fallback 안내는 회귀 테스트로 고정됐다. 남은 정리는 `InventoryQrPrototypeScreen` route/screen 명명을 production-facing 구조로 바꾸는 일이다.
   - 디자인 시스템은 emoji 사용 금지와 `DSIcon` 우선을 명시한다. 로그인/회원가입/위치 설정 화면은 정책 테스트 범위에 들어갔고, 남은 대표 debt는 `FridgeSelectScreen` 뒤로가기 Text glyph, Onboarding 일러스트 emoji, 일부 테스트 fixture의 Text check 등이다.
   - 지도 화면은 선택 냉장고 카드와 상세 sheet가 동시에 바닥을 차지해 정보 구조가 과밀하다.
 - 다음 엔지니어링 우선순위:
@@ -1760,7 +1760,7 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
   5. 알림 서버 목록/읽음 상태는 Post-MVP 저장형으로 별도 설계
 - 다음 UI/UX 우선순위:
   1. P0 fixed footer safe area: `AnalysisResultScreen`, `PostCreateScreen`, `FridgeSelectScreen`, `PostCompleteScreen`, `PostDetailScreen` 계열의 하단 CTA를 `useSafeAreaInsets()` 기반 공통 footer 패턴으로 통합한다.
-  2. P0 QR productization: `InventoryQrPrototypeScreen`의 실제 스캔 경로와 QA용 시뮬레이션 action을 분리하고 production-facing route/screen 명명으로 정리한다.
+  2. P0 QR productization: API-backed 실제 스캔 경로에서 QA용 시뮬레이션 action은 분리됐다. 남은 작업은 `InventoryQrPrototypeScreen`의 production-facing route/screen 명명 정리다.
   3. P1 icon migration 잔여 정리: 로그인/회원가입/위치 설정은 `DSIcon` 정책 테스트에 포함됐고, 남은 Text glyph/fixture emoji debt를 화면별로 줄인다.
   4. P1 map bottom surface 정리: 냉장고 선택 시 carousel과 상세 sheet 중 하나를 primary surface로 정하고, 지도 가시성과 다음 action을 보존한다.
   5. P1 profile surface 정리: 준비 중 메뉴를 줄이고 내 나눔/받은 나눔/알림 작업 중 하나를 실제 lifecycle 관리 화면으로 승격한다.
@@ -1769,6 +1769,7 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
   - [ ] 진행 중인 action은 `입고 QR 필요`, `수령 QR 필요`, `신청 접수`, `수령 제한 시간`, `완료/만료/취소` 같은 사용자-facing 상태로 표시된다.
   - [ ] Android emulator/실기기 screenshot에서 주요 fixed footer CTA가 system navigation bar와 겹치지 않는다.
   - [x] QR 보관/수령 화면의 사용자-facing copy에서 `테스트`, `프로토타입`, `초기화` 같은 내부 QA 언어가 제거된다.
+  - [x] API-backed QR 보관/수령 화면은 QA용 시뮬레이션 action을 노출하지 않고 실제 scanner callback으로 confirm API를 호출하며, 실패 후 `다시 스캔`으로 같은 QR을 재시도할 수 있다.
   - [ ] 로그인/회원가입/위치 설정은 `DSIcon` 정책 테스트 범위에 들어갔고, 남은 Text glyph/emoji fixture debt를 화면별로 추적한다.
   - [ ] 지도에서 냉장고 선택 시 하단 primary surface가 하나로 정리되어 지도와 냉장고 내부 목록의 위계가 명확하다.
   - [x] `/auth/me`에서 `isOperator`, `operatorRole`, `operatorFridgeIds` 운영자 힌트를 내려준다.
@@ -1780,7 +1781,7 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
 - 검증 방법:
   - 진행 중인 나눔 허브: fixture/API 계약 테스트 + 홈/전용 화면 회귀 + QR pending/requested state QA
   - fixed footer: Android emulator + 실기기 screenshot 비교, iOS simulator smoke에서 CTA clipping 여부 확인
-  - QR productization: 실제 API-backed route와 prototype-only route를 분리해 copy snapshot/화면 QA
+  - QR productization: API-backed route의 simulation action 미노출, native scanner callback, 실패 후 같은 QR 재스캔, 권한/카메라 fallback, prototype-only route의 QA action 유지 회귀 테스트, production-facing route/screen 명명 정리
   - icon migration 잔여: `Text` glyph/emoji grep + `FridgeSelectScreen`, Onboarding, 관련 fixture 중심 screenshot/정책 테스트
   - map surface: 냉장고 선택/검색/빈 목록/신청 후 refresh 상태의 screenshot QA
   - 운영자 권한: VM API matrix + 실제 앱 role-gated profile QA
