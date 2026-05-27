@@ -7,7 +7,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
-  Text,
   TouchableOpacity,
   FlatList,
   StatusBar,
@@ -220,9 +219,11 @@ const FridgeSelectScreen = ({ route, navigation }: Props) => {
       {/* 헤더 */}
       <View style={styles.header}>
         <TouchableOpacity
+          accessibilityLabel="뒤로가기"
+          accessibilityRole="button"
           onPress={() => navigation.goBack()}
           style={styles.headerButton}>
-          <Text style={styles.headerIcon}>←</Text>
+          <DSIcon name="angle-left" size="large" color="primary" />
         </TouchableOpacity>
         <DSText
           variant="bodyBold"

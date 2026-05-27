@@ -9,7 +9,6 @@
 import React, { useRef, useState, useCallback } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   FlatList,
   Dimensions,
@@ -19,7 +18,13 @@ import {
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AuthStackParamList } from '@/navigation/types';
 import { setOnboarded } from '@/utils/storage';
-import { DSButton, DSChip, DSText } from '@/design-system';
+import {
+  DSButton,
+  DSChip,
+  DSIcon,
+  DSText,
+  type DSIconName,
+} from '@/design-system';
 import { colors } from '@/theme';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Onboarding'>;
@@ -28,44 +33,44 @@ const { width } = Dimensions.get('window');
 
 interface SlideData {
   id: string;
-  icon: string;
+  icon: DSIconName;
   title: string;
   highlight: string;
   description: string;
   badgeText: string;
-  badgeIcon: string;
+  badgeIcon: DSIconName;
 }
 
 const SLIDES: SlideData[] = [
   {
     id: '1',
-    icon: '📸',
+    icon: 'camera',
     title: '사진 한 장으로',
     highlight: '신선도 판별',
     description:
       'Vision AI가 잉여 농산물의 상태를 분석하고\n가장 가까운 이웃에게 실시간으로 알려드려요.',
     badgeText: 'Vision AI Scanning',
-    badgeIcon: '🔬',
+    badgeIcon: 'flask',
   },
   {
     id: '2',
-    icon: '📍',
+    icon: 'location-dot',
     title: '반경 2km 내',
     highlight: '로컬 매칭',
     description:
       'GIS 기반 알고리즘이 가장 가까운\n이웃에게 자동으로 알림을 보내드려요.',
     badgeText: '반경 2.0km 내 탐색',
-    badgeIcon: '🗺️',
+    badgeIcon: 'map-location-dot',
   },
   {
     id: '3',
-    icon: '🧊',
+    icon: 'house-chimney',
     title: '우리 동네',
     highlight: '공유 냉장고',
     description:
       '가까운 공유 냉장고에 식재료를 보관하고\n이웃과 함께 나눠보세요.',
     badgeText: '실시간 냉장고 현황',
-    badgeIcon: '❄️',
+    badgeIcon: 'temperature-half',
   },
 ];
 
@@ -107,14 +112,16 @@ const OnboardingScreen = ({ navigation }: Props) => {
     <View style={styles.slide}>
       {/* 일러스트 카드 */}
       <View style={styles.illustrationCard}>
-        <Text style={styles.illustrationIcon}>{item.icon}</Text>
+        <DSIcon name={item.icon} size={88} color="primary" />
 
         {/* 떠있는 뱃지 */}
         <DSChip
           label={item.badgeText}
           tone="primary"
           size="small"
-          leading={<Text style={styles.badgeIcon}>{item.badgeIcon}</Text>}
+          leading={
+            <DSIcon name={item.badgeIcon} size="xsmall" color="primary" />
+          }
           style={styles.floatingBadge}
         />
       </View>
@@ -257,9 +264,6 @@ const styles = StyleSheet.create({
     elevation: 8,
     overflow: 'hidden',
   },
-  illustrationIcon: {
-    fontSize: 80,
-  },
   floatingBadge: {
     position: 'absolute',
     top: 24,
@@ -270,9 +274,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
-  },
-  badgeIcon: {
-    fontSize: 14,
   },
   textSection: {
     paddingHorizontal: 32,

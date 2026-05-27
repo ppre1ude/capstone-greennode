@@ -8,6 +8,7 @@ const emojiPattern = /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}]/u;
 const iconPolicyFiles = [
   'src/design-system/catalog/DesignSystemCatalog.tsx',
   'src/navigation/MainTab.tsx',
+  'src/screens/auth/OnboardingScreen.tsx',
   'src/screens/auth/LoginEmailScreen.tsx',
   'src/screens/auth/LoginScreen.tsx',
   'src/screens/auth/SignupScreen.tsx',
@@ -46,6 +47,15 @@ describe('design system icon policy', () => {
     });
 
     expect(filesWithEmoji).toEqual([]);
+  });
+
+  it('keeps FridgeSelect navigation glyphs out of Text nodes', () => {
+    const source = fs.readFileSync(
+      'src/screens/post/FridgeSelectScreen.tsx',
+      'utf8',
+    );
+
+    expect(source).not.toMatch(/<Text\b[^>]*>\s*(?:←|›|✓)\s*<\/Text>/u);
   });
 
   it('bundles FontAwesome6 fonts in native targets', () => {
