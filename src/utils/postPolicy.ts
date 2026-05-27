@@ -20,6 +20,7 @@ type PostLifecycleFields = {
   expirationDate?: string | null;
   requestExpiresAt?: string | null;
   storeExpiresAt?: string | null;
+  storageDeadlineAt?: string | null;
   pickedUpAt?: string | null;
   updatedAt?: string | null;
 };
@@ -55,6 +56,7 @@ export const MY_POST_LIFECYCLE_STATUSES = [
   'completed',
   'cancelled',
   'expired',
+  'disposed',
 ] as const satisfies readonly PostStatus[];
 
 export const MY_SHARE_REQUEST_LIFECYCLE_STATUSES = [
@@ -338,13 +340,14 @@ export const isShareRequestAwaitingPickup = (
   item.request.status === 'requested' && item.post.status === 'requested';
 
 export const canCancelPost = (post: PostLifecycleFields): boolean =>
-  post.status === 'pending_store' || post.status === 'available';
+  post.status === 'pending_store' ||
+  post.status === 'available' ||
+  post.status === 'requested';
 
 export const canCompletePost = (post: PostLifecycleFields): boolean =>
   post.status === 'requested';
 
-export const canExpirePost = (post: PostLifecycleFields): boolean =>
-  post.status === 'requested' || post.status === 'available';
+export const canExpirePost = (_post: PostLifecycleFields): boolean => false;
 
 export const formatPostLifecycleDate = (
   value?: string | null,
@@ -371,7 +374,9 @@ export const getPostLifecycleDeadlineLabel = (
   post: PostLifecycleFields,
 ): string => {
   if (post.status === 'pending_store') {
-    return `입고 QR 만료 ${formatPostLifecycleDate(post.storeExpiresAt)}`;
+    return `입고 QR 만료 ${formatPostLifecycleDate(
+      post.storeExpiresAt ?? post.storageDeadlineAt,
+    )}`;
   }
 
   if (post.status === 'requested') {

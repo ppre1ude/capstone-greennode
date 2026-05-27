@@ -27,6 +27,7 @@ export interface Post {
   expirationDate: string;
   status: PostStatus;
   fridgeId: number;
+  fridgeName?: string | null;
   authorId: number;
   userId?: number;
   requestExpiresAt?: string | null;

@@ -102,18 +102,11 @@ export const completePost = async (
   return response.data;
 };
 
-export const expirePost = async (
-  postId: number,
-): Promise<ApiResponse<Post>> => {
-  const response = await apiClient.post(`${POSTS_PREFIX}/${postId}/expire`);
-  return response.data;
-};
-
 export const cancelShareRequest = async (
   requestId: number,
 ): Promise<ApiResponse<ShareRequestResult>> => {
   const response = await apiClient.post(
-    `/api/v1/share-requests/${requestId}/cancel`,
+    `/api/v1/users/me/share-requests/${requestId}/cancel`,
   );
   return response.data;
 };

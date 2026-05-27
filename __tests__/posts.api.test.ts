@@ -4,7 +4,6 @@ import {
   cancelShareRequest,
   completePost,
   createPost,
-  expirePost,
   generatePost,
   getImageUrl,
   requestShare,
@@ -335,7 +334,6 @@ describe('posts API contract', () => {
 
     await cancelPost(10);
     await completePost(10);
-    await expirePost(10);
     await cancelShareRequest(99);
 
     expect(mockedApiClient.post).toHaveBeenNthCalledWith(
@@ -348,11 +346,7 @@ describe('posts API contract', () => {
     );
     expect(mockedApiClient.post).toHaveBeenNthCalledWith(
       3,
-      '/api/v1/posts/10/expire',
-    );
-    expect(mockedApiClient.post).toHaveBeenNthCalledWith(
-      4,
-      '/api/v1/share-requests/99/cancel',
+      '/api/v1/users/me/share-requests/99/cancel',
     );
   });
 

@@ -17,7 +17,6 @@ import {
   cancelPost,
   cancelShareRequest,
   completePost,
-  expirePost,
 } from '@/api/posts';
 import { getMyPosts, getMyShareRequests } from '@/api/users';
 import { useFeedRefreshStore } from '@/store/feedRefreshStore';
@@ -25,7 +24,6 @@ import type { Post, UserShareRequestItem } from '@/types';
 import {
   canCancelPost,
   canCompletePost,
-  canExpirePost,
   getPostDisplayName,
   getPostLifecycleDeadlineLabel,
   getPostStatusLabel,
@@ -158,7 +156,7 @@ const MySharesScreen = ({ route, navigation }: Props) => {
     const actionKeyPrefix = `post-${post.id}`;
     const canCancel = canCancelPost(post);
     const canComplete = canCompletePost(post);
-    const canExpire = canExpirePost(post);
+    const fridgeLabel = post.fridgeName || `냉장고 #${post.fridgeId}`;
 
     return (
       <DSCard
@@ -172,7 +170,7 @@ const MySharesScreen = ({ route, navigation }: Props) => {
               {getPostDisplayName(post)}
             </DSText>
             <DSText variant="small" color="textSecondary">
-              냉장고 #{post.fridgeId} · {getPostLifecycleDeadlineLabel(post)}
+              {`${fridgeLabel} · ${getPostLifecycleDeadlineLabel(post)}`}
             </DSText>
           </View>
           <DSChip label={getPostStatusLabel(post.status)} size="small" />
@@ -241,27 +239,6 @@ const MySharesScreen = ({ route, navigation }: Props) => {
               }
             />
           ) : null}
-          {canExpire ? (
-            <DSButton
-              label="만료 처리"
-              variant="text"
-              color="danger"
-              size="small"
-              loading={pendingActionKey === `${actionKeyPrefix}-expire`}
-              onPress={() =>
-                confirmLifecycleAction(
-                  '나눔을 만료 처리할까요?',
-                  '만료된 나눔은 신청 대상에서 제외됩니다.',
-                  () =>
-                    runLifecycleAction(
-                      `${actionKeyPrefix}-expire`,
-                      '나눔을 만료 처리했습니다.',
-                      () => expirePost(post.id),
-                    ),
-                )
-              }
-            />
-          ) : null}
         </View>
       </DSCard>
     );
@@ -271,6 +248,8 @@ const MySharesScreen = ({ route, navigation }: Props) => {
     const { post, request } = item;
     const actionKeyPrefix = `request-${request.id}`;
     const canPickup = isShareRequestAwaitingPickup(item);
+    const fridgeLabel =
+      post.fridgeName || item.fridge?.name || `냉장고 #${post.fridgeId}`;
 
     return (
       <DSCard
@@ -284,9 +263,9 @@ const MySharesScreen = ({ route, navigation }: Props) => {
               {getPostDisplayName(post)}
             </DSText>
             <DSText variant="small" color="textSecondary">
-              {item.fridge?.name || `냉장고 #${post.fridgeId}`} ·{' '}
-              {getShareRequestStatusLabel(request.status)} ·{' '}
-              {getPostLifecycleDeadlineLabel(post)}
+              {`${fridgeLabel} · ${getShareRequestStatusLabel(
+                request.status,
+              )} · ${getPostLifecycleDeadlineLabel(post)}`}
             </DSText>
           </View>
           <DSChip

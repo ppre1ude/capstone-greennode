@@ -218,6 +218,7 @@ describe('post policy', () => {
       'completed',
       'cancelled',
       'expired',
+      'disposed',
     ]);
     expect([...MY_SHARE_REQUEST_LIFECYCLE_STATUSES]).toEqual([
       'requested',
@@ -244,11 +245,11 @@ describe('post policy', () => {
 
     expect(canCancelPost({ status: 'pending_store' })).toBe(true);
     expect(canCancelPost({ status: 'available' })).toBe(true);
-    expect(canCancelPost({ status: 'requested' })).toBe(false);
+    expect(canCancelPost({ status: 'requested' })).toBe(true);
     expect(canCompletePost({ status: 'requested' })).toBe(true);
     expect(canCompletePost({ status: 'available' })).toBe(false);
-    expect(canExpirePost({ status: 'available' })).toBe(true);
-    expect(canExpirePost({ status: 'requested' })).toBe(true);
+    expect(canExpirePost({ status: 'available' })).toBe(false);
+    expect(canExpirePost({ status: 'requested' })).toBe(false);
     expect(canExpirePost({ status: 'completed' })).toBe(false);
   });
 
@@ -284,6 +285,13 @@ describe('post policy', () => {
         storeExpiresAt: 'not-a-date',
       }),
     ).toBe('입고 QR 만료 일정 확인 필요');
+    const storageDeadlineLabel = getPostLifecycleDeadlineLabel({
+      status: 'pending_store',
+      storageDeadlineAt: '2026-05-27T08:20:00Z',
+    });
+    expect(storageDeadlineLabel).toContain('입고 QR 만료');
+    expect(storageDeadlineLabel).toContain('5월 27일');
+    expect(storageDeadlineLabel).toContain('05:20');
     expect(
       getPostLifecycleDeadlineLabel({
         status: 'requested',

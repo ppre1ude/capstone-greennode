@@ -6,7 +6,6 @@ import {
   cancelPost,
   cancelShareRequest,
   completePost,
-  expirePost,
 } from '@/api/posts';
 import { getMyPosts, getMyShareRequests } from '@/api/users';
 import type { Post, UserShareRequestItem } from '@/types';
@@ -27,7 +26,6 @@ jest.mock('@/api/posts', () => ({
   cancelPost: jest.fn(),
   cancelShareRequest: jest.fn(),
   completePost: jest.fn(),
-  expirePost: jest.fn(),
 }));
 
 const mockedGetMyPosts = getMyPosts as jest.MockedFunction<typeof getMyPosts>;
@@ -37,11 +35,11 @@ const mockedCancelPost = cancelPost as jest.MockedFunction<typeof cancelPost>;
 const mockedCancelShareRequest =
   cancelShareRequest as jest.MockedFunction<typeof cancelShareRequest>;
 const mockedCompletePost = completePost as jest.MockedFunction<typeof completePost>;
-const mockedExpirePost = expirePost as jest.MockedFunction<typeof expirePost>;
 
 const basePost: Post = {
   id: 31,
   fridgeId: 1,
+  fridgeName: '광주역 공유냉장고',
   authorId: 2,
   detectedFruit: 'banana',
   detectedFruitKo: '바나나',
@@ -71,10 +69,7 @@ const receivedItem: UserShareRequestItem = {
     detectedFruitKo: '사과',
     status: 'requested',
     requestExpiresAt: '2026-05-26T00:40:00Z',
-  },
-  fridge: {
-    id: 1,
-    name: '중앙 공유 냉장고',
+    fridgeName: '중앙 공유 냉장고',
   },
 };
 
@@ -165,11 +160,6 @@ describe('MySharesScreen', () => {
       message: 'ok',
       data: null,
     });
-    mockedExpirePost.mockResolvedValue({
-      success: true,
-      message: 'ok',
-      data: null,
-    });
   });
 
   afterEach(() => {
@@ -191,6 +181,13 @@ describe('MySharesScreen', () => {
 
     expect(mockedGetMyPosts).toHaveBeenCalled();
     expect(renderer!.root.findAllByProps({ children: '바나나' })).not.toHaveLength(0);
+    expect(
+      renderer!.root.findAll(
+        node =>
+          typeof node.props.children === 'string' &&
+          node.props.children.includes('광주역 공유냉장고'),
+      ),
+    ).not.toHaveLength(0);
 
     await ReactTestRenderer.act(async () => {
       findTouchableByText(renderer!, '입고 QR').props.onPress();
@@ -231,7 +228,7 @@ describe('MySharesScreen', () => {
     });
   });
 
-  it('completes and expires requested shares through lifecycle actions', async () => {
+  it('cancels or completes requested shares without exposing manual expiry', async () => {
     const requestedPost: Post = {
       ...basePost,
       id: 32,
@@ -263,10 +260,13 @@ describe('MySharesScreen', () => {
     expect(mockedCompletePost).toHaveBeenCalledWith(32);
 
     await ReactTestRenderer.act(async () => {
-      findTouchableByText(renderer!, '만료 처리').props.onPress();
+      findTouchableByText(renderer!, '나눔 취소').props.onPress();
     });
     await confirmLastAlert();
-    expect(mockedExpirePost).toHaveBeenCalledWith(32);
+    expect(mockedCancelPost).toHaveBeenCalledWith(32);
+    expect(() => findTouchableByText(renderer!, '만료 처리')).toThrow(
+      'Touchable with text "만료 처리" not found',
+    );
 
     await ReactTestRenderer.act(async () => {
       renderer?.unmount();
