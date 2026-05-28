@@ -313,6 +313,12 @@ describe('post policy', () => {
     ).toBe('권장 수령일 2026-05-31');
   });
 
+  it('formats timezone-less backend lifecycle timestamps the same as UTC timestamps', () => {
+    expect(formatPostLifecycleDate('2026-05-28T11:38:21.707849')).toBe(
+      formatPostLifecycleDate('2026-05-28T11:38:21.707849Z'),
+    );
+  });
+
   it('normalizes confidence scores and flags confidence below 90% for review', () => {
     expect(CONFIDENCE_REVIEW_THRESHOLD_PERCENT).toBe(90);
     expect(getConfidencePercent(0.57)).toBe(57);

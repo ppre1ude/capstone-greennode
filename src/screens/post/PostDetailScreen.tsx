@@ -42,6 +42,7 @@ import {
   formatInventoryHoldRemaining,
   getInventoryHoldRemainingMs,
   isInventoryHoldExpired,
+  parseServerLifecycleTimestampMs,
 } from '@/features/inventory/holdPolicy';
 import {
   getConfidencePercent,
@@ -65,7 +66,7 @@ const getErrorStatus = (error: unknown): number | null => {
 };
 
 const isValidDateInput = (value?: string | null): value is string =>
-  Boolean(value && Number.isFinite(new Date(value).getTime()));
+  Boolean(value && Number.isFinite(parseServerLifecycleTimestampMs(value)));
 
 const PostDetailScreen = ({ route, navigation }: Props) => {
   const { postId } = route.params;

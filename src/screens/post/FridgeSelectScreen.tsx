@@ -34,6 +34,7 @@ import {
   DSScreenFooter,
   DSText,
 } from '@/design-system';
+import { parseServerLifecycleTimestampMs } from '@/features/inventory';
 import { colors } from '@/theme';
 import { styles } from './FridgeSelectScreen.styles';
 
@@ -46,7 +47,7 @@ const toValidTimestamp = (value?: string | null): number | null => {
     return null;
   }
 
-  const timestamp = Date.parse(value);
+  const timestamp = parseServerLifecycleTimestampMs(value);
   return Number.isFinite(timestamp) ? timestamp : null;
 };
 

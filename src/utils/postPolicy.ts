@@ -4,6 +4,7 @@ import type {
   PostStatus,
   ShareRequestStatus,
 } from '@/types';
+import { parseServerLifecycleTimestampMs } from '@/features/inventory/holdPolicy';
 
 type PostOwnershipFields = {
   authorId?: number | null;
@@ -357,7 +358,7 @@ export const formatPostLifecycleDate = (
     return fallback;
   }
 
-  const date = new Date(value);
+  const date = new Date(parseServerLifecycleTimestampMs(value));
   if (Number.isNaN(date.getTime())) {
     return fallback;
   }

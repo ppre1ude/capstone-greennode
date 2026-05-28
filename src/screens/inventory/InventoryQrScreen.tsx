@@ -21,6 +21,7 @@ import {
   InventoryLabelInstructionCard,
   InventoryProgressStepper,
   createPendingStoreExpiresAt,
+  parseServerLifecycleTimestampMs,
   resolveStoragePolicy,
   type InventoryDisplayStatus,
 } from '@/features/inventory';
@@ -86,7 +87,7 @@ const isValidDateInput = (value?: string): value is string => {
     return false;
   }
 
-  return Number.isFinite(Date.parse(value));
+  return Number.isFinite(parseServerLifecycleTimestampMs(value));
 };
 
 const InventoryQrScreen = ({ navigation, route }: Props) => {
