@@ -18,6 +18,7 @@
 - 2026-05-27 백엔드 feature contract는 프론트 API client와 화면에 연결됐다.
 - 알림 탭은 MVP에서 FCM 수신 기록과 로컬 AsyncStorage 읽음 상태만 사용한다. 서버 저장형 알림 API는 Post-MVP다.
 - `requested` 이후 취소/완료 전이는 사용자-facing 정책과 API 계약이 확정됐다. 만료는 서버 배치로 처리한다.
+- 홈의 진행 중인 나눔 허브, 지도 하단 primary surface, 주요 fixed CTA의 `DSScreenFooter` 코드 통합, 앱 UI/fixture icon migration은 2026-05-28 코드/테스트 기준으로 닫혔다.
 - 현재 주요 blocker는 최신 live VM E2E 검증이다. 2026-05-28 기준 로컬 `localhost:8080` SSH tunnel 미연결로 `/openapi.json` 접근이 막혀 있었다.
 
 ## 활성 P0
@@ -48,7 +49,7 @@ To-do:
 
 - 분류: UX/QA
 - 배경: 사용자가 지금 처리해야 할 나눔 action을 앱에서 바로 봐야 한다.
-- 현재 상태: 홈의 `진행 중인 나눔` 허브와 내 나눔/받은 나눔 화면은 연결됐다.
+- 현재 상태: 홈의 `진행 중인 나눔` 허브와 내 나눔/받은 나눔 화면은 연결됐다. 2026-05-28 회귀 테스트 기준으로 계정 lifecycle action과 최근 신청/등록 fallback action이 노출된다.
 - 기대 동작: QR 필요, 신청 접수, 제한 시간, 완료/만료/취소 상태가 사용자 언어로 표시된다.
 - 검증 방법: Android emulator 또는 실기기에서 등록자/신청자 2계정으로 홈, 상세, 내역 화면 smoke QA.
 
@@ -58,20 +59,21 @@ To-do:
 - [x] QR 보관/수령 화면의 사용자-facing copy에서 내부 QA 언어가 제거된다.
 - [x] API-backed QR 보관/수령 화면은 QA용 시뮬레이션 action을 노출하지 않고 실제 scanner callback으로 confirm API를 호출한다.
 - [x] QR 화면 route/screen/test 명명은 `InventoryQr`, `InventoryQrScreen`, `inventoryQr.screen.test.tsx`로 production-facing 구조를 사용한다.
-- [ ] 홈 또는 전용 허브에서 사용자가 지금 처리해야 할 나눔 action을 볼 수 있다.
-- [ ] 진행 중인 action은 `입고 QR 필요`, `수령 QR 필요`, `신청 접수`, `수령 제한 시간`, `완료/만료/취소` 같은 사용자-facing 상태로 표시된다.
+- [x] 홈 또는 전용 허브에서 사용자가 지금 처리해야 할 나눔 action을 볼 수 있다.
+- [x] 진행 중인 action은 `입고 QR 필요`, `수령 QR 필요`, `신청 접수`, `수령 제한 시간`, `완료/만료/취소` 같은 사용자-facing 상태로 표시된다. 홈은 active QR/request label을, MyShares는 완료/만료/취소 lifecycle 표면을 맡는다.
 
 ### Android 시각 회귀 QA
 
 - 분류: UI QA
 - 배경: 기능은 연결됐지만 fixed footer, 지도 overlay, 하단 surface의 실제 화면 검증이 남아 있다.
+- 현재 상태: 주요 fixed CTA 화면은 `DSScreenFooter` 공통 safe-area 패턴에 들어갔고, 지도 하단 primary surface 단일 모드는 코드/테스트로 고정됐다.
 - 기대 동작: CTA가 system navigation bar와 겹치지 않고, 지도와 냉장고 내부 목록의 위계가 명확하다.
 - 검증 방법: Android emulator와 가능하면 실기기 screenshot.
 
 To-do:
 
-- [ ] Android emulator/실기기 screenshot에서 주요 fixed footer CTA가 system navigation bar와 겹치지 않는다.
-- [ ] 지도에서 냉장고 선택 시 하단 primary surface가 하나로 정리되어 지도와 냉장고 내부 목록의 위계가 명확하다.
+- [ ] Android emulator/실기기 screenshot에서 주요 fixed footer CTA가 system navigation bar와 겹치지 않는다. 코드/정책 테스트 기준 통합은 완료됐지만 screenshot evidence가 남아 있다.
+- [x] 지도에서 냉장고 선택 시 하단 primary surface가 하나로 정리되어 지도와 냉장고 내부 목록의 위계가 명확하다.
 
 ## 활성 P1
 
@@ -89,13 +91,14 @@ To-do:
 
 - 분류: 디자인 시스템 debt
 - 배경: DS primitive와 `DSIcon` 기준은 세웠지만 일부 테스트 fixture와 후속 화면의 glyph/emoji debt가 남아 있다.
+- 현재 상태: 앱 UI와 DS component fixture의 직접 glyph/emoji는 정책 테스트 범위에 들어갔다. `src`/`__tests__` grep상 남은 emoji는 앱 UI가 아닌 API 주석 경고 기호뿐이다.
 - 기대 동작: 사용자-facing UI는 emoji/Text glyph 대신 design-system icon을 우선 사용한다.
 
 To-do:
 
 - [x] 로그인/회원가입/위치 설정 화면은 정책 테스트 범위에 들어갔다.
 - [x] `FridgeSelectScreen` 뒤로가기 Text glyph와 Onboarding 일러스트 emoji는 `DSIcon`으로 치환했다.
-- [ ] 로그인/회원가입/위치 설정/Onboarding/FridgeSelect는 `DSIcon` 정책 테스트 또는 치환 범위에 들어갔고, 남은 테스트 fixture Text check와 후속 화면 glyph/emoji debt를 화면별로 추적한다.
+- [x] 로그인/회원가입/위치 설정/Onboarding/FridgeSelect는 `DSIcon` 정책 테스트 또는 치환 범위에 들어갔고, 남은 테스트 fixture Text check와 후속 화면 glyph/emoji debt를 화면별로 추적한다.
 
 ### AI false-positive와 rejection contract
 

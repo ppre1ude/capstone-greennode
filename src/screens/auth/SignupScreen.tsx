@@ -26,7 +26,7 @@ import { signupSchema, type SignupFormData } from '@/utils/validation';
 import { signup, login, getMe } from '@/api/auth';
 import { useAuthStore } from '@/store/authStore';
 import { colors } from '@/theme';
-import { DSButton, DSTextField } from '@/design-system';
+import { DSButton, DSIcon, DSTextField } from '@/design-system';
 import { styles } from './SignupScreen.styles';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Signup'>;
@@ -109,8 +109,10 @@ const SignupScreen = ({ navigation }: Props) => {
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.backButton}
+            accessibilityRole="button"
+            accessibilityLabel="뒤로가기"
             onPress={() => navigation.goBack()}>
-            <Text style={styles.backIcon}>←</Text>
+            <DSIcon name="angle-left" size="large" color="primary" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>회원가입</Text>
           <View style={styles.headerSpacer} />
@@ -192,10 +194,17 @@ const SignupScreen = ({ navigation }: Props) => {
                   trailing={
                     <TouchableOpacity
                       style={styles.eyeButton}
+                      accessibilityRole="button"
+                      accessibilityLabel={
+                        showPassword ? '비밀번호 숨기기' : '비밀번호 보기'
+                      }
                       onPress={() => setShowPassword(!showPassword)}>
-                      <Text style={styles.eyeIcon}>
-                        {showPassword ? '🙈' : '👁️'}
-                      </Text>
+                      <DSIcon
+                        name={showPassword ? 'eye-slash' : 'eye'}
+                        size="medium"
+                        color="textTertiary"
+                        style={styles.eyeIcon}
+                      />
                     </TouchableOpacity>
                   }
                 />
@@ -228,7 +237,12 @@ const SignupScreen = ({ navigation }: Props) => {
         {/* 약관 동의 */}
         <View style={styles.termsRow}>
           <View style={styles.termsCheck}>
-            <Text style={styles.termsCheckIcon}>✓</Text>
+            <DSIcon
+              name="check"
+              size="xsmall"
+              color="#FFFFFF"
+              style={styles.termsCheckIcon}
+            />
           </View>
           <Text style={styles.termsText}>
             <Text style={styles.termsBold}>이용약관 및 개인정보 처리방침</Text>

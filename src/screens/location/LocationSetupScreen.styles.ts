@@ -1,4 +1,4 @@
-import { StyleSheet, Platform } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { colors } from '@/theme';
 import { getHeaderTopPadding } from '@/utils/safeArea';
 
@@ -25,10 +25,6 @@ export const styles = StyleSheet.create({
     height: 36,
     justifyContent: 'center',
     alignItems: 'flex-start',
-  },
-  headerBackText: {
-    fontSize: 22,
-    color: colors.primary,
   },
   // 지도 영역
   mapArea: {
@@ -174,9 +170,6 @@ export const styles = StyleSheet.create({
   },
   // 하단
   footer: {
-    paddingHorizontal: 24,
-    paddingTop: 16,
-    paddingBottom: Platform.OS === 'ios' ? 40 : 24,
     gap: 12,
   },
   notificationPanel: {

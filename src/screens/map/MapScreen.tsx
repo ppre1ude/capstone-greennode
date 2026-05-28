@@ -314,7 +314,9 @@ const MapScreen = () => {
     }
 
     return (
-      <DSCard style={styles.selectedFridgeSheet}>
+      <DSCard
+        testID="map-selected-fridge-sheet"
+        style={styles.selectedFridgeSheet}>
         <View style={styles.selectedFridgeActionRow}>
           <DSButton
             label="다른 냉장고 보기"
@@ -536,8 +538,8 @@ const MapScreen = () => {
         <DSIcon name="location-crosshairs" size="large" color="primary" />
       </TouchableOpacity>
 
-      {/* 하단 냉장고 리스트 캐러셀 */}
-      <View style={styles.bottomCarousel}>
+      {/* 하단 primary surface */}
+      <View testID="map-bottom-surface" style={styles.bottomSurface}>
         {selectedFridge ? (
           renderSelectedFridgePosts()
         ) : fridgeState === 'loading' ? (
@@ -577,6 +579,7 @@ const MapScreen = () => {
           </DSCard>
         ) : displayedFridges.length > 0 ? (
           <FlatList
+            testID="map-fridge-carousel"
             ref={flatListRef}
             data={displayedFridges}
             keyExtractor={item => item.id.toString()}

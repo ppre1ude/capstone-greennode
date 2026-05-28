@@ -387,7 +387,7 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
               variant="outlined"
               fullWidth
               onPress={() =>
-                navigation.navigate('InventoryQrPrototype', {
+                navigation.navigate('InventoryQr', {
                   mode: 'pickup',
                   postId: post.id,
                   pendingExpiresAt: requestExpiresAt ?? undefined,

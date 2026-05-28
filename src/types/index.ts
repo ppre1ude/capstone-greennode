@@ -4,6 +4,7 @@ export type {
   LoginResponse,
   SignupRequest,
   LocationUpdateRequest,
+  UserProfileUpdateRequest,
 } from './auth';
 export type {
   Post,
@@ -18,6 +19,10 @@ export type {
   PostCreateData,
   ShareRequest,
   ShareRequestResult,
+  ShareRequestStatus,
+  UserPostStatusFilter,
+  UserShareRequestItem,
+  UserShareRequestStatusFilter,
   Fridge,
 } from './post';
 export type {
@@ -26,6 +31,7 @@ export type {
   FoodLinkNotificationType,
   NotificationRecord,
   NotificationSource,
+  ServerNotificationRecord,
   ShareCreatedFcmPayload,
   ShareRequestedFcmPayload,
 } from './notification';

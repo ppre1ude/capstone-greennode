@@ -168,7 +168,7 @@ describe('FridgeSelectScreen QR flow', () => {
       fridgeId: 1,
       flow: 'fridge_qr',
     });
-    expect(navigation.replace).toHaveBeenCalledWith('InventoryQrPrototype', {
+    expect(navigation.replace).toHaveBeenCalledWith('InventoryQr', {
       mode: 'store',
       postId: 55,
       fridgePublicCode: 'GJ-STATION-001',
@@ -290,7 +290,7 @@ describe('FridgeSelectScreen QR flow', () => {
     await selectFridgeAndSubmitQr(renderer);
 
     expect(navigation.replace).toHaveBeenCalledWith(
-      'InventoryQrPrototype',
+      'InventoryQr',
       expect.objectContaining({
         pendingExpiresAt: '2026-05-20T00:10:00.000Z',
       }),
@@ -315,7 +315,7 @@ describe('FridgeSelectScreen QR flow', () => {
     await selectFridgeAndSubmitQr(renderer);
 
     expect(navigation.replace).toHaveBeenCalledWith(
-      'InventoryQrPrototype',
+      'InventoryQr',
       expect.objectContaining({
         pendingExpiresAt: '2026-05-20T00:10:00.000Z',
       }),
@@ -341,7 +341,7 @@ describe('FridgeSelectScreen QR flow', () => {
     await selectFridgeAndSubmitQr(renderer);
 
     expect(navigation.replace).toHaveBeenCalledWith(
-      'InventoryQrPrototype',
+      'InventoryQr',
       expect.objectContaining({
         pendingExpiresAt: undefined,
       }),

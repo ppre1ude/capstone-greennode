@@ -8,6 +8,7 @@
     "lint": "eslint .",
     "mock:api": "node scripts/mock-api.js",
     "qa:ai-fixtures": "node scripts/validate-ai-fixtures.js",
+    "qa:backend-contracts": "node scripts/validate-backend-feature-contracts.js",
     "start": "react-native start",
     "test": "jest"
   },

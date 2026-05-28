@@ -68,4 +68,45 @@ describe('notification store', () => {
       },
     ]);
   });
+
+  it('dedupes server notifications with local FCM records by event key', () => {
+    useNotificationStore.setState({
+      notifications: [
+        {
+          ...backgroundNotification,
+          id: 'fcm-message-1',
+          requestId: '99',
+          readAt: '2026-05-10T00:30:00.000Z',
+        },
+      ],
+    });
+
+    useNotificationStore.getState().syncNotifications([
+      {
+        ...backgroundNotification,
+        id: 'server-new',
+        postId: '11',
+        receivedAt: '2026-05-10T00:40:00.000Z',
+        source: 'server',
+      },
+      {
+        ...backgroundNotification,
+        id: 'server-message-1',
+        requestId: '99',
+        receivedAt: '2026-05-10T00:10:00.000Z',
+        readAt: null,
+        source: 'server',
+      },
+    ]);
+
+    expect(useNotificationStore.getState().notifications).toMatchObject([
+      {id: 'server-new', source: 'server'},
+      {
+        id: 'server-message-1',
+        source: 'server',
+        requestId: '99',
+        readAt: '2026-05-10T00:30:00.000Z',
+      },
+    ]);
+  });
 });

@@ -9,7 +9,13 @@
  *
  * @wireframe wireframe-foodlink/homescreen.html + temp/screen-home.html
  */
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, {
+  useEffect,
+  useState,
+  useCallback,
+  useMemo,
+  useRef,
+} from 'react';
 import {
   View,
   Text,
@@ -27,8 +33,9 @@ import {
   useRoute,
 } from '@react-navigation/native';
 import type { RouteProp } from '@react-navigation/native';
-import type { PostNearbyRead } from '@/types';
+import type { Post, PostNearbyRead, UserShareRequestItem } from '@/types';
 import { getNearbyPosts } from '@/api/posts';
+import { getMyPosts, getMyShareRequests } from '@/api/users';
 import { useAuthStore } from '@/store/authStore';
 import { useFeedRefreshStore } from '@/store/feedRefreshStore';
 import type { MainTabParamList } from '@/navigation/types';
@@ -41,9 +48,27 @@ import {
   LOCATION_REQUIRED_TITLE,
 } from '@/utils/locationGuard';
 import { selectHomeRecommendations } from '@/utils/homeRecommendations';
-import { DSIcon } from '@/design-system';
+import { DSIcon, type DSIconName } from '@/design-system';
+import {
+  formatPostLifecycleDate,
+  HOME_POST_LIFECYCLE_STATUSES,
+  HOME_SHARE_REQUEST_LIFECYCLE_STATUSES,
+  isPostAwaitingPickupConfirmation,
+  isPostAwaitingStoreQr,
+  isShareRequestAwaitingPickup,
+} from '@/utils/postPolicy';
 import { colors } from '@/theme';
 import { getHeaderTopPadding } from '@/utils/safeArea';
+
+type HomeAction = {
+  key: string;
+  title: string;
+  statusLabels?: string[];
+  description: string;
+  buttonLabel: string | null;
+  icon: DSIconName;
+  onPress?: () => void;
+};
 
 const HomeScreen = () => {
   const [posts, setPosts] = useState<PostNearbyRead[]>([]);
@@ -52,6 +77,10 @@ const HomeScreen = () => {
     'loading' | 'ready' | 'empty' | 'error'
   >('loading');
   const [feedError, setFeedError] = useState<string | null>(null);
+  const [myPosts, setMyPosts] = useState<Post[]>([]);
+  const [myShareRequests, setMyShareRequests] = useState<
+    UserShareRequestItem[]
+  >([]);
   const [refreshing, setRefreshing] = useState(false);
   const user = useAuthStore(state => state.user);
   const navigation = useNavigation<any>();
@@ -61,6 +90,10 @@ const HomeScreen = () => {
   const feedRefreshToken = useFeedRefreshStore(
     state => state.nearbyPostsRefreshToken,
   );
+  const refreshSignalRef = useRef({
+    nearbyPostsRefreshToken,
+    feedRefreshToken,
+  });
   const requestedPostId = useFeedRefreshStore(state => state.requestedPostId);
   const hasLocation = hasRegisteredLocation(user);
   const normalizedFeedQuery = feedQuery.trim().toLowerCase();
@@ -128,14 +161,54 @@ const HomeScreen = () => {
     }
   }, [user]);
 
+  const fetchLifecycleActions = useCallback(async () => {
+    if (!user) {
+      setMyPosts([]);
+      setMyShareRequests([]);
+      return;
+    }
+
+    try {
+      const [postsResponse, requestsResponse] = await Promise.all([
+        getMyPosts([...HOME_POST_LIFECYCLE_STATUSES], 0, 20),
+        getMyShareRequests([...HOME_SHARE_REQUEST_LIFECYCLE_STATUSES], 0, 20),
+      ]);
+
+      setMyPosts(postsResponse.data ?? []);
+      setMyShareRequests(requestsResponse.data ?? []);
+    } catch (error) {
+      console.warn('Failed to fetch lifecycle actions:', error);
+    }
+  }, [user]);
+
   useFocusEffect(
     useCallback(() => {
-      // Keep the token in this closure so post completion can force a focus refetch.
-      void nearbyPostsRefreshToken;
-      void feedRefreshToken;
-      void fetchPosts();
-    }, [feedRefreshToken, fetchPosts, nearbyPostsRefreshToken]),
+      fetchPosts();
+      fetchLifecycleActions();
+    }, [fetchLifecycleActions, fetchPosts]),
   );
+
+  useEffect(() => {
+    const previous = refreshSignalRef.current;
+    if (
+      previous.nearbyPostsRefreshToken === nearbyPostsRefreshToken &&
+      previous.feedRefreshToken === feedRefreshToken
+    ) {
+      return;
+    }
+
+    refreshSignalRef.current = {
+      nearbyPostsRefreshToken,
+      feedRefreshToken,
+    };
+    fetchPosts();
+    fetchLifecycleActions();
+  }, [
+    feedRefreshToken,
+    fetchLifecycleActions,
+    fetchPosts,
+    nearbyPostsRefreshToken,
+  ]);
 
   useEffect(() => {
     if (requestedPostId == null) {
@@ -149,9 +222,9 @@ const HomeScreen = () => {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await fetchPosts();
+    await Promise.all([fetchPosts(), fetchLifecycleActions()]);
     setRefreshing(false);
-  }, [fetchPosts]);
+  }, [fetchLifecycleActions, fetchPosts]);
 
   const openPostDetail = useCallback(
     (postId: number) => {
@@ -161,38 +234,139 @@ const HomeScreen = () => {
     },
     [navigation],
   );
-  const currentAction = useMemo(() => {
+  const currentActions = useMemo<HomeAction[]>(() => {
+    const actions: HomeAction[] = [];
+
+    myShareRequests.filter(isShareRequestAwaitingPickup).forEach(item => {
+      actions.push({
+        key: `pickup-${item.request.id}`,
+        title: '수령 QR 필요',
+        statusLabels: ['수령 QR 필요', '수령 제한 시간'],
+        description: `${
+          item.post.detectedFruitKo ?? '나눔 식재료'
+        } 수령 QR이 열려 있습니다. 수령 제한 시간 ${formatPostLifecycleDate(
+          item.post.requestExpiresAt,
+          '마감 시간 확인 필요',
+        )} 전까지 인증을 완료하세요.`,
+        buttonLabel: '수령 QR 열기',
+        icon: 'qrcode',
+        onPress: () =>
+          navigation.getParent()?.navigate('InventoryQr', {
+            mode: 'pickup',
+            postId: item.post.id,
+            pendingExpiresAt: item.post.requestExpiresAt ?? undefined,
+          }),
+      });
+    });
+
+    myPosts.filter(isPostAwaitingStoreQr).forEach(post => {
+      actions.push({
+        key: `store-${post.id}`,
+        title: '입고 QR 필요',
+        statusLabels: ['입고 QR 필요'],
+        description: `${
+          post.detectedFruitKo ?? '나눔 식재료'
+        }는 입고 QR 인증 전이라 주변 목록에 노출되지 않습니다. ${formatPostLifecycleDate(
+          post.storeExpiresAt,
+          '마감 시간 확인 필요',
+        )} 전까지 입고를 완료하세요.`,
+        buttonLabel: '입고 QR 열기',
+        icon: 'qrcode',
+        onPress: () =>
+          navigation.getParent()?.navigate('InventoryQr', {
+            mode: 'store',
+            postId: post.id,
+          }),
+      });
+    });
+
+    myPosts.filter(isPostAwaitingPickupConfirmation).forEach(post => {
+      actions.push({
+        key: `posted-requested-${post.id}`,
+        title: '신청 접수',
+        statusLabels: [
+          '신청 접수',
+          ...(post.requestExpiresAt ? ['수령 제한 시간'] : []),
+        ],
+        description: `${
+          post.detectedFruitKo ?? '나눔 식재료'
+        } 신청이 접수됐습니다. 수령 제한 시간 ${formatPostLifecycleDate(
+          post.requestExpiresAt,
+          '마감 시간 확인 필요',
+        )} 전까지 수령 상태를 확인하세요.`,
+        buttonLabel: '내 나눔 관리',
+        icon: 'clipboard-list',
+        onPress: () =>
+          navigation.getParent()?.navigate('MyShares', {
+            initialTab: 'posted',
+          }),
+      });
+    });
+
+    if (actions.length > 0) {
+      return actions.slice(0, 3);
+    }
+
     if (requestedPostId != null) {
-      return {
-        title: '수령 QR 확인 필요',
-        description:
-          '방금 신청한 나눔은 상세 화면에서 남은 시간과 수령 QR 인증을 확인할 수 있어요.',
-        buttonLabel: '상세에서 확인',
-        icon: 'qrcode' as const,
-        onPress: () => openPostDetail(requestedPostId),
-      };
+      return [
+        {
+          key: `requested-${requestedPostId}`,
+          title: '수령 QR 확인 필요',
+          description:
+            '방금 신청한 나눔은 상세 화면에서 남은 시간과 수령 QR 인증을 확인할 수 있어요.',
+          buttonLabel: '상세에서 확인',
+          icon: 'qrcode',
+          onPress: () => openPostDetail(requestedPostId),
+        },
+      ];
     }
 
     if (completedPostId != null) {
-      return {
-        title: '등록한 나눔 확인 중',
-        description:
-          '주변 이웃에게 알림을 보냈어요. 지도와 알림에서 신청 상태를 확인하세요.',
-        buttonLabel: '지도에서 보기',
-        icon: 'clipboard-list' as const,
-        onPress: () => navigation.navigate('Map'),
-      };
+      return [
+        {
+          key: `completed-${completedPostId}`,
+          title: '등록한 나눔 확인 중',
+          description:
+            '주변 이웃에게 알림을 보냈어요. 지도와 알림에서 신청 상태를 확인하세요.',
+          buttonLabel: '지도에서 보기',
+          icon: 'clipboard-list',
+          onPress: () => navigation.navigate('Map'),
+        },
+      ];
     }
 
-    return {
-      title: '진행 중인 나눔 없음',
-      description:
-        '입고 QR, 수령 QR, 신청 상태처럼 지금 해야 할 일이 생기면 여기에 모입니다.',
-      buttonLabel: null,
-      icon: 'circle-check' as const,
-      onPress: undefined,
-    };
-  }, [completedPostId, navigation, openPostDetail, requestedPostId]);
+    return [
+      {
+        key: 'empty',
+        title: '진행 중인 나눔 없음',
+        description:
+          '입고 QR, 수령 QR, 신청 상태처럼 지금 해야 할 일이 생기면 여기에 모입니다.',
+        buttonLabel: null,
+        icon: 'circle-check',
+        onPress: undefined,
+      },
+    ];
+  }, [
+    completedPostId,
+    myPosts,
+    myShareRequests,
+    navigation,
+    openPostDetail,
+    requestedPostId,
+  ]);
+
+  const activeActionCount = useMemo(() => {
+    const accountActionCount =
+      myShareRequests.filter(isShareRequestAwaitingPickup).length +
+      myPosts.filter(isPostAwaitingStoreQr).length +
+      myPosts.filter(isPostAwaitingPickupConfirmation).length;
+
+    if (accountActionCount > 0) {
+      return accountActionCount;
+    }
+
+    return requestedPostId != null || completedPostId != null ? 1 : 0;
+  }, [completedPostId, myPosts, myShareRequests, requestedPostId]);
 
   return (
     <View style={styles.container}>
@@ -272,22 +446,56 @@ const HomeScreen = () => {
         <View style={styles.actionHub}>
           <View style={styles.actionHubHeader}>
             <Text style={styles.actionHubEyebrow}>진행 중인 나눔</Text>
-            <DSIcon name={currentAction.icon} size="medium" color="primary" />
+            <Text style={styles.actionHubCount}>
+              {activeActionCount > 0 ? `${activeActionCount}건` : '없음'}
+            </Text>
           </View>
-          <Text style={styles.actionHubTitle}>{currentAction.title}</Text>
-          <Text style={styles.actionHubDescription}>
-            {currentAction.description}
-          </Text>
-          {currentAction.buttonLabel && currentAction.onPress ? (
-            <TouchableOpacity
-              style={styles.actionHubButton}
-              onPress={currentAction.onPress}>
-              <Text style={styles.actionHubButtonText}>
-                {currentAction.buttonLabel}
-              </Text>
-              <DSIcon name="angle-right" size="xsmall" color="primary" />
-            </TouchableOpacity>
-          ) : null}
+          <View style={styles.actionHubList}>
+            {currentActions.map((action, index) => (
+              <View
+                key={action.key}
+                style={[
+                  styles.actionHubItem,
+                  index < currentActions.length - 1 &&
+                    styles.actionHubItemDivider,
+                ]}>
+                <View style={styles.actionHubItemIcon}>
+                  <DSIcon name={action.icon} size="small" color="primary" />
+                </View>
+                <View style={styles.actionHubItemBody}>
+                  <Text style={styles.actionHubTitle}>{action.title}</Text>
+                  {action.statusLabels?.length ? (
+                    <View style={styles.actionHubStatusRow}>
+                      {action.statusLabels.map((label, labelIndex) => (
+                        <Text
+                          key={`${action.key}-${label}-${labelIndex}`}
+                          style={styles.actionHubStatusLabel}>
+                          {label}
+                        </Text>
+                      ))}
+                    </View>
+                  ) : null}
+                  <Text style={styles.actionHubDescription}>
+                    {action.description}
+                  </Text>
+                  {action.buttonLabel && action.onPress ? (
+                    <TouchableOpacity
+                      style={styles.actionHubButton}
+                      onPress={action.onPress}>
+                      <Text style={styles.actionHubButtonText}>
+                        {action.buttonLabel}
+                      </Text>
+                      <DSIcon
+                        name="angle-right"
+                        size="xsmall"
+                        color="primary"
+                      />
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+              </View>
+            ))}
+          </View>
         </View>
 
         {/* 통계 카드 */}
@@ -355,7 +563,7 @@ const HomeScreen = () => {
                 <TouchableOpacity
                   style={styles.feedSearchClear}
                   onPress={() => setFeedQuery('')}>
-                  <Text style={styles.feedSearchClearText}>×</Text>
+                  <DSIcon name="xmark" size="small" color="textSecondary" />
                 </TouchableOpacity>
               ) : null}
             </View>
@@ -553,11 +761,54 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: colors.primary,
   },
+  actionHubCount: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: colors.textSecondary,
+  },
+  actionHubList: {
+    gap: 0,
+  },
+  actionHubItem: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingVertical: 12,
+  },
+  actionHubItemDivider: {
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+  },
+  actionHubItemIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primaryLight,
+  },
+  actionHubItemBody: {
+    flex: 1,
+  },
   actionHubTitle: {
     fontSize: 16,
     fontWeight: '800',
     color: colors.textPrimary,
     marginBottom: 6,
+  },
+  actionHubStatusRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginBottom: 8,
+  },
+  actionHubStatusLabel: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    backgroundColor: colors.surface,
+    color: colors.textSecondary,
+    fontSize: 11,
+    fontWeight: '800',
   },
   actionHubDescription: {
     fontSize: 13,
@@ -671,11 +922,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surface,
-  },
-  feedSearchClearText: {
-    fontSize: 18,
-    lineHeight: 20,
-    color: colors.textSecondary,
   },
   feedSearchMeta: {
     marginBottom: 10,

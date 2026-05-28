@@ -1,0 +1,551 @@
+#!/usr/bin/env node
+
+const fs = require('fs');
+const path = require('path');
+
+const repoRoot = path.resolve(__dirname, '..');
+const baseUrl = (process.env.FOODLINK_API_BASE_URL || 'http://localhost:8080').replace(
+  /\/$/,
+  '',
+);
+const shouldMutate = process.argv.includes('--mutate');
+const qaPassword = process.env.FOODLINK_QA_PASSWORD || 'Password123';
+const qaFridgeId = Number(process.env.FOODLINK_QA_FRIDGE_ID || 1);
+const fixturePath = path.join(
+  repoRoot,
+  'docs',
+  'qa-fixtures',
+  'fresh-single-fresh-20260505.jpg',
+);
+const timestamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\..+$/, 'Z');
+const reportPath = path.join(
+  repoRoot,
+  'temp',
+  `backend-feature-contract-e2e-${timestamp}.json`,
+);
+
+const report = {
+  baseUrl,
+  timestamp,
+  mutate: shouldMutate,
+  results: [],
+};
+
+const tunnelHelp =
+  'API is not reachable. Open the SSH tunnel first, for example: ssh -N -L 8080:<backend-host>:80 <vm-user>@<vm-host>, or set FOODLINK_API_BASE_URL.';
+
+const addResult = (status, id, detail, extra = undefined) => {
+  const result = {status, id, detail};
+  if (extra !== undefined) {
+    result.extra = extra;
+  }
+  report.results.push(result);
+  console.log(`[${status}] ${id}: ${detail}`);
+  return result;
+};
+
+const getServerMessage = body =>
+  body?.message ||
+  body?.detail ||
+  body?.data?.message ||
+  body?.data?.detail ||
+  body?.error ||
+  'no server message';
+
+const writeReport = () => {
+  fs.mkdirSync(path.dirname(reportPath), {recursive: true});
+  fs.writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`, {
+    encoding: 'utf8',
+  });
+  console.log(`Report written: ${reportPath}`);
+};
+
+const parseJson = async (response, label) => {
+  const text = await response.text();
+  if (!text) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    const preview = text.slice(0, 300).replace(/\s+/g, ' ');
+    throw new Error(
+      `${label} returned non-JSON response (${response.status}): ${preview}`,
+    );
+  }
+};
+
+const request = async (method, pathname, options = {}) => {
+  const headers = {...(options.headers || {})};
+  if (options.token) {
+    headers.Authorization = `Bearer ${options.token}`;
+  }
+  if (options.json !== undefined) {
+    headers['Content-Type'] = 'application/json';
+  }
+
+  const response = await fetch(`${baseUrl}${pathname}`, {
+    method,
+    headers,
+    body:
+      options.body !== undefined
+        ? options.body
+        : options.json !== undefined
+          ? JSON.stringify(options.json)
+          : undefined,
+  });
+  const body = await parseJson(response, `${method} ${pathname}`);
+  return {response, body};
+};
+
+const expectOk = async (id, method, pathname, options = {}) => {
+  const result = await request(method, pathname, options);
+  if (!result.response.ok) {
+    throw new Error(
+      `${result.response.status}: ${getServerMessage(result.body)}`,
+    );
+  }
+  return result.body;
+};
+
+const getData = body => body?.data ?? body;
+
+const normalizeUser = user => ({
+  ...user,
+  profileImageUrl: user.profileImageUrl ?? user.profile_image_url ?? null,
+  isOperator: user.isOperator ?? user.is_operator ?? null,
+  operatorRole: user.operatorRole ?? user.operator_role ?? null,
+  operatorFridgeIds: user.operatorFridgeIds ?? user.operator_fridge_ids ?? null,
+});
+
+const hasAnyOwnKey = (object, keys) =>
+  keys.some(key => Object.prototype.hasOwnProperty.call(object, key));
+
+const expectObject = (value, label) => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error(`${label} must be an object`);
+  }
+  return value;
+};
+
+const expectArray = (value, label) => {
+  if (!Array.isArray(value)) {
+    throw new Error(`${label} must be an array`);
+  }
+  return value;
+};
+
+const runStep = async (id, fn) => {
+  try {
+    const detail = await fn();
+    addResult('passed', id, detail || 'ok');
+  } catch (error) {
+    addResult('failed', id, error instanceof Error ? error.message : String(error));
+  }
+};
+
+const checkPreflight = async () => {
+  const targets = ['/openapi.json', '/docs'];
+  const failures = [];
+
+  for (const target of targets) {
+    try {
+      const response = await fetch(`${baseUrl}${target}`, {method: 'GET'});
+      if (response.ok) {
+        addResult('passed', 'preflight', `${target} reachable (${response.status})`);
+        return;
+      }
+      failures.push(`${target} -> ${response.status}`);
+    } catch (error) {
+      failures.push(
+        `${target} -> ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+
+  throw new Error(`${tunnelHelp} Checked: ${failures.join('; ')}`);
+};
+
+const signup = async user => {
+  const body = await expectOk('signup', 'POST', '/api/v1/auth/signup', {
+    json: user,
+  });
+  return expectObject(getData(body), `signup ${user.email} data`);
+};
+
+const login = async (email, password) => {
+  const form = new URLSearchParams();
+  form.set('username', email);
+  form.set('password', password);
+
+  const body = await expectOk('login', 'POST', '/api/v1/auth/login', {
+    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+    body: form.toString(),
+  });
+  const data = expectObject(getData(body), `login ${email} data`);
+  const token = data.accessToken || data.access_token;
+  if (!token) {
+    throw new Error(`login ${email} response missing accessToken`);
+  }
+  return token;
+};
+
+const updateLocation = async (token, label) => {
+  const body = await expectOk(
+    `${label} location`,
+    'PUT',
+    '/api/v1/auth/me/location',
+    {
+      token,
+      json: {
+        latitude: 35.1595,
+        longitude: 126.9136,
+        fcmToken: `qa-contract-${label}-${timestamp}`,
+      },
+    },
+  );
+  return expectObject(getData(body), `${label} location data`);
+};
+
+const getMe = async token => {
+  const body = await expectOk('getMe', 'GET', '/api/v1/auth/me', {token});
+  const rawUser = expectObject(getData(body), 'auth/me data');
+  return {rawUser, user: normalizeUser(rawUser)};
+};
+
+const validateOperatorFields = (rawUser, user) => {
+  const fieldPairs = [
+    ['isOperator', 'is_operator'],
+    ['operatorRole', 'operator_role'],
+    ['operatorFridgeIds', 'operator_fridge_ids'],
+  ];
+
+  for (const keys of fieldPairs) {
+    if (!hasAnyOwnKey(rawUser, keys)) {
+      throw new Error(`/auth/me missing ${keys.join(' or ')}`);
+    }
+  }
+
+  if (
+    user.operatorFridgeIds !== null &&
+    user.operatorFridgeIds !== undefined &&
+    !Array.isArray(user.operatorFridgeIds)
+  ) {
+    throw new Error('operatorFridgeIds must be an array, null, or undefined');
+  }
+};
+
+const updateProfile = async token => {
+  const body = await expectOk('patch profile', 'PATCH', '/api/v1/auth/me', {
+    token,
+    json: {
+      nickname: `QA Author ${timestamp}`,
+      profileImageUrl: `https://example.com/qa/${timestamp}.jpg`,
+    },
+  });
+  const user = normalizeUser(expectObject(getData(body), 'PATCH /auth/me data'));
+  if (user.nickname !== `QA Author ${timestamp}`) {
+    throw new Error(`nickname was not updated: ${user.nickname}`);
+  }
+  if (!('profileImageUrl' in user)) {
+    throw new Error('PATCH /auth/me response missing profileImageUrl');
+  }
+  return user;
+};
+
+const validatePostShape = item => {
+  const post = expectObject(item, 'post');
+  for (const field of ['id', 'status', 'fridgeId', 'expirationDate']) {
+    if (!(field in post)) {
+      throw new Error(`post missing ${field}`);
+    }
+  }
+};
+
+const validateShareRequestShape = item => {
+  const wrapper = expectObject(item, 'share request item');
+  const requestItem = expectObject(wrapper.request, 'share request item.request');
+  expectObject(wrapper.post, 'share request item.post');
+  if (!('id' in requestItem) || !('status' in requestItem)) {
+    throw new Error('share request item.request missing id/status');
+  }
+};
+
+const getMyPosts = async token => {
+  const body = await expectOk(
+    'my posts',
+    'GET',
+    '/api/v1/users/me/posts?status=available,requested,completed,cancelled,expired,pending_store,disposed&skip=0&limit=20',
+    {token},
+  );
+  const data = expectArray(getData(body), 'GET /users/me/posts data');
+  data.forEach(validatePostShape);
+  return data;
+};
+
+const getMyShareRequests = async token => {
+  const body = await expectOk(
+    'my share requests',
+    'GET',
+    '/api/v1/users/me/share-requests?status=requested,completed,cancelled,expired&skip=0&limit=20',
+    {token},
+  );
+  const data = expectArray(getData(body), 'GET /users/me/share-requests data');
+  data.forEach(validateShareRequestShape);
+  return data;
+};
+
+const generateImageToken = async token => {
+  if (!fs.existsSync(fixturePath)) {
+    throw new Error(`fixture missing: ${fixturePath}`);
+  }
+
+  const form = new FormData();
+  const buffer = fs.readFileSync(fixturePath);
+  form.append('image', new Blob([buffer], {type: 'image/jpeg'}), path.basename(fixturePath));
+
+  const response = await fetch(`${baseUrl}/api/v1/posts/generate`, {
+    method: 'POST',
+    headers: {Authorization: `Bearer ${token}`},
+    body: form,
+  });
+  const body = await parseJson(response, 'POST /api/v1/posts/generate');
+  if (!response.ok) {
+    throw new Error(`${response.status}: ${getServerMessage(body)}`);
+  }
+  const data = expectObject(getData(body), 'generate data');
+  if (!data.imageToken) {
+    throw new Error('generate response missing imageToken');
+  }
+  return data.imageToken;
+};
+
+const getExpirationDate = () => {
+  const date = new Date();
+  date.setUTCDate(date.getUTCDate() + 7);
+  return date.toISOString().slice(0, 10);
+};
+
+const createPost = async token => {
+  const imageToken = await generateImageToken(token);
+  const data = {
+    fridgeId: qaFridgeId,
+    expirationDate: getExpirationDate(),
+    imageToken,
+    flow: 'direct',
+  };
+  const body = await expectOk('create post', 'POST', '/api/v1/posts', {
+    token,
+    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+    body: `data=${encodeURIComponent(JSON.stringify(data))}`,
+  });
+  const post = expectObject(getData(body), 'create post data');
+  if (!post.id) {
+    throw new Error('create post response missing id');
+  }
+  return post;
+};
+
+const requestShare = async (token, postId) => {
+  const body = await expectOk(
+    'request share',
+    'POST',
+    `/api/v1/posts/${postId}/requests`,
+    {token},
+  );
+  const data = expectObject(getData(body), 'request share data');
+  const requestData = expectObject(data.request, 'request share data.request');
+  if (!requestData.id) {
+    throw new Error('request share response missing request.id');
+  }
+  return data;
+};
+
+const postMutation = async (token, pathname) => {
+  const body = await expectOk(pathname, 'POST', pathname, {token});
+  return expectObject(getData(body), `${pathname} data`);
+};
+
+const getPostDetail = async (token, postId) => {
+  const body = await expectOk('post detail', 'GET', `/api/v1/posts/${postId}`, {
+    token,
+  });
+  return expectObject(getData(body), `post ${postId} detail`);
+};
+
+const runLifecycleScenario = async (id, authorToken, requesterToken, fn) => {
+  try {
+    await fn();
+    addResult('passed', id, 'ok');
+  } catch (error) {
+    addResult(
+      'failed',
+      id,
+      error instanceof Error ? error.message : String(error),
+    );
+  }
+};
+
+const runOperatorProfileCheck = async () => {
+  const email = process.env.FOODLINK_OPERATOR_EMAIL;
+  const password = process.env.FOODLINK_OPERATOR_PASSWORD;
+  if (!email || !password) {
+    addResult(
+      'skipped',
+      'operator profile',
+      'FOODLINK_OPERATOR_EMAIL/FOODLINK_OPERATOR_PASSWORD not set',
+    );
+    return;
+  }
+
+  await runStep('operator profile', async () => {
+    const token = await login(email, password);
+    const {rawUser, user} = await getMe(token);
+    validateOperatorFields(rawUser, user);
+    if (user.isOperator !== true) {
+      throw new Error(`expected isOperator true, got ${user.isOperator}`);
+    }
+    if (!user.operatorRole) {
+      throw new Error('operatorRole is empty');
+    }
+    if (!Array.isArray(user.operatorFridgeIds) || user.operatorFridgeIds.length === 0) {
+      throw new Error('operatorFridgeIds must contain at least one fridge id');
+    }
+    return `role=${user.operatorRole}, fridgeIds=${user.operatorFridgeIds.join(',')}`;
+  });
+};
+
+const runMutationMatrix = async () => {
+  const suffix = Date.now();
+  const author = {
+    email: `codex_contract_author_${suffix}@example.com`,
+    nickname: `QA Author ${suffix}`,
+    password: qaPassword,
+  };
+  const requester = {
+    email: `codex_contract_requester_${suffix}@example.com`,
+    nickname: `QA Requester ${suffix}`,
+    password: qaPassword,
+  };
+  const state = {};
+
+  await runStep('auth signup author/requester', async () => {
+    state.authorUser = await signup(author);
+    state.requesterUser = await signup(requester);
+    return `${author.email}, ${requester.email}`;
+  });
+
+  await runStep('auth login author/requester', async () => {
+    state.authorToken = await login(author.email, author.password);
+    state.requesterToken = await login(requester.email, requester.password);
+    return 'tokens acquired';
+  });
+
+  if (!state.authorToken || !state.requesterToken) {
+    addResult('skipped', 'mutation matrix', 'auth setup failed');
+    return;
+  }
+
+  await runStep('auth location author/requester', async () => {
+    await updateLocation(state.authorToken, 'author');
+    await updateLocation(state.requesterToken, 'requester');
+    return 'Gwangju coordinates saved';
+  });
+
+  await runStep('auth me operator fields', async () => {
+    const {rawUser, user} = await getMe(state.authorToken);
+    validateOperatorFields(rawUser, user);
+    return `isOperator=${user.isOperator}, operatorRole=${user.operatorRole}, operatorFridgeIds=${JSON.stringify(user.operatorFridgeIds)}`;
+  });
+
+  await runStep('auth profile patch', async () => {
+    const user = await updateProfile(state.authorToken);
+    return `nickname=${user.nickname}`;
+  });
+
+  await runStep('my history APIs', async () => {
+    const posts = await getMyPosts(state.authorToken);
+    const requests = await getMyShareRequests(state.requesterToken);
+    return `posts=${posts.length}, shareRequests=${requests.length}`;
+  });
+
+  await runLifecycleScenario(
+    'lifecycle cancel available post',
+    state.authorToken,
+    state.requesterToken,
+    async () => {
+      const post = await createPost(state.authorToken);
+      const cancelled = await postMutation(
+        state.authorToken,
+        `/api/v1/posts/${post.id}/cancel`,
+      );
+      if (cancelled.status !== 'cancelled') {
+        throw new Error(`expected cancelled status, got ${cancelled.status}`);
+      }
+    },
+  );
+
+  await runLifecycleScenario(
+    'lifecycle request then author complete',
+    state.authorToken,
+    state.requesterToken,
+    async () => {
+      const post = await createPost(state.authorToken);
+      await requestShare(state.requesterToken, post.id);
+      const completed = await postMutation(
+        state.authorToken,
+        `/api/v1/posts/${post.id}/complete`,
+      );
+      if (completed.status !== 'completed') {
+        throw new Error(`expected completed status, got ${completed.status}`);
+      }
+    },
+  );
+
+  await runLifecycleScenario(
+    'lifecycle request then requester cancel',
+    state.authorToken,
+    state.requesterToken,
+    async () => {
+      const post = await createPost(state.authorToken);
+      const requested = await requestShare(state.requesterToken, post.id);
+      await postMutation(
+        state.requesterToken,
+        `/api/v1/users/me/share-requests/${requested.request.id}/cancel`,
+      );
+      const detail = await getPostDetail(state.authorToken, post.id);
+      if (detail.status !== 'available') {
+        throw new Error(`expected post status restored to available, got ${detail.status}`);
+      }
+    },
+  );
+
+  await runOperatorProfileCheck();
+};
+
+const main = async () => {
+  try {
+    await checkPreflight();
+  } catch (error) {
+    addResult('failed', 'preflight', error instanceof Error ? error.message : String(error));
+    writeReport();
+    process.exitCode = 1;
+    return;
+  }
+
+  if (!shouldMutate) {
+    addResult(
+      'skipped',
+      'mutation matrix',
+      'read-only preflight mode; rerun with --mutate to create QA accounts and exercise lifecycle mutations',
+    );
+  } else {
+    await runMutationMatrix();
+  }
+
+  writeReport();
+  process.exitCode = report.results.some(result => result.status === 'failed') ? 1 : 0;
+};
+
+main();

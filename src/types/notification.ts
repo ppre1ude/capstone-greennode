@@ -1,4 +1,8 @@
-export type NotificationSource = 'foreground' | 'background' | 'opened';
+export type NotificationSource =
+  | 'foreground'
+  | 'background'
+  | 'opened'
+  | 'server';
 
 export type FoodLinkNotificationType = 'share_created' | 'share_requested';
 
@@ -36,3 +40,15 @@ export interface NotificationRecord {
   readAt?: string | null;
   source: NotificationSource;
 }
+
+export type ServerNotificationRecord = Omit<
+  Partial<NotificationRecord>,
+  'postId' | 'requestId' | 'source'
+> & {
+  id: string;
+  type: FoodLinkNotificationType;
+  postId?: string | number | null;
+  requestId?: string | number | null;
+  receivedAt?: string | null;
+  createdAt?: string | null;
+};

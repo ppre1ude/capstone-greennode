@@ -24,7 +24,7 @@ import { updateLocation } from '@/api/auth';
 import { useAuthStore } from '@/store/authStore';
 import { styles } from './LocationSetupScreen.styles';
 import { getFcmToken } from '@/services/deviceRegistration';
-import { DSButton, DSCard } from '@/design-system';
+import { DSButton, DSCard, DSIcon, DSScreenFooter } from '@/design-system';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'LocationSetup'>;
 
@@ -275,8 +275,10 @@ const LocationSetupScreen = ({ route, navigation }: Props) => {
         {allowBack && (
           <TouchableOpacity
             style={styles.headerBackButton}
+            accessibilityRole="button"
+            accessibilityLabel="뒤로가기"
             onPress={() => navigation.goBack()}>
-            <Text style={styles.headerBackText}>←</Text>
+            <DSIcon name="angle-left" size="large" color="primary" />
           </TouchableOpacity>
         )}
         <Text style={styles.headerTitle}>동네 설정</Text>
@@ -286,7 +288,12 @@ const LocationSetupScreen = ({ route, navigation }: Props) => {
       <View style={styles.mapArea}>
         {/* 배경 (실제 지도는 Phase 5에서 react-native-maps로 교체) */}
         <View style={styles.mapPlaceholder}>
-          <Text style={styles.mapEmoji}>🗺️</Text>
+          <DSIcon
+            name="map-location-dot"
+            size={60}
+            color="primary"
+            style={styles.mapEmoji}
+          />
 
           {/* 2km 반경 원 */}
           <View style={styles.radiusCircle}>
@@ -302,7 +309,12 @@ const LocationSetupScreen = ({ route, navigation }: Props) => {
         {/* 위치 정보 카드 */}
         <DSCard padded={false} style={styles.locationCard}>
           <View style={styles.locationRow}>
-            <Text style={styles.locationPin}>📍</Text>
+            <DSIcon
+              name="location-dot"
+              size="small"
+              color="primary"
+              style={styles.locationPin}
+            />
             <Text style={styles.locationName}>
               {isFetching ? '위치를 탐색 중...' : locationName}
             </Text>
@@ -340,7 +352,7 @@ const LocationSetupScreen = ({ route, navigation }: Props) => {
       </View>
 
       {/* CTA */}
-      <View style={styles.footer}>
+      <DSScreenFooter style={styles.footer} testID="location-setup-footer">
         <DSCard
           variant="outlined"
           padded={false}
@@ -381,7 +393,7 @@ const LocationSetupScreen = ({ route, navigation }: Props) => {
           style={styles.submitButton}
           textStyle={styles.submitButtonText}
         />
-      </View>
+      </DSScreenFooter>
     </View>
   );
 };

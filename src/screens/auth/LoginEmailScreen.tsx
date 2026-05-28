@@ -4,7 +4,7 @@
  * login.html → "이메일로 계속하기" 터치 후 진입
  * react-hook-form + zod 유효성 검증
  *
- * ⚠️ 로그인 API: application/x-www-form-urlencoded, 필드명 'username'
+ * NOTE: 로그인 API: application/x-www-form-urlencoded, 필드명 'username'
  */
 import React, { useState } from 'react';
 import {
@@ -26,7 +26,7 @@ import { loginSchema, type LoginFormData } from '@/utils/validation';
 import { login, getMe } from '@/api/auth';
 import { useAuthStore } from '@/store/authStore';
 import { colors } from '@/theme';
-import { DSButton, DSTextField } from '@/design-system';
+import { DSButton, DSIcon, DSTextField } from '@/design-system';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'LoginEmail'>;
 
@@ -99,8 +99,10 @@ const LoginEmailScreen = ({ navigation }: Props) => {
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.backButton}
+            accessibilityRole="button"
+            accessibilityLabel="뒤로가기"
             onPress={() => navigation.goBack()}>
-            <Text style={styles.backIcon}>←</Text>
+            <DSIcon name="angle-left" size="large" color="primary" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>로그인</Text>
           <View style={styles.headerSpacer} />
@@ -158,10 +160,17 @@ const LoginEmailScreen = ({ navigation }: Props) => {
                   trailing={
                     <TouchableOpacity
                       style={styles.eyeButton}
+                      accessibilityRole="button"
+                      accessibilityLabel={
+                        showPassword ? '비밀번호 숨기기' : '비밀번호 보기'
+                      }
                       onPress={() => setShowPassword(!showPassword)}>
-                      <Text style={styles.eyeIcon}>
-                        {showPassword ? '🙈' : '👁️'}
-                      </Text>
+                      <DSIcon
+                        name={showPassword ? 'eye-slash' : 'eye'}
+                        size="medium"
+                        color="textTertiary"
+                        style={styles.eyeIcon}
+                      />
                     </TouchableOpacity>
                   }
                 />
@@ -220,10 +229,6 @@ const styles = StyleSheet.create({
     height: 40,
     justifyContent: 'center',
     alignItems: 'flex-start',
-  },
-  backIcon: {
-    fontSize: 22,
-    color: colors.primary,
   },
   headerTitle: {
     fontSize: 17,

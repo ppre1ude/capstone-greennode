@@ -35,3 +35,8 @@ export interface LocationUpdateRequest {
   latitude: number;
   longitude: number;
 }
+
+export interface UserProfileUpdateRequest {
+  nickname?: string;
+  profileImageUrl?: string | null;
+}

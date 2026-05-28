@@ -4,6 +4,10 @@ import ReactTestRenderer from 'react-test-renderer';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { DSScreenFooter } from '@/design-system';
 
+const fs = jest.requireActual('fs') as {
+  readFileSync: (filePath: string, encoding: 'utf8') => string;
+};
+
 const renderWithBottomInset = (bottom: number) => (
   <SafeAreaProvider
     initialMetrics={{
@@ -23,6 +27,20 @@ const renderWithBottomInset = (bottom: number) => (
 
 const flattenStyle = (style: unknown) =>
   Array.isArray(style) ? Object.assign({}, ...style) : style;
+
+const ctaFooterScreenFiles = [
+  {
+    screenPath: 'src/screens/location/LocationSetupScreen.tsx',
+    stylePath: 'src/screens/location/LocationSetupScreen.styles.ts',
+  },
+  {
+    screenPath: 'src/screens/auth/OnboardingScreen.tsx',
+    stylePath: 'src/screens/auth/OnboardingScreen.tsx',
+  },
+];
+
+const getFooterStyleBody = (source: string) =>
+  source.match(/footer:\s*\{([\s\S]*?)\n\s*\},/)?.[1] ?? '';
 
 describe('DSScreenFooter', () => {
   it('keeps fixed CTA content above the native navigation area', async () => {
@@ -66,6 +84,19 @@ describe('DSScreenFooter', () => {
 
     await ReactTestRenderer.act(async () => {
       renderer?.unmount();
+    });
+  });
+
+  it('keeps remaining fixed CTA screens on safe-area-aware footers', () => {
+    ctaFooterScreenFiles.forEach(({ screenPath, stylePath }) => {
+      const screenSource = fs.readFileSync(screenPath, 'utf8');
+      const footerStyleBody = getFooterStyleBody(
+        fs.readFileSync(stylePath, 'utf8'),
+      );
+
+      expect(screenSource).toContain('DSScreenFooter');
+      expect(screenSource).toContain('<DSScreenFooter');
+      expect(footerStyleBody).not.toContain('paddingBottom');
     });
   });
 });

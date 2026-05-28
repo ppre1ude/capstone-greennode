@@ -76,7 +76,7 @@ export const styles = StyleSheet.create({
     elevation: 6,
     zIndex: 10,
   },
-  bottomCarousel: {
+  bottomSurface: {
     position: 'absolute',
     bottom: 24,
     left: 0,

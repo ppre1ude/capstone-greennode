@@ -41,6 +41,8 @@ const getSourceLabel = (source: NotificationRecord['source']) => {
       return '백그라운드 수신';
     case 'opened':
       return '알림 열기';
+    case 'server':
+      return '계정 동기화';
     default:
       return '수신 기록';
   }
@@ -61,14 +63,24 @@ const ChatListScreen = () => {
     notification => !notification.readAt,
   ).length;
 
+  const handleOpenNotification = (item: NotificationRecord) => {
+    markNotificationRead(item.id);
+    openNotificationTarget(item);
+  };
+
+  const handleMarkAllRead = () => {
+    markAllNotificationsRead();
+  };
+
+  const handleClearNotifications = () => {
+    clearNotifications();
+  };
+
   const renderNotification = ({ item }: { item: NotificationRecord }) => (
     <TouchableOpacity
       style={styles.notificationCard}
       activeOpacity={0.82}
-      onPress={() => {
-        markNotificationRead(item.id);
-        openNotificationTarget(item);
-      }}>
+      onPress={() => handleOpenNotification(item)}>
       <View style={styles.notificationHeader}>
         <Text style={styles.notificationTitle} numberOfLines={1}>
           {item.title}
@@ -112,13 +124,13 @@ const ChatListScreen = () => {
             {unreadCount > 0 ? (
               <TouchableOpacity
                 style={styles.markAllReadButton}
-                onPress={() => markAllNotificationsRead()}>
+                onPress={handleMarkAllRead}>
                 <Text style={styles.markAllReadButtonText}>모두 읽음</Text>
               </TouchableOpacity>
             ) : null}
             <TouchableOpacity
               style={styles.clearButton}
-              onPress={clearNotifications}>
+              onPress={handleClearNotifications}>
               <Text style={styles.clearButtonText}>비우기</Text>
             </TouchableOpacity>
           </View>
@@ -205,6 +217,20 @@ const styles = StyleSheet.create({
   listContent: {
     padding: 20,
     gap: 12,
+  },
+  syncRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: colors.surface,
+  },
+  syncText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.textSecondary,
   },
   notificationCard: {
     backgroundColor: '#FFFFFF',

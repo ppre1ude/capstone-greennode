@@ -183,12 +183,12 @@ npm run mock:api
 
 현재 검증 문서 기준 남은 주요 작업은 아래와 같습니다.
 
-- 운영자 role metadata 계약: `/auth/me` 또는 별도 endpoint가 실제 운영자 계정의 냉장고 권한을 앱에 알려줘야 프로필 진입점을 안정적으로 노출할 수 있습니다.
+- 최신 VM E2E 재검증: `/auth/me` 운영자 힌트와 프로필 운영자 콘솔 게이트는 연결됐으므로, 실제 운영자 계정으로 진입 정책을 다시 확인합니다.
 - Android 13 실기기 또는 추가 OEM 참고 매트릭스: 기기가 확보되면 Firebase 설정 포함 빌드와 2계정으로 background/terminated 수신을 보강합니다.
 - Post-MVP AI rejection reason 계약 정리
 - 주변 공유 냉장고 없음 상태를 위한 백엔드 필터 또는 fixture 검증
 - 실제 환경 성취 지표 API와 계산식 정의
-- Inventory/QR PRD v0 기반 실제 `pending_store`, 30분 임시 선점, QR 보관/수령 end-to-end QA
+- Inventory/QR PRD v0 기반 최신 VM/실기기 QR 보관·수령 회귀 재검증
 
 ## 문서 지도
 

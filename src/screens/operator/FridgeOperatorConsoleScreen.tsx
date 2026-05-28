@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -8,21 +8,24 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import type {NativeStackScreenProps} from '@react-navigation/native-stack';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import {
   disposeOperatorItem,
   getOperatorInventoryItems,
   getOperatorInventorySummary,
-  type OperatorInventoryItem,
   type OperatorInventorySummary,
 } from '@/api/operator';
-import type {RootStackParamList} from '@/navigation/types';
-import {colors} from '@/theme';
-import {getApiErrorMessage} from '@/utils/apiError';
+import type { RootStackParamList } from '@/navigation/types';
+import { colors } from '@/theme';
+import { getApiErrorMessage } from '@/utils/apiError';
 import {
+  canDisposeOperatorItem,
   deriveBasketStatus,
+  formatOperatorDateTime,
   getOperatorItemStatusLabel,
   getOperatorItemStatusTone,
+  mapOperatorInventoryItem,
+  type OperatorInspectionItem,
   type OperatorItemStatus,
   type OperatorStatusTone,
 } from '@/utils/fridgeOperatorInventory';
@@ -55,8 +58,16 @@ const makeSummaryCards = (summary: OperatorInventorySummary) => [
     value: String(summary.totalItems),
     note: '개별 나눔 식재료 기준',
   },
-  {label: '신청 가능', value: String(summary.availableItems), note: 'available'},
-  {label: '신청 접수', value: String(summary.requestedItems), note: 'requested'},
+  {
+    label: '신청 가능',
+    value: String(summary.availableItems),
+    note: 'available',
+  },
+  {
+    label: '신청 접수',
+    value: String(summary.requestedItems),
+    note: 'requested',
+  },
   {
     label: '폐기 후보',
     value: String(summary.expiredItems),
@@ -72,7 +83,7 @@ const makeSummaryCards = (summary: OperatorInventorySummary) => [
 type BasketCandidate = {
   id: string;
   source: string;
-  items: {name: string; status: OperatorItemStatus}[];
+  items: { name: string; status: OperatorItemStatus }[];
   decision: string;
 };
 
@@ -81,9 +92,9 @@ const basketCandidates: BasketCandidate[] = [
     id: 'BASKET-CAND-001',
     source: '공급자 24',
     items: [
-      {name: '바나나', status: 'available'},
-      {name: '토마토', status: 'available'},
-      {name: '상추', status: 'needsReview'},
+      { name: '바나나', status: 'available' },
+      { name: '토마토', status: 'available' },
+      { name: '상추', status: 'needsReview' },
     ],
     decision: '바구니로 묶으면 현장 점검이 쉬움',
   },
@@ -91,30 +102,20 @@ const basketCandidates: BasketCandidate[] = [
     id: 'BASKET-CAND-002',
     source: '공급자 31',
     items: [
-      {name: '사과', status: 'requested'},
-      {name: '감자', status: 'requested'},
+      { name: '사과', status: 'requested' },
+      { name: '감자', status: 'requested' },
     ],
     decision: '개별 항목 상태만으로도 충분할 수 있음',
   },
   {
     id: 'NO-BASKET',
     source: '기존 단일 등록',
-    items: [{name: '오이', status: 'discardCandidate'}],
+    items: [{ name: '오이', status: 'discardCandidate' }],
     decision: '바구니 없이도 폐기 판단 가능',
   },
 ];
 
-type InspectionItem = {
-  name: string;
-  postId: string;
-  labelCode?: string;
-  storageZone?: string;
-  ai: string;
-  recommendedUntil: string;
-  status: OperatorItemStatus;
-};
-
-const initialInspectionItems: InspectionItem[] = [
+const initialInspectionItems: OperatorInspectionItem[] = [
   {
     name: '토마토',
     postId: '108',
@@ -179,63 +180,6 @@ const statusTone = (tone: OperatorStatusTone) => {
 const itemStatusTone = (status: OperatorItemStatus) =>
   statusTone(getOperatorItemStatusTone(status));
 
-const formatConfidence = (confidenceScore?: number | null): string | null => {
-  if (typeof confidenceScore !== 'number') {
-    return null;
-  }
-
-  return confidenceScore <= 1
-    ? confidenceScore.toFixed(2)
-    : (confidenceScore / 100).toFixed(2);
-};
-
-const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-
-const formatOperatorDateTime = (value?: string | null): string => {
-  const trimmedValue = value?.trim();
-
-  if (!trimmedValue) {
-    return '-';
-  }
-
-  const isDateOnly = DATE_ONLY_PATTERN.test(trimmedValue);
-  const normalizedValue = isDateOnly
-    ? `${trimmedValue}T00:00:00`
-    : trimmedValue.replace(' ', 'T');
-  const date = new Date(normalizedValue);
-
-  if (!Number.isFinite(date.getTime())) {
-    return trimmedValue;
-  }
-
-  const dateText = date.toLocaleDateString('ko-KR', {
-    month: 'long',
-    day: 'numeric',
-  });
-
-  if (isDateOnly) {
-    return dateText;
-  }
-
-  const timeText = date.toLocaleTimeString('ko-KR', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  });
-
-  return `${dateText} ${timeText}`;
-};
-
-const getStorageZoneLabel = (
-  storageZone?: OperatorInventoryItem['storageZone'],
-): string => {
-  if (storageZone === 'ETHYLENE_SEPARATED') {
-    return '에틸렌 분리 구역';
-  }
-
-  return '일반 구역';
-};
-
 type ErrorWithResponseStatus = {
   response?: {
     status?: number;
@@ -251,65 +195,14 @@ const isOperatorAuthorizationError = (error: unknown): boolean => {
   return status === 401 || status === 403;
 };
 
-const mapOperatorItemStatus = (
-  status: OperatorInventoryItem['status'],
-): OperatorItemStatus => {
-  if (status === 'expired') {
-    return 'discardCandidate';
-  }
-
-  if (status === 'disposed') {
-    return 'discarded';
-  }
-
-  if (status === 'needs_review') {
-    return 'needsReview';
-  }
-
-  if (
-    status === 'available' ||
-    status === 'requested' ||
-    status === 'completed' ||
-    status === 'missing'
-  ) {
-    return status;
-  }
-
-  return 'needsReview';
-};
-
-const canDisposeOperatorItem = (status: OperatorItemStatus): boolean =>
-  status === 'available' || status === 'discardCandidate';
-
-const mapOperatorInventoryItem = (
-  item: OperatorInventoryItem,
-): InspectionItem => {
-  const confidence = formatConfidence(item.confidenceScore);
-  const freshness = item.freshnessLabel ?? 'unknown';
-
-  return {
-    name:
-      item.itemName ??
-      item.detectedFruitKo ??
-      item.detectedFruit ??
-      '나눔 식재료',
-    postId: String(item.postId),
-    labelCode: item.labelCode ?? undefined,
-    storageZone: getStorageZoneLabel(item.storageZone),
-    ai: confidence ? `${freshness}, ${confidence}` : String(freshness),
-    recommendedUntil: formatOperatorDateTime(
-      item.storageDeadlineAt ?? item.expirationDate ?? item.updatedAt,
-    ),
-    status: mapOperatorItemStatus(item.status),
-  };
-};
-
-const FridgeOperatorConsoleScreen = ({navigation, route}: Props) => {
+const FridgeOperatorConsoleScreen = ({ navigation, route }: Props) => {
   const fridgeId = route.params?.fridgeId ?? DEFAULT_OPERATOR_FRIDGE.id;
   const fridgeName = route.params?.fridgeName ?? DEFAULT_OPERATOR_FRIDGE.name;
   const [inventorySummary, setInventorySummary] =
     useState<OperatorInventorySummary>(fallbackSummary);
-  const [inspectionItems, setInspectionItems] = useState(initialInspectionItems);
+  const [inspectionItems, setInspectionItems] = useState(
+    initialInspectionItems,
+  );
   const [disposingPostId, setDisposingPostId] = useState<string | null>(null);
   const [isLoadingInventory, setIsLoadingInventory] = useState(false);
   const [inventoryError, setInventoryError] = useState<string | null>(null);
@@ -361,9 +254,7 @@ const FridgeOperatorConsoleScreen = ({navigation, route}: Props) => {
     } catch (error) {
       if (isOperatorAuthorizationError(error)) {
         setIsOperatorAccessDenied(true);
-        setInventoryError(
-          getApiErrorMessage(error, '운영자 권한이 없습니다.'),
-        );
+        setInventoryError(getApiErrorMessage(error, '운영자 권한이 없습니다.'));
         return;
       }
 
@@ -382,7 +273,7 @@ const FridgeOperatorConsoleScreen = ({navigation, route}: Props) => {
     fetchOperatorInventory();
   }, [fetchOperatorInventory]);
 
-  const disposeItem = async (item: InspectionItem, postId: number) => {
+  const disposeItem = async (item: OperatorInspectionItem, postId: number) => {
     setDisposingPostId(item.postId);
 
     try {
@@ -392,7 +283,7 @@ const FridgeOperatorConsoleScreen = ({navigation, route}: Props) => {
         setInspectionItems(currentItems =>
           currentItems.map(currentItem =>
             currentItem.postId === item.postId
-              ? {...currentItem, status: 'discarded'}
+              ? { ...currentItem, status: 'discarded' }
               : currentItem,
           ),
         );
@@ -418,7 +309,7 @@ const FridgeOperatorConsoleScreen = ({navigation, route}: Props) => {
     }
   };
 
-  const handleDispose = (item: InspectionItem) => {
+  const handleDispose = (item: OperatorInspectionItem) => {
     const postId = Number(item.postId);
 
     if (!Number.isFinite(postId)) {
@@ -430,7 +321,7 @@ const FridgeOperatorConsoleScreen = ({navigation, route}: Props) => {
       '폐기 처분 확인',
       `${item.name} (postId ${item.postId})을 폐기 완료로 처리할까요? 이 작업은 실제 재고 상태를 변경합니다.`,
       [
-        {text: '취소', style: 'cancel'},
+        { text: '취소', style: 'cancel' },
         {
           text: '폐기 처분',
           style: 'destructive',
@@ -456,7 +347,8 @@ const FridgeOperatorConsoleScreen = ({navigation, route}: Props) => {
         <View style={styles.prototypeBanner}>
           <Text style={styles.prototypeBadge}>실제 운영자 API 연결</Text>
           <Text style={styles.prototypeText}>
-            폐기 후보 항목은 운영자 API로 바로 처분 요청을 보냅니다. 백엔드가 아직 배포되지 않았다면 실패 메시지가 표시됩니다.
+            폐기 후보 항목은 운영자 API로 바로 처분 요청을 보냅니다. 백엔드가
+            아직 배포되지 않았다면 실패 메시지가 표시됩니다.
           </Text>
           {isLoadingInventory ? (
             <View style={styles.syncRow}>
@@ -488,7 +380,8 @@ const FridgeOperatorConsoleScreen = ({navigation, route}: Props) => {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>운영자 권한이 필요합니다</Text>
             <Text style={styles.sectionNote}>
-              이 냉장고의 운영자로 등록된 계정만 재고를 확인하고 폐기 처리할 수 있습니다.
+              이 냉장고의 운영자로 등록된 계정만 재고를 확인하고 폐기 처리할 수
+              있습니다.
             </Text>
           </View>
         ) : (
@@ -557,9 +450,7 @@ const FridgeOperatorConsoleScreen = ({navigation, route}: Props) => {
                     <View style={styles.rowHeader}>
                       <View>
                         <Text style={styles.rowTitle}>{item.name}</Text>
-                        <Text style={styles.rowMeta}>
-                          postId {item.postId}
-                        </Text>
+                        <Text style={styles.rowMeta}>postId {item.postId}</Text>
                       </View>
                       <Text
                         style={[
@@ -606,9 +497,12 @@ const FridgeOperatorConsoleScreen = ({navigation, route}: Props) => {
                 ))
               ) : (
                 <View style={styles.emptyState}>
-                  <Text style={styles.emptyTitle}>점검할 식재료가 없습니다</Text>
+                  <Text style={styles.emptyTitle}>
+                    점검할 식재료가 없습니다
+                  </Text>
                   <Text style={styles.emptyText}>
-                    백엔드 inventory API가 빈 목록을 반환했습니다. 새 나눔이 보관되면 이 영역에 표시됩니다.
+                    백엔드 inventory API가 빈 목록을 반환했습니다. 새 나눔이
+                    보관되면 이 영역에 표시됩니다.
                   </Text>
                   <TouchableOpacity
                     style={styles.retryButton}

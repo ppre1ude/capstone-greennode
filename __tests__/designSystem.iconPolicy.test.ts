@@ -4,20 +4,36 @@ const fs = jest.requireActual('fs') as {
 };
 
 const emojiPattern = /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}]/u;
+const textIconGlyphPattern =
+  /<Text\b[^>]*>\s*(?:[\u00D7\u2190\u203A\u2713])\s*<\/Text>/u;
+const stripSourceComments = (source: string) =>
+  source
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/(^|[^:])\/\/.*$/gm, '$1');
 
 const iconPolicyFiles = [
   'src/design-system/catalog/DesignSystemCatalog.tsx',
   'src/navigation/MainTab.tsx',
+  'src/screens/auth/SplashScreen.tsx',
+  'src/screens/auth/OnboardingScreen.tsx',
+  'src/screens/auth/LoginEmailScreen.tsx',
   'src/screens/auth/LoginScreen.tsx',
+  'src/screens/auth/SignupScreen.tsx',
   'src/screens/camera/CameraScanScreen.tsx',
   'src/screens/chat/ChatListScreen.tsx',
   'src/screens/home/HomeScreen.tsx',
+  'src/screens/location/LocationSetupScreen.tsx',
   'src/screens/map/MapScreen.tsx',
   'src/screens/post/FridgeSelectScreen.tsx',
   'src/screens/post/PostCompleteScreen.tsx',
   'src/screens/post/PostCreateScreen.tsx',
   'src/screens/post/PostDetailScreen.tsx',
   'src/screens/profile/ProfileScreen.tsx',
+];
+
+const textGlyphPolicyFiles = [
+  ...iconPolicyFiles,
+  '__tests__/designSystem.components.test.tsx',
 ];
 
 const fontAwesome6Fonts = [
@@ -43,6 +59,15 @@ describe('design system icon policy', () => {
     });
 
     expect(filesWithEmoji).toEqual([]);
+  });
+
+  it('keeps single-character icon glyphs out of Text nodes', () => {
+    const filesWithTextIconGlyphs = textGlyphPolicyFiles.filter(relativePath => {
+      const source = stripSourceComments(fs.readFileSync(relativePath, 'utf8'));
+      return textIconGlyphPattern.test(source);
+    });
+
+    expect(filesWithTextIconGlyphs).toEqual([]);
   });
 
   it('bundles FontAwesome6 fonts in native targets', () => {

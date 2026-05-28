@@ -1,3 +1,5 @@
+import type { OperatorInventoryItem } from '@/api/operator';
+
 export type OperatorItemStatus =
   | 'available'
   | 'requested'
@@ -10,6 +12,16 @@ export type OperatorItemStatus =
 export type OperatorStatusTone = 'good' | 'info' | 'warning' | 'danger';
 
 type StatusSource = {
+  status: OperatorItemStatus;
+};
+
+export type OperatorInspectionItem = {
+  name: string;
+  postId: string;
+  labelCode?: string;
+  storageZone?: string;
+  ai: string;
+  recommendedUntil: string;
   status: OperatorItemStatus;
 };
 
@@ -60,10 +72,12 @@ export const deriveBasketStatus = (items: StatusSource[]) => {
   const needsReviewCount = items.filter(
     item => item.status === 'needsReview',
   ).length;
-  const requestedCount = items.filter(item => item.status === 'requested').length;
+  const requestedCount = items.filter(
+    item => item.status === 'requested',
+  ).length;
 
   if (total === 0) {
-    return {label: '항목 없음', tone: 'warning' as const};
+    return { label: '항목 없음', tone: 'warning' as const };
   }
 
   if (discardCandidateCount > 0) {
@@ -90,5 +104,115 @@ export const deriveBasketStatus = (items: StatusSource[]) => {
   return {
     label: `${total}개 신청 가능`,
     tone: 'good' as const,
+  };
+};
+
+const formatConfidence = (confidenceScore?: number | null): string | null => {
+  if (typeof confidenceScore !== 'number') {
+    return null;
+  }
+
+  return confidenceScore <= 1
+    ? confidenceScore.toFixed(2)
+    : (confidenceScore / 100).toFixed(2);
+};
+
+const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+export const formatOperatorDateTime = (value?: string | null): string => {
+  const trimmedValue = value?.trim();
+
+  if (!trimmedValue) {
+    return '-';
+  }
+
+  const isDateOnly = DATE_ONLY_PATTERN.test(trimmedValue);
+  const normalizedValue = isDateOnly
+    ? `${trimmedValue}T00:00:00`
+    : trimmedValue.replace(' ', 'T');
+  const date = new Date(normalizedValue);
+
+  if (!Number.isFinite(date.getTime())) {
+    return trimmedValue;
+  }
+
+  const dateText = date.toLocaleDateString('ko-KR', {
+    month: 'long',
+    day: 'numeric',
+  });
+
+  if (isDateOnly) {
+    return dateText;
+  }
+
+  const timeText = date.toLocaleTimeString('ko-KR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+
+  return `${dateText} ${timeText}`;
+};
+
+export const getStorageZoneLabel = (
+  storageZone?: OperatorInventoryItem['storageZone'],
+): string => {
+  if (storageZone === 'ETHYLENE_SEPARATED') {
+    return '에틸렌 분리 구역';
+  }
+
+  return '일반 구역';
+};
+
+export const mapOperatorItemStatus = (
+  status: OperatorInventoryItem['status'],
+): OperatorItemStatus => {
+  if (status === 'expired') {
+    return 'discardCandidate';
+  }
+
+  if (status === 'disposed') {
+    return 'discarded';
+  }
+
+  if (status === 'needs_review') {
+    return 'needsReview';
+  }
+
+  if (
+    status === 'available' ||
+    status === 'requested' ||
+    status === 'completed' ||
+    status === 'missing'
+  ) {
+    return status;
+  }
+
+  return 'needsReview';
+};
+
+export const canDisposeOperatorItem = (status: OperatorItemStatus): boolean =>
+  status === 'available' || status === 'discardCandidate';
+
+export const mapOperatorInventoryItem = (
+  item: OperatorInventoryItem,
+): OperatorInspectionItem => {
+  const confidence = formatConfidence(item.confidenceScore);
+  const freshness = item.freshnessLabel ?? 'unknown';
+
+  return {
+    name:
+      item.itemName ??
+      item.detectedFruitKo ??
+      item.detectedFruit ??
+      '나눔 식재료',
+    postId: String(item.postId),
+    labelCode: item.labelCode ?? undefined,
+    storageZone: getStorageZoneLabel(item.storageZone),
+    ai: confidence ? `${freshness}, ${confidence}` : String(freshness),
+    recommendedUntil: formatOperatorDateTime(
+      item.storageDeadlineAt ?? item.expirationDate ?? item.updatedAt,
+    ),
+    status: mapOperatorItemStatus(item.status),
   };
 };

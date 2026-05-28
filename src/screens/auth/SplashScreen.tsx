@@ -20,6 +20,7 @@ import type {AuthStackParamList} from '@/navigation/types';
 import {useAuthStore} from '@/store/authStore';
 import {hasOnboarded} from '@/utils/storage';
 import {flushPendingNotificationNavigation} from '@/services/notifications';
+import {DSIcon} from '@/design-system';
 import {colors} from '@/theme';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Splash'>;
@@ -96,7 +97,7 @@ const SplashScreen = ({navigation}: Props) => {
         ]}>
         {/* 로고 아이콘 */}
         <View style={styles.logoCircle}>
-          <Text style={styles.logoIcon}>🍃</Text>
+          <DSIcon name="seedling" size={42} color="primary" />
         </View>
 
         <Text style={styles.appName}>FoodLink</Text>
@@ -168,9 +169,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 24,
     elevation: 12,
-  },
-  logoIcon: {
-    fontSize: 42,
   },
   appName: {
     fontSize: 32,

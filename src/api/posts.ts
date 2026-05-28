@@ -3,6 +3,8 @@
  * @see docs/API_INTEGRATION_CONTRACT.md § 4.4~4.9
  */
 import apiClient, { BASE_URL } from './client';
+import { createApiError } from './errors';
+import { postMultipart } from './multipart';
 import type {
   ApiResponse,
   Post,
@@ -86,6 +88,29 @@ export const requestShare = async (
   return response.data;
 };
 
+export const cancelPost = async (
+  postId: number,
+): Promise<ApiResponse<Post>> => {
+  const response = await apiClient.post(`${POSTS_PREFIX}/${postId}/cancel`);
+  return response.data;
+};
+
+export const completePost = async (
+  postId: number,
+): Promise<ApiResponse<Post>> => {
+  const response = await apiClient.post(`${POSTS_PREFIX}/${postId}/complete`);
+  return response.data;
+};
+
+export const cancelShareRequest = async (
+  requestId: number,
+): Promise<ApiResponse<ShareRequestResult>> => {
+  const response = await apiClient.post(
+    `/api/v1/users/me/share-requests/${requestId}/cancel`,
+  );
+  return response.data;
+};
+
 /** 나눔 식재료 삭제 — DELETE /api/v1/posts/{id} */
 export const deletePost = async (
   postId: number,
@@ -98,45 +123,3 @@ export const deletePost = async (
 export const getImageUrl = (relativeUrl: string): string => {
   return `${BASE_URL}${relativeUrl}`;
 };
-
-const createApiError = (status: number, data: unknown) => {
-  const error = new Error(
-    `Request failed with status code ${status}`,
-  ) as Error & {
-    response?: { status: number; data: unknown };
-  };
-  error.response = { status, data };
-  return error;
-};
-
-const postMultipart = async <T>(
-  path: string,
-  formData: FormData,
-): Promise<ApiResponse<T>> =>
-  new Promise(async (resolve, reject) => {
-    const token = await getToken();
-    const request = new XMLHttpRequest();
-
-    request.open('POST', `${BASE_URL}${path}`);
-    request.timeout = 30000;
-    if (token) {
-      request.setRequestHeader('Authorization', `Bearer ${token}`);
-    }
-
-    request.onload = () => {
-      try {
-        const responseData = JSON.parse(request.responseText || '{}');
-        if (request.status >= 200 && request.status < 300) {
-          resolve(responseData);
-          return;
-        }
-        reject(createApiError(request.status, responseData));
-      } catch (error) {
-        reject(error);
-      }
-    };
-
-    request.onerror = () => reject(new Error('Network Error'));
-    request.ontimeout = () => reject(new Error('Request timed out'));
-    request.send(formData);
-  });

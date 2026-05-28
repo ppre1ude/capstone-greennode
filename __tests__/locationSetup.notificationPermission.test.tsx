@@ -12,6 +12,7 @@ import LocationSetupScreen from '@/screens/location/LocationSetupScreen';
 import { updateLocation } from '@/api/auth';
 import { getFcmToken } from '@/services/deviceRegistration';
 import { useAuthStore } from '@/store/authStore';
+import { renderWithSafeArea } from '../test-utils/renderWithSafeArea';
 
 jest.mock('@/api/auth', () => ({
   updateLocation: jest.fn(),
@@ -48,6 +49,13 @@ describe('LocationSetupScreen notification permission flow', () => {
     goBack: jest.fn(),
     reset: jest.fn(),
   };
+  const renderLocationSetup = () =>
+    renderWithSafeArea(
+      <LocationSetupScreen
+        navigation={navigation as never}
+        route={{ params: { allowBack: false } } as never}
+      />,
+    );
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -99,12 +107,7 @@ describe('LocationSetupScreen notification permission flow', () => {
     let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
 
     await ReactTestRenderer.act(async () => {
-      renderer = ReactTestRenderer.create(
-        <LocationSetupScreen
-          navigation={navigation as never}
-          route={{ params: { allowBack: false } } as never}
-        />,
-      );
+      renderer = ReactTestRenderer.create(renderLocationSetup());
       await Promise.resolve();
       await Promise.resolve();
     });
@@ -147,12 +150,7 @@ describe('LocationSetupScreen notification permission flow', () => {
     let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
 
     await ReactTestRenderer.act(async () => {
-      renderer = ReactTestRenderer.create(
-        <LocationSetupScreen
-          navigation={navigation as never}
-          route={{ params: { allowBack: false } } as never}
-        />,
-      );
+      renderer = ReactTestRenderer.create(renderLocationSetup());
       await Promise.resolve();
       await Promise.resolve();
     });
@@ -192,12 +190,7 @@ describe('LocationSetupScreen notification permission flow', () => {
     let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
 
     await ReactTestRenderer.act(async () => {
-      renderer = ReactTestRenderer.create(
-        <LocationSetupScreen
-          navigation={navigation as never}
-          route={{ params: { allowBack: false } } as never}
-        />,
-      );
+      renderer = ReactTestRenderer.create(renderLocationSetup());
       await Promise.resolve();
       await Promise.resolve();
     });
@@ -226,12 +219,7 @@ describe('LocationSetupScreen notification permission flow', () => {
     let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
 
     await ReactTestRenderer.act(async () => {
-      renderer = ReactTestRenderer.create(
-        <LocationSetupScreen
-          navigation={navigation as never}
-          route={{ params: { allowBack: false } } as never}
-        />,
-      );
+      renderer = ReactTestRenderer.create(renderLocationSetup());
       await Promise.resolve();
       await Promise.resolve();
     });
@@ -281,12 +269,7 @@ describe('LocationSetupScreen notification permission flow', () => {
     let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
 
     await ReactTestRenderer.act(async () => {
-      renderer = ReactTestRenderer.create(
-        <LocationSetupScreen
-          navigation={navigation as never}
-          route={{ params: { allowBack: false } } as never}
-        />,
-      );
+      renderer = ReactTestRenderer.create(renderLocationSetup());
       await Promise.resolve();
       await Promise.resolve();
     });

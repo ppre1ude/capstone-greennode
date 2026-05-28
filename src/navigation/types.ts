@@ -38,13 +38,18 @@ export type RootStackParamList = {
   PostCreate: {result: GenerateResult; imageUri: string};
   PostComplete: {postId: number};
   PostDetail: {postId: number};
+  MyShares:
+    | {
+        initialTab?: 'posted' | 'received';
+      }
+    | undefined;
   FridgeOperatorConsole:
     | {
         fridgeId?: number;
         fridgeName?: string;
       }
     | undefined;
-  InventoryQrPrototype:
+  InventoryQr:
     | {
         mode?: 'store' | 'pickup';
         postId?: number;

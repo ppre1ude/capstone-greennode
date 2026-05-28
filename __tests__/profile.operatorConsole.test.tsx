@@ -1,16 +1,27 @@
 import React from 'react';
-import { Alert, TouchableOpacity } from 'react-native';
+import { Alert, TextInput, TouchableOpacity } from 'react-native';
 import ReactTestRenderer from 'react-test-renderer';
 import ProfileScreen from '@/screens/profile/ProfileScreen';
 import { useAuthStore } from '@/store/authStore';
+import { updateProfile } from '@/api/auth';
 
 const mockParentNavigate = jest.fn();
+const mockNavigate = jest.fn();
 
 jest.mock('@react-navigation/native', () => ({
   useNavigation: jest.fn(() => ({
+    navigate: mockNavigate,
     getParent: jest.fn(() => ({ navigate: mockParentNavigate })),
   })),
 }));
+
+jest.mock('@/api/auth', () => ({
+  updateProfile: jest.fn(),
+}));
+
+const mockedUpdateProfile = updateProfile as jest.MockedFunction<
+  typeof updateProfile
+>;
 
 const findTouchableByText = (
   renderer: ReactTestRenderer.ReactTestRenderer,
@@ -39,6 +50,15 @@ const expectOperatorConsoleVisible = (
   expect(matches.length > 0).toBe(visible);
 };
 
+const expectTextVisible = (
+  renderer: ReactTestRenderer.ReactTestRenderer,
+  text: string,
+  visible: boolean,
+) => {
+  const matches = renderer.root.findAllByProps({ children: text });
+  expect(matches.length > 0).toBe(visible);
+};
+
 describe('ProfileScreen operator console entry', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -57,6 +77,16 @@ describe('ProfileScreen operator console entry', () => {
       },
       isLoggedIn: true,
       hasLocation: true,
+    });
+    mockedUpdateProfile.mockResolvedValue({
+      success: true,
+      message: '사용자 조회 성공',
+      data: {
+        ...useAuthStore.getState().user!,
+        nickname: '테스터 수정',
+        profileImageUrl: '/static/uploads/profile/avatar.jpg',
+        updatedAt: '2026-05-27T00:00:00Z',
+      },
     });
   });
 
@@ -152,56 +182,69 @@ describe('ProfileScreen operator console entry', () => {
     });
   });
 
-  it('opens QR verification from profile without prototype copy', async () => {
+  it('exposes real lifecycle actions from the primary profile surface', async () => {
     let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
 
     await ReactTestRenderer.act(async () => {
       renderer = ReactTestRenderer.create(<ProfileScreen />);
     });
+
+    expectTextVisible(renderer!, '나눔 관리', true);
+    expectTextVisible(renderer!, '내 나눔 관리', true);
+    expectTextVisible(renderer!, '받은 나눔 관리', true);
+    expectTextVisible(renderer!, '알림함', true);
+    expectTextVisible(renderer!, '냉장고 QR 인증', true);
+
+    await ReactTestRenderer.act(async () => {
+      findTouchableByText(renderer!, '내 나눔 관리').props.onPress();
+    });
+
+    expect(mockParentNavigate).toHaveBeenCalledWith('MyShares', {
+      initialTab: 'posted',
+    });
+
+    await ReactTestRenderer.act(async () => {
+      findTouchableByText(renderer!, '받은 나눔 관리').props.onPress();
+    });
+
+    expect(mockParentNavigate).toHaveBeenCalledWith('MyShares', {
+      initialTab: 'received',
+    });
+
+    await ReactTestRenderer.act(async () => {
+      findTouchableByText(renderer!, '알림함').props.onPress();
+    });
+
+    expect(mockNavigate).toHaveBeenCalledWith('Chat');
 
     await ReactTestRenderer.act(async () => {
       findTouchableByText(renderer!, '냉장고 QR 인증').props.onPress();
     });
 
-    expect(mockParentNavigate).toHaveBeenCalledWith('InventoryQrPrototype');
+    expect(mockParentNavigate).toHaveBeenCalledWith('InventoryQr');
 
     await ReactTestRenderer.act(async () => {
       renderer?.unmount();
     });
   });
 
-  it('explains contract-needed profile menus instead of showing a generic placeholder', async () => {
-    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
+  it('keeps Post-MVP menu entries out of the primary profile surface', async () => {
     let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
 
     await ReactTestRenderer.act(async () => {
       renderer = ReactTestRenderer.create(<ProfileScreen />);
     });
 
-    await ReactTestRenderer.act(async () => {
-      findTouchableByText(renderer!, '내 나눔 내역').props.onPress();
-    });
-
-    expect(alertSpy).toHaveBeenCalledWith(
-      '내 나눔 내역 준비 중',
-      expect.stringContaining('서버 API'),
-    );
-
-    await ReactTestRenderer.act(async () => {
-      findTouchableByText(renderer!, '받은 나눔 내역').props.onPress();
-    });
-
-    expect(alertSpy).toHaveBeenCalledWith(
-      '받은 나눔 내역 준비 중',
-      expect.stringContaining('나눔 목록 API'),
-    );
+    expectTextVisible(renderer!, '관심 식재료', false);
+    expectTextVisible(renderer!, '설정', false);
+    expectTextVisible(renderer!, '고객센터', false);
 
     await ReactTestRenderer.act(async () => {
       renderer?.unmount();
     });
   });
 
-  it('explains that profile editing needs a backend save contract', async () => {
+  it('updates nickname and profile image URL through the backend contract', async () => {
     const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
     let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
 
@@ -213,9 +256,30 @@ describe('ProfileScreen operator console entry', () => {
       findTouchableByText(renderer!, '프로필 수정').props.onPress();
     });
 
+    const [nicknameInput, profileImageInput] =
+      renderer!.root.findAllByType(TextInput);
+
+    await ReactTestRenderer.act(async () => {
+      nicknameInput.props.onChangeText('테스터 수정');
+      profileImageInput.props.onChangeText('/static/uploads/profile/avatar.jpg');
+    });
+
+    await ReactTestRenderer.act(async () => {
+      findTouchableByText(renderer!, '저장').props.onPress();
+      await Promise.resolve();
+    });
+
+    expect(mockedUpdateProfile).toHaveBeenCalledWith({
+      nickname: '테스터 수정',
+      profileImageUrl: '/static/uploads/profile/avatar.jpg',
+    });
+    expect(useAuthStore.getState().user).toMatchObject({
+      nickname: '테스터 수정',
+      profileImageUrl: '/static/uploads/profile/avatar.jpg',
+    });
     expect(alertSpy).toHaveBeenCalledWith(
-      '프로필 수정 준비 중',
-      expect.stringContaining('프로필 이미지를 저장하는 서버 API'),
+      '프로필 수정 완료',
+      '변경된 프로필을 저장했습니다.',
     );
 
     await ReactTestRenderer.act(async () => {
