@@ -8,6 +8,7 @@ import React, {
 import {
   ActivityIndicator,
   Alert,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -64,6 +65,7 @@ const SAMPLE_STORAGE_POLICY = resolveStoragePolicy({
 
 const PENDING_STORE_TIMEOUT_MS = 10 * 60 * 1000;
 const REQUEST_HOLD_TIMEOUT_MS = 30 * 60 * 1000;
+const ANDROID_NAVIGATION_BAR_FALLBACK_INSET = 48;
 const SCROLL_CONTENT_MIN_BOTTOM_PADDING = 36;
 const SCROLL_CONTENT_BOTTOM_INSET_GAP = 16;
 const UNKNOWN_FRIDGE_CODE_LABEL = 'QR 스캔 후 확인';
@@ -328,10 +330,17 @@ const InventoryQrScreen = ({ navigation, route }: Props) => {
   const deadlineLabel = confirmedStoreResult?.storageDeadlineAt
     ? new Date(confirmedStoreResult.storageDeadlineAt).toLocaleString()
     : SAMPLE_STORAGE_POLICY.deadlineLabel;
-  const contentBottomPadding = Math.max(
-    insets.bottom + SCROLL_CONTENT_BOTTOM_INSET_GAP,
-    SCROLL_CONTENT_MIN_BOTTOM_PADDING,
-  );
+  const contentBottomPadding =
+    Platform.OS === 'android'
+      ? SCROLL_CONTENT_MIN_BOTTOM_PADDING
+      : Math.max(
+          insets.bottom + SCROLL_CONTENT_BOTTOM_INSET_GAP,
+          SCROLL_CONTENT_MIN_BOTTOM_PADDING,
+        );
+  const viewportBottomInset =
+    Platform.OS === 'android'
+      ? Math.max(insets.bottom, ANDROID_NAVIGATION_BAR_FALLBACK_INSET)
+      : 0;
 
   return (
     <View style={styles.container} testID="inventory-qr-screen">
@@ -348,6 +357,7 @@ const InventoryQrScreen = ({ navigation, route }: Props) => {
       </View>
 
       <ScrollView
+        style={{ marginBottom: viewportBottomInset }}
         contentContainerStyle={[
           styles.content,
           { paddingBottom: contentBottomPadding },

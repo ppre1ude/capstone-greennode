@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   Alert,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -111,6 +112,15 @@ const InventoryQrScreen = (
   props: React.ComponentProps<typeof InventoryQrScreenBase>,
 ) => renderWithSafeArea(<InventoryQrScreenBase {...props} />);
 
+const originalPlatformOS = Platform.OS;
+
+const setPlatformOS = (os: typeof Platform.OS) => {
+  Object.defineProperty(Platform, 'OS', {
+    configurable: true,
+    value: os,
+  });
+};
+
 const renderInventoryQrScreenWithBottomInset = (bottomInset: number) =>
   renderWithSafeArea(
     <InventoryQrScreenBase
@@ -134,10 +144,13 @@ describe('InventoryQrScreen', () => {
   });
 
   afterEach(() => {
+    setPlatformOS(originalPlatformOS);
     alertSpy.mockRestore();
   });
 
-  it('adds safe-area bottom spacing to scroll content while preserving the minimum padding', async () => {
+  it('keeps scroll content bottom spacing stable while preserving the minimum padding', async () => {
+    setPlatformOS('ios');
+
     let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
 
     await ReactTestRenderer.act(async () => {
@@ -161,6 +174,81 @@ describe('InventoryQrScreen', () => {
     scrollView = renderer!.root.findByType(ScrollView);
     contentStyle = StyleSheet.flatten(scrollView.props.contentContainerStyle);
 
+    expect(contentStyle.paddingBottom).toBe(50);
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
+  it('insets the Android scroll viewport above system navigation controls when safe-area bottom is 0', async () => {
+    setPlatformOS('android');
+
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(
+        renderInventoryQrScreenWithBottomInset(0),
+      );
+    });
+
+    const scrollView = renderer!.root.findByType(ScrollView);
+    const viewportStyle = StyleSheet.flatten(scrollView.props.style);
+    const contentStyle = StyleSheet.flatten(
+      scrollView.props.contentContainerStyle,
+    );
+
+    expect(viewportStyle.marginBottom).toBe(48);
+    expect(contentStyle.paddingBottom).toBe(36);
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
+  it('uses reported Android safe-area bottom when it exceeds the navigation fallback', async () => {
+    setPlatformOS('android');
+
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(
+        renderInventoryQrScreenWithBottomInset(64),
+      );
+    });
+
+    const scrollView = renderer!.root.findByType(ScrollView);
+    const viewportStyle = StyleSheet.flatten(scrollView.props.style);
+    const contentStyle = StyleSheet.flatten(
+      scrollView.props.contentContainerStyle,
+    );
+
+    expect(viewportStyle.marginBottom).toBe(64);
+    expect(contentStyle.paddingBottom).toBe(36);
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
+  it('does not shorten the iOS scroll viewport when a safe-area bottom is reported', async () => {
+    setPlatformOS('ios');
+
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(
+        renderInventoryQrScreenWithBottomInset(34),
+      );
+    });
+
+    const scrollView = renderer!.root.findByType(ScrollView);
+    const viewportStyle = StyleSheet.flatten(scrollView.props.style);
+    const contentStyle = StyleSheet.flatten(
+      scrollView.props.contentContainerStyle,
+    );
+
+    expect(viewportStyle.marginBottom).toBe(0);
     expect(contentStyle.paddingBottom).toBe(50);
 
     await ReactTestRenderer.act(async () => {
