@@ -42,3 +42,6 @@ Modes:
 - Use report-only for analysis/current-state recording. Use strict mode as the
   acceptance gate after backend/AI fixes. Keep `screenshot-or-ui` report-only
   during MVP.
+- Post-MVP strict mode requires explicit `rejectionReason` or `reviewReason`
+  for blocked/review fixtures. A generic 400 without a reason is recorded as a
+  contract failure.

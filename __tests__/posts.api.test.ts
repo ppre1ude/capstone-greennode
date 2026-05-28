@@ -218,6 +218,45 @@ describe('posts API contract', () => {
     expect(response.data?.id).toBe(10);
   });
 
+  it('passes selected detection id without sending detection bbox data', async () => {
+    const postData = {
+      fridgeId: 1,
+      expirationDate: '2026-05-08',
+      imageToken: 'image-token-1',
+      selectedDetectionId: 'apple-detection',
+    };
+
+    testGlobal.fetch.mockResolvedValue({
+      ok: true,
+      status: 201,
+      json: async () => ({
+        success: true,
+        message: 'created',
+        data: {
+          id: 10,
+          fridgeId: 1,
+          authorId: 1,
+          imageUrl: '/static/posts/10.jpg',
+          expirationDate: '2026-05-08',
+          status: 'available',
+          createdAt: '2026-05-06T00:00:00Z',
+          updatedAt: '2026-05-06T00:00:00Z',
+        },
+      }),
+    } satisfies MockFetchResponse);
+
+    await createPost(postData);
+    const [, init] = testGlobal.fetch.mock.calls[0];
+    const body = init.body as string;
+    const payload = JSON.parse(decodeURIComponent(body.slice('data='.length)));
+
+    expect(payload).toEqual(postData);
+    expect(payload).toHaveProperty('selectedDetectionId', 'apple-detection');
+    expect(payload).not.toHaveProperty('bbox');
+    expect(body).not.toContain('width');
+    expect(body).not.toContain('height');
+  });
+
   it('passes fridge QR flow through post creation without changing the endpoint', async () => {
     const postData = {
       fridgeId: 1,
@@ -318,9 +357,7 @@ describe('posts API contract', () => {
     );
     expect(response.data?.request.id).toBe(1);
     expect(response.data?.post.status).toBe('requested');
-    expect(response.data?.post.requestExpiresAt).toBe(
-      '2026-05-19T14:00:00Z',
-    );
+    expect(response.data?.post.requestExpiresAt).toBe('2026-05-19T14:00:00Z');
   });
 
   it('calls lifecycle mutation endpoints for requested follow-up actions', async () => {

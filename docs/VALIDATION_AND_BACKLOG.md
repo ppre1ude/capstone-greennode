@@ -21,6 +21,7 @@
 - 홈의 진행 중인 나눔 허브, 지도 하단 primary surface, 주요 fixed CTA의 `DSScreenFooter` 코드 통합, 앱 UI/fixture icon migration은 2026-05-28 코드/테스트 기준으로 닫혔다.
 - 최신 live VM feature-contract happy path E2E는 2026-05-28에 통과했다. `requestExpiresAt` timezone 해석과 Android 하단 surface safe-area 회귀는 2026-05-28 후속 실기기 evidence로 닫았고, 잔여 blocker는 운영자 계정 환경변수 확보 시 role-gated profile 재검증이다.
 - Post-MVP 제품/계약 결정은 2026-05-29 [POST_MVP_PRODUCT_CONTRACT_DECISIONS.md](./POST_MVP_PRODUCT_CONTRACT_DECISIONS.md)에 정리했다. 결정 기준은 `HOLD_SCOPE`이며 AI rejection/review, multi-object 대표 객체, 서버 저장형 알림, 환경 성취 지표, 서버 검색, 이메일 verification, 운영자 role 관리, 소셜 로그인, WebSocket 채팅 범위를 분리했다.
+- 2026-05-29 Post-MVP 프론트 선반영과 live VM blocker 분리는 [BACKEND_POST_MVP_CONTRACT_BLOCKERS_2026-05-29.md](./BACKEND_POST_MVP_CONTRACT_BLOCKERS_2026-05-29.md)를 따른다. 프론트는 multi-object 대표 후보 선택/`selectedDetectionId` 전송과 알림함 server sync fallback을 준비했고, AI reason enum, 알림 endpoint, impact summary, server search, email verification은 backend blocker로 남았다.
 
 ## 활성 P0
 
@@ -130,7 +131,7 @@ To-do:
 - [x] confidence 0.4/0.7/1.0 기대값을 테스트로 고정한다.
 - [x] 2026-05-28 실기기 카메라 QA에서 키보드/노트북 사진이 `바나나`, `confidenceScore=0.7`, `확인 필요`로 통과하는 false-positive evidence를 확보했다.
 - [x] Post-MVP에서 `not_food`, `low_quality`, `screenshot`, `ui_screenshot`, `review_required`, `multi_object_review` 등 실패/검토 사유 enum을 서버 계약에 추가한다. 결정 문서 기준 hard block은 `rejectionReason`, soft review는 `reviewReason`이다.
-- [ ] Post-MVP 백엔드가 비식재료/스크린샷/저품질 fixture를 `rejectionReason` 400 또는 `reviewReason` 200으로 반환하고, 앱/VM fixture QA가 이를 검증한다.
+- [ ] Post-MVP 백엔드가 비식재료/스크린샷/저품질 fixture를 `rejectionReason` 400 또는 `reviewReason` 200으로 반환하고, 앱/VM fixture QA가 이를 검증한다. 2026-05-29 live VM report-only 기준 stale/screenshot/low-quality는 여전히 `Fresh + imageToken`으로 통과했고, not-food는 reason 없는 generic 400이라 backend blocker다. 최신 로그는 `temp/ai-fixtures-report-only-20260528T163234Z.txt`다.
 
 ### Multi-object UX 결정
 
@@ -145,7 +146,8 @@ To-do:
 - [x] 백엔드 `detections[]` 최소 필드 초안이 확정된다.
 - [x] multi-object fixture 이미지를 준비하고 VM/API report-only 결과를 기록한다.
 - [x] 대표 객체 1개 처리와 객체별 분리 등록 중 UX 방향을 결정한다. 다음 Post-MVP increment도 대표 객체 1개 등록이고, 자동 분리 등록은 보류한다.
-- [ ] Post-MVP에서 `selectedDetectionId`, normalized `bbox`, `reviewReason=multi_object_review` contract를 백엔드/프론트 구현 범위로 쪼갠다.
+- [x] 프론트 등록 확인 화면에서 대표 후보를 선택하고 후보 `id`가 있으면 `selectedDetectionId`를 `POST /posts` payload로 넘긴다.
+- [ ] Post-MVP 백엔드가 `reviewReason=multi_object_review`, 실제 `detections[]`, normalized `bbox`, `selectedDetectionId` 수용 계약을 구현한 뒤 VM에서 다시 검증한다.
 
 ### 운영자 role 관리 UI
 
@@ -170,7 +172,8 @@ To-do:
 
 - [x] 알림함은 MVP에서 FCM 수신 기록과 로컬 AsyncStorage 읽음 상태로 유지하고, 서버 저장형 목록/읽음 API는 Post-MVP 설계로 분리한다.
 - [x] 서버 저장형 알림 API 계약을 설계한다. `GET /notifications`, `PATCH /notifications/{id}/read`, `PATCH /notifications/read-all`, `DELETE /notifications/{id}` 기준이다.
-- [ ] Post-MVP 백엔드 endpoint 구현 후 앱 알림함 server sync를 live VM에서 검증한다.
+- [x] 앱 알림함은 focus 시 서버 알림을 fetch/merge하고 read/read-all/delete를 best-effort 호출한다. endpoint 실패 시 로컬 FCM 기록 fallback을 유지한다.
+- [ ] Post-MVP 백엔드 endpoint 구현 후 앱 알림함 server sync를 live VM에서 검증한다. 2026-05-29 VM/OpenAPI 기준 `/api/v1/notifications` 계열 endpoint는 아직 404/미노출이다.
 
 ### 실제 지표와 탄소 절감 표시
 
@@ -183,7 +186,7 @@ To-do:
 - [x] 홈 탄소 절감 mock 값은 운영성 UI에서 제거된다.
 - [x] 프로필 mock 통계를 제거하거나 준비 중 상태로 바꾼다.
 - [x] 실제 지표로 유지하려면 계산식과 API 계약이 문서화된다. `GET /users/me/impact/summary`와 `estimatedWeightGrams * categoryCarbonFactor` 기준이다.
-- [ ] Post-MVP 백엔드가 factor source와 `calculationVersion`을 확정한 뒤 앱에 `추정 절감` UI를 연결한다.
+- [ ] Post-MVP 백엔드가 factor source와 `calculationVersion`을 확정한 뒤 앱에 `추정 절감` UI를 연결한다. 2026-05-29 VM/OpenAPI 기준 `/api/v1/users/me/impact/summary`는 아직 404/미노출이다.
 
 ### 서버 검색, 인증, 채팅 Post-MVP 결정
 
@@ -196,7 +199,8 @@ To-do:
 - [x] 서버 검색 계약 방향을 결정한다. `GET /posts/nearby`와 `GET /fridges/nearby`에 optional `q`, `skip`, `limit`을 추가하는 방식으로 확장한다.
 - [x] 이메일 verification과 소셜 로그인 순서를 결정한다. 이메일 verification을 먼저 구현하고, 소셜 로그인은 Google/Apple 후속 후보로 둔다.
 - [x] WebSocket 채팅 범위를 결정한다. 다음 구현 후보에서 제외하고 알림/신청 lifecycle을 우선한다.
-- [ ] Post-MVP 구현 시 server search, email verification, social login, WebSocket chat을 각각 독립 issue/plan으로 분리한다.
+- [x] Post-MVP 구현 시 server search, email verification, social login, WebSocket chat을 각각 독립 후속 항목으로 분리한다. 2026-05-29 backend blocker 문서에 API 필요 범위와 제외 범위를 분리했다.
+- [ ] server search `q` parameter와 email verification endpoint가 OpenAPI/live VM에 추가된 뒤 앱 연결 여부를 결정한다.
 
 ## 보존된 To-do 완료 기록
 
@@ -334,4 +338,5 @@ To-do:
 - 도메인 용어와 정책: [DOMAIN_MODEL.md](./DOMAIN_MODEL.md)
 - API 계약: [API_INTEGRATION_CONTRACT.md](./API_INTEGRATION_CONTRACT.md)
 - Post-MVP 제품/계약 결정: [POST_MVP_PRODUCT_CONTRACT_DECISIONS.md](./POST_MVP_PRODUCT_CONTRACT_DECISIONS.md)
+- Post-MVP backend blocker: [BACKEND_POST_MVP_CONTRACT_BLOCKERS_2026-05-29.md](./BACKEND_POST_MVP_CONTRACT_BLOCKERS_2026-05-29.md)
 - 백엔드 feature contract handoff: [BACKEND_HANDOFF_FEATURE_CONTRACTS_2026-05-25.md](./BACKEND_HANDOFF_FEATURE_CONTRACTS_2026-05-25.md)

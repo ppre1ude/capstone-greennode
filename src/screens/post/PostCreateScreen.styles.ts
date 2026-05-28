@@ -121,6 +121,16 @@ export const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     gap: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  detectionRowSelected: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryLight,
   },
   detectionName: {
     flex: 1,

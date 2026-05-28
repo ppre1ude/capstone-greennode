@@ -445,7 +445,7 @@ const response = await fetch(`${BASE_URL}/api/v1/posts`, {
 
 `Stale` 판정 이미지는 generate 단계에서 임시 저장까지 도달하지 않으므로 `imageToken`이 없다. generate를 우회해 `POST /posts`를 직접 호출해도 유효한 토큰이 없으면 등록되지 않는다.
 
-> 프론트는 기존대로 `fridgeId`, `expirationDate`, `imageToken`만 보낸다. AI 메타데이터를 create payload에 다시 보낼 필요가 없다. 백엔드 우선순위는 서버 sidecar 값 > 프론트 전송 값이며, 프론트가 AI 필드를 보내더라도 서버 보관 값이 우선이다.
+> MVP 필수 payload는 `fridgeId`, `expirationDate`, `imageToken`이다. AI 메타데이터를 create payload에 다시 보낼 필요가 없다. 백엔드 우선순위는 서버 sidecar 값 > 프론트 전송 값이며, 프론트가 AI 필드를 보내더라도 서버 보관 값이 우선이다. Post-MVP multi-object 계약이 활성화되면 프론트는 사용자가 선택한 대표 후보의 `selectedDetectionId`만 optional로 추가 전송한다. `bbox`와 객체별 분리 등록 데이터는 create payload에 보내지 않는다.
 >
 > 2026-05-06 live VM conflict: 공개 fresh fixture로 `generate -> create -> detail`을 실행했을 때 생성된 Post id `2`의 AI 필드가 모두 `null`이었다. 2026-05-08 백엔드 답변 기준 이 현상은 백엔드 버그로 확정됐고, `save_temp_image()`/`move_temp_to_final()` sidecar 저장/복원 방식으로 VM 재배포 완료됐다. 프론트는 기존 null 데이터 fallback을 MVP에서 유지한다.
 
@@ -886,6 +886,8 @@ docker compose logs api | grep FCM
 ## 6-A. Post-MVP 계획 계약
 
 이 섹션은 아직 live VM에서 보장되는 endpoint가 아니라 2026-05-29 제품/계약 결정 초안이다. 구현 전에는 [POST_MVP_PRODUCT_CONTRACT_DECISIONS.md](./POST_MVP_PRODUCT_CONTRACT_DECISIONS.md)와 [VALIDATION_AND_BACKLOG.md](./VALIDATION_AND_BACKLOG.md)를 함께 확인한다.
+
+2026-05-29 live VM 확인 결과는 [BACKEND_POST_MVP_CONTRACT_BLOCKERS_2026-05-29.md](./BACKEND_POST_MVP_CONTRACT_BLOCKERS_2026-05-29.md)에 분리했다. 현재 VM은 알림 endpoint, impact summary, email verification path를 OpenAPI에 노출하지 않고, nearby discovery endpoint에도 `q` parameter가 없다. AI fixture는 explicit `rejectionReason`/`reviewReason` 계약이 아직 충족되지 않는다.
 
 ### AI rejection/review reason
 

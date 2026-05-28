@@ -195,7 +195,7 @@ MVP에서 공급자는 `requested` 이후 별도 승인 행동을 하지 않는�
 - 공급자는 정보를 확인/수정하고 공유 냉장고를 선택한다.
 - 등록이 완료되면 근처 사용자에게 푸시 알림을 보낸다.
 - MVP는 실제 보관 검증을 QR/토큰/냉장고 운영자 확인으로 강제하지 않는다.
-- 서버는 `Stale` 분석 결과에 대해 `imageToken`을 발급하지 않고, 무효/만료 토큰으로는 최종 등록을 막는다. 프론트의 나눔 가능 가드는 사용자 경험용이며 서버가 최종 방어선이다. 프론트는 `POST /posts`에 `imageToken`, `fridgeId`, `expirationDate`만 보내고 AI 메타데이터를 재전송하지 않는다.
+- 서버는 `Stale` 분석 결과에 대해 `imageToken`을 발급하지 않고, 무효/만료 토큰으로는 최종 등록을 막는다. 프론트의 나눔 가능 가드는 사용자 경험용이며 서버가 최종 방어선이다. MVP 필수 등록 payload는 `imageToken`, `fridgeId`, `expirationDate`이고 AI 메타데이터를 재전송하지 않는다. Post-MVP multi-object 계약에서는 대표 후보 선택값인 `selectedDetectionId`만 optional로 추가한다.
 
 ### 3. 근처 나눔 식재료 발견
 

@@ -15,6 +15,7 @@
       "localPath": "docs/qa-fixtures/stale-or-rotten-rejected-20260505.jpg",
       "expectedOutcome": "rejected",
       "expectedCategories": ["Stale"],
+      "expectedRejectionReasons": ["stale"],
       "notes": "Moldy, spoiled, or clearly stale ingredient photo. Expected to block registration."
     },
     {
@@ -23,6 +24,7 @@
       "localPath": "docs/qa-fixtures/not-food-rejected-20260505.jpg",
       "expectedOutcome": "rejected_or_review",
       "expectedRejectionReasons": ["not_food", "non_food"],
+      "expectedReviewReasons": ["not_food", "non_food"],
       "notes": "Desk, room, electronics, or other non-ingredient photo."
     },
     {
@@ -31,6 +33,7 @@
       "localPath": "docs/qa-fixtures/screenshot-or-ui-rejected-20260505.jpg",
       "expectedOutcome": "rejected_or_review",
       "expectedRejectionReasons": ["screenshot", "ui_screenshot"],
+      "expectedReviewReasons": ["screenshot", "ui_screenshot"],
       "notes": "App screen, map, search result, or icon capture. MVP backend may still return Fresh + imageToken; keep this as a Post-MVP rejection target and run report-only during MVP."
     },
     {
@@ -39,10 +42,11 @@
       "localPath": "docs/qa-fixtures/low-quality-review-20260505.jpg",
       "expectedOutcome": "rejected_or_review",
       "confidenceReviewThreshold": 0.9,
+      "expectedReviewReasons": ["low_quality"],
       "expectedConfidenceChecks": [
-        {"confidenceScore": 0.4, "needsReview": true},
-        {"confidenceScore": 0.7, "needsReview": true},
-        {"confidenceScore": 1.0, "needsReview": false}
+        { "confidenceScore": 0.4, "needsReview": true },
+        { "confidenceScore": 0.7, "needsReview": true },
+        { "confidenceScore": 1.0, "needsReview": false }
       ],
       "expectedRejectionReasons": ["low_quality"],
       "notes": "Blurred, dark, occluded, or otherwise hard-to-evaluate photo. Low confidence is review, not automatic blocking."
@@ -59,7 +63,7 @@
       "case": "multiple ingredients",
       "localPath": "docs/qa-fixtures/multi-object-review-20260505.jpg",
       "expectedOutcome": "single_representative_or_review",
-      "expectedRejectionReasons": ["multi_object_review"],
+      "expectedReviewReasons": ["multi_object_review"],
       "notes": "Two or more different ingredients in one image. Current contract supports one representative object only."
     }
   ]

@@ -114,6 +114,7 @@ export interface PostCreateData {
   fridgeId: number;
   expirationDate: string;
   imageToken: string;
+  selectedDetectionId?: string;
   flow?: PostCreateFlow;
 }
 

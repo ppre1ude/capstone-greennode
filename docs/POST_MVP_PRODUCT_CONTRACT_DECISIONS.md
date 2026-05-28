@@ -250,10 +250,10 @@ DELETE /api/v1/admin/operator-roles/{roleId}
 
 ## Next Implementation Slices
 
-1. Backend AI rejection/review enum 구현과 fixture report.
-2. Server notification endpoint 구현 후 앱 알림함 sync 활성화.
-3. Multi-object 대표 후보 선택 UI와 `selectedDetectionId` 전송 여부 결정.
-4. Impact summary endpoint와 `추정 절감` UI 연결.
-5. Nearby/fridge server search query parameter 구현.
-6. Email verification gate 정책 구현.
+1. Backend AI rejection/review enum 구현과 fixture report. 2026-05-29 VM 기준 explicit reason 미충족.
+2. Server notification endpoint 구현 후 앱 알림함 sync 검증. 프론트 fallback sync 경로는 준비됨.
+3. Multi-object 대표 후보 선택 UI와 `selectedDetectionId` 전송 경로. 프론트는 준비됐고 backend 수용/bbox/reviewReason이 남음.
+4. Impact summary endpoint와 `추정 절감` UI 연결. endpoint/factor source가 남음.
+5. Nearby/fridge server search query parameter 구현. OpenAPI `q` parameter 추가가 남음.
+6. Email verification gate 정책 구현. endpoint와 `emailVerifiedAt` 계약이 남음.
 7. Admin-only operator role 관리 surface 분리.

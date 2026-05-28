@@ -44,7 +44,7 @@ FOODLINK_API_BASE_URL=http://localhost:8080 FOODLINK_ACCESS_TOKEN=<token> npm ru
 - `FOODLINK_ACCESS_TOKEN`은 필수다. 토큰 누락/만료로 401/403이 내려오면 AI rejection 성공으로 보지 않고 인증 실패로 기록한다.
 - 백엔드/AI 수정 후 acceptance gate로 검증할 때는 strict mode를 사용한다. 단, `screenshot-or-ui`는 2026-05-08 백엔드 답변 기준 MVP 허용 케이스이므로 Post-MVP rejection enum 도입 전까지 report-only 관찰 대상으로 둔다.
 - fixture 파일이 없으면 해당 항목은 `skipped`로 기록된다.
-- 실패/검토 케이스는 generate 400, 나눔 기준 미충족 category, 낮은 confidence, 또는 검토 사유 enum 중 하나를 기대한다. MVP에서 screenshot/UI는 예외적으로 통과할 수 있다.
+- 실패/검토 케이스는 Post-MVP strict mode에서 명시 `rejectionReason` 400 또는 `reviewReason` 200을 기대한다. reason 없는 generic 400은 계약 실패로 기록한다. MVP에서 screenshot/UI는 예외적으로 통과할 수 있다.
 - 백엔드 Phase 1.5 기준 신선도 label은 `Fresh/Mid/Stale`이다. 기존 `Normal`은 `Mid` 그룹으로 번역하고, `Bad/Rotten`은 현재 서버 label이 아닌 방어 호환 label로만 본다.
 - 백엔드 AI는 `unknown`도 반환할 수 있다. `unknown`은 바로 등록 가능한 성공 상태로 보지 않고 `확인 필요` 또는 실패 UX로 기록한다.
 - confidence 테스트는 `0.4`, `0.7`, `1.0`을 포함한다. 제품 기준은 백엔드 활용 가이드를 따라 `0.9` 미만을 `확인 필요` UX로 본다. 따라서 `0.4`와 `0.7`은 확인 필요, `1.0`은 바로 나눔 가능 표시가 기대값이다. 단, 낮은 confidence만으로 등록을 차단하지 않는다.
