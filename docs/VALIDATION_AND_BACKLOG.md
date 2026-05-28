@@ -14,12 +14,12 @@
 
 ## 현재 기준선
 
-- MVP 핵심 흐름인 `등록 -> 냉장고/홈 노출 -> 신청 -> 알림 -> QR 보관/수령`은 검증 완료 상태다.
+- MVP 핵심 흐름인 `등록 -> 냉장고/홈 노출 -> 신청 -> 알림 -> QR 보관/수령`은 API/화면 연결 기준으로 검증됐지만, 2026-05-28 실기기 QA에서 신청 만료 시각 해석과 QR 화면 하단 safe-area 회귀가 발견됐다.
 - 2026-05-27 백엔드 feature contract는 프론트 API client와 화면에 연결됐다.
 - 알림 탭은 MVP에서 FCM 수신 기록과 로컬 AsyncStorage 읽음 상태만 사용한다. 서버 저장형 알림 API는 Post-MVP다.
 - `requested` 이후 취소/완료 전이는 사용자-facing 정책과 API 계약이 확정됐다. 만료는 서버 배치로 처리한다.
 - 홈의 진행 중인 나눔 허브, 지도 하단 primary surface, 주요 fixed CTA의 `DSScreenFooter` 코드 통합, 앱 UI/fixture icon migration은 2026-05-28 코드/테스트 기준으로 닫혔다.
-- 현재 주요 blocker는 최신 live VM E2E 검증이다. 2026-05-28 기준 로컬 `localhost:8080` SSH tunnel 미연결로 `/openapi.json` 접근이 막혀 있었다.
+- 최신 live VM feature-contract happy path E2E는 2026-05-28에 통과했다. 남은 blocker는 `requestExpiresAt` timezone 해석과 `InventoryQrScreen` 하단 CTA safe-area 회귀다.
 
 ## 활성 P0
 
@@ -27,10 +27,10 @@
 
 - 분류: QA blocker
 - 배경: 프론트 연결은 끝났지만 최신 백엔드 live VM에서 실제 mutation matrix를 다시 닫아야 한다.
-- 현재 상태: `npm run qa:backend-contracts` 하네스는 준비됐고, tunnel 미연결이 마지막 blocker였다.
+- 현재 상태: 2026-05-28 `localhost:8080 -> NHN Cloud VM:80` SSH tunnel 연결 후 mutate 하네스가 통과했다. 스크립트는 profile PATCH, my posts/share requests shape, lifecycle happy path를 검증하지만 403/409 전체 matrix는 아직 체계적으로 커버하지 않는다.
 - 기대 동작: 실제 VM에서 profile PATCH, my posts/share requests, lifecycle mutation, 200/403/409 matrix를 통과한다.
 - 검증 방법: tunnel(`localhost:8080 -> NHN Cloud VM:80`)을 연 뒤 `$env:FOODLINK_API_BASE_URL='http://localhost:8080'; npm run qa:backend-contracts -- --mutate`.
-- 산출물: `temp/backend-feature-contract-e2e-<timestamp>.json`.
+- 산출물: `temp/backend-feature-contract-e2e-20260528T104636Z.json`.
 
 To-do:
 
@@ -39,11 +39,25 @@ To-do:
 - [x] 내 나눔/받은 나눔 화면 진입점 연결
 - [x] profile PATCH 폼 연결
 - [x] read-only preflight 하네스 준비
-- [ ] SSH tunnel 연결 후 live VM mutate E2E 실행
-- [ ] my posts/share requests 최신 VM 응답 확인
-- [ ] profile PATCH 최신 VM 응답 확인
-- [ ] lifecycle mutation 200/403/409 matrix 확인
+- [x] SSH tunnel 연결 후 live VM mutate E2E 실행
+- [x] my posts/share requests 최신 VM 응답 확인
+- [x] profile PATCH 최신 VM 응답 확인
+- [x] lifecycle happy path mutation 확인: available cancel, request 후 author complete, request 후 requester cancel
+- [ ] lifecycle 403/409 matrix를 하네스 또는 수동 QA로 보강
 - [ ] 운영자 계정 환경변수 확보 시 operator role-gated profile 확인
+
+### 신청 만료 시각 timezone 해석 수정
+
+- 분류: P0/P1 bug
+- 배경: 2026-05-28 SM-S928N Android 15 실기기 QA에서 신청 직후 상세 화면이 `수령 제한 시간이 지났어요`를 표시했다.
+- 증거: 서버는 `requestExpiresAt: "2026-05-28T11:38:21.707849"`처럼 timezone 없는 문자열을 내려줬고, 앱은 이를 KST 로컬 11:38로 해석했다. 실제 의도는 VM/UTC 기준 30분 hold로 보이며 한국 시간에서는 당일 20:38이어야 한다.
+- 영향: 신청은 성공하지만 수령 QR/진행 중 나눔 UX가 즉시 만료처럼 보여 requester flow를 신뢰할 수 없다.
+- 산출물: `temp/android-device-qa-20260528T195534/22-request-status.png`, API 수동 조회.
+
+To-do:
+
+- [ ] 백엔드가 timezone 포함 ISO 문자열을 내려주도록 계약을 확정하거나, 프론트가 timezone 없는 서버 시각을 명시적으로 UTC로 파싱한다.
+- [ ] 신청 직후 상세와 받은 나눔에서 `수령까지 남은 시간` 또는 정상 만료 시각이 표시되는지 실기기 재검증한다.
 
 ### 진행 중인 나눔 허브 완성도 확인
 
@@ -61,19 +75,21 @@ To-do:
 - [x] QR 화면 route/screen/test 명명은 `InventoryQr`, `InventoryQrScreen`, `inventoryQr.screen.test.tsx`로 production-facing 구조를 사용한다.
 - [x] 홈 또는 전용 허브에서 사용자가 지금 처리해야 할 나눔 action을 볼 수 있다.
 - [x] 진행 중인 action은 `입고 QR 필요`, `수령 QR 필요`, `신청 접수`, `수령 제한 시간`, `완료/만료/취소` 같은 사용자-facing 상태로 표시된다. 홈은 active QR/request label을, MyShares는 완료/만료/취소 lifecycle 표면을 맡는다.
+- [ ] 2026-05-28 실기기 QA에서 발견한 `requestExpiresAt` timezone 해석 문제를 수정한 뒤 진행 중인 나눔 허브와 받은 나눔 수령 QR 상태를 재검증한다.
 
 ### Android 시각 회귀 QA
 
 - 분류: UI QA
 - 배경: 기능은 연결됐지만 fixed footer, 지도 overlay, 하단 surface의 실제 화면 검증이 남아 있다.
-- 현재 상태: 주요 fixed CTA 화면은 `DSScreenFooter` 공통 safe-area 패턴에 들어갔고, 지도 하단 primary surface 단일 모드는 코드/테스트로 고정됐다.
+- 현재 상태: 주요 fixed CTA 화면은 `DSScreenFooter` 공통 safe-area 패턴에 들어갔고, 지도 하단 primary surface 단일 모드는 코드/테스트로 고정됐다. 2026-05-28 SM-S928N Android 15 release QA에서 분석 결과/상세 CTA는 안전했지만 `InventoryQrScreen` 하단 action grid가 system navigation bar와 겹쳤다.
 - 기대 동작: CTA가 system navigation bar와 겹치지 않고, 지도와 냉장고 내부 목록의 위계가 명확하다.
 - 검증 방법: Android emulator와 가능하면 실기기 screenshot.
 
 To-do:
 
-- [ ] Android emulator/실기기 screenshot에서 주요 fixed footer CTA가 system navigation bar와 겹치지 않는다. 코드/정책 테스트 기준 통합은 완료됐지만 screenshot evidence가 남아 있다.
+- [ ] Android emulator/실기기 screenshot에서 주요 fixed footer CTA가 system navigation bar와 겹치지 않는다. 2026-05-28 screenshot evidence 기준 `InventoryQrScreen`은 실패했다.
 - [x] 지도에서 냉장고 선택 시 하단 primary surface가 하나로 정리되어 지도와 냉장고 내부 목록의 위계가 명확하다.
+- [ ] `InventoryQrScreen` 하단 `보관 QR 스캔`/`수령 QR 스캔`/`다른 냉장고 스캔`/`다시 시작` action을 safe-area 위로 올리거나 `DSScreenFooter` 패턴으로 옮긴다.
 
 ## 활성 P1
 
@@ -111,6 +127,7 @@ To-do:
 - [x] 앱은 서버 실패 사유를 사용자에게 보여주고 등록을 진행하지 않는다.
 - [x] `confidenceScore < 0.9`는 등록 차단이 아니라 확인 필요 표시로 처리한다.
 - [x] confidence 0.4/0.7/1.0 기대값을 테스트로 고정한다.
+- [x] 2026-05-28 실기기 카메라 QA에서 키보드/노트북 사진이 `바나나`, `confidenceScore=0.7`, `확인 필요`로 통과하는 false-positive evidence를 확보했다.
 - [ ] Post-MVP에서 `not_food`, `low_quality`, `screenshot`, `ui_screenshot`, `review_required`, `multi_object_review` 등 실패/검토 사유 enum을 서버 계약에 추가한다.
 - [ ] Post-MVP에서 비식재료/스크린샷 fixture는 generate 400 또는 `확인 필요`로 처리된다.
 

@@ -25,6 +25,14 @@
 
 이 문서는 초기 Phase 1~6 구현 리포트를 2026-05-05 MVP 검증 결과 기준으로 갱신한 것이다. 과거 문서의 일괄 완료 표현은 실제 서버/기기 검증 결과를 반영하지 못하므로, 현재는 `구현됨`, `부분 구현`, `목업`, `미구현`, `검증 필요`, `버그`로 분리한다.
 
+## 2026-05-28 live VM / Android 실기기 QA 업데이트
+
+- 브랜치 `codex/live-device-vm-qa`에서 `localhost:8080 -> NHN Cloud VM:80` SSH tunnel을 열고 `npm run qa:backend-contracts -- --mutate`를 실행했다. 결과는 통과했고 산출물은 `temp/backend-feature-contract-e2e-20260528T104636Z.json`이다. 단, 운영자 profile 검증은 `FOODLINK_OPERATOR_EMAIL`/`FOODLINK_OPERATOR_PASSWORD` 미설정으로 skip됐다.
+- SM-S928N Android 15 실기기에서 release APK를 설치하고 홈, 지도 냉장고 내부 목록, 상세/신청 CTA, 내 나눔/받은 나눔, QR 화면, AI 분석 결과를 확인했다. 스크린샷 evidence는 `temp/android-device-qa-20260528T195534/`에 남겼다.
+- 발견한 blocker: 서버가 timezone 없는 `requestExpiresAt`을 내려주고 앱이 이를 KST 로컬 시각으로 해석해 신청 직후 `수령 제한 시간이 지났어요`를 표시한다. 신청/수령 lifecycle 완료 claim은 이 시간 계약 수정과 실기기 재검증 전까지 보류한다.
+- 발견한 UI 회귀: `InventoryQrScreen` 하단 action grid가 Android system navigation bar와 겹친다. 분석 결과/상세 fixed CTA는 safe-area 위에 배치됐지만 QR 화면은 `DSScreenFooter` 또는 bottom inset 처리가 필요하다.
+- Post-MVP AI 품질 evidence: 실기기 카메라가 키보드/노트북 사진을 `바나나`, `confidenceScore=0.7`, `확인 필요`로 통과시켰다. 현재 앱은 낮은 confidence 안내를 표시하지만, 비식재료/스크린샷 rejection enum은 여전히 Post-MVP 서버 계약이다.
+
 ## 2026-05-19 Montage 기반 디자인 시스템 레이어
 
 - 상태 변경: GreenNode의 기존 컬러 팔레트와 `src/theme` 토큰을 유지하면서, Wanted Montage Android/iOS의 컴포넌트 API 패턴을 참고한 `src/design-system` 레이어를 추가했다.
