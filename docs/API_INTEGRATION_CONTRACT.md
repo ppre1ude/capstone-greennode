@@ -883,6 +883,125 @@ docker compose logs api | grep FCM
 
 ---
 
+## 6-A. Post-MVP 계획 계약
+
+이 섹션은 아직 live VM에서 보장되는 endpoint가 아니라 2026-05-29 제품/계약 결정 초안이다. 구현 전에는 [POST_MVP_PRODUCT_CONTRACT_DECISIONS.md](./POST_MVP_PRODUCT_CONTRACT_DECISIONS.md)와 [VALIDATION_AND_BACKLOG.md](./VALIDATION_AND_BACKLOG.md)를 함께 확인한다.
+
+### AI rejection/review reason
+
+`POST /api/v1/posts/generate`는 hard block과 soft review를 분리한다.
+
+| Field | Meaning | App behavior |
+| --- | --- | --- |
+| `rejectionReason` | 등록 차단 사유 | `imageToken` 없음, 등록 흐름 차단 |
+| `reviewReason` | 사용자 재확인 사유 | `imageToken` 있음, `확인 필요` 표시 후 등록 가능 |
+
+Hard block enum은 `stale`, `not_food`, `low_quality`, `screenshot`, `ui_screenshot`이다. Soft review enum은 `review_required`, `multi_object_review`, `low_confidence`이다.
+
+Hard block 응답은 400을 기본으로 한다.
+
+```json
+{
+  "success": false,
+  "message": "식재료 사진으로 확인되지 않았어요.",
+  "data": null,
+  "error": {
+    "code": "AI_REJECTED",
+    "rejectionReason": "not_food"
+  }
+}
+```
+
+Soft review 응답은 기존 generate 200 payload에 `reviewReason`을 추가한다.
+
+### Multi-object representative selection
+
+다음 Post-MVP increment에서도 `POST /posts`는 나눔 식재료 1개만 만든다. 여러 객체가 감지되면 앱은 대표 후보 1개를 선택하도록 안내한다. 자동 객체별 분리 등록은 별도 후속 기능이다.
+
+```json
+{
+  "reviewReason": "multi_object_review",
+  "selectedDetectionId": "detection-1",
+  "detections": [
+    {
+      "id": "detection-1",
+      "label": "banana",
+      "labelKo": "바나나",
+      "freshnessLabel": "Fresh",
+      "confidenceScore": 0.91,
+      "bbox": {"x": 0.12, "y": 0.18, "width": 0.31, "height": 0.42}
+    }
+  ]
+}
+```
+
+`bbox`는 이미지 기준 0~1 normalized rectangle이며, 기존 `bbox: null`은 호환 값으로 계속 허용한다.
+
+### Server-backed notifications
+
+서버 저장형 알림은 Post-MVP에서 source of truth가 된다. 로컬 FCM 기록은 offline/foreground fallback cache로 유지한다.
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `GET` | `/api/v1/notifications?unreadOnly=false&skip=0&limit=50` | 계정 알림 목록 |
+| `PATCH` | `/api/v1/notifications/{notificationId}/read` | 단일 읽음 처리 |
+| `PATCH` | `/api/v1/notifications/read-all` | 전체 읽음 처리 |
+| `DELETE` | `/api/v1/notifications/{notificationId}` | 단일 삭제 |
+
+앱 merge rule은 `type + postId + requestId` event key dedupe다. 같은 이벤트가 로컬 FCM 기록과 서버 record에 모두 있으면 서버 record가 우선한다.
+
+### Impact summary
+
+환경 성취 지표는 backend-computed estimate로만 표시한다.
+
+```text
+GET /api/v1/users/me/impact/summary?period=month
+Authorization: Bearer {token}
+```
+
+```json
+{
+  "completedShares": 8,
+  "estimatedFoodSavedGrams": 2400,
+  "estimatedCarbonSavedGrams": 6200,
+  "calculationVersion": "impact-v1",
+  "computedAt": "2026-05-29T00:00:00Z"
+}
+```
+
+집계 대상은 `completed` 또는 `picked_up`으로 확인된 나눔 식재료뿐이다. UI는 factor source가 확정되기 전까지 `추정 절감`으로 표시한다.
+
+### Server search
+
+서버 검색은 별도 global search endpoint가 아니라 기존 discovery endpoint 확장으로 둔다.
+
+```text
+GET /api/v1/posts/nearby?latitude=...&longitude=...&radius_km=2&q=바나나&skip=0&limit=20
+GET /api/v1/fridges/nearby?latitude=...&longitude=...&radius_km=2&q=광주역&skip=0&limit=20
+```
+
+검색 대상은 나눔 식재료명, 공유 냉장고명, 공유 냉장고 주소다. 정렬은 거리 우선, 같은 거리권에서는 최신순이다.
+
+### Email verification and social login
+
+이메일 verification을 소셜 로그인보다 먼저 구현한다.
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `POST` | `/api/v1/auth/email-verifications` | 인증 메일 발송 |
+| `POST` | `/api/v1/auth/email-verifications/confirm` | 토큰 확인 |
+| `GET` | `/api/v1/auth/me` | `emailVerifiedAt` 반환 |
+
+Verification 전에도 browsing과 위치 등록은 허용할 수 있다. 나눔 식재료 등록, 나눔 신청, 운영자 action은 verification 이후로 제한할 수 있다. 소셜 로그인은 Google/Apple만 후속 후보로 두고, provider가 verified email을 보장하면 `emailVerifiedAt`을 채운다.
+
+### Operator role management and WebSocket chat
+
+소비자 앱은 role grant/revoke UI를 제공하지 않는다. 앱은 `/auth/me`의 `isOperator`, `operatorRole`, `operatorFridgeIds`로 운영자 콘솔 진입만 제어한다. Role 관리는 backend seed, admin CLI, 또는 별도 web backoffice 범위다.
+
+WebSocket 채팅은 다음 구현 후보에서 제외한다. 알림 저장소와 lifecycle action이 안정화된 뒤 구조화된 문의/요청 메시지를 먼저 검토한다.
+
+---
+
 ## 7. 추천 앱 흐름
 
 ### 온보딩

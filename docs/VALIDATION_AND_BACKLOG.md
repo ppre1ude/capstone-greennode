@@ -20,6 +20,7 @@
 - `requested` 이후 취소/완료 전이는 사용자-facing 정책과 API 계약이 확정됐다. 만료는 서버 배치로 처리한다.
 - 홈의 진행 중인 나눔 허브, 지도 하단 primary surface, 주요 fixed CTA의 `DSScreenFooter` 코드 통합, 앱 UI/fixture icon migration은 2026-05-28 코드/테스트 기준으로 닫혔다.
 - 최신 live VM feature-contract happy path E2E는 2026-05-28에 통과했다. `requestExpiresAt` timezone 해석과 Android 하단 surface safe-area 회귀는 2026-05-28 후속 실기기 evidence로 닫았고, 잔여 blocker는 운영자 계정 환경변수 확보 시 role-gated profile 재검증이다.
+- Post-MVP 제품/계약 결정은 2026-05-29 [POST_MVP_PRODUCT_CONTRACT_DECISIONS.md](./POST_MVP_PRODUCT_CONTRACT_DECISIONS.md)에 정리했다. 결정 기준은 `HOLD_SCOPE`이며 AI rejection/review, multi-object 대표 객체, 서버 저장형 알림, 환경 성취 지표, 서버 검색, 이메일 verification, 운영자 role 관리, 소셜 로그인, WebSocket 채팅 범위를 분리했다.
 
 ## 활성 P0
 
@@ -119,7 +120,7 @@ To-do:
 ### AI false-positive와 rejection contract
 
 - 분류: 서버 계약/정책
-- 배경: MVP에서는 `rejectionReason`이 정상 응답에서 `null`이다. 비식재료, 저품질, 스크린샷, 다중 객체 검토 enum은 Post-MVP 계약이다.
+- 배경: MVP에서는 `rejectionReason`이 정상 응답에서 `null`이다. 비식재료, 저품질, 스크린샷, 다중 객체 검토 enum은 Post-MVP 계약이다. 2026-05-29 결정으로 hard block `rejectionReason`과 soft review `reviewReason`을 분리했다.
 - 기대 동작: 서버가 실패/검토 사유를 내려주면 앱은 등록을 진행하지 않고 사용자-facing 문구를 보여준다.
 
 To-do:
@@ -128,14 +129,14 @@ To-do:
 - [x] `confidenceScore < 0.9`는 등록 차단이 아니라 확인 필요 표시로 처리한다.
 - [x] confidence 0.4/0.7/1.0 기대값을 테스트로 고정한다.
 - [x] 2026-05-28 실기기 카메라 QA에서 키보드/노트북 사진이 `바나나`, `confidenceScore=0.7`, `확인 필요`로 통과하는 false-positive evidence를 확보했다.
-- [ ] Post-MVP에서 `not_food`, `low_quality`, `screenshot`, `ui_screenshot`, `review_required`, `multi_object_review` 등 실패/검토 사유 enum을 서버 계약에 추가한다.
-- [ ] Post-MVP에서 비식재료/스크린샷 fixture는 generate 400 또는 `확인 필요`로 처리된다.
+- [x] Post-MVP에서 `not_food`, `low_quality`, `screenshot`, `ui_screenshot`, `review_required`, `multi_object_review` 등 실패/검토 사유 enum을 서버 계약에 추가한다. 결정 문서 기준 hard block은 `rejectionReason`, soft review는 `reviewReason`이다.
+- [ ] Post-MVP 백엔드가 비식재료/스크린샷/저품질 fixture를 `rejectionReason` 400 또는 `reviewReason` 200으로 반환하고, 앱/VM fixture QA가 이를 검증한다.
 
 ### Multi-object UX 결정
 
 - 분류: 제품 정책
-- 배경: 프론트 타입은 `detections[]` 후보를 방어적으로 받을 수 있지만, 사용자 UX는 대표 객체 1개 등록을 유지한다.
-- 기대 동작: 대표 객체 1개 처리와 객체별 분리 등록 중 방향을 결정한다.
+- 배경: 프론트 타입은 `detections[]` 후보를 방어적으로 받을 수 있지만, 사용자 UX는 대표 객체 1개 등록을 유지한다. 2026-05-29 결정으로 자동 객체별 분리 등록은 보류하고 대표 객체 1개 등록을 유지한다.
+- 기대 동작: 여러 후보가 감지되면 후보 목록을 보여주고 사용자가 대표 식재료 1개를 확인/선택한다.
 
 To-do:
 
@@ -143,43 +144,59 @@ To-do:
 - [x] 분석/등록 화면이 여러 후보를 표시하되 대표 식재료 1개 등록 안내를 유지한다.
 - [x] 백엔드 `detections[]` 최소 필드 초안이 확정된다.
 - [x] multi-object fixture 이미지를 준비하고 VM/API report-only 결과를 기록한다.
-- [ ] 대표 객체 1개 처리와 객체별 분리 등록 중 UX 방향을 결정한다.
+- [x] 대표 객체 1개 처리와 객체별 분리 등록 중 UX 방향을 결정한다. 다음 Post-MVP increment도 대표 객체 1개 등록이고, 자동 분리 등록은 보류한다.
+- [ ] Post-MVP에서 `selectedDetectionId`, normalized `bbox`, `reviewReason=multi_object_review` contract를 백엔드/프론트 구현 범위로 쪼갠다.
 
 ### 운영자 role 관리 UI
 
 - 분류: Post-MVP/운영 기능
-- 배경: `/auth/me` role metadata는 연결됐지만 role 관리 자체는 아직 제품 UI가 아니다.
-- 기대 동작: 실제 운영자 계정만 운영자 콘솔에 진입하고, role 부여/변경 정책은 백엔드와 제품에서 확정한다.
+- 배경: `/auth/me` role metadata는 연결됐지만 role 관리 자체는 아직 제품 UI가 아니다. 2026-05-29 결정으로 소비자 앱 안의 role 부여/변경 UI는 제외한다.
+- 기대 동작: 실제 운영자 계정만 운영자 콘솔에 진입하고, role 부여/변경은 backend seed, admin CLI, 또는 별도 web backoffice에서 처리한다.
 
 To-do:
 
 - [x] `/auth/me`에서 `isOperator`, `operatorRole`, `operatorFridgeIds` 운영자 힌트를 내려준다.
 - [x] 실제 운영자 계정만 프로필에서 운영자 콘솔 진입점을 볼 수 있다.
 - [ ] 최신 VM 실제 운영자 계정으로 role-gated profile과 operator console 진입을 재검증한다.
-- [ ] 운영자 role 관리 UI 범위를 결정한다.
+- [x] 운영자 role 관리 UI 범위를 결정한다. 모바일 소비자 앱에는 role grant/revoke를 넣지 않는다.
 
 ### 서버 저장형 알림 읽음 상태
 
 - 분류: Post-MVP
-- 배경: MVP 알림함은 FCM 수신 기록과 로컬 읽음 상태만 사용한다.
-- 기대 동작: 서버 저장형 알림 목록, 읽음, 삭제 API를 도입할지 별도 설계한다.
+- 배경: MVP 알림함은 FCM 수신 기록과 로컬 읽음 상태만 사용한다. 2026-05-29 결정으로 서버 알림 저장소를 Post-MVP source of truth로 채택한다.
+- 기대 동작: 서버 저장형 알림 목록, 읽음, 삭제 API를 도입하고 로컬 FCM 기록은 fallback cache로 dedupe한다.
 
 To-do:
 
 - [x] 알림함은 MVP에서 FCM 수신 기록과 로컬 AsyncStorage 읽음 상태로 유지하고, 서버 저장형 목록/읽음 API는 Post-MVP 설계로 분리한다.
-- [ ] 서버 저장형 알림 API 계약을 설계한다.
+- [x] 서버 저장형 알림 API 계약을 설계한다. `GET /notifications`, `PATCH /notifications/{id}/read`, `PATCH /notifications/read-all`, `DELETE /notifications/{id}` 기준이다.
+- [ ] Post-MVP 백엔드 endpoint 구현 후 앱 알림함 server sync를 live VM에서 검증한다.
 
 ### 실제 지표와 탄소 절감 표시
 
 - 분류: 정책/데이터 계약
-- 배경: MVP에서는 mock 통계와 탄소 절감 표시를 운영성 UI에서 제거했다.
-- 기대 동작: 실제 지표로 유지하려면 계산식과 API 계약이 먼저 확정된다.
+- 배경: MVP에서는 mock 통계와 탄소 절감 표시를 운영성 UI에서 제거했다. 2026-05-29 결정으로 환경 성취 지표는 backend-computed estimate로만 노출한다.
+- 기대 동작: 실제 지표로 유지하려면 완료/수령 확인된 나눔 식재료만 집계하고 `추정 절감`으로 표시한다.
 
 To-do:
 
 - [x] 홈 탄소 절감 mock 값은 운영성 UI에서 제거된다.
 - [x] 프로필 mock 통계를 제거하거나 준비 중 상태로 바꾼다.
-- [ ] 실제 지표로 유지하려면 계산식과 API 계약이 문서화된다.
+- [x] 실제 지표로 유지하려면 계산식과 API 계약이 문서화된다. `GET /users/me/impact/summary`와 `estimatedWeightGrams * categoryCarbonFactor` 기준이다.
+- [ ] Post-MVP 백엔드가 factor source와 `calculationVersion`을 확정한 뒤 앱에 `추정 절감` UI를 연결한다.
+
+### 서버 검색, 인증, 채팅 Post-MVP 결정
+
+- 분류: 제품/계약
+- 배경: 검색, 소셜 로그인, 이메일 verification, WebSocket 채팅은 MVP 핵심 flow가 아니며 계약 없이 UI를 먼저 붙이면 scope가 커진다.
+- 기대 동작: server search는 기존 discovery endpoint 확장으로, 이메일 verification은 소셜 로그인보다 먼저, WebSocket 채팅은 lifecycle/알림 안정화 전까지 제외한다.
+
+To-do:
+
+- [x] 서버 검색 계약 방향을 결정한다. `GET /posts/nearby`와 `GET /fridges/nearby`에 optional `q`, `skip`, `limit`을 추가하는 방식으로 확장한다.
+- [x] 이메일 verification과 소셜 로그인 순서를 결정한다. 이메일 verification을 먼저 구현하고, 소셜 로그인은 Google/Apple 후속 후보로 둔다.
+- [x] WebSocket 채팅 범위를 결정한다. 다음 구현 후보에서 제외하고 알림/신청 lifecycle을 우선한다.
+- [ ] Post-MVP 구현 시 server search, email verification, social login, WebSocket chat을 각각 독립 issue/plan으로 분리한다.
 
 ## 보존된 To-do 완료 기록
 
@@ -316,4 +333,5 @@ To-do:
 - 구현 상태 요약: [IMPLEMENTATION_STATUS.md](./IMPLEMENTATION_STATUS.md)
 - 도메인 용어와 정책: [DOMAIN_MODEL.md](./DOMAIN_MODEL.md)
 - API 계약: [API_INTEGRATION_CONTRACT.md](./API_INTEGRATION_CONTRACT.md)
+- Post-MVP 제품/계약 결정: [POST_MVP_PRODUCT_CONTRACT_DECISIONS.md](./POST_MVP_PRODUCT_CONTRACT_DECISIONS.md)
 - 백엔드 feature contract handoff: [BACKEND_HANDOFF_FEATURE_CONTRACTS_2026-05-25.md](./BACKEND_HANDOFF_FEATURE_CONTRACTS_2026-05-25.md)

@@ -90,6 +90,8 @@ FoodLink는 사용자를 오래 붙잡는 콘텐츠 앱이 아니다. 핵심 지
 - 소셜 로그인, 이메일 verification, 실제 활동 지표 API
 - 진짜 인기 랭킹. 데이터가 쌓이기 전까지 "많이 찾는 식재료"는 후순위 추천 기능이다.
 
+2026-05-29 Post-MVP 제품/계약 결정은 [POST_MVP_PRODUCT_CONTRACT_DECISIONS.md](./POST_MVP_PRODUCT_CONTRACT_DECISIONS.md)를 따른다. 결정 요지는 기능 확장이 아니라 scope 고정이다. AI는 hard block `rejectionReason`과 soft review `reviewReason`을 분리하고, multi-object는 자동 분리 등록 대신 대표 객체 1개 등록을 유지한다. 서버 알림 저장소는 Post-MVP source of truth로 채택하되 WebSocket 채팅은 제외한다. 환경 성취 지표는 완료/수령 확인된 나눔 식재료 기준의 backend-computed estimate로만 노출하고, 이메일 verification은 소셜 로그인보다 먼저 구현한다.
+
 ## MVP Flow Contract
 
 | Flow slice       | Entry point    | Must happen                                                                                                                                              | Result state/effect                                             | Explicitly not MVP                          |
