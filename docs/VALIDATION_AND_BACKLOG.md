@@ -27,10 +27,10 @@
 
 - 분류: QA blocker
 - 배경: 프론트 연결은 끝났지만 최신 백엔드 live VM에서 실제 mutation matrix를 다시 닫아야 한다.
-- 현재 상태: 2026-05-28 `localhost:8080 -> NHN Cloud VM:80` SSH tunnel 연결 후 mutate 하네스가 통과했다. 스크립트는 profile PATCH, my posts/share requests shape, lifecycle happy path를 검증하지만 403/409 전체 matrix는 아직 체계적으로 커버하지 않는다.
-- 기대 동작: 실제 VM에서 profile PATCH, my posts/share requests, lifecycle mutation, 200/403/409 matrix를 통과한다.
+- 현재 상태: 2026-05-28 `localhost:8080 -> NHN Cloud VM:80` SSH tunnel 연결 후 mutate 하네스가 통과했다. 스크립트는 profile PATCH, my posts/share requests shape, lifecycle happy path, 403 권한 거부, 409 중복 신청, 400 available 완료 거부를 검증한다. 비운영자/mutation matrix는 닫혔고, 이 항목의 잔여 범위는 운영자 계정 환경변수 확보 시 role-gated profile 재검증뿐이다.
+- 기대 동작: 실제 VM에서 profile PATCH, my posts/share requests, lifecycle mutation, 200/403/409와 상태 규칙 위반 400 matrix를 통과한다.
 - 검증 방법: tunnel(`localhost:8080 -> NHN Cloud VM:80`)을 연 뒤 `$env:FOODLINK_API_BASE_URL='http://localhost:8080'; npm run qa:backend-contracts -- --mutate`.
-- 산출물: `temp/backend-feature-contract-e2e-20260528T104636Z.json`.
+- 산출물: `temp/backend-feature-contract-e2e-20260528T143053Z.json`.
 
 To-do:
 
@@ -43,7 +43,7 @@ To-do:
 - [x] my posts/share requests 최신 VM 응답 확인
 - [x] profile PATCH 최신 VM 응답 확인
 - [x] lifecycle happy path mutation 확인: available cancel, request 후 author complete, request 후 requester cancel
-- [ ] lifecycle 403/409 matrix를 하네스 또는 수동 QA로 보강
+- [x] lifecycle 403/409 matrix를 하네스 또는 수동 QA로 보강. `temp/backend-feature-contract-e2e-20260528T143053Z.json`에서 author/requester/observer 계정으로 403 권한 거부, requested 중복 신청 409, available 완료 시도 400을 확인했다.
 - [ ] 운영자 계정 환경변수 확보 시 operator role-gated profile 확인
 
 ### 신청 만료 시각 timezone 해석 수정
@@ -56,7 +56,7 @@ To-do:
 
 To-do:
 
-- [x] 프론트가 timezone 없는 서버 lifecycle 시각을 명시적으로 UTC로 파싱한다. `240de71`에서 `requestExpiresAt`/`storeExpiresAt`/post lifecycle formatting 경로와 회귀 테스트를 고정했다.
+- [x] 프론트가 timezone 없는 서버 lifecycle 시각을 명시적으로 UTC로 파싱한다. `37f73f9`에서 `requestExpiresAt`/`storeExpiresAt`/post lifecycle formatting 경로와 회귀 테스트를 고정했다.
 - [ ] 신청 직후 상세와 받은 나눔에서 `수령까지 남은 시간` 또는 정상 만료 시각이 표시되는지 실기기 재검증한다. 2026-05-28 emulator release QA에서 신청 성공 alert까지는 확인했지만, after-request 상태 screenshot은 확보하지 못했다.
 
 ### 진행 중인 나눔 허브 완성도 확인
@@ -81,7 +81,7 @@ To-do:
 
 - 분류: UI QA
 - 배경: 기능은 연결됐지만 fixed footer, 지도 overlay, 하단 surface의 실제 화면 검증이 남아 있다.
-- 현재 상태: 주요 fixed CTA 화면은 `DSScreenFooter` 공통 safe-area 패턴에 들어갔고, 지도 하단 primary surface 단일 모드는 코드/테스트로 고정됐다. 2026-05-28 SM-S928N Android 15 release QA에서 분석 결과/상세 CTA는 안전했지만 `InventoryQrScreen` 하단 action grid가 system navigation bar와 겹쳤다. `4f0986e`에서 QR 화면 `ScrollView` 하단 padding을 bottom inset 기반으로 보정했고 Jest 회귀 테스트를 추가했다.
+- 현재 상태: 주요 fixed CTA 화면은 `DSScreenFooter` 공통 safe-area 패턴에 들어갔고, 지도 하단 primary surface 단일 모드는 코드/테스트로 고정됐다. 2026-05-28 SM-S928N Android 15 release QA에서 분석 결과/상세 CTA는 안전했지만 `InventoryQrScreen` 하단 action grid가 system navigation bar와 겹쳤다. `d71d071`에서 QR 화면 `ScrollView` 하단 padding을 bottom inset 기반으로 보정했고 Jest 회귀 테스트를 추가했다.
 - 기대 동작: CTA가 system navigation bar와 겹치지 않고, 지도와 냉장고 내부 목록의 위계가 명확하다.
 - 검증 방법: Android emulator와 가능하면 실기기 screenshot.
 
@@ -89,7 +89,7 @@ To-do:
 
 - [ ] Android emulator/실기기 screenshot에서 주요 fixed footer CTA가 system navigation bar와 겹치지 않는다. 2026-05-28 screenshot evidence 기준 `InventoryQrScreen`은 실패했다. 후속 emulator UI-tree에서는 QR action grid가 하단 여백 위로 올라온 것을 확인했지만, 최종 screenshot evidence는 실기기 또는 재실행 emulator에서 다시 남긴다.
 - [x] 지도에서 냉장고 선택 시 하단 primary surface가 하나로 정리되어 지도와 냉장고 내부 목록의 위계가 명확하다.
-- [x] `InventoryQrScreen` 하단 `보관 QR 스캔`/`수령 QR 스캔`/`다른 냉장고 스캔`/`다시 시작` action을 safe-area 위로 올리거나 `DSScreenFooter` 패턴으로 옮긴다. `4f0986e`에서 bottom inset 기반 scroll content padding을 적용했다.
+- [x] `InventoryQrScreen` 하단 `보관 QR 스캔`/`수령 QR 스캔`/`다른 냉장고 스캔`/`다시 시작` action을 safe-area 위로 올리거나 `DSScreenFooter` 패턴으로 옮긴다. `d71d071`에서 bottom inset 기반 scroll content padding을 적용했다.
 
 ## 활성 P1
 

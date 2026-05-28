@@ -27,7 +27,7 @@
 
 ## 2026-05-28 live VM / Android 실기기 QA 업데이트
 
-- 브랜치 `codex/live-device-vm-qa`에서 `localhost:8080 -> NHN Cloud VM:80` SSH tunnel을 열고 `npm run qa:backend-contracts -- --mutate`를 실행했다. 결과는 통과했고 산출물은 `temp/backend-feature-contract-e2e-20260528T104636Z.json`이다. 단, 운영자 profile 검증은 `FOODLINK_OPERATOR_EMAIL`/`FOODLINK_OPERATOR_PASSWORD` 미설정으로 skip됐다.
+- 브랜치 `codex/live-device-vm-qa`에서 `localhost:8080 -> NHN Cloud VM:80` SSH tunnel을 열고 `npm run qa:backend-contracts -- --mutate`를 실행했다. 최신 결과는 통과했고 산출물은 `temp/backend-feature-contract-e2e-20260528T143053Z.json`이다. 하네스는 profile PATCH, my posts/share requests, lifecycle happy path, 403 권한 거부, requested 중복 신청 409, available 완료 시도 400을 검증한다. 단, 운영자 profile 검증은 `FOODLINK_OPERATOR_EMAIL`/`FOODLINK_OPERATOR_PASSWORD` 미설정으로 skip됐다.
 - SM-S928N Android 15 실기기에서 release APK를 설치하고 홈, 지도 냉장고 내부 목록, 상세/신청 CTA, 내 나눔/받은 나눔, QR 화면, AI 분석 결과를 확인했다. 스크린샷 evidence는 `temp/android-device-qa-20260528T195534/`에 남겼다.
 - 발견한 blocker: 서버가 timezone 없는 `requestExpiresAt`을 내려주고 앱이 이를 KST 로컬 시각으로 해석해 신청 직후 `수령 제한 시간이 지났어요`를 표시한다. 신청/수령 lifecycle 완료 claim은 이 시간 계약 수정과 실기기 재검증 전까지 보류한다.
 - 발견한 UI 회귀: `InventoryQrScreen` 하단 action grid가 Android system navigation bar와 겹친다. 분석 결과/상세 fixed CTA는 safe-area 위에 배치됐지만 QR 화면은 `DSScreenFooter` 또는 bottom inset 처리가 필요하다.
@@ -37,6 +37,7 @@
 
 - `requestExpiresAt`/`storeExpiresAt` 등 backend lifecycle timestamp가 timezone 없이 내려오는 경우 프론트가 UTC로 파싱하도록 수정했다. `Z`/offset timestamp는 같은 UTC instant로 유지하고, JS Date의 lenient parsing은 받지 않는다.
 - `InventoryQrScreen`은 `useSafeAreaInsets()` 기반으로 `ScrollView` 하단 padding을 계산해 Android system navigation bar 위로 하단 action grid를 띄운다.
+- backend feature-contract 하네스는 author/requester/observer 계정 matrix와 best-effort cleanup을 추가해 403/409/400 negative lifecycle 검증 후 VM 냉장고 슬롯을 남기지 않도록 처리한다. 최신 VM mutate 산출물은 `temp/backend-feature-contract-e2e-20260528T143053Z.json`이다.
 - 검증: `npx tsc --noEmit`, `npx jest __tests__/inventoryHoldPolicy.test.ts __tests__/postPolicy.test.ts __tests__/postDetail.requestShare.test.tsx __tests__/myShares.screen.test.tsx __tests__/fridgeSelect.qrFlow.test.tsx __tests__/inventoryQr.screen.test.tsx --runInBand` 통과. 최신 실기기 screenshot 재확인은 아직 남아 있다.
 - 추가 emulator QA: `Medium_Phone_API_36.1` release APK, SSH tunnel `localhost:8080 -> NHN-Cloud-Server:80`, QA 계정 `ce70039792@example.com`으로 로그인 후 프로필의 `냉장고 QR 인증`에 진입했다. `temp/android-emulator-qa-20260528T2100/10-inventory-qr-bottom.xml` 기준 하단 action grid는 scroll bottom에서 y=1702~1955에 위치하고 label panel은 y=2031부터 시작해 system navigation bar와 겹치지 않는다. 신청 flow는 `신청 완료` alert까지 확인했지만 after-request 상세/받은 나눔 screenshot은 확보하지 못해 실기기 재검증으로 남긴다.
 
