@@ -105,6 +105,14 @@ const findTouchableByText = (
   return touchable;
 };
 
+const findHostByTestId = (
+  renderer: ReactTestRenderer.ReactTestRenderer,
+  testID: string,
+) =>
+  renderer.root.findAll(
+    node => node.props.testID === testID && typeof node.type === 'string',
+  );
+
 describe('MapScreen fridge posts', () => {
   let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
 
@@ -159,6 +167,70 @@ describe('MapScreen fridge posts', () => {
       renderer?.unmount();
       renderer = undefined;
     });
+  });
+
+  it('shows the fridge carousel as the only bottom surface mode before selection', async () => {
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(<MapScreen />);
+    });
+
+    expect(
+      findHostByTestId(renderer!, 'map-bottom-surface'),
+    ).toHaveLength(1);
+    expect(
+      findHostByTestId(renderer!, 'map-fridge-carousel'),
+    ).toHaveLength(1);
+    expect(
+      findHostByTestId(renderer!, 'map-selected-fridge-sheet'),
+    ).toHaveLength(0);
+  });
+
+  it('replaces the fridge carousel with the selected fridge sheet', async () => {
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(<MapScreen />);
+    });
+
+    await ReactTestRenderer.act(async () => {
+      findTouchableByText(renderer!, post.fridgeName).props.onPress();
+    });
+
+    expect(
+      findHostByTestId(renderer!, 'map-bottom-surface'),
+    ).toHaveLength(1);
+    expect(
+      findHostByTestId(renderer!, 'map-fridge-carousel'),
+    ).toHaveLength(0);
+    expect(
+      findHostByTestId(renderer!, 'map-selected-fridge-sheet'),
+    ).toHaveLength(1);
+  });
+
+  it('returns from the selected fridge sheet to the fridge carousel', async () => {
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(<MapScreen />);
+    });
+
+    await ReactTestRenderer.act(async () => {
+      findTouchableByText(renderer!, post.fridgeName).props.onPress();
+    });
+
+    expect(
+      findHostByTestId(renderer!, 'map-selected-fridge-sheet'),
+    ).toHaveLength(1);
+
+    await ReactTestRenderer.act(async () => {
+      findTouchableByText(renderer!, '다른 냉장고 보기').props.onPress();
+    });
+
+    expect(
+      findHostByTestId(renderer!, 'map-fridge-carousel'),
+    ).toHaveLength(1);
+    expect(
+      findHostByTestId(renderer!, 'map-selected-fridge-sheet'),
+    ).toHaveLength(0);
+    expect(
+      renderer!.root.findAllByProps({ children: post.detectedFruitKo }),
+    ).toHaveLength(0);
   });
 
   it('loads available posts when a fridge is selected and opens post detail', async () => {
