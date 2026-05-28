@@ -8,7 +8,9 @@
  */
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, ScrollView, Alert, StatusBar } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, type CompositeNavigationProp } from '@react-navigation/native';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuthStore } from '@/store/authStore';
 import { updateProfile } from '@/api/auth';
 import {
@@ -24,102 +26,64 @@ import {
 import { colors } from '@/theme';
 import type { User } from '@/types';
 import { getHeaderTopPadding } from '@/utils/safeArea';
+import type { MainTabParamList, RootStackParamList } from '@/navigation/types';
 
 type ProfileMenuItemId =
   | 'location'
   | 'operator-console'
   | 'inventory-qr'
   | 'my-posts'
-  | 'bookmark'
   | 'history'
-  | 'settings'
-  | 'help';
+  | 'notifications';
 
 type ProfileMenuItem = {
   id: ProfileMenuItemId;
   title: string;
   icon: DSIconName;
-  availability?: 'ready' | 'coming-soon' | 'contract-needed';
 };
 
-const MENU_ITEMS: ProfileMenuItem[] = [
+type ProfileNavigation = CompositeNavigationProp<
+  BottomTabNavigationProp<MainTabParamList, 'Profile'>,
+  NativeStackNavigationProp<RootStackParamList>
+>;
+
+const LIFECYCLE_MENU_ITEMS: ProfileMenuItem[] = [
   {
-    id: 'location',
-    title: '동네 위치 재설정',
-    icon: 'location-dot',
-    availability: 'ready',
+    id: 'my-posts',
+    title: '내 나눔 관리',
+    icon: 'clipboard-list',
   },
   {
-    id: 'operator-console',
-    title: '냉장고 운영자 콘솔',
-    icon: 'clipboard-list',
-    availability: 'ready',
+    id: 'history',
+    title: '받은 나눔 관리',
+    icon: 'gift',
+  },
+  {
+    id: 'notifications',
+    title: '알림함',
+    icon: 'bell',
   },
   {
     id: 'inventory-qr',
     title: '냉장고 QR 인증',
     icon: 'qrcode',
-    availability: 'ready',
+  },
+];
+
+const ACCOUNT_MENU_ITEMS: ProfileMenuItem[] = [
+  {
+    id: 'location',
+    title: '동네 위치 재설정',
+    icon: 'location-dot',
   },
   {
-    id: 'my-posts',
-    title: '내 나눔 내역',
+    id: 'operator-console',
+    title: '냉장고 운영자 콘솔',
     icon: 'clipboard-list',
-    availability: 'ready',
-  },
-  {
-    id: 'bookmark',
-    title: '관심 식재료',
-    icon: 'heart',
-    availability: 'contract-needed',
-  },
-  {
-    id: 'history',
-    title: '받은 나눔 내역',
-    icon: 'gift',
-    availability: 'ready',
-  },
-  { id: 'settings', title: '설정', icon: 'gear', availability: 'coming-soon' },
-  {
-    id: 'help',
-    title: '고객센터',
-    icon: 'headset',
-    availability: 'coming-soon',
   },
 ];
 
 const OPERATOR_ROLES = new Set(['operator', 'admin', 'fridge_operator']);
-
-const BLOCKED_MENU_MESSAGES: Record<
-  Exclude<
-    ProfileMenuItemId,
-    'location' | 'operator-console' | 'inventory-qr'
-  >,
-  { title: string; message: string }
-> = {
-  'my-posts': {
-    title: '내 나눔 내역 준비 중',
-    message:
-      '내가 등록한 나눔 목록을 불러오는 서버 API가 준비되면 연결할 수 있습니다.',
-  },
-  bookmark: {
-    title: '관심 식재료 준비 중',
-    message: '관심 등록과 관심 목록 저장 API가 준비되면 연결할 수 있습니다.',
-  },
-  history: {
-    title: '받은 나눔 내역 준비 중',
-    message:
-      '내가 신청하거나 수령한 나눔 목록 API가 준비되면 연결할 수 있습니다.',
-  },
-  settings: {
-    title: '설정 준비 중',
-    message: '알림 설정과 계정 설정 항목은 후속 화면으로 분리할 예정입니다.',
-  },
-  help: {
-    title: '고객센터 준비 중',
-    message: '문의 접수 경로가 확정되면 연결하겠습니다.',
-  },
-};
 
 const canAccessOperatorConsole = (user: User | null): boolean => {
   if (!user) {
@@ -147,18 +111,22 @@ const canAccessOperatorConsole = (user: User | null): boolean => {
   );
 };
 
+const assertUnhandledMenuItem = (id: never): never => {
+  throw new Error(`Unhandled profile menu item: ${id}`);
+};
+
 const ProfileScreen = () => {
   const user = useAuthStore(state => state.user);
   const setUser = useAuthStore(state => state.setUser);
   const logoutStore = useAuthStore(state => state.logout);
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<ProfileNavigation>();
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [draftNickname, setDraftNickname] = useState(user?.nickname ?? '');
   const [draftProfileImageUrl, setDraftProfileImageUrl] = useState(
     user?.profileImageUrl ?? '',
   );
-  const visibleMenuItems = MENU_ITEMS.filter(
+  const visibleAccountMenuItems = ACCOUNT_MENU_ITEMS.filter(
     item => item.id !== 'operator-console' || canAccessOperatorConsole(user),
   );
 
@@ -182,11 +150,6 @@ const ProfileScreen = () => {
         },
       },
     ]);
-  };
-
-  const showBlockedMenuMessage = (id: keyof typeof BLOCKED_MENU_MESSAGES) => {
-    const message = BLOCKED_MENU_MESSAGES[id];
-    Alert.alert(message.title, message.message);
   };
 
   const handleProfileEditPress = () => {
@@ -236,40 +199,45 @@ const ProfileScreen = () => {
   };
 
   const handleMenuPress = (id: ProfileMenuItemId) => {
-    if (id === 'location') {
-      navigation.getParent()?.navigate('LocationSetup', { allowBack: true });
-      return;
-    }
+    const rootNavigation =
+      navigation.getParent<NativeStackNavigationProp<RootStackParamList>>();
 
-    if (id === 'operator-console') {
-      if (!canAccessOperatorConsole(user)) {
-        Alert.alert(
-          '운영자 권한 필요',
-          '운영자로 등록된 계정만 사용할 수 있습니다.',
-        );
+    switch (id) {
+      case 'location':
+        rootNavigation?.navigate('LocationSetup', { allowBack: true });
         return;
-      }
 
-      navigation.getParent()?.navigate('FridgeOperatorConsole');
-      return;
+      case 'operator-console':
+        if (!canAccessOperatorConsole(user)) {
+          Alert.alert(
+            '운영자 권한 필요',
+            '운영자로 등록된 계정만 사용할 수 있습니다.',
+          );
+          return;
+        }
+
+        rootNavigation?.navigate('FridgeOperatorConsole');
+        return;
+
+      case 'inventory-qr':
+        rootNavigation?.navigate('InventoryQr');
+        return;
+
+      case 'my-posts':
+        rootNavigation?.navigate('MyShares', { initialTab: 'posted' });
+        return;
+
+      case 'history':
+        rootNavigation?.navigate('MyShares', { initialTab: 'received' });
+        return;
+
+      case 'notifications':
+        navigation.navigate('Chat');
+        return;
+
+      default:
+        assertUnhandledMenuItem(id);
     }
-
-    if (id === 'inventory-qr') {
-      navigation.getParent()?.navigate('InventoryQr');
-      return;
-    }
-
-    if (id === 'my-posts') {
-      navigation.getParent()?.navigate('MyShares', { initialTab: 'posted' });
-      return;
-    }
-
-    if (id === 'history') {
-      navigation.getParent()?.navigate('MyShares', { initialTab: 'received' });
-      return;
-    }
-
-    showBlockedMenuMessage(id);
   };
 
   return (
@@ -409,9 +377,12 @@ const ProfileScreen = () => {
           </View>
         </DSCard>
 
-        {/* 메뉴 리스트 */}
+        {/* 나눔 관리 */}
         <DSCard variant="plain" padded={false} style={styles.menuSection}>
-          {visibleMenuItems.map((item, index) => (
+          <DSText variant="bodyBold" style={styles.menuSectionTitle}>
+            나눔 관리
+          </DSText>
+          {LIFECYCLE_MENU_ITEMS.map((item, index) => (
             <DSListCell
               key={item.id}
               title={item.title}
@@ -423,13 +394,34 @@ const ProfileScreen = () => {
                   style={styles.menuIcon}
                 />
               }
-              trailing={
-                item.availability === 'contract-needed' ? (
-                  <DSChip label="준비 중" tone="neutral" size="small" />
-                ) : undefined
+              chevron
+              divider={index !== LIFECYCLE_MENU_ITEMS.length - 1}
+              verticalPadding="large"
+              onPress={() => handleMenuPress(item.id)}
+              style={styles.menuItem}
+            />
+          ))}
+        </DSCard>
+
+        {/* 계정 및 운영 */}
+        <DSCard variant="plain" padded={false} style={styles.menuSection}>
+          <DSText variant="bodyBold" style={styles.menuSectionTitle}>
+            계정 및 운영
+          </DSText>
+          {visibleAccountMenuItems.map((item, index) => (
+            <DSListCell
+              key={item.id}
+              title={item.title}
+              leading={
+                <DSIcon
+                  name={item.icon}
+                  size="medium"
+                  color="primary"
+                  style={styles.menuIcon}
+                />
               }
               chevron
-              divider={index !== visibleMenuItems.length - 1}
+              divider={index !== visibleAccountMenuItems.length - 1}
               verticalPadding="large"
               onPress={() => handleMenuPress(item.id)}
               style={styles.menuItem}
@@ -579,6 +571,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 8,
     marginBottom: 24,
+  },
+  menuSectionTitle: {
+    fontSize: 15,
+    paddingTop: 12,
+    paddingBottom: 4,
   },
   menuItem: {
     paddingVertical: 16,

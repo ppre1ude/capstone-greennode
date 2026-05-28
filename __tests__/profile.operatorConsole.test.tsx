@@ -6,9 +6,11 @@ import { useAuthStore } from '@/store/authStore';
 import { updateProfile } from '@/api/auth';
 
 const mockParentNavigate = jest.fn();
+const mockNavigate = jest.fn();
 
 jest.mock('@react-navigation/native', () => ({
   useNavigation: jest.fn(() => ({
+    navigate: mockNavigate,
     getParent: jest.fn(() => ({ navigate: mockParentNavigate })),
   })),
 }));
@@ -45,6 +47,15 @@ const expectOperatorConsoleVisible = (
   const matches = renderer.root.findAllByProps({
     children: '냉장고 운영자 콘솔',
   });
+  expect(matches.length > 0).toBe(visible);
+};
+
+const expectTextVisible = (
+  renderer: ReactTestRenderer.ReactTestRenderer,
+  text: string,
+  visible: boolean,
+) => {
+  const matches = renderer.root.findAllByProps({ children: text });
   expect(matches.length > 0).toBe(visible);
 };
 
@@ -171,12 +182,40 @@ describe('ProfileScreen operator console entry', () => {
     });
   });
 
-  it('opens QR verification from profile without prototype copy', async () => {
+  it('exposes real lifecycle actions from the primary profile surface', async () => {
     let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
 
     await ReactTestRenderer.act(async () => {
       renderer = ReactTestRenderer.create(<ProfileScreen />);
     });
+
+    expectTextVisible(renderer!, '나눔 관리', true);
+    expectTextVisible(renderer!, '내 나눔 관리', true);
+    expectTextVisible(renderer!, '받은 나눔 관리', true);
+    expectTextVisible(renderer!, '알림함', true);
+    expectTextVisible(renderer!, '냉장고 QR 인증', true);
+
+    await ReactTestRenderer.act(async () => {
+      findTouchableByText(renderer!, '내 나눔 관리').props.onPress();
+    });
+
+    expect(mockParentNavigate).toHaveBeenCalledWith('MyShares', {
+      initialTab: 'posted',
+    });
+
+    await ReactTestRenderer.act(async () => {
+      findTouchableByText(renderer!, '받은 나눔 관리').props.onPress();
+    });
+
+    expect(mockParentNavigate).toHaveBeenCalledWith('MyShares', {
+      initialTab: 'received',
+    });
+
+    await ReactTestRenderer.act(async () => {
+      findTouchableByText(renderer!, '알림함').props.onPress();
+    });
+
+    expect(mockNavigate).toHaveBeenCalledWith('Chat');
 
     await ReactTestRenderer.act(async () => {
       findTouchableByText(renderer!, '냉장고 QR 인증').props.onPress();
@@ -189,28 +228,16 @@ describe('ProfileScreen operator console entry', () => {
     });
   });
 
-  it('opens account-level lifecycle screens from profile history entries', async () => {
+  it('keeps Post-MVP menu entries out of the primary profile surface', async () => {
     let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
 
     await ReactTestRenderer.act(async () => {
       renderer = ReactTestRenderer.create(<ProfileScreen />);
     });
 
-    await ReactTestRenderer.act(async () => {
-      findTouchableByText(renderer!, '내 나눔 내역').props.onPress();
-    });
-
-    expect(mockParentNavigate).toHaveBeenCalledWith('MyShares', {
-      initialTab: 'posted',
-    });
-
-    await ReactTestRenderer.act(async () => {
-      findTouchableByText(renderer!, '받은 나눔 내역').props.onPress();
-    });
-
-    expect(mockParentNavigate).toHaveBeenCalledWith('MyShares', {
-      initialTab: 'received',
-    });
+    expectTextVisible(renderer!, '관심 식재료', false);
+    expectTextVisible(renderer!, '설정', false);
+    expectTextVisible(renderer!, '고객센터', false);
 
     await ReactTestRenderer.act(async () => {
       renderer?.unmount();

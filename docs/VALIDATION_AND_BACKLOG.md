@@ -1752,6 +1752,7 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
   - QR 화면의 내부 QA copy 제거, API-backed 실제 스캔 경로의 QA용 시뮬레이션 action 미노출, 실패 후 같은 QR 재스캔 복구, 카메라 권한/후면 카메라 fallback 안내는 회귀 테스트로 고정됐다. 2026-05-28 기준 route/screen 명명도 `InventoryQrScreen`/`InventoryQr`로 production-facing 구조에 맞췄다.
   - 디자인 시스템은 emoji 사용 금지와 `DSIcon` 우선을 명시한다. 로그인/회원가입/위치 설정 화면은 정책 테스트 범위에 들어갔고, 2026-05-28 기준 `FridgeSelectScreen` 뒤로가기 Text glyph와 Onboarding 일러스트 emoji는 `DSIcon`으로 치환했다. 남은 대표 debt는 일부 테스트 fixture의 Text check와 후속 화면에서 발견되는 glyph/emoji 항목이다.
   - 지도 화면은 2026-05-28 코드/테스트 기준으로 냉장고 미선택 캐러셀과 선택 냉장고 상세 sheet가 동시에 보이지 않는 단일 하단 primary surface 모드로 정리됐다.
+  - 프로필 화면은 2026-05-28 코드/테스트 기준으로 `나눔 관리` primary section에 내 나눔 관리, 받은 나눔 관리, 알림함, 냉장고 QR 인증을 실제 route로 노출하고, 관심 식재료/설정/고객센터 Post-MVP 메뉴는 primary surface에서 숨겼다. 실기기 QA evidence는 아직 추가하지 않았다.
 - 다음 엔지니어링 우선순위:
   1. 내 진행 중인 나눔 허브: 홈 상단 또는 별도 화면에서 내가 등록한 나눔, 내가 신청한 나눔, QR 필요, 남은 시간, 신청 상태를 한 번에 보여준다.
   2. 최신 VM E2E 재검증: profile PATCH, my posts/share requests, lifecycle mutation, operator role-gated profile
@@ -1763,7 +1764,7 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
   2. P0 QR productization: API-backed 실제 스캔 경로에서 QA용 시뮬레이션 action은 분리됐고, route/screen 명명은 `InventoryQrScreen`/`InventoryQr`로 정리됐다.
   3. P1 icon migration 잔여 정리: 로그인/회원가입/위치 설정/Onboarding/FridgeSelect는 `DSIcon` 정책 테스트 또는 치환 범위에 포함됐고, 남은 테스트 fixture Text check와 후속 화면 glyph/emoji debt를 화면별로 줄인다.
   4. P1 map surface evidence QA: 하단 primary surface 단일 모드는 코드/테스트로 닫혔고, 냉장고 선택/검색/빈 목록/신청 후 refresh의 screenshot QA와 Google Map overlay/touch 확인을 후속 evidence로 남긴다.
-  5. P1 profile surface 정리: 준비 중 메뉴를 줄이고 내 나눔/받은 나눔/알림 작업 중 하나를 실제 lifecycle 관리 화면으로 승격한다.
+  5. P1 profile surface 정리: 2026-05-28 코드/테스트 기준으로 내 나눔/받은 나눔/알림/QR 인증을 실제 lifecycle 관리 화면으로 승격했다. 관심 식재료, 설정, 고객센터, 서버 저장형 알림/읽음 상태, 실제 통계 API는 Post-MVP 계약/디자인 항목으로 남긴다.
 - Acceptance Criteria:
   - [ ] 홈 또는 전용 허브에서 사용자가 지금 처리해야 할 나눔 action을 볼 수 있다.
   - [ ] 진행 중인 action은 `입고 QR 필요`, `수령 QR 필요`, `신청 접수`, `수령 제한 시간`, `완료/만료/취소` 같은 사용자-facing 상태로 표시된다.
@@ -1776,6 +1777,7 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
   - [x] `/auth/me`에서 `isOperator`, `operatorRole`, `operatorFridgeIds` 운영자 힌트를 내려준다.
   - [x] 실제 운영자 계정만 프로필에서 운영자 콘솔 진입점을 볼 수 있다.
   - [x] 사용자가 내가 등록한 나눔 식재료와 내가 신청/수령한 나눔 식재료를 앱 안에서 확인할 수 있다.
+  - [x] 프로필 primary surface에서 내 나눔 관리, 받은 나눔 관리, 알림함, 냉장고 QR 인증이 실제 route로 이동하고, 관심 식재료/설정/고객센터 준비 중 메뉴는 노출하지 않는다.
   - [x] 알림함은 MVP에서 FCM 수신 기록과 로컬 AsyncStorage 읽음 상태로 유지하고, 서버 저장형 목록/읽음 API는 Post-MVP 설계로 분리한다.
   - [ ] iOS 시뮬레이터에서 로그인, 위치 권한, 카메라/갤러리, 지도, 알림 권한, 홈/상세/신청 smoke QA evidence가 남는다.
   - [x] `requested` 이후 취소/완료 전이에 대한 사용자-facing 정책과 API 계약이 확정된다. 만료는 서버 배치로 처리한다.
