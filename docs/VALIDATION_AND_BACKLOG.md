@@ -704,8 +704,8 @@ DB/API 초안:
   - 검증 범위: `Fresh/Mid`, `Stale`/`isFresh=false`, generate 400, `imageToken` 누락, 낮은 confidence 확인 필요, Post fallback 응답 처리.
   - 낮은 confidence에서 `확인 필요`만 보여주면 실제 false-positive 위험이 충분히 드러나지 않아, 분석 결과 화면과 등록 확인 화면의 보조 문구를 `AI가 나눔 가능으로 분석했지만 실제 상태를 직접 확인한 뒤 등록해주세요.`로 강화했다.
 - 실제 AI/API smoke QA:
-  - 명령: `FOODLINK_API_BASE_URL=http://localhost:8080 FOODLINK_ACCESS_TOKEN=<token> node .\scripts\validate-ai-fixtures.js`
-  - 분석/기록용 명령: `FOODLINK_API_BASE_URL=http://localhost:8080 FOODLINK_ACCESS_TOKEN=<token> node .\scripts\validate-ai-fixtures.js --report-only`
+  - 명령: `$env:FOODLINK_API_BASE_URL='http://localhost:8080'; $env:FOODLINK_ACCESS_TOKEN='<token>'; node .\scripts\validate-ai-fixtures.js`
+  - 분석/기록용 명령: `$env:FOODLINK_API_BASE_URL='http://localhost:8080'; $env:FOODLINK_ACCESS_TOKEN='<token>'; node .\scripts\validate-ai-fixtures.js --report-only`
   - strict mode는 runnable fixture 실패 시 exit code `1`, report-only mode는 같은 실패를 출력하되 exit code `0`을 반환한다.
   - 통과:
     - `fresh-single`: `바나나`, `Fresh`, confidence `1`.
@@ -1904,4 +1904,6 @@ GET /api/v1/fridges/available?latitude=35.1595&longitude=126.9136&radius_km=2.0
 - 알림 표면: 백엔드가 서버 알림 목록/읽음을 Post-MVP로 확정했으므로 알림 탭은 FCM 수신 기록과 로컬 AsyncStorage 읽음 상태만 사용한다. `/notifications` 서버 sync/read/delete 호출은 MVP 화면에서 사용하지 않는다.
 - 운영자 metadata: `/auth/me` 응답의 `isOperator`, `operatorRole`, `operatorFridgeIds`를 앱의 `User` shape로 정규화한다. 기존 fixture 호환을 위해 snake_case와 `fridge_operator` role도 방어적으로 처리한다.
 - lifecycle 정책: 내 나눔 목록에는 `disposed`를 포함한다. 작성자 취소는 `available/requested/pending_store`, 작성자 완료는 `requested`, 신청자 취소는 `users/me/share-requests/{id}/cancel`에 연결한다. 수동 expire API는 사용하지 않고 서버 배치 만료를 따른다.
+- 재현 하네스: `npm run qa:backend-contracts`는 `/openapi.json` 또는 `/docs` 가용성만 확인하는 read-only preflight다. 주요 mutation happy path는 PowerShell에서 `$env:FOODLINK_API_BASE_URL='http://localhost:8080'; npm run qa:backend-contracts -- --mutate`로 실행하며, 신규 author/requester QA 계정을 만들고 profile PATCH, my posts/share requests, direct post lifecycle cancel/complete/request-cancel을 반복 검증한다. 이 하네스는 403/409 negative matrix를 아직 포함하지 않는다. 운영자 role-gated profile은 `FOODLINK_OPERATOR_EMAIL`/`FOODLINK_OPERATOR_PASSWORD`가 있을 때만 검증하고 없으면 skip한다. 결과는 `temp/backend-feature-contract-e2e-<timestamp>.json`에 저장된다.
+- 현재 blocker: 2026-05-28 현재 로컬 `http://localhost:8080/openapi.json`은 SSH tunnel 미연결 상태에서 접근할 수 없다. tunnel(`localhost:8080 -> NHN Cloud VM:80`)을 먼저 연 뒤 같은 명령을 재실행해야 최신 VM E2E를 닫을 수 있다.
 - 남은 QA: 백엔드 live VM 최신 배포에서 실제 계정으로 my posts/share requests, profile PATCH, lifecycle mutation 200/403/409 matrix를 재검증해야 한다.
