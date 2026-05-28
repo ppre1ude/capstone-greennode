@@ -15,6 +15,7 @@ import {
   View,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { RootStackParamList } from '@/navigation/types';
 import {
   InventoryCountdownBadge,
@@ -63,6 +64,8 @@ const SAMPLE_STORAGE_POLICY = resolveStoragePolicy({
 
 const PENDING_STORE_TIMEOUT_MS = 10 * 60 * 1000;
 const REQUEST_HOLD_TIMEOUT_MS = 30 * 60 * 1000;
+const SCROLL_CONTENT_MIN_BOTTOM_PADDING = 36;
+const SCROLL_CONTENT_BOTTOM_INSET_GAP = 16;
 const UNKNOWN_FRIDGE_CODE_LABEL = 'QR 스캔 후 확인';
 
 const wrongFridgePayload = 'foodlink://fridges/GJ-WRONG-999/verify';
@@ -91,6 +94,7 @@ const isValidDateInput = (value?: string): value is string => {
 };
 
 const InventoryQrScreen = ({ navigation, route }: Props) => {
+  const insets = useSafeAreaInsets();
   const params = route.params;
   const postId = params?.postId;
   const isApiBacked = typeof postId === 'number';
@@ -324,6 +328,10 @@ const InventoryQrScreen = ({ navigation, route }: Props) => {
   const deadlineLabel = confirmedStoreResult?.storageDeadlineAt
     ? new Date(confirmedStoreResult.storageDeadlineAt).toLocaleString()
     : SAMPLE_STORAGE_POLICY.deadlineLabel;
+  const contentBottomPadding = Math.max(
+    insets.bottom + SCROLL_CONTENT_BOTTOM_INSET_GAP,
+    SCROLL_CONTENT_MIN_BOTTOM_PADDING,
+  );
 
   return (
     <View style={styles.container} testID="inventory-qr-screen">
@@ -339,7 +347,11 @@ const InventoryQrScreen = ({ navigation, route }: Props) => {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: contentBottomPadding },
+        ]}>
         <View style={styles.notice}>
           <Text style={styles.noticeTitle}>
             {isApiBacked ? 'QR 인증 준비' : 'QR 인증 확인'}
@@ -595,7 +607,7 @@ const styles = StyleSheet.create({
   content: {
     gap: 12,
     padding: 16,
-    paddingBottom: 36,
+    paddingBottom: SCROLL_CONTENT_MIN_BOTTOM_PADDING,
   },
   notice: {
     backgroundColor: '#FFF7ED',

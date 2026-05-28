@@ -1,9 +1,16 @@
 import React from 'react';
-import { Alert, Text, TouchableOpacity } from 'react-native';
+import {
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+} from 'react-native';
 import ReactTestRenderer from 'react-test-renderer';
 import { confirmPickup, confirmStore } from '@/api/inventory';
-import InventoryQrScreen from '@/screens/inventory/InventoryQrScreen';
+import InventoryQrScreenBase from '@/screens/inventory/InventoryQrScreen';
 import { useFeedRefreshStore } from '@/store/feedRefreshStore';
+import { renderWithSafeArea } from '../test-utils/renderWithSafeArea';
 
 let mockOnObjectsScanned:
   | ((objects: Array<{ type: string; value?: string }>) => void)
@@ -100,6 +107,19 @@ const scanNativeQrValue = async (value: string, type = 'qr') => {
   });
 };
 
+const InventoryQrScreen = (
+  props: React.ComponentProps<typeof InventoryQrScreenBase>,
+) => renderWithSafeArea(<InventoryQrScreenBase {...props} />);
+
+const renderInventoryQrScreenWithBottomInset = (bottomInset: number) =>
+  renderWithSafeArea(
+    <InventoryQrScreenBase
+      navigation={{ goBack: jest.fn() } as any}
+      route={{ params: undefined } as any}
+    />,
+    bottomInset,
+  );
+
 describe('InventoryQrScreen', () => {
   let alertSpy: jest.SpyInstance;
 
@@ -115,6 +135,37 @@ describe('InventoryQrScreen', () => {
 
   afterEach(() => {
     alertSpy.mockRestore();
+  });
+
+  it('adds safe-area bottom spacing to scroll content while preserving the minimum padding', async () => {
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(
+        renderInventoryQrScreenWithBottomInset(0),
+      );
+    });
+
+    let scrollView = renderer!.root.findByType(ScrollView);
+    let contentStyle = StyleSheet.flatten(scrollView.props.contentContainerStyle);
+
+    expect(contentStyle.paddingBottom).toBe(36);
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+      renderer = ReactTestRenderer.create(
+        renderInventoryQrScreenWithBottomInset(34),
+      );
+    });
+
+    scrollView = renderer!.root.findByType(ScrollView);
+    contentStyle = StyleSheet.flatten(scrollView.props.contentContainerStyle);
+
+    expect(contentStyle.paddingBottom).toBe(50);
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
   });
 
   it('renders the QR and inventory verification surface without internal QA language', async () => {
