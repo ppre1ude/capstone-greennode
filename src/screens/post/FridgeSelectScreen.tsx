@@ -145,7 +145,7 @@ const FridgeSelectScreen = ({ route, navigation }: Props) => {
 
       if (response.success && response.data) {
         if (flow === 'fridge_qr') {
-          navigation.replace('InventoryQrPrototype', {
+          navigation.replace('InventoryQr', {
             mode: 'store',
             postId: response.data.id,
             fridgePublicCode: selectedFridge?.publicCode,

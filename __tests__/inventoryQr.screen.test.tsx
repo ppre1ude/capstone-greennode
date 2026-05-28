@@ -2,7 +2,7 @@ import React from 'react';
 import { Alert, Text, TouchableOpacity } from 'react-native';
 import ReactTestRenderer from 'react-test-renderer';
 import { confirmPickup, confirmStore } from '@/api/inventory';
-import InventoryQrPrototypeScreen from '@/screens/inventory/InventoryQrPrototypeScreen';
+import InventoryQrScreen from '@/screens/inventory/InventoryQrScreen';
 import { useFeedRefreshStore } from '@/store/feedRefreshStore';
 
 let mockOnObjectsScanned:
@@ -100,7 +100,7 @@ const scanNativeQrValue = async (value: string, type = 'qr') => {
   });
 };
 
-describe('InventoryQrPrototypeScreen', () => {
+describe('InventoryQrScreen', () => {
   let alertSpy: jest.SpyInstance;
 
   beforeEach(() => {
@@ -122,7 +122,7 @@ describe('InventoryQrPrototypeScreen', () => {
 
     await ReactTestRenderer.act(async () => {
       renderer = ReactTestRenderer.create(
-        <InventoryQrPrototypeScreen
+        <InventoryQrScreen
           navigation={{ goBack: jest.fn() } as any}
           route={{ params: undefined } as any}
         />,
@@ -141,7 +141,7 @@ describe('InventoryQrPrototypeScreen', () => {
     expect(textContent).toContain('다른 냉장고 스캔');
     expect(textContent).toContain('다시 시작');
     expect(textContent).not.toContain('냉장고 QR 흐름 테스트');
-    expect(textContent).not.toContain('프로토타입');
+    expect(textContent).not.toContain('\uD504\uB85C\uD1A0\uD0C0\uC785');
     expect(textContent).not.toContain('보관 QR 테스트');
     expect(textContent).not.toContain('수령 QR 테스트');
     expect(textContent).not.toContain('초기화');
@@ -156,7 +156,7 @@ describe('InventoryQrPrototypeScreen', () => {
 
     await ReactTestRenderer.act(async () => {
       renderer = ReactTestRenderer.create(
-        <InventoryQrPrototypeScreen
+        <InventoryQrScreen
           navigation={{ goBack: jest.fn() } as any}
           route={
             {
@@ -209,7 +209,7 @@ describe('InventoryQrPrototypeScreen', () => {
 
     await ReactTestRenderer.act(async () => {
       renderer = ReactTestRenderer.create(
-        <InventoryQrPrototypeScreen
+        <InventoryQrScreen
           navigation={{ goBack: jest.fn() } as any}
           route={
             {
@@ -253,7 +253,7 @@ describe('InventoryQrPrototypeScreen', () => {
 
     await ReactTestRenderer.act(async () => {
       renderer = ReactTestRenderer.create(
-        <InventoryQrPrototypeScreen
+        <InventoryQrScreen
           navigation={{ goBack: jest.fn() } as any}
           route={{ params: undefined } as any}
         />,
@@ -288,7 +288,7 @@ describe('InventoryQrPrototypeScreen', () => {
 
     await ReactTestRenderer.act(async () => {
       renderer = ReactTestRenderer.create(
-        <InventoryQrPrototypeScreen
+        <InventoryQrScreen
           navigation={{ goBack: jest.fn() } as any}
           route={{ params: undefined } as any}
         />,
@@ -327,7 +327,7 @@ describe('InventoryQrPrototypeScreen', () => {
 
     await ReactTestRenderer.act(async () => {
       renderer = ReactTestRenderer.create(
-        <InventoryQrPrototypeScreen
+        <InventoryQrScreen
           navigation={{ goBack: jest.fn() } as any}
           route={
             {
@@ -376,7 +376,7 @@ describe('InventoryQrPrototypeScreen', () => {
 
     await ReactTestRenderer.act(async () => {
       renderer = ReactTestRenderer.create(
-        <InventoryQrPrototypeScreen
+        <InventoryQrScreen
           navigation={{ goBack: jest.fn() } as any}
           route={
             {
@@ -423,7 +423,7 @@ describe('InventoryQrPrototypeScreen', () => {
 
     await ReactTestRenderer.act(async () => {
       renderer = ReactTestRenderer.create(
-        <InventoryQrPrototypeScreen
+        <InventoryQrScreen
           navigation={{ goBack: jest.fn() } as any}
           route={
             {
@@ -460,7 +460,7 @@ describe('InventoryQrPrototypeScreen', () => {
 
     await ReactTestRenderer.act(async () => {
       renderer = ReactTestRenderer.create(
-        <InventoryQrPrototypeScreen
+        <InventoryQrScreen
           navigation={{ goBack: jest.fn() } as any}
           route={
             {
@@ -512,7 +512,7 @@ describe('InventoryQrPrototypeScreen', () => {
 
     await ReactTestRenderer.act(async () => {
       renderer = ReactTestRenderer.create(
-        <InventoryQrPrototypeScreen
+        <InventoryQrScreen
           navigation={{ goBack: jest.fn() } as any}
           route={
             {
@@ -551,7 +551,7 @@ describe('InventoryQrPrototypeScreen', () => {
 
     await ReactTestRenderer.act(async () => {
       renderer = ReactTestRenderer.create(
-        <InventoryQrPrototypeScreen
+        <InventoryQrScreen
           navigation={{ goBack: jest.fn() } as any}
           route={
             {
@@ -606,7 +606,7 @@ describe('InventoryQrPrototypeScreen', () => {
 
     await ReactTestRenderer.act(async () => {
       renderer = ReactTestRenderer.create(
-        <InventoryQrPrototypeScreen
+        <InventoryQrScreen
           navigation={{ goBack: jest.fn() } as any}
           route={
             {
@@ -670,7 +670,7 @@ describe('InventoryQrPrototypeScreen', () => {
 
     await ReactTestRenderer.act(async () => {
       renderer = ReactTestRenderer.create(
-        <InventoryQrPrototypeScreen
+        <InventoryQrScreen
           navigation={{ goBack: jest.fn() } as any}
           route={
             {
@@ -731,7 +731,7 @@ describe('InventoryQrPrototypeScreen', () => {
 
     await ReactTestRenderer.act(async () => {
       renderer = ReactTestRenderer.create(
-        <InventoryQrPrototypeScreen
+        <InventoryQrScreen
           navigation={{ goBack: jest.fn() } as any}
           route={
             {
@@ -765,7 +765,7 @@ describe('InventoryQrPrototypeScreen', () => {
 
     await ReactTestRenderer.act(async () => {
       renderer = ReactTestRenderer.create(
-        <InventoryQrPrototypeScreen
+        <InventoryQrScreen
           navigation={{ goBack: jest.fn() } as any}
           route={
             {
@@ -809,7 +809,7 @@ describe('InventoryQrPrototypeScreen', () => {
 
     await ReactTestRenderer.act(async () => {
       renderer = ReactTestRenderer.create(
-        <InventoryQrPrototypeScreen
+        <InventoryQrScreen
           navigation={{ goBack: jest.fn() } as any}
           route={
             {
@@ -853,7 +853,7 @@ describe('InventoryQrPrototypeScreen', () => {
 
     await ReactTestRenderer.act(async () => {
       renderer = ReactTestRenderer.create(
-        <InventoryQrPrototypeScreen
+        <InventoryQrScreen
           navigation={{ goBack: jest.fn() } as any}
           route={
             {

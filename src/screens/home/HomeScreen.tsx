@@ -249,7 +249,7 @@ const HomeScreen = () => {
         buttonLabel: '수령 QR 열기',
         icon: 'qrcode',
         onPress: () =>
-          navigation.getParent()?.navigate('InventoryQrPrototype', {
+          navigation.getParent()?.navigate('InventoryQr', {
             mode: 'pickup',
             postId: item.post.id,
             pendingExpiresAt: item.post.requestExpiresAt ?? undefined,
@@ -270,7 +270,7 @@ const HomeScreen = () => {
         buttonLabel: '입고 QR 열기',
         icon: 'qrcode',
         onPress: () =>
-          navigation.getParent()?.navigate('InventoryQrPrototype', {
+          navigation.getParent()?.navigate('InventoryQr', {
             mode: 'store',
             postId: post.id,
           }),

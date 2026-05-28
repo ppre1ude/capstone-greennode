@@ -28,7 +28,7 @@ import { getHeaderTopPadding } from '@/utils/safeArea';
 type ProfileMenuItemId =
   | 'location'
   | 'operator-console'
-  | 'inventory-qr-prototype'
+  | 'inventory-qr'
   | 'my-posts'
   | 'bookmark'
   | 'history'
@@ -56,7 +56,7 @@ const MENU_ITEMS: ProfileMenuItem[] = [
     availability: 'ready',
   },
   {
-    id: 'inventory-qr-prototype',
+    id: 'inventory-qr',
     title: '냉장고 QR 인증',
     icon: 'qrcode',
     availability: 'ready',
@@ -93,7 +93,7 @@ const OPERATOR_ROLES = new Set(['operator', 'admin', 'fridge_operator']);
 const BLOCKED_MENU_MESSAGES: Record<
   Exclude<
     ProfileMenuItemId,
-    'location' | 'operator-console' | 'inventory-qr-prototype'
+    'location' | 'operator-console' | 'inventory-qr'
   >,
   { title: string; message: string }
 > = {
@@ -254,8 +254,8 @@ const ProfileScreen = () => {
       return;
     }
 
-    if (id === 'inventory-qr-prototype') {
-      navigation.getParent()?.navigate('InventoryQrPrototype');
+    if (id === 'inventory-qr') {
+      navigation.getParent()?.navigate('InventoryQr');
       return;
     }
 

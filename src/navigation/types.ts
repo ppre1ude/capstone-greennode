@@ -49,7 +49,7 @@ export type RootStackParamList = {
         fridgeName?: string;
       }
     | undefined;
-  InventoryQrPrototype:
+  InventoryQr:
     | {
         mode?: 'store' | 'pickup';
         postId?: number;

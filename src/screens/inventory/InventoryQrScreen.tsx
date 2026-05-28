@@ -35,7 +35,7 @@ import type { ConfirmPickupResult, ConfirmStoreResult } from '@/api/inventory';
 import { useFeedRefreshStore } from '@/store/feedRefreshStore';
 import { colors } from '@/theme';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'InventoryQrPrototype'>;
+type Props = NativeStackScreenProps<RootStackParamList, 'InventoryQr'>;
 
 type ScanMode = 'store' | 'pickup';
 
@@ -51,7 +51,7 @@ const LABEL_SAMPLE = {
   quality: 'Mid' as const,
 };
 
-const PROTOTYPE_NOW = new Date('2026-05-19T00:05:00.000Z');
+const SAMPLE_NOW = new Date('2026-05-19T00:05:00.000Z');
 const HOLD_STARTED_AT = new Date('2026-05-19T00:00:00.000Z');
 const HOLD_EXPIRES_AT = createPendingStoreExpiresAt(HOLD_STARTED_AT);
 const SAMPLE_STORAGE_POLICY = resolveStoragePolicy({
@@ -89,7 +89,7 @@ const isValidDateInput = (value?: string): value is string => {
   return Number.isFinite(Date.parse(value));
 };
 
-const InventoryQrPrototypeScreen = ({ navigation, route }: Props) => {
+const InventoryQrScreen = ({ navigation, route }: Props) => {
   const params = route.params;
   const postId = params?.postId;
   const isApiBacked = typeof postId === 'number';
@@ -158,7 +158,7 @@ const InventoryQrPrototypeScreen = ({ navigation, route }: Props) => {
     return apiFallbackExpiresAt;
   }, [apiFallbackExpiresAt, isApiBacked, params?.pendingExpiresAt]);
 
-  const countdownNow = isApiBacked ? currentTime : PROTOTYPE_NOW;
+  const countdownNow = isApiBacked ? currentTime : SAMPLE_NOW;
 
   const inventoryStatus: InventoryDisplayStatus = useMemo(() => {
     if (pickupConfirmed) {
@@ -325,7 +325,7 @@ const InventoryQrPrototypeScreen = ({ navigation, route }: Props) => {
     : SAMPLE_STORAGE_POLICY.deadlineLabel;
 
   return (
-    <View style={styles.container} testID="inventory-qr-prototype-screen">
+    <View style={styles.container} testID="inventory-qr-screen">
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={navigation.goBack}>
           <Text style={styles.backButtonText}>‹</Text>
@@ -793,4 +793,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default InventoryQrPrototypeScreen;
+export default InventoryQrScreen;

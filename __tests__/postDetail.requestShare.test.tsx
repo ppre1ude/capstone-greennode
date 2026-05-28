@@ -338,7 +338,7 @@ describe('PostDetailScreen share request', () => {
       pickupButton?.props.onPress();
     });
 
-    expect(navigation.navigate).toHaveBeenCalledWith('InventoryQrPrototype', {
+    expect(navigation.navigate).toHaveBeenCalledWith('InventoryQr', {
       mode: 'pickup',
       postId: 10,
       pendingExpiresAt: '2026-05-06T00:30:00Z',
@@ -420,7 +420,7 @@ describe('PostDetailScreen share request', () => {
       pickupButton?.props.onPress();
     });
 
-    expect(navigation.navigate).toHaveBeenCalledWith('InventoryQrPrototype', {
+    expect(navigation.navigate).toHaveBeenCalledWith('InventoryQr', {
       mode: 'pickup',
       postId: 10,
       pendingExpiresAt: '2026-05-06T00:30:00Z',

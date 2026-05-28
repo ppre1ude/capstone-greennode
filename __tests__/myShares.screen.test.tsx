@@ -193,7 +193,7 @@ describe('MySharesScreen', () => {
       findTouchableByText(renderer!, '입고 QR').props.onPress();
     });
 
-    expect(navigation.navigate).toHaveBeenCalledWith('InventoryQrPrototype', {
+    expect(navigation.navigate).toHaveBeenCalledWith('InventoryQr', {
       mode: 'store',
       postId: 31,
     });
@@ -295,7 +295,7 @@ describe('MySharesScreen', () => {
       findTouchableByText(renderer!, '수령 QR').props.onPress();
     });
 
-    expect(navigation.navigate).toHaveBeenCalledWith('InventoryQrPrototype', {
+    expect(navigation.navigate).toHaveBeenCalledWith('InventoryQr', {
       mode: 'pickup',
       postId: 41,
       pendingExpiresAt: '2026-05-26T00:40:00Z',

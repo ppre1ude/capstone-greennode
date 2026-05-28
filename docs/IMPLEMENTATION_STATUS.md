@@ -131,7 +131,7 @@
 - 운영자 폐기 성공 후에는 summary/items를 즉시 재조회해 폐기 대상 수, 만료 임박 수, 항목 상태를 서버 결과 기준으로 다시 맞춘다.
 - 운영자 inventory 조회가 401/403으로 거절되면 샘플 재고와 폐기 버튼을 숨기고 `운영자 권한이 필요합니다` 안내만 표시한다. 네트워크/배포 실패 fallback과 권한 실패를 분리했다.
 - 프로필의 `냉장고 운영자 콘솔 (실험)` 진입점은 `isOperator`, `operatorRole`, `operatorFridgeIds`, `roles` 중 하나로 운영자 힌트가 있는 계정에만 노출한다.
-- 검증: `operator.api`, `fridgeOperatorConsole.screen`, `fridgeSelect.qrFlow`, `inventoryQrPrototype.screen`, `postDetail.requestShare` 테스트와 전체 Jest/TypeScript 검증으로 프론트 계약을 고정했다. Operator inventory VM runtime QA는 2026-05-25에 통과했고, 실제 QR 스캔 기기 QA는 후속이다.
+- 검증: `operator.api`, `fridgeOperatorConsole.screen`, `fridgeSelect.qrFlow`, `inventoryQr.screen`, `postDetail.requestShare` 테스트와 전체 Jest/TypeScript 검증으로 프론트 계약을 고정했다. Operator inventory VM runtime QA는 2026-05-25에 통과했고, 실제 QR 스캔 기기 QA는 후속이다.
 
 ### 2026-05-21 프론트 마무리 작업 업데이트
 
@@ -321,7 +321,7 @@ node ./node_modules/typescript/bin/tsc --noEmit
 
 ### 2026-05-20 Inventory/QR 대기 만료 시각 후속 구현
 
-- `FridgeSelect`는 백엔드 `storeExpiresAt`을 `pendingExpiresAt`으로 `InventoryQrPrototype`에 전달한다. 값이 없거나 잘못된 날짜이면 `createdAt + 10분`으로 보정하고, 둘 다 유효하지 않으면 QR 화면의 API fallback countdown을 사용한다.
+- `FridgeSelect`는 백엔드 `storeExpiresAt`을 `pendingExpiresAt`으로 `InventoryQr`에 전달한다. 값이 없거나 잘못된 날짜이면 `createdAt + 10분`으로 보정하고, 둘 다 유효하지 않으면 QR 화면의 API fallback countdown을 사용한다.
 - `PostDetail`의 수령 QR 진입은 검증된 `requestExpiresAt`을 같은 `pendingExpiresAt` route param으로 넘겨 QR 화면의 30분 countdown과 서버 인증 흐름을 맞춘다.
 - API-backed QR 인증 화면에 route `fridgePublicCode`가 없으면 프론트가 임의로 냉장고 불일치 차단을 하지 않는다. 스캔된 public code를 보관/수령 인증 API에 보내고 서버가 pending action과 냉장고 일치를 검증한다.
-- Focused verification: `npm test -- --runInBand __tests__/fridgeSelect.qrFlow.test.tsx __tests__/inventoryQrPrototype.screen.test.tsx`.
+- Focused verification: `npm test -- --runInBand __tests__/fridgeSelect.qrFlow.test.tsx __tests__/inventoryQr.screen.test.tsx`.

@@ -182,7 +182,7 @@ describe('ProfileScreen operator console entry', () => {
       findTouchableByText(renderer!, '냉장고 QR 인증').props.onPress();
     });
 
-    expect(mockParentNavigate).toHaveBeenCalledWith('InventoryQrPrototype');
+    expect(mockParentNavigate).toHaveBeenCalledWith('InventoryQr');
 
     await ReactTestRenderer.act(async () => {
       renderer?.unmount();

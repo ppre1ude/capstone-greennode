@@ -191,7 +191,7 @@ const MySharesScreen = ({ route, navigation }: Props) => {
               label="입고 QR"
               size="small"
               onPress={() =>
-                navigation.navigate('InventoryQrPrototype', {
+                navigation.navigate('InventoryQr', {
                   mode: 'store',
                   postId: post.id,
                 })
@@ -290,7 +290,7 @@ const MySharesScreen = ({ route, navigation }: Props) => {
                 label="수령 QR"
                 size="small"
                 onPress={() =>
-                  navigation.navigate('InventoryQrPrototype', {
+                  navigation.navigate('InventoryQr', {
                     mode: 'pickup',
                     postId: post.id,
                     pendingExpiresAt: post.requestExpiresAt ?? undefined,

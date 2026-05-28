@@ -32,7 +32,7 @@ import PostCompleteScreen from '@/screens/post/PostCompleteScreen';
 import PostDetailScreen from '@/screens/post/PostDetailScreen';
 import MySharesScreen from '@/screens/profile/MySharesScreen';
 import FridgeOperatorConsoleScreen from '@/screens/operator/FridgeOperatorConsoleScreen';
-import InventoryQrPrototypeScreen from '@/screens/inventory/InventoryQrPrototypeScreen';
+import InventoryQrScreen from '@/screens/inventory/InventoryQrScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -134,8 +134,8 @@ const AppNavigator = () => {
           component={FridgeOperatorConsoleScreen}
         />
         <Stack.Screen
-          name="InventoryQrPrototype"
-          component={InventoryQrPrototypeScreen}
+          name="InventoryQr"
+          component={InventoryQrScreen}
         />
       </Stack.Navigator>
     </NavigationContainer>
