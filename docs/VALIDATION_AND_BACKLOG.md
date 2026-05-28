@@ -1750,7 +1750,7 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
   - 현재 UX/UI는 약 6/10이다. MVP 흐름은 이해되지만 반복 사용 제품으로 보이는 lifecycle 표면과 모바일 마감이 부족하다.
   - 분석 결과, 등록 폼/냉장고 선택/완료 화면 계열에서 하단 CTA가 Android system navigation 영역과 겹치는 screenshot evidence가 있다.
   - QR 화면의 내부 QA copy 제거, API-backed 실제 스캔 경로의 QA용 시뮬레이션 action 미노출, 실패 후 같은 QR 재스캔 복구, 카메라 권한/후면 카메라 fallback 안내는 회귀 테스트로 고정됐다. 2026-05-28 기준 route/screen 명명도 `InventoryQrScreen`/`InventoryQr`로 production-facing 구조에 맞췄다.
-  - 디자인 시스템은 emoji 사용 금지와 `DSIcon` 우선을 명시한다. 로그인/회원가입/위치 설정 화면은 정책 테스트 범위에 들어갔고, 2026-05-28 기준 `FridgeSelectScreen` 뒤로가기 Text glyph, Onboarding 일러스트 emoji, Splash logo emoji, Home search clear glyph는 `DSIcon`으로 치환했다. 남은 대표 debt는 앱 UI 밖의 일부 테스트 fixture Text check와 후속 화면에서 발견되는 glyph/emoji 항목이다.
+  - 디자인 시스템은 emoji 사용 금지와 `DSIcon` 우선을 명시한다. 로그인/회원가입/위치 설정 화면은 정책 테스트 범위에 들어갔고, 2026-05-28 기준 `FridgeSelectScreen` 뒤로가기 Text glyph, Onboarding 일러스트 emoji, Splash logo emoji, Home search clear glyph, DS component test fixture 체크 glyph는 `DSIcon`으로 치환했다. 남은 grep 결과는 앱 UI가 아닌 API 주석의 경고 기호로 분리한다.
   - 지도 화면은 2026-05-28 코드/테스트 기준으로 냉장고 미선택 캐러셀과 선택 냉장고 상세 sheet가 동시에 보이지 않는 단일 하단 primary surface 모드로 정리됐다.
   - 프로필 화면은 2026-05-28 코드/테스트 기준으로 `나눔 관리` primary section에 내 나눔 관리, 받은 나눔 관리, 알림함, 냉장고 QR 인증을 실제 route로 노출하고, 관심 식재료/설정/고객센터 Post-MVP 메뉴는 primary surface에서 숨겼다. 실기기 QA evidence는 아직 추가하지 않았다.
   - fixed footer는 2026-05-28 코드/테스트 기준으로 등록/상세/완료/냉장고 선택 계열에 더해 `LocationSetupScreen`, `OnboardingScreen`까지 `DSScreenFooter` 공통 safe-area 패턴을 사용한다.
@@ -1763,7 +1763,7 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
 - 다음 UI/UX 우선순위:
   1. P0 fixed footer safe area: `AnalysisResultScreen`, `PostCreateScreen`, `FridgeSelectScreen`, `PostCompleteScreen`, `PostDetailScreen`, `LocationSetupScreen`, `OnboardingScreen`의 하단 CTA는 `useSafeAreaInsets()` 기반 공통 footer 패턴으로 통합됐다. 남은 항목은 emulator/실기기 screenshot evidence다.
   2. P0 QR productization: API-backed 실제 스캔 경로에서 QA용 시뮬레이션 action은 분리됐고, route/screen 명명은 `InventoryQrScreen`/`InventoryQr`로 정리됐다.
-  3. P1 icon migration 잔여 정리: 로그인/회원가입/위치 설정/Onboarding/FridgeSelect/Splash/Home은 `DSIcon` 정책 테스트 또는 치환 범위에 포함됐고, 2026-05-28 Splash logo emoji와 Home search clear glyph는 `DSIcon`으로 정리했다. 남은 테스트 fixture Text check와 후속 화면 glyph/emoji debt는 앱 UI 여부를 구분해 화면별로 줄인다.
+  3. P1 icon migration 잔여 정리: 로그인/회원가입/위치 설정/Onboarding/FridgeSelect/Splash/Home과 DS component fixture는 `DSIcon` 정책 테스트 또는 치환 범위에 포함됐다. 새 화면 추가 시 동일 정책 테스트에 편입한다.
   4. P1 map surface evidence QA: 하단 primary surface 단일 모드는 코드/테스트로 닫혔고, 냉장고 선택/검색/빈 목록/신청 후 refresh의 screenshot QA와 Google Map overlay/touch 확인을 후속 evidence로 남긴다.
   5. P1 profile surface 정리: 2026-05-28 코드/테스트 기준으로 내 나눔/받은 나눔/알림/QR 인증을 실제 lifecycle 관리 화면으로 승격했다. 관심 식재료, 설정, 고객센터, 서버 저장형 알림/읽음 상태, 실제 통계 API는 Post-MVP 계약/디자인 항목으로 남긴다.
 - Acceptance Criteria:
@@ -1773,7 +1773,7 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
   - [x] QR 보관/수령 화면의 사용자-facing copy에서 내부 QA 언어가 제거된다.
   - [x] API-backed QR 보관/수령 화면은 QA용 시뮬레이션 action을 노출하지 않고 실제 scanner callback으로 confirm API를 호출하며, 실패 후 `다시 스캔`으로 같은 QR을 재시도할 수 있다.
   - [x] QR 화면 route/screen/test 명명은 `InventoryQr`, `InventoryQrScreen`, `inventoryQr.screen.test.tsx`로 production-facing 구조를 사용한다.
-  - [ ] 로그인/회원가입/위치 설정/Onboarding/FridgeSelect/Splash/Home은 `DSIcon` 정책 테스트 또는 치환 범위에 들어갔고, 2026-05-28 Splash logo emoji와 Home search clear glyph는 `DSIcon`으로 치환했다. 남은 앱 UI 밖 테스트 fixture Text check와 후속 화면 glyph/emoji debt를 화면별로 추적한다.
+  - [x] 로그인/회원가입/위치 설정/Onboarding/FridgeSelect/Splash/Home은 `DSIcon` 정책 테스트 또는 치환 범위에 들어갔고, 2026-05-28 Splash logo emoji, Home search clear glyph, DS component fixture Text check는 `DSIcon`으로 치환했다. `src`/`__tests__` grep상 남은 emoji는 앱 UI가 아닌 API 주석 경고 기호뿐이다.
   - [x] 지도에서 냉장고 선택 시 하단 primary surface가 하나로 정리되어 지도와 냉장고 내부 목록의 위계가 명확하다.
   - [x] `/auth/me`에서 `isOperator`, `operatorRole`, `operatorFridgeIds` 운영자 힌트를 내려준다.
   - [x] 실제 운영자 계정만 프로필에서 운영자 콘솔 진입점을 볼 수 있다.
@@ -1786,7 +1786,7 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
   - 진행 중인 나눔 허브: 2026-05-28 코드/테스트 기준으로 Home 회귀 테스트를 닫았다. 이번 task에서는 실기기/VM screenshot QA를 실행하지 않았다.
   - fixed footer: `DSScreenFooter` 정책 테스트로 코드 통합을 고정하고, Android emulator + 실기기 screenshot 비교, iOS simulator smoke에서 CTA clipping 여부 확인
   - QR productization: API-backed route의 simulation action 미노출, native scanner callback, 실패 후 같은 QR 재스캔, 권한/카메라 fallback, non-API sample flow의 QA action 유지 회귀 테스트, production-facing route/screen 명명 유지
-  - icon migration 잔여: `Text` glyph/emoji grep + 관련 fixture와 후속 화면 중심 screenshot/정책 테스트
+  - icon migration 잔여: `Text` glyph/emoji grep + 관련 fixture 정책 테스트. 2026-05-28 기준 앱 UI와 DS fixture의 직접 glyph는 제거됐고, 남은 grep 결과는 API 주석 경고 기호로 분리한다.
   - map surface: 하단 단일 primary surface 모드는 `MapScreen` 회귀 테스트로 고정했다. 냉장고 선택/검색/빈 목록/신청 후 refresh 상태의 screenshot QA와 Google Map overlay/touch 확인은 남은 evidence로 둔다.
   - 운영자 권한: VM API matrix + 실제 앱 role-gated profile QA
   - 내역 화면: API 계약 테스트 + React Native 화면 회귀 + Android/iOS smoke QA

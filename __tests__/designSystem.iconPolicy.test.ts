@@ -31,6 +31,11 @@ const iconPolicyFiles = [
   'src/screens/profile/ProfileScreen.tsx',
 ];
 
+const textGlyphPolicyFiles = [
+  ...iconPolicyFiles,
+  '__tests__/designSystem.components.test.tsx',
+];
+
 const fontAwesome6Fonts = [
   'FontAwesome6_Brands.ttf',
   'FontAwesome6_Regular.ttf',
@@ -57,7 +62,7 @@ describe('design system icon policy', () => {
   });
 
   it('keeps single-character icon glyphs out of Text nodes', () => {
-    const filesWithTextIconGlyphs = iconPolicyFiles.filter(relativePath => {
+    const filesWithTextIconGlyphs = textGlyphPolicyFiles.filter(relativePath => {
       const source = stripSourceComments(fs.readFileSync(relativePath, 'utf8'));
       return textIconGlyphPattern.test(source);
     });

@@ -72,7 +72,7 @@ describe('design system components', () => {
         <DSChip
           label="신선"
           selected
-          trailing={<Text>✓</Text>}
+          trailing={<DSIcon name="check" size="xsmall" color="primary" />}
           onPress={jest.fn()}
         />,
       );
@@ -85,7 +85,7 @@ describe('design system components', () => {
       renderer!.root.findAllByProps({ children: '신선' }).length,
     ).toBeGreaterThan(0);
     expect(
-      renderer!.root.findAllByProps({ children: '✓' }).length,
+      renderer!.root.findAllByProps({ name: 'check' }).length,
     ).toBeGreaterThan(0);
   });
 
