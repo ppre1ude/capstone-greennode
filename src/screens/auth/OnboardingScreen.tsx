@@ -22,6 +22,7 @@ import {
   DSButton,
   DSChip,
   DSIcon,
+  DSScreenFooter,
   DSText,
   type DSIconName,
 } from '@/design-system';
@@ -194,7 +195,7 @@ const OnboardingScreen = ({ navigation }: Props) => {
       </View>
 
       {/* 하단 CTA */}
-      <View style={styles.footer}>
+      <DSScreenFooter style={styles.footer} testID="onboarding-footer">
         <DSButton
           label={isLastSlide ? '시작하기' : '다음으로'}
           size="large"
@@ -219,7 +220,7 @@ const OnboardingScreen = ({ navigation }: Props) => {
           textStyle={styles.loginLinkText}
           onPress={() => navigation.replace('Login')}
         />
-      </View>
+      </DSScreenFooter>
     </View>
   );
 };
@@ -312,9 +313,9 @@ const styles = StyleSheet.create({
   },
   footer: {
     paddingHorizontal: 24,
-    paddingBottom: 48,
     paddingTop: 16,
     backgroundColor: '#FFFFFF',
+    borderTopWidth: 0,
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
     shadowColor: '#000',

@@ -24,7 +24,7 @@ import { updateLocation } from '@/api/auth';
 import { useAuthStore } from '@/store/authStore';
 import { styles } from './LocationSetupScreen.styles';
 import { getFcmToken } from '@/services/deviceRegistration';
-import { DSButton, DSCard, DSIcon } from '@/design-system';
+import { DSButton, DSCard, DSIcon, DSScreenFooter } from '@/design-system';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'LocationSetup'>;
 
@@ -352,7 +352,7 @@ const LocationSetupScreen = ({ route, navigation }: Props) => {
       </View>
 
       {/* CTA */}
-      <View style={styles.footer}>
+      <DSScreenFooter style={styles.footer} testID="location-setup-footer">
         <DSCard
           variant="outlined"
           padded={false}
@@ -393,7 +393,7 @@ const LocationSetupScreen = ({ route, navigation }: Props) => {
           style={styles.submitButton}
           textStyle={styles.submitButtonText}
         />
-      </View>
+      </DSScreenFooter>
     </View>
   );
 };

@@ -1753,6 +1753,7 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
   - 디자인 시스템은 emoji 사용 금지와 `DSIcon` 우선을 명시한다. 로그인/회원가입/위치 설정 화면은 정책 테스트 범위에 들어갔고, 2026-05-28 기준 `FridgeSelectScreen` 뒤로가기 Text glyph, Onboarding 일러스트 emoji, Splash logo emoji, Home search clear glyph는 `DSIcon`으로 치환했다. 남은 대표 debt는 앱 UI 밖의 일부 테스트 fixture Text check와 후속 화면에서 발견되는 glyph/emoji 항목이다.
   - 지도 화면은 2026-05-28 코드/테스트 기준으로 냉장고 미선택 캐러셀과 선택 냉장고 상세 sheet가 동시에 보이지 않는 단일 하단 primary surface 모드로 정리됐다.
   - 프로필 화면은 2026-05-28 코드/테스트 기준으로 `나눔 관리` primary section에 내 나눔 관리, 받은 나눔 관리, 알림함, 냉장고 QR 인증을 실제 route로 노출하고, 관심 식재료/설정/고객센터 Post-MVP 메뉴는 primary surface에서 숨겼다. 실기기 QA evidence는 아직 추가하지 않았다.
+  - fixed footer는 2026-05-28 코드/테스트 기준으로 등록/상세/완료/냉장고 선택 계열에 더해 `LocationSetupScreen`, `OnboardingScreen`까지 `DSScreenFooter` 공통 safe-area 패턴을 사용한다.
 - 다음 엔지니어링 우선순위:
   1. 내 진행 중인 나눔 허브: 홈 상단 또는 별도 화면에서 내가 등록한 나눔, 내가 신청한 나눔, QR 필요, 남은 시간, 신청 상태를 한 번에 보여준다.
   2. 최신 VM E2E 재검증: profile PATCH, my posts/share requests, lifecycle mutation, operator role-gated profile
@@ -1760,7 +1761,7 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
   4. 검색/통계/AI rejection reason 확장
   5. 알림 서버 목록/읽음 상태는 Post-MVP 저장형으로 별도 설계
 - 다음 UI/UX 우선순위:
-  1. P0 fixed footer safe area: `AnalysisResultScreen`, `PostCreateScreen`, `FridgeSelectScreen`, `PostCompleteScreen`, `PostDetailScreen` 계열의 하단 CTA를 `useSafeAreaInsets()` 기반 공통 footer 패턴으로 통합한다.
+  1. P0 fixed footer safe area: `AnalysisResultScreen`, `PostCreateScreen`, `FridgeSelectScreen`, `PostCompleteScreen`, `PostDetailScreen`, `LocationSetupScreen`, `OnboardingScreen`의 하단 CTA는 `useSafeAreaInsets()` 기반 공통 footer 패턴으로 통합됐다. 남은 항목은 emulator/실기기 screenshot evidence다.
   2. P0 QR productization: API-backed 실제 스캔 경로에서 QA용 시뮬레이션 action은 분리됐고, route/screen 명명은 `InventoryQrScreen`/`InventoryQr`로 정리됐다.
   3. P1 icon migration 잔여 정리: 로그인/회원가입/위치 설정/Onboarding/FridgeSelect/Splash/Home은 `DSIcon` 정책 테스트 또는 치환 범위에 포함됐고, 2026-05-28 Splash logo emoji와 Home search clear glyph는 `DSIcon`으로 정리했다. 남은 테스트 fixture Text check와 후속 화면 glyph/emoji debt는 앱 UI 여부를 구분해 화면별로 줄인다.
   4. P1 map surface evidence QA: 하단 primary surface 단일 모드는 코드/테스트로 닫혔고, 냉장고 선택/검색/빈 목록/신청 후 refresh의 screenshot QA와 Google Map overlay/touch 확인을 후속 evidence로 남긴다.
@@ -1768,7 +1769,7 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
 - Acceptance Criteria:
   - [x] 홈 또는 전용 허브에서 사용자가 지금 처리해야 할 나눔 action을 볼 수 있다. 2026-05-28 코드/테스트 기준으로 Home `진행 중인 나눔` 허브가 계정 lifecycle action과 최근 신청/등록 fallback action을 노출한다.
   - [x] 진행 중인 action은 `입고 QR 필요`, `수령 QR 필요`, `신청 접수`, `수령 제한 시간` 같은 사용자-facing 상태로 표시된다. 2026-05-28 Home 회귀 테스트가 active QR/request 표기를 고정했다. 완료/만료/취소 표면은 MyShares lifecycle 관리 화면 정책 범위로 유지한다.
-  - [ ] Android emulator/실기기 screenshot에서 주요 fixed footer CTA가 system navigation bar와 겹치지 않는다.
+  - [ ] Android emulator/실기기 screenshot에서 주요 fixed footer CTA가 system navigation bar와 겹치지 않는다. 2026-05-28 코드/정책 테스트 기준으로 주요 fixed CTA 화면은 `DSScreenFooter` 공통 패턴에 들어갔지만, 실기기 불가로 screenshot evidence는 아직 남아 있다.
   - [x] QR 보관/수령 화면의 사용자-facing copy에서 내부 QA 언어가 제거된다.
   - [x] API-backed QR 보관/수령 화면은 QA용 시뮬레이션 action을 노출하지 않고 실제 scanner callback으로 confirm API를 호출하며, 실패 후 `다시 스캔`으로 같은 QR을 재시도할 수 있다.
   - [x] QR 화면 route/screen/test 명명은 `InventoryQr`, `InventoryQrScreen`, `inventoryQr.screen.test.tsx`로 production-facing 구조를 사용한다.
@@ -1783,7 +1784,7 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
   - [x] `requested` 이후 취소/완료 전이에 대한 사용자-facing 정책과 API 계약이 확정된다. 만료는 서버 배치로 처리한다.
 - 검증 방법:
   - 진행 중인 나눔 허브: 2026-05-28 코드/테스트 기준으로 Home 회귀 테스트를 닫았다. 이번 task에서는 실기기/VM screenshot QA를 실행하지 않았다.
-  - fixed footer: Android emulator + 실기기 screenshot 비교, iOS simulator smoke에서 CTA clipping 여부 확인
+  - fixed footer: `DSScreenFooter` 정책 테스트로 코드 통합을 고정하고, Android emulator + 실기기 screenshot 비교, iOS simulator smoke에서 CTA clipping 여부 확인
   - QR productization: API-backed route의 simulation action 미노출, native scanner callback, 실패 후 같은 QR 재스캔, 권한/카메라 fallback, non-API sample flow의 QA action 유지 회귀 테스트, production-facing route/screen 명명 유지
   - icon migration 잔여: `Text` glyph/emoji grep + 관련 fixture와 후속 화면 중심 screenshot/정책 테스트
   - map surface: 하단 단일 primary surface 모드는 `MapScreen` 회귀 테스트로 고정했다. 냉장고 선택/검색/빈 목록/신청 후 refresh 상태의 screenshot QA와 Google Map overlay/touch 확인은 남은 evidence로 둔다.
