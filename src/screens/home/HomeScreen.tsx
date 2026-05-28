@@ -63,6 +63,7 @@ import { getHeaderTopPadding } from '@/utils/safeArea';
 type HomeAction = {
   key: string;
   title: string;
+  statusLabels?: string[];
   description: string;
   buttonLabel: string | null;
   icon: DSIconName;
@@ -239,10 +240,11 @@ const HomeScreen = () => {
     myShareRequests.filter(isShareRequestAwaitingPickup).forEach(item => {
       actions.push({
         key: `pickup-${item.request.id}`,
-        title: '수령 QR 확인 필요',
+        title: '수령 QR 필요',
+        statusLabels: ['수령 QR 필요', '수령 제한 시간'],
         description: `${
           item.post.detectedFruitKo ?? '나눔 식재료'
-        } 수령 QR이 열려 있습니다. ${formatPostLifecycleDate(
+        } 수령 QR이 열려 있습니다. 수령 제한 시간 ${formatPostLifecycleDate(
           item.post.requestExpiresAt,
           '마감 시간 확인 필요',
         )} 전까지 인증을 완료하세요.`,
@@ -260,7 +262,8 @@ const HomeScreen = () => {
     myPosts.filter(isPostAwaitingStoreQr).forEach(post => {
       actions.push({
         key: `store-${post.id}`,
-        title: '입고 QR 인증 필요',
+        title: '입고 QR 필요',
+        statusLabels: ['입고 QR 필요'],
         description: `${
           post.detectedFruitKo ?? '나눔 식재료'
         }는 입고 QR 인증 전이라 주변 목록에 노출되지 않습니다. ${formatPostLifecycleDate(
@@ -280,10 +283,14 @@ const HomeScreen = () => {
     myPosts.filter(isPostAwaitingPickupConfirmation).forEach(post => {
       actions.push({
         key: `posted-requested-${post.id}`,
-        title: '신청된 나눔 확인 필요',
+        title: '신청 접수',
+        statusLabels: [
+          '신청 접수',
+          ...(post.requestExpiresAt ? ['수령 제한 시간'] : []),
+        ],
         description: `${
           post.detectedFruitKo ?? '나눔 식재료'
-        } 신청이 접수됐습니다. ${formatPostLifecycleDate(
+        } 신청이 접수됐습니다. 수령 제한 시간 ${formatPostLifecycleDate(
           post.requestExpiresAt,
           '마감 시간 확인 필요',
         )} 전까지 수령 상태를 확인하세요.`,
@@ -457,6 +464,17 @@ const HomeScreen = () => {
                 </View>
                 <View style={styles.actionHubItemBody}>
                   <Text style={styles.actionHubTitle}>{action.title}</Text>
+                  {action.statusLabels?.length ? (
+                    <View style={styles.actionHubStatusRow}>
+                      {action.statusLabels.map((label, labelIndex) => (
+                        <Text
+                          key={`${action.key}-${label}-${labelIndex}`}
+                          style={styles.actionHubStatusLabel}>
+                          {label}
+                        </Text>
+                      ))}
+                    </View>
+                  ) : null}
                   <Text style={styles.actionHubDescription}>
                     {action.description}
                   </Text>
@@ -776,6 +794,21 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: colors.textPrimary,
     marginBottom: 6,
+  },
+  actionHubStatusRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginBottom: 8,
+  },
+  actionHubStatusLabel: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    backgroundColor: colors.surface,
+    color: colors.textSecondary,
+    fontSize: 11,
+    fontWeight: '800',
   },
   actionHubDescription: {
     fontSize: 13,

@@ -1766,8 +1766,8 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
   4. P1 map surface evidence QA: 하단 primary surface 단일 모드는 코드/테스트로 닫혔고, 냉장고 선택/검색/빈 목록/신청 후 refresh의 screenshot QA와 Google Map overlay/touch 확인을 후속 evidence로 남긴다.
   5. P1 profile surface 정리: 2026-05-28 코드/테스트 기준으로 내 나눔/받은 나눔/알림/QR 인증을 실제 lifecycle 관리 화면으로 승격했다. 관심 식재료, 설정, 고객센터, 서버 저장형 알림/읽음 상태, 실제 통계 API는 Post-MVP 계약/디자인 항목으로 남긴다.
 - Acceptance Criteria:
-  - [ ] 홈 또는 전용 허브에서 사용자가 지금 처리해야 할 나눔 action을 볼 수 있다.
-  - [ ] 진행 중인 action은 `입고 QR 필요`, `수령 QR 필요`, `신청 접수`, `수령 제한 시간`, `완료/만료/취소` 같은 사용자-facing 상태로 표시된다.
+  - [x] 홈 또는 전용 허브에서 사용자가 지금 처리해야 할 나눔 action을 볼 수 있다. 2026-05-28 코드/테스트 기준으로 Home `진행 중인 나눔` 허브가 계정 lifecycle action과 최근 신청/등록 fallback action을 노출한다.
+  - [x] 진행 중인 action은 `입고 QR 필요`, `수령 QR 필요`, `신청 접수`, `수령 제한 시간` 같은 사용자-facing 상태로 표시된다. 2026-05-28 Home 회귀 테스트가 active QR/request 표기를 고정했다. 완료/만료/취소 표면은 MyShares lifecycle 관리 화면 정책 범위로 유지한다.
   - [ ] Android emulator/실기기 screenshot에서 주요 fixed footer CTA가 system navigation bar와 겹치지 않는다.
   - [x] QR 보관/수령 화면의 사용자-facing copy에서 내부 QA 언어가 제거된다.
   - [x] API-backed QR 보관/수령 화면은 QA용 시뮬레이션 action을 노출하지 않고 실제 scanner callback으로 confirm API를 호출하며, 실패 후 `다시 스캔`으로 같은 QR을 재시도할 수 있다.
@@ -1782,7 +1782,7 @@ docs/VALIDATION_AND_BACKLOG.md의 "5. 미구현 기능 상태 점검"을 기준�
   - [ ] iOS 시뮬레이터에서 로그인, 위치 권한, 카메라/갤러리, 지도, 알림 권한, 홈/상세/신청 smoke QA evidence가 남는다.
   - [x] `requested` 이후 취소/완료 전이에 대한 사용자-facing 정책과 API 계약이 확정된다. 만료는 서버 배치로 처리한다.
 - 검증 방법:
-  - 진행 중인 나눔 허브: fixture/API 계약 테스트 + 홈/전용 화면 회귀 + QR pending/requested state QA
+  - 진행 중인 나눔 허브: 2026-05-28 코드/테스트 기준으로 Home 회귀 테스트를 닫았다. 이번 task에서는 실기기/VM screenshot QA를 실행하지 않았다.
   - fixed footer: Android emulator + 실기기 screenshot 비교, iOS simulator smoke에서 CTA clipping 여부 확인
   - QR productization: API-backed route의 simulation action 미노출, native scanner callback, 실패 후 같은 QR 재스캔, 권한/카메라 fallback, non-API sample flow의 QA action 유지 회귀 테스트, production-facing route/screen 명명 유지
   - icon migration 잔여: `Text` glyph/emoji grep + 관련 fixture와 후속 화면 중심 screenshot/정책 테스트

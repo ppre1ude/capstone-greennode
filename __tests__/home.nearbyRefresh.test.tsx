@@ -358,13 +358,16 @@ describe('HomeScreen nearby post refresh', () => {
     });
 
     expect(
-      renderer!.root.findAllByProps({ children: '수령 QR 확인 필요' }),
+      renderer!.root.findAllByProps({ children: '수령 QR 필요' }),
     ).not.toHaveLength(0);
     expect(
-      renderer!.root.findAllByProps({ children: '입고 QR 인증 필요' }),
+      renderer!.root.findAllByProps({ children: '수령 제한 시간' }),
     ).not.toHaveLength(0);
     expect(
-      renderer!.root.findAllByProps({ children: '신청된 나눔 확인 필요' }),
+      renderer!.root.findAllByProps({ children: '입고 QR 필요' }),
+    ).not.toHaveLength(0);
+    expect(
+      renderer!.root.findAllByProps({ children: '신청 접수' }),
     ).not.toHaveLength(0);
     expect(renderer!.root.findAllByProps({ children: '3건' })).not.toHaveLength(
       0,
