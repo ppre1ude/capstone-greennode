@@ -545,7 +545,7 @@ const HomeScreen = () => {
                 <TouchableOpacity
                   style={styles.feedSearchClear}
                   onPress={() => setFeedQuery('')}>
-                  <Text style={styles.feedSearchClearText}>×</Text>
+                  <DSIcon name="xmark" size="small" color="textSecondary" />
                 </TouchableOpacity>
               ) : null}
             </View>
@@ -889,11 +889,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surface,
-  },
-  feedSearchClearText: {
-    fontSize: 18,
-    lineHeight: 20,
-    color: colors.textSecondary,
   },
   feedSearchMeta: {
     marginBottom: 10,

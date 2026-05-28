@@ -4,10 +4,17 @@ const fs = jest.requireActual('fs') as {
 };
 
 const emojiPattern = /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}]/u;
+const textIconGlyphPattern =
+  /<Text\b[^>]*>\s*(?:[\u00D7\u2190\u203A\u2713])\s*<\/Text>/u;
+const stripSourceComments = (source: string) =>
+  source
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/(^|[^:])\/\/.*$/gm, '$1');
 
 const iconPolicyFiles = [
   'src/design-system/catalog/DesignSystemCatalog.tsx',
   'src/navigation/MainTab.tsx',
+  'src/screens/auth/SplashScreen.tsx',
   'src/screens/auth/OnboardingScreen.tsx',
   'src/screens/auth/LoginEmailScreen.tsx',
   'src/screens/auth/LoginScreen.tsx',
@@ -49,13 +56,13 @@ describe('design system icon policy', () => {
     expect(filesWithEmoji).toEqual([]);
   });
 
-  it('keeps FridgeSelect navigation glyphs out of Text nodes', () => {
-    const source = fs.readFileSync(
-      'src/screens/post/FridgeSelectScreen.tsx',
-      'utf8',
-    );
+  it('keeps single-character icon glyphs out of Text nodes', () => {
+    const filesWithTextIconGlyphs = iconPolicyFiles.filter(relativePath => {
+      const source = stripSourceComments(fs.readFileSync(relativePath, 'utf8'));
+      return textIconGlyphPattern.test(source);
+    });
 
-    expect(source).not.toMatch(/<Text\b[^>]*>\s*(?:←|›|✓)\s*<\/Text>/u);
+    expect(filesWithTextIconGlyphs).toEqual([]);
   });
 
   it('bundles FontAwesome6 fonts in native targets', () => {
