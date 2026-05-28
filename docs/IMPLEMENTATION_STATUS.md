@@ -33,6 +33,13 @@
 - 발견한 UI 회귀: `InventoryQrScreen` 하단 action grid가 Android system navigation bar와 겹친다. 분석 결과/상세 fixed CTA는 safe-area 위에 배치됐지만 QR 화면은 `DSScreenFooter` 또는 bottom inset 처리가 필요하다.
 - Post-MVP AI 품질 evidence: 실기기 카메라가 키보드/노트북 사진을 `바나나`, `confidenceScore=0.7`, `확인 필요`로 통과시켰다. 현재 앱은 낮은 confidence 안내를 표시하지만, 비식재료/스크린샷 rejection enum은 여전히 Post-MVP 서버 계약이다.
 
+## 2026-05-28 QA 후속 코드 수정
+
+- `requestExpiresAt`/`storeExpiresAt` 등 backend lifecycle timestamp가 timezone 없이 내려오는 경우 프론트가 UTC로 파싱하도록 수정했다. `Z`/offset timestamp는 같은 UTC instant로 유지하고, JS Date의 lenient parsing은 받지 않는다.
+- `InventoryQrScreen`은 `useSafeAreaInsets()` 기반으로 `ScrollView` 하단 padding을 계산해 Android system navigation bar 위로 하단 action grid를 띄운다.
+- 검증: `npx tsc --noEmit`, `npx jest __tests__/inventoryHoldPolicy.test.ts __tests__/postPolicy.test.ts __tests__/postDetail.requestShare.test.tsx __tests__/myShares.screen.test.tsx __tests__/fridgeSelect.qrFlow.test.tsx __tests__/inventoryQr.screen.test.tsx --runInBand` 통과. 최신 실기기 screenshot 재확인은 아직 남아 있다.
+- 추가 emulator QA: `Medium_Phone_API_36.1` release APK, SSH tunnel `localhost:8080 -> NHN-Cloud-Server:80`, QA 계정 `ce70039792@example.com`으로 로그인 후 프로필의 `냉장고 QR 인증`에 진입했다. `temp/android-emulator-qa-20260528T2100/10-inventory-qr-bottom.xml` 기준 하단 action grid는 scroll bottom에서 y=1702~1955에 위치하고 label panel은 y=2031부터 시작해 system navigation bar와 겹치지 않는다. 신청 flow는 `신청 완료` alert까지 확인했지만 after-request 상세/받은 나눔 screenshot은 확보하지 못해 실기기 재검증으로 남긴다.
+
 ## 2026-05-19 Montage 기반 디자인 시스템 레이어
 
 - 상태 변경: GreenNode의 기존 컬러 팔레트와 `src/theme` 토큰을 유지하면서, Wanted Montage Android/iOS의 컴포넌트 API 패턴을 참고한 `src/design-system` 레이어를 추가했다.

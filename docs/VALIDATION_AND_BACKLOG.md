@@ -14,12 +14,12 @@
 
 ## 현재 기준선
 
-- MVP 핵심 흐름인 `등록 -> 냉장고/홈 노출 -> 신청 -> 알림 -> QR 보관/수령`은 API/화면 연결 기준으로 검증됐지만, 2026-05-28 실기기 QA에서 신청 만료 시각 해석과 QR 화면 하단 safe-area 회귀가 발견됐다.
+- MVP 핵심 흐름인 `등록 -> 냉장고/홈 노출 -> 신청 -> 알림 -> QR 보관/수령`은 API/화면 연결 기준으로 검증됐다. 2026-05-28 실기기 QA에서 발견한 신청 만료 시각 해석과 QR 화면 하단 safe-area 회귀는 코드/테스트 수정까지 완료했고, 최신 실기기 재검증은 남아 있다.
 - 2026-05-27 백엔드 feature contract는 프론트 API client와 화면에 연결됐다.
 - 알림 탭은 MVP에서 FCM 수신 기록과 로컬 AsyncStorage 읽음 상태만 사용한다. 서버 저장형 알림 API는 Post-MVP다.
 - `requested` 이후 취소/완료 전이는 사용자-facing 정책과 API 계약이 확정됐다. 만료는 서버 배치로 처리한다.
 - 홈의 진행 중인 나눔 허브, 지도 하단 primary surface, 주요 fixed CTA의 `DSScreenFooter` 코드 통합, 앱 UI/fixture icon migration은 2026-05-28 코드/테스트 기준으로 닫혔다.
-- 최신 live VM feature-contract happy path E2E는 2026-05-28에 통과했다. 남은 blocker는 `requestExpiresAt` timezone 해석과 `InventoryQrScreen` 하단 CTA safe-area 회귀다.
+- 최신 live VM feature-contract happy path E2E는 2026-05-28에 통과했다. `requestExpiresAt` timezone 해석과 `InventoryQrScreen` 하단 CTA safe-area 회귀는 2026-05-28 후속 코드 수정으로 닫았고, 남은 blocker는 실기기 evidence 재확인이다.
 
 ## 활성 P0
 
@@ -56,8 +56,8 @@ To-do:
 
 To-do:
 
-- [ ] 백엔드가 timezone 포함 ISO 문자열을 내려주도록 계약을 확정하거나, 프론트가 timezone 없는 서버 시각을 명시적으로 UTC로 파싱한다.
-- [ ] 신청 직후 상세와 받은 나눔에서 `수령까지 남은 시간` 또는 정상 만료 시각이 표시되는지 실기기 재검증한다.
+- [x] 프론트가 timezone 없는 서버 lifecycle 시각을 명시적으로 UTC로 파싱한다. `240de71`에서 `requestExpiresAt`/`storeExpiresAt`/post lifecycle formatting 경로와 회귀 테스트를 고정했다.
+- [ ] 신청 직후 상세와 받은 나눔에서 `수령까지 남은 시간` 또는 정상 만료 시각이 표시되는지 실기기 재검증한다. 2026-05-28 emulator release QA에서 신청 성공 alert까지는 확인했지만, after-request 상태 screenshot은 확보하지 못했다.
 
 ### 진행 중인 나눔 허브 완성도 확인
 
@@ -81,15 +81,15 @@ To-do:
 
 - 분류: UI QA
 - 배경: 기능은 연결됐지만 fixed footer, 지도 overlay, 하단 surface의 실제 화면 검증이 남아 있다.
-- 현재 상태: 주요 fixed CTA 화면은 `DSScreenFooter` 공통 safe-area 패턴에 들어갔고, 지도 하단 primary surface 단일 모드는 코드/테스트로 고정됐다. 2026-05-28 SM-S928N Android 15 release QA에서 분석 결과/상세 CTA는 안전했지만 `InventoryQrScreen` 하단 action grid가 system navigation bar와 겹쳤다.
+- 현재 상태: 주요 fixed CTA 화면은 `DSScreenFooter` 공통 safe-area 패턴에 들어갔고, 지도 하단 primary surface 단일 모드는 코드/테스트로 고정됐다. 2026-05-28 SM-S928N Android 15 release QA에서 분석 결과/상세 CTA는 안전했지만 `InventoryQrScreen` 하단 action grid가 system navigation bar와 겹쳤다. `4f0986e`에서 QR 화면 `ScrollView` 하단 padding을 bottom inset 기반으로 보정했고 Jest 회귀 테스트를 추가했다.
 - 기대 동작: CTA가 system navigation bar와 겹치지 않고, 지도와 냉장고 내부 목록의 위계가 명확하다.
 - 검증 방법: Android emulator와 가능하면 실기기 screenshot.
 
 To-do:
 
-- [ ] Android emulator/실기기 screenshot에서 주요 fixed footer CTA가 system navigation bar와 겹치지 않는다. 2026-05-28 screenshot evidence 기준 `InventoryQrScreen`은 실패했다.
+- [ ] Android emulator/실기기 screenshot에서 주요 fixed footer CTA가 system navigation bar와 겹치지 않는다. 2026-05-28 screenshot evidence 기준 `InventoryQrScreen`은 실패했다. 후속 emulator UI-tree에서는 QR action grid가 하단 여백 위로 올라온 것을 확인했지만, 최종 screenshot evidence는 실기기 또는 재실행 emulator에서 다시 남긴다.
 - [x] 지도에서 냉장고 선택 시 하단 primary surface가 하나로 정리되어 지도와 냉장고 내부 목록의 위계가 명확하다.
-- [ ] `InventoryQrScreen` 하단 `보관 QR 스캔`/`수령 QR 스캔`/`다른 냉장고 스캔`/`다시 시작` action을 safe-area 위로 올리거나 `DSScreenFooter` 패턴으로 옮긴다.
+- [x] `InventoryQrScreen` 하단 `보관 QR 스캔`/`수령 QR 스캔`/`다른 냉장고 스캔`/`다시 시작` action을 safe-area 위로 올리거나 `DSScreenFooter` 패턴으로 옮긴다. `4f0986e`에서 bottom inset 기반 scroll content padding을 적용했다.
 
 ## 활성 P1
 
