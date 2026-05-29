@@ -82,6 +82,13 @@ describe('inventory hold policy', () => {
     );
   });
 
+  it('parses leap-day lifecycle timestamps with the target year calendar', () => {
+    expect(parseServerLifecycleTimestampMs('2024-02-29T00:00:00Z')).toBe(
+      Date.UTC(2024, 1, 29),
+    );
+    expect(parseServerLifecycleTimestampMs('2023-02-29T00:00:00Z')).toBeNaN();
+  });
+
   it.each([
     '2026-05-28 11:38:21.707849Z',
     '2026-05-28t11:38:21.707849z',

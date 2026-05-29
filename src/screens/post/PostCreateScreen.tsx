@@ -7,7 +7,7 @@
  *
  * @wireframe wireframe-foodlink/scanapply.html
  */
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -131,7 +131,7 @@ const PostCreateScreen = ({ route, navigation }: Props) => {
         result.confidenceScore ?? result.aiAnalysis?.confidenceScore,
       ));
   const hasImageToken = Boolean(result.imageToken);
-  const detections = getResultDetections(result);
+  const detections = useMemo(() => getResultDetections(result), [result]);
   const showMultiObjectNotice = detections.length > 1;
   const defaultDetectionIndex = useMemo(
     () => getDefaultDetectionIndex(detections),
@@ -140,6 +140,9 @@ const PostCreateScreen = ({ route, navigation }: Props) => {
   const [selectedDetectionIndex, setSelectedDetectionIndex] = useState(
     defaultDetectionIndex,
   );
+  useEffect(() => {
+    setSelectedDetectionIndex(defaultDetectionIndex);
+  }, [defaultDetectionIndex, detections]);
   const selectedDetection = showMultiObjectNotice
     ? detections[selectedDetectionIndex] ?? detections[defaultDetectionIndex]
     : undefined;

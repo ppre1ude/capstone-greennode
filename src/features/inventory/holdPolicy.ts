@@ -16,10 +16,8 @@ const getUtcTimestampMs = (
   second: number,
   millisecond: number,
 ): number => {
-  const date = new Date(
-    Date.UTC(0, month - 1, day, hour, minute, second, millisecond),
-  );
-  date.setUTCFullYear(year);
+  const date = new Date(Date.UTC(0, 0, 1, hour, minute, second, millisecond));
+  date.setUTCFullYear(year, month - 1, day);
   return date.getTime();
 };
 

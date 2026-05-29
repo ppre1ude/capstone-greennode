@@ -288,6 +288,104 @@ describe('PostCreateScreen review notice', () => {
     });
   });
 
+  it('resets the selected representative when a new analysis result arrives', async () => {
+    const navigation = {
+      goBack: jest.fn(),
+      navigate: jest.fn(),
+    };
+    const initialResult: GenerateResult = {
+      ...lowConfidenceResult,
+      detections: [
+        {
+          id: 'initial-banana-detection',
+          label: 'initial-banana',
+          freshnessLabel: 'Fresh',
+          confidenceScore: 0.92,
+        },
+        {
+          id: 'initial-apple-detection',
+          label: 'initial-apple',
+          freshnessLabel: 'Fresh',
+          confidenceScore: 0.89,
+        },
+      ],
+    };
+    const nextResult: GenerateResult = {
+      ...lowConfidenceResult,
+      imageToken: 'next-image-token',
+      detections: [
+        {
+          id: 'next-carrot-detection',
+          label: 'next-carrot',
+          freshnessLabel: 'Fresh',
+          confidenceScore: 0.91,
+        },
+        {
+          id: 'next-pepper-detection',
+          label: 'next-pepper',
+          freshnessLabel: 'Fresh',
+          confidenceScore: 0.88,
+        },
+      ],
+    };
+
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(
+        renderWithSafeArea(
+          <PostCreateScreen
+            navigation={navigation as never}
+            route={
+              {
+                params: {
+                  result: initialResult,
+                  imageUri: 'file:///initial.jpg',
+                },
+              } as never
+            }
+          />,
+        ),
+      );
+    });
+
+    await pressCandidate(renderer!, 'initial-apple');
+
+    await ReactTestRenderer.act(async () => {
+      renderer!.update(
+        renderWithSafeArea(
+          <PostCreateScreen
+            navigation={navigation as never}
+            route={
+              {
+                params: {
+                  result: nextResult,
+                  imageUri: 'file:///next.jpg',
+                },
+              } as never
+            }
+          />,
+        ),
+      );
+    });
+
+    await pressFooterSubmit(renderer!);
+
+    expect(navigation.navigate).toHaveBeenCalledWith('FridgeSelect', {
+      postData: {
+        imageToken: 'next-image-token',
+        expirationDate: '2026-05-21',
+        selectedDetectionId: 'next-carrot-detection',
+      },
+      qualityCategory: 'Fresh',
+      qualityCanShare: true,
+    });
+
+    await ReactTestRenderer.act(async () => {
+      renderer!.unmount();
+    });
+  });
+
   it('omits selectedDetectionId when selected multi-object candidate has no id', async () => {
     const navigation = {
       goBack: jest.fn(),
