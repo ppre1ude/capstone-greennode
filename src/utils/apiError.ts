@@ -42,6 +42,52 @@ const extractDetailMessage = (detail: unknown): string | null => {
   return null;
 };
 
+const extractStringField = (
+  value: unknown,
+  field: string,
+): string | null => {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const fieldValue = value[field];
+  return typeof fieldValue === 'string' && fieldValue.trim()
+    ? fieldValue
+    : null;
+};
+
+const extractStructuredAiRejectionReason = (data: unknown): string | null => {
+  if (!isRecord(data)) {
+    return null;
+  }
+
+  if (!isRecord(data.error) || data.error.code !== 'AI_REJECTED') {
+    return null;
+  }
+
+  return extractStringField(data.error, 'rejectionReason');
+};
+
+const getAiRejectionReasonMessage = (reason: string): string | null => {
+  switch (reason.toLowerCase()) {
+    case 'stale':
+      return '나눔 기준에 맞지 않아요. 다시 촬영해주세요.';
+    case 'not_food':
+    case 'non_food':
+    case 'not-food':
+    case 'non-food':
+    case 'screenshot':
+    case 'ui_screenshot':
+    case 'ui-screenshot':
+      return '식재료 사진으로 확인되지 않았어요. 다시 촬영해주세요.';
+    case 'low_quality':
+    case 'low-quality':
+      return '사진으로 상태를 확인하기 어려워요. 다시 촬영해주세요.';
+    default:
+      return null;
+  }
+};
+
 const extractMessageFromData = (data: unknown): string | null => {
   if (typeof data === 'string' && data.trim()) {
     return data;
@@ -71,16 +117,17 @@ const extractDetailFromData = (data: unknown): string | null => {
 };
 
 const normalizeDomainErrorMessage = (message: string): string => {
+  const aiReasonMessage = getAiRejectionReasonMessage(message.trim());
+  if (aiReasonMessage) {
+    return aiReasonMessage;
+  }
+
   if (/부패|상함|썩음|썩은|게시할 수 없는 식재료/.test(message)) {
     return '나눔 기준에 맞지 않아요. 다시 촬영해주세요.';
   }
 
-  if (/식재료가 아닌|not_food|non_food/.test(message)) {
+  if (/식재료가 아닌/.test(message)) {
     return '식재료 사진으로 확인되지 않았어요. 다시 촬영해주세요.';
-  }
-
-  if (/low_quality|low-quality/.test(message)) {
-    return '사진으로 상태를 확인하기 어려워요. 다시 촬영해주세요.';
   }
 
   return message;
@@ -96,6 +143,13 @@ export const getApiErrorMessage = (
   }
 
   const errorLike = isRecord(error) ? (error as ErrorWithResponse) : {};
+  const structuredAiMessage = getAiRejectionReasonMessage(
+    extractStructuredAiRejectionReason(errorLike.response?.data) ?? '',
+  );
+  if (structuredAiMessage) {
+    return structuredAiMessage;
+  }
+
   const responseMessage = options.preferDetail
     ? extractDetailFromData(errorLike.response?.data) ??
       extractMessageFromData(errorLike.response?.data)

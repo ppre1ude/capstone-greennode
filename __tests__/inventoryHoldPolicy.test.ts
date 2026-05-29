@@ -8,6 +8,7 @@ import {
   formatInventoryHoldRemaining,
   getInventoryHoldRemainingMs,
   isInventoryHoldExpired,
+  parseServerLifecycleTimestampMs,
 } from '@/features/inventory';
 
 describe('inventory hold policy', () => {
@@ -49,6 +50,64 @@ describe('inventory hold policy', () => {
         new Date('2026-05-19T00:30:01.000Z'),
       ),
     ).toBe(0);
+  });
+
+  it('treats timezone-less backend hold timestamps as UTC', () => {
+    expect(
+      getInventoryHoldRemainingMs(
+        '2026-05-28T11:38:21.707849',
+        '2026-05-28T11:08:21.707Z',
+      ),
+    ).toBe(30 * 60 * 1000);
+
+    expect(
+      isInventoryHoldExpired(
+        '2026-05-28T11:38:21.707849',
+        '2026-05-28T11:08:21.707Z',
+      ),
+    ).toBe(false);
+  });
+
+  it('keeps whitespace-padded backend timestamps invalid as received', () => {
+    expect(
+      parseServerLifecycleTimestampMs(' 2026-05-28T11:38:21.707849 '),
+    ).toBeNaN();
+  });
+
+  it('parses explicit offset backend timestamps as their UTC instant', () => {
+    expect(
+      parseServerLifecycleTimestampMs('2026-05-28T20:38:21.707849+09:00'),
+    ).toBe(
+      parseServerLifecycleTimestampMs('2026-05-28T11:38:21.707849Z'),
+    );
+  });
+
+  it('parses leap-day lifecycle timestamps with the target year calendar', () => {
+    expect(parseServerLifecycleTimestampMs('2024-02-29T00:00:00Z')).toBe(
+      Date.UTC(2024, 1, 29),
+    );
+    expect(parseServerLifecycleTimestampMs('2023-02-29T00:00:00Z')).toBeNaN();
+  });
+
+  it.each([
+    '2026-05-28 11:38:21.707849Z',
+    '2026-05-28t11:38:21.707849z',
+  ])('rejects JS Date lenient timestamp string %s', value => {
+    expect(parseServerLifecycleTimestampMs(value)).toBeNaN();
+  });
+
+  it('rejects date-only lifecycle timestamp strings', () => {
+    expect(parseServerLifecycleTimestampMs('2026-05-28')).toBeNaN();
+  });
+
+  it.each([
+    '2026-02-30T11:38:21Z',
+    '2026-05-28T24:00Z',
+    '2026-05-28T11:60Z',
+    '2026-05-28T11:38:60Z',
+    '2026-05-28T11:38+09:60',
+  ])('rejects impossible lifecycle timestamp %s', value => {
+    expect(parseServerLifecycleTimestampMs(value)).toBeNaN();
   });
 
   it('treats the exact expiry time as expired', () => {

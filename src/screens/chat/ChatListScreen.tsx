@@ -12,10 +12,17 @@ import {
   TouchableOpacity,
   ScrollView,
 } from 'react-native';
+import {useFocusEffect} from '@react-navigation/native';
 import { colors } from '@/theme';
 import { DSIcon } from '@/design-system';
 import { useNotificationStore } from '@/store/notificationStore';
 import { openNotificationTarget } from '@/services/notifications';
+import {
+  deleteServerNotification,
+  getNotifications,
+  markAllServerNotificationsRead,
+  markServerNotificationRead,
+} from '@/api/notifications';
 import type { NotificationRecord } from '@/types';
 import { getHeaderTopPadding } from '@/utils/safeArea';
 
@@ -59,21 +66,66 @@ const ChatListScreen = () => {
   const markAllNotificationsRead = useNotificationStore(
     state => state.markAllNotificationsRead,
   );
+  const syncNotifications = useNotificationStore(
+    state => state.syncNotifications,
+  );
   const unreadCount = notifications.filter(
     notification => !notification.readAt,
   ).length;
 
+  useFocusEffect(
+    React.useCallback(() => {
+      let isActive = true;
+
+      const syncServerNotifications = async () => {
+        try {
+          const response = await getNotifications(false, 0, 50);
+          if (isActive && response.success) {
+            syncNotifications(response.data ?? []);
+          }
+        } catch {
+          // Local FCM records remain the fallback inbox when server sync fails.
+        }
+      };
+
+      syncServerNotifications().catch(() => undefined);
+
+      return () => {
+        isActive = false;
+      };
+    }, [syncNotifications]),
+  );
+
   const handleOpenNotification = (item: NotificationRecord) => {
     markNotificationRead(item.id);
+    if (item.source === 'server') {
+      markServerNotificationRead(item.id).catch(() => undefined);
+    }
     openNotificationTarget(item);
   };
 
   const handleMarkAllRead = () => {
+    const hasUnreadServerNotification = notifications.some(
+      notification => notification.source === 'server' && !notification.readAt,
+    );
+
     markAllNotificationsRead();
+
+    if (hasUnreadServerNotification) {
+      markAllServerNotificationsRead().catch(() => undefined);
+    }
   };
 
   const handleClearNotifications = () => {
+    const serverNotificationIds = notifications
+      .filter(notification => notification.source === 'server')
+      .map(notification => notification.id);
+
     clearNotifications();
+
+    serverNotificationIds.forEach(notificationId => {
+      deleteServerNotification(notificationId).catch(() => undefined);
+    });
   };
 
   const renderNotification = ({ item }: { item: NotificationRecord }) => (

@@ -7,7 +7,7 @@
  *
  * @wireframe wireframe-foodlink/scanapply.html
  */
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -92,6 +92,24 @@ const isValidExpirationDate = (value: string) => {
   return selectedDate >= today;
 };
 
+const getDetectionId = (detection?: { id?: string | number | null }) => {
+  if (detection?.id == null) {
+    return undefined;
+  }
+
+  return String(detection.id);
+};
+
+const getDefaultDetectionIndex = (
+  detections: ReturnType<typeof getResultDetections>,
+) => {
+  const firstDetectionWithIdIndex = detections.findIndex(
+    detection => detection.id != null,
+  );
+
+  return firstDetectionWithIdIndex >= 0 ? firstDetectionWithIdIndex : 0;
+};
+
 const PostCreateScreen = ({ route, navigation }: Props) => {
   const { result, imageUri } = route.params;
   const defaultExpirationDate = useMemo(() => getDefaultExpirationDate(), []);
@@ -113,8 +131,25 @@ const PostCreateScreen = ({ route, navigation }: Props) => {
         result.confidenceScore ?? result.aiAnalysis?.confidenceScore,
       ));
   const hasImageToken = Boolean(result.imageToken);
-  const detections = getResultDetections(result);
+  const detections = useMemo(() => getResultDetections(result), [result]);
   const showMultiObjectNotice = detections.length > 1;
+  const defaultDetectionIndex = useMemo(
+    () => getDefaultDetectionIndex(detections),
+    [detections],
+  );
+  const [selectedDetectionIndex, setSelectedDetectionIndex] = useState(
+    defaultDetectionIndex,
+  );
+  useEffect(() => {
+    setSelectedDetectionIndex(defaultDetectionIndex);
+  }, [defaultDetectionIndex, detections]);
+  const selectedDetection = showMultiObjectNotice
+    ? detections[selectedDetectionIndex] ?? detections[defaultDetectionIndex]
+    : undefined;
+  const selectedDetectionId = getDetectionId(selectedDetection);
+  const representativeName = selectedDetection
+    ? getDetectionName(selectedDetection)
+    : detectedCrop;
 
   const handleNext = () => {
     if (!quality.canShare || !hasImageToken) {
@@ -137,6 +172,7 @@ const PostCreateScreen = ({ route, navigation }: Props) => {
       postData: {
         imageToken: result.imageToken as string,
         expirationDate,
+        ...(selectedDetectionId ? { selectedDetectionId } : {}),
       },
       qualityCategory:
         result.aiAnalysis?.category ?? result.freshnessLabel ?? undefined,
@@ -220,23 +256,32 @@ const PostCreateScreen = ({ route, navigation }: Props) => {
                 등록합니다.
               </Text>
               {detections.map((detection, index) => (
-                <View
+                <TouchableOpacity
                   key={`${getDetectionName(detection)}-${index}`}
-                  style={styles.detectionRow}>
+                  accessibilityRole="button"
+                  accessibilityState={{
+                    selected: selectedDetectionIndex === index,
+                  }}
+                  onPress={() => setSelectedDetectionIndex(index)}
+                  style={[
+                    styles.detectionRow,
+                    selectedDetectionIndex === index &&
+                      styles.detectionRowSelected,
+                  ]}>
                   <Text style={styles.detectionName} numberOfLines={1}>
                     {getDetectionName(detection)}
                   </Text>
                   <Text style={styles.detectionMeta}>
                     {getDetectionSummary(detection)}
                   </Text>
-                </View>
+                </TouchableOpacity>
               ))}
             </DSCard>
           ) : null}
 
           <DSCard variant="outlined" padded={false} style={styles.summaryCard}>
             <Text style={styles.summaryTitle}>등록될 나눔 식재료</Text>
-            <Text style={styles.summaryName}>{detectedCrop}</Text>
+            <Text style={styles.summaryName}>{representativeName}</Text>
             <Text style={styles.summaryDescription}>
               공유 냉장고를 선택하면 이 식재료가 나눔 가능 상태로 등록됩니다.
             </Text>

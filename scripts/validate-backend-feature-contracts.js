@@ -109,6 +109,27 @@ const expectOk = async (id, method, pathname, options = {}) => {
   return result.body;
 };
 
+const expectHttpStatus = async (
+  id,
+  expectedStatus,
+  method,
+  pathname,
+  options = {},
+) => {
+  const result = await request(method, pathname, options);
+  const serverMessage = getServerMessage(result.body);
+  if (result.response.status !== expectedStatus) {
+    throw new Error(
+      `${id} expected ${expectedStatus}, got ${result.response.status}: ${serverMessage}`,
+    );
+  }
+  return {
+    status: result.response.status,
+    message: serverMessage,
+    body: result.body,
+  };
+};
+
 const getData = body => body?.data ?? body;
 
 const normalizeUser = user => ({
@@ -374,10 +395,39 @@ const getPostDetail = async (token, postId) => {
   return expectObject(getData(body), `post ${postId} detail`);
 };
 
-const runLifecycleScenario = async (id, authorToken, requesterToken, fn) => {
+const cleanupActivePost = async (authorToken, postId) => {
+  if (!postId) {
+    return;
+  }
+
   try {
-    await fn();
-    addResult('passed', id, 'ok');
+    const detail = await getPostDetail(authorToken, postId);
+    if (!['available', 'requested'].includes(detail.status)) {
+      return;
+    }
+  } catch (error) {
+    console.warn(
+      `[cleanup] post=${postId} status check failed: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+  }
+
+  try {
+    await postMutation(authorToken, `/api/v1/posts/${postId}/cancel`);
+  } catch (error) {
+    console.warn(
+      `[cleanup] post=${postId} cancel failed: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+  }
+};
+
+const runLifecycleScenario = async (id, fn) => {
+  try {
+    const detail = await fn();
+    addResult('passed', id, detail || 'ok');
   } catch (error) {
     addResult(
       'failed',
@@ -428,28 +478,36 @@ const runMutationMatrix = async () => {
     nickname: `QA Requester ${suffix}`,
     password: qaPassword,
   };
+  const observer = {
+    email: `codex_contract_observer_${suffix}@example.com`,
+    nickname: `QA Observer ${suffix}`,
+    password: qaPassword,
+  };
   const state = {};
 
-  await runStep('auth signup author/requester', async () => {
+  await runStep('auth signup author/requester/observer', async () => {
     state.authorUser = await signup(author);
     state.requesterUser = await signup(requester);
-    return `${author.email}, ${requester.email}`;
+    state.observerUser = await signup(observer);
+    return `${author.email}, ${requester.email}, ${observer.email}`;
   });
 
-  await runStep('auth login author/requester', async () => {
+  await runStep('auth login author/requester/observer', async () => {
     state.authorToken = await login(author.email, author.password);
     state.requesterToken = await login(requester.email, requester.password);
+    state.observerToken = await login(observer.email, observer.password);
     return 'tokens acquired';
   });
 
-  if (!state.authorToken || !state.requesterToken) {
+  if (!state.authorToken || !state.requesterToken || !state.observerToken) {
     addResult('skipped', 'mutation matrix', 'auth setup failed');
     return;
   }
 
-  await runStep('auth location author/requester', async () => {
+  await runStep('auth location author/requester/observer', async () => {
     await updateLocation(state.authorToken, 'author');
     await updateLocation(state.requesterToken, 'requester');
+    await updateLocation(state.observerToken, 'observer');
     return 'Gwangju coordinates saved';
   });
 
@@ -471,52 +529,201 @@ const runMutationMatrix = async () => {
   });
 
   await runLifecycleScenario(
-    'lifecycle cancel available post',
-    state.authorToken,
-    state.requesterToken,
+    'lifecycle happy cancel available post',
     async () => {
-      const post = await createPost(state.authorToken);
-      const cancelled = await postMutation(
-        state.authorToken,
-        `/api/v1/posts/${post.id}/cancel`,
-      );
-      if (cancelled.status !== 'cancelled') {
-        throw new Error(`expected cancelled status, got ${cancelled.status}`);
+      let postId;
+      try {
+        const post = await createPost(state.authorToken);
+        postId = post.id;
+        const cancelled = await postMutation(
+          state.authorToken,
+          `/api/v1/posts/${post.id}/cancel`,
+        );
+        if (cancelled.status !== 'cancelled') {
+          throw new Error(`expected cancelled status, got ${cancelled.status}`);
+        }
+        return `post=${post.id}, status=${cancelled.status}`;
+      } finally {
+        await cleanupActivePost(state.authorToken, postId);
       }
     },
   );
 
   await runLifecycleScenario(
-    'lifecycle request then author complete',
-    state.authorToken,
-    state.requesterToken,
+    'lifecycle happy request then author complete',
     async () => {
-      const post = await createPost(state.authorToken);
-      await requestShare(state.requesterToken, post.id);
-      const completed = await postMutation(
-        state.authorToken,
-        `/api/v1/posts/${post.id}/complete`,
-      );
-      if (completed.status !== 'completed') {
-        throw new Error(`expected completed status, got ${completed.status}`);
+      let postId;
+      try {
+        const post = await createPost(state.authorToken);
+        postId = post.id;
+        await requestShare(state.requesterToken, post.id);
+        const completed = await postMutation(
+          state.authorToken,
+          `/api/v1/posts/${post.id}/complete`,
+        );
+        if (completed.status !== 'completed') {
+          throw new Error(`expected completed status, got ${completed.status}`);
+        }
+        return `post=${post.id}, status=${completed.status}`;
+      } finally {
+        await cleanupActivePost(state.authorToken, postId);
       }
     },
   );
 
   await runLifecycleScenario(
-    'lifecycle request then requester cancel',
-    state.authorToken,
-    state.requesterToken,
+    'lifecycle happy request then requester cancel',
     async () => {
-      const post = await createPost(state.authorToken);
-      const requested = await requestShare(state.requesterToken, post.id);
-      await postMutation(
-        state.requesterToken,
-        `/api/v1/users/me/share-requests/${requested.request.id}/cancel`,
-      );
-      const detail = await getPostDetail(state.authorToken, post.id);
-      if (detail.status !== 'available') {
-        throw new Error(`expected post status restored to available, got ${detail.status}`);
+      let postId;
+      try {
+        const post = await createPost(state.authorToken);
+        postId = post.id;
+        const requested = await requestShare(state.requesterToken, post.id);
+        await postMutation(
+          state.requesterToken,
+          `/api/v1/users/me/share-requests/${requested.request.id}/cancel`,
+        );
+        const detail = await getPostDetail(state.authorToken, post.id);
+        if (detail.status !== 'available') {
+          throw new Error(`expected post status restored to available, got ${detail.status}`);
+        }
+        return `post=${post.id}, request=${requested.request.id}, status=${detail.status}`;
+      } finally {
+        await cleanupActivePost(state.authorToken, postId);
+      }
+    },
+  );
+
+  await runLifecycleScenario(
+    'lifecycle 403 author cannot request own post',
+    async () => {
+      let postId;
+      try {
+        const post = await createPost(state.authorToken);
+        postId = post.id;
+        const result = await expectHttpStatus(
+          'author request own post',
+          403,
+          'POST',
+          `/api/v1/posts/${post.id}/requests`,
+          {token: state.authorToken},
+        );
+        return `post=${post.id}, status=${result.status}, message=${result.message}`;
+      } finally {
+        await cleanupActivePost(state.authorToken, postId);
+      }
+    },
+  );
+
+  await runLifecycleScenario(
+    'lifecycle 403 non-author cannot cancel available post',
+    async () => {
+      let postId;
+      try {
+        const post = await createPost(state.authorToken);
+        postId = post.id;
+        const result = await expectHttpStatus(
+          'non-author cancel available post',
+          403,
+          'POST',
+          `/api/v1/posts/${post.id}/cancel`,
+          {token: state.requesterToken},
+        );
+        return `post=${post.id}, status=${result.status}, message=${result.message}`;
+      } finally {
+        await cleanupActivePost(state.authorToken, postId);
+      }
+    },
+  );
+
+  await runLifecycleScenario(
+    'lifecycle 403 non-author/requester cannot complete requested post',
+    async () => {
+      let postId;
+      try {
+        const post = await createPost(state.authorToken);
+        postId = post.id;
+        await requestShare(state.requesterToken, post.id);
+        const result = await expectHttpStatus(
+          'observer complete requested post',
+          403,
+          'POST',
+          `/api/v1/posts/${post.id}/complete`,
+          {token: state.observerToken},
+        );
+        return `post=${post.id}, status=${result.status}, message=${result.message}`;
+      } finally {
+        await cleanupActivePost(state.authorToken, postId);
+      }
+    },
+  );
+
+  await runLifecycleScenario(
+    'lifecycle 403 non-owner cannot cancel another share request',
+    async () => {
+      let postId;
+      try {
+        const post = await createPost(state.authorToken);
+        postId = post.id;
+        const requested = await requestShare(state.requesterToken, post.id);
+        const result = await expectHttpStatus(
+          'observer cancel requester share request',
+          403,
+          'POST',
+          `/api/v1/users/me/share-requests/${requested.request.id}/cancel`,
+          {token: state.observerToken},
+        );
+        return [
+          `post=${post.id}`,
+          `request=${requested.request.id}`,
+          `status=${result.status}`,
+          `message=${result.message}`,
+        ].join(', ');
+      } finally {
+        await cleanupActivePost(state.authorToken, postId);
+      }
+    },
+  );
+
+  await runLifecycleScenario(
+    'lifecycle 409 request already requested post',
+    async () => {
+      let postId;
+      try {
+        const post = await createPost(state.authorToken);
+        postId = post.id;
+        await requestShare(state.requesterToken, post.id);
+        const result = await expectHttpStatus(
+          'observer request already requested post',
+          409,
+          'POST',
+          `/api/v1/posts/${post.id}/requests`,
+          {token: state.observerToken},
+        );
+        return `post=${post.id}, status=${result.status}, message=${result.message}`;
+      } finally {
+        await cleanupActivePost(state.authorToken, postId);
+      }
+    },
+  );
+
+  await runLifecycleScenario(
+    'lifecycle 400 complete available post without request',
+    async () => {
+      let postId;
+      try {
+        const post = await createPost(state.authorToken);
+        postId = post.id;
+        const result = await expectHttpStatus(
+          'complete available post without request',
+          400,
+          'POST',
+          `/api/v1/posts/${post.id}/complete`,
+          {token: state.authorToken},
+        );
+        return `post=${post.id}, status=${result.status}, message=${result.message}`;
+      } finally {
+        await cleanupActivePost(state.authorToken, postId);
       }
     },
   );

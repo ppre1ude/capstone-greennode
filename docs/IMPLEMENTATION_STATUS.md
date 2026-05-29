@@ -25,6 +25,32 @@
 
 이 문서는 초기 Phase 1~6 구현 리포트를 2026-05-05 MVP 검증 결과 기준으로 갱신한 것이다. 과거 문서의 일괄 완료 표현은 실제 서버/기기 검증 결과를 반영하지 못하므로, 현재는 `구현됨`, `부분 구현`, `목업`, `미구현`, `검증 필요`, `버그`로 분리한다.
 
+## 2026-05-28 live VM / Android 실기기 QA 업데이트
+
+- 브랜치 `codex/live-device-vm-qa`에서 `localhost:8080 -> NHN Cloud VM:80` SSH tunnel을 열고 `npm run qa:backend-contracts -- --mutate`를 실행했다. 최신 결과는 통과했고 산출물은 `temp/backend-feature-contract-e2e-20260528T143053Z.json`이다. 하네스는 profile PATCH, my posts/share requests, lifecycle happy path, 403 권한 거부, requested 중복 신청 409, available 완료 시도 400을 검증한다. 단, 운영자 profile 검증은 `FOODLINK_OPERATOR_EMAIL`/`FOODLINK_OPERATOR_PASSWORD` 미설정으로 skip됐다.
+- SM-S928N Android 15 실기기에서 release APK를 설치하고 홈, 지도 냉장고 내부 목록, 상세/신청 CTA, 내 나눔/받은 나눔, QR 화면, AI 분석 결과를 확인했다. 초기 스크린샷 evidence는 `temp/android-device-qa-20260528T195534/`에, 후속 재검증 evidence는 `temp/android-device-qa-20260528T234844/`에 남겼다.
+- 발견했던 blocker: 서버가 timezone 없는 `requestExpiresAt`을 내려주고 앱이 이를 KST 로컬 시각으로 해석해 신청 직후 `수령 제한 시간이 지났어요`를 표시했다. 후속 수정 후 2026-05-28 실기기 QA에서 상세 `수령까지 남은 시간 29:31`, 홈 `수령 QR 필요`, 받은 나눔 `수령 QR` action이 정상 표시되는 것을 확인했다.
+- 발견했던 UI 회귀: `InventoryQrScreen` 하단 action grid와 메인 하단 탭 label이 Android system navigation bar와 겹쳤다. 후속 수정 후 QR `ScrollView` viewport는 navigation bar 시작 y=2952 위에서 끝나고, scroll-bottom 상태의 QR action grid와 홈 탭 label도 navigation bar 위에 위치한다.
+- Post-MVP AI 품질 evidence: 실기기 카메라가 키보드/노트북 사진을 `바나나`, `confidenceScore=0.7`, `확인 필요`로 통과시켰다. 현재 앱은 낮은 confidence 안내를 표시하지만, 비식재료/스크린샷 rejection enum은 여전히 Post-MVP 서버 계약이다.
+
+## 2026-05-29 Post-MVP 백엔드 회신 반영
+
+- 백엔드가 Post-MVP blocker 8개 항목에 답변했고, 프론트 검토 결과는 [BACKEND_RESPONSE_TO_POST_MVP_BLOCKERS_2026-05-29.md](./BACKEND_RESPONSE_TO_POST_MVP_BLOCKERS_2026-05-29.md)에 정리했다.
+- AI는 현재 ResNet-50 단일 분류 모델 한계로 비식재료, 스크린샷/UI, 저품질, 다중 객체를 실제로 판별하지 못한다. 프론트는 `rejectionReason`/`reviewReason` shape 대응을 유지하되, fixture full strict 통과는 Phase 4 모델 고도화 이후 gate로 분리한다.
+- Multi-object 대표 후보 선택 UI와 `selectedDetectionId` 전송 경로는 방어 준비 상태다. 실제 `detections.length >= 2`와 normalized `bbox`는 object detection 모델 도입 후 검증한다.
+- Notifications와 server search는 백엔드가 구현 완료로 회신했다. Impact는 회신 내부에서 구현 상태가 상충한다. 세 항목 모두 live VM/OpenAPI 재검증 전까지 앱 연결 완료로 보지 않는다.
+- Email verification과 social login은 이번 immediate scope에서 제외하고 Phase 4 auth expansion으로 묶는다. WebSocket 채팅 제외 결정은 유지한다.
+- 프론트 후속 반영: root-level `reviewReason`을 앱 정책에 반영하고 `qa:ai-fixtures -- --shape-only` 모드를 추가했다. `getNearbyPosts`/`getNearbyFridges`는 optional `q`를 보낼 수 있으며, `getImpactSummary`와 `emailVerifiedAt` 타입은 live VM 확인 전 연결 준비 상태로 추가했다.
+
+## 2026-05-28 QA 후속 코드 수정
+
+- `requestExpiresAt`/`storeExpiresAt` 등 backend lifecycle timestamp가 timezone 없이 내려오는 경우 프론트가 UTC로 파싱하도록 수정했다. `Z`/offset timestamp는 같은 UTC instant로 유지하고, JS Date의 lenient parsing은 받지 않는다.
+- `InventoryQrScreen`은 `useSafeAreaInsets()`와 Android navigation fallback inset 기반으로 `ScrollView` viewport 자체를 system navigation bar 위로 올리고, scroll content padding은 별도로 유지한다.
+- `MainTab`은 Android에서 bottom safe-area가 0으로 보고되는 실기기에도 48dp fallback inset을 적용해 하단 탭 icon/label을 system navigation bar 위에 배치한다.
+- backend feature-contract 하네스는 author/requester/observer 계정 matrix와 best-effort cleanup을 추가해 403/409/400 negative lifecycle 검증 후 VM 냉장고 슬롯을 남기지 않도록 처리한다. 최신 VM mutate 산출물은 `temp/backend-feature-contract-e2e-20260528T143053Z.json`이다.
+- 검증: `npx tsc --noEmit`, `npm test -- --runInBand __tests__/inventoryQr.screen.test.tsx __tests__/mainTab.safeArea.test.tsx __tests__/postDetail.requestShare.test.tsx __tests__/myShares.screen.test.tsx`, `git diff --check`, `android/gradlew.bat :app:assembleRelease --console=plain` 통과. 후속 실기기 release APK screenshot evidence는 `temp/android-device-qa-20260528T234844/18-post-detail-after-request.png`, `19-home-after-request.png`, `20-received-shares-after-request.png`, `21-inventory-qr-fixed.png`, `22-inventory-qr-fixed-bottom.png`, `23-home-tabbar-fixed.png`다.
+- 추가 emulator QA: `Medium_Phone_API_36.1` release APK, SSH tunnel `localhost:8080 -> NHN-Cloud-Server:80`, QA 계정 `ce70039792@example.com`으로 로그인 후 프로필의 `냉장고 QR 인증`에 진입했다. `temp/android-emulator-qa-20260528T2100/10-inventory-qr-bottom.xml` 기준 하단 action grid는 scroll bottom에서 y=1702~1955에 위치하고 label panel은 y=2031부터 시작해 system navigation bar와 겹치지 않는다.
+
 ## 2026-05-19 Montage 기반 디자인 시스템 레이어
 
 - 상태 변경: GreenNode의 기존 컬러 팔레트와 `src/theme` 토큰을 유지하면서, Wanted Montage Android/iOS의 컴포넌트 API 패턴을 참고한 `src/design-system` 레이어를 추가했다.
@@ -87,12 +113,12 @@
 - 검증: `__tests__/locationSetup.notificationPermission.test.tsx`에 권한 거부/재시도/설정 열기 회귀 테스트를 추가했고, 해당 테스트와 TypeScript, ESLint를 통과했다.
 - 남은 검증: 실제 Android 기기에서 시스템 권한 팝업의 거부/다시 묻지 않음/설정 복귀 후 재시도 흐름은 별도 QA가 필요하다.
 
-### 2026-05-07 AI fixture smoke QA 업데이트
+### 2026-05-07 AI fixture 기본 동작 점검 업데이트
 
 - 준비: `docs/qa-fixtures/`에 커밋 가능한 이미지 fixture를 추가하고, `docs/qa-fixtures/SOURCES.md`에 출처/라이선스를 기록했다. `large-image`는 로컬 전용이라 커밋하지 않는다.
 - 백엔드 전달용 압축 문서: [BACKEND_AI_FIXTURE_QA_NOTICE_2026-05-07.md](./BACKEND_AI_FIXTURE_QA_NOTICE_2026-05-07.md)에 fixture 결과와 백엔드/AI 수정 요청 기준을 별도 정리했다.
 - 프론트 응답 흐름 QA: `analysisResult.fallback`, `cameraScan.fallback`, `postPolicy`, `posts.api` 테스트 4 suites / 45 tests 통과.
-- 실제 VM API smoke QA: `fresh-single`, `not-food`, `multi-object`는 통과했다.
+- 실제 VM API 기본 동작 점검: `fresh-single`, `not-food`, `multi-object`는 통과했다.
 - 발견한 충돌: `stale-or-rotten`, `screenshot-or-ui`, `low-quality` fixture가 live VM API에서 `Fresh`로 통과했다. 이 결과는 프론트 응답 파싱 오류가 아니라 백엔드/AI false-positive 또는 confidence 산정 정책 이슈로 분류한다.
 
 ### 2026-05-07 QA 후속 업데이트

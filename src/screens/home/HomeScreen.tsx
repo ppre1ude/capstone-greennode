@@ -70,9 +70,28 @@ type HomeAction = {
   onPress?: () => void;
 };
 
+const filterPostsByQuery = (
+  items: PostNearbyRead[],
+  query: string,
+): PostNearbyRead[] => {
+  const normalizedQuery = query.trim().toLowerCase();
+  if (!normalizedQuery) {
+    return items;
+  }
+
+  return items.filter(post =>
+    [post.detectedFruitKo, post.detectedFruit, post.fridgeName].some(value =>
+      (value ?? '').toLowerCase().includes(normalizedQuery),
+    ),
+  );
+};
+
 const HomeScreen = () => {
   const [posts, setPosts] = useState<PostNearbyRead[]>([]);
   const [feedQuery, setFeedQuery] = useState('');
+  const [serverFilteredFeedQuery, setServerFilteredFeedQuery] = useState<
+    string | null
+  >(null);
   const [feedState, setFeedState] = useState<
     'loading' | 'ready' | 'empty' | 'error'
   >('loading');
@@ -94,27 +113,37 @@ const HomeScreen = () => {
     nearbyPostsRefreshToken,
     feedRefreshToken,
   });
+  const feedSearchRequestId = useRef(0);
+  const didMountFeedSearch = useRef(false);
+  const feedQueryRef = useRef('');
+  const unfilteredPostsRef = useRef<PostNearbyRead[]>([]);
+  const hasLoadedUnfilteredPostsRef = useRef(false);
   const requestedPostId = useFeedRefreshStore(state => state.requestedPostId);
   const hasLocation = hasRegisteredLocation(user);
   const normalizedFeedQuery = feedQuery.trim().toLowerCase();
   const isFilteringFeed = normalizedFeedQuery.length > 0;
+  const isServerFilteredFeed =
+    isFilteringFeed && serverFilteredFeedQuery === normalizedFeedQuery;
   const filteredPosts = useMemo(() => {
-    if (!isFilteringFeed) {
+    if (!isFilteringFeed || isServerFilteredFeed) {
       return posts;
     }
 
-    return posts.filter(post =>
-      [post.detectedFruitKo, post.detectedFruit, post.fridgeName].some(value =>
-        (value ?? '').toLowerCase().includes(normalizedFeedQuery),
-      ),
-    );
-  }, [isFilteringFeed, normalizedFeedQuery, posts]);
+    return filterPostsByQuery(posts, normalizedFeedQuery);
+  }, [isFilteringFeed, isServerFilteredFeed, normalizedFeedQuery, posts]);
   const recommendedPosts = useMemo(
     () => selectHomeRecommendations(posts),
     [posts],
   );
   const shouldShowRecommendations =
     feedState === 'ready' && !isFilteringFeed && recommendedPosts.length > 0;
+  const shouldShowFeedSearch =
+    isFilteringFeed || (posts.length > 0 && feedState === 'ready');
+
+  const updateFeedQuery = useCallback((query: string) => {
+    feedQueryRef.current = query;
+    setFeedQuery(query);
+  }, []);
 
   const openLocationSetup = useCallback(() => {
     navigation.getParent()?.navigate('LocationSetup', { allowBack: true });
@@ -130,9 +159,14 @@ const HomeScreen = () => {
   }, [hasLocation, navigation, openLocationSetup]);
 
   const fetchPosts = useCallback(async () => {
+    const requestId = feedSearchRequestId.current + 1;
+    feedSearchRequestId.current = requestId;
     const location = getRegisteredLocation(user);
     if (!location) {
       setPosts([]);
+      setServerFilteredFeedQuery(null);
+      unfilteredPostsRef.current = [];
+      hasLoadedUnfilteredPostsRef.current = false;
       setFeedState('error');
       setFeedError(LOCATION_REQUIRED_MESSAGE);
       return;
@@ -145,21 +179,107 @@ const HomeScreen = () => {
         location.latitude,
         location.longitude,
       );
+      if (feedSearchRequestId.current !== requestId) {
+        return;
+      }
       if (response.success && response.data) {
         setPosts(response.data);
+        setServerFilteredFeedQuery(null);
+        unfilteredPostsRef.current = response.data;
+        hasLoadedUnfilteredPostsRef.current = true;
         setFeedState(response.data.length > 0 ? 'ready' : 'empty');
       } else {
         setPosts([]);
+        setServerFilteredFeedQuery(null);
+        unfilteredPostsRef.current = [];
+        hasLoadedUnfilteredPostsRef.current = false;
         setFeedState('error');
         setFeedError(response.message || '주변 나눔을 불러오지 못했습니다.');
       }
     } catch (error) {
+      if (feedSearchRequestId.current !== requestId) {
+        return;
+      }
       console.warn('Failed to fetch posts:', error);
       setPosts([]);
+      setServerFilteredFeedQuery(null);
+      unfilteredPostsRef.current = [];
+      hasLoadedUnfilteredPostsRef.current = false;
       setFeedState('error');
       setFeedError('서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.');
     }
   }, [user]);
+
+  const searchPosts = useCallback(
+    async (query: string) => {
+      const location = getRegisteredLocation(user);
+      if (!location) {
+        return;
+      }
+
+      const requestId = feedSearchRequestId.current + 1;
+      feedSearchRequestId.current = requestId;
+      setFeedState('loading');
+      setFeedError(null);
+
+      try {
+        const response = await getNearbyPosts(
+          location.latitude,
+          location.longitude,
+          2.0,
+          0,
+          20,
+          query,
+        );
+        if (feedSearchRequestId.current !== requestId) {
+          return;
+        }
+
+        if (response.success && response.data) {
+          setPosts(response.data);
+          setServerFilteredFeedQuery(query.trim().toLowerCase());
+          setFeedState(response.data.length > 0 ? 'ready' : 'empty');
+        } else {
+          throw new Error(response.message || 'search failed');
+        }
+      } catch (error) {
+        if (feedSearchRequestId.current !== requestId) {
+          return;
+        }
+
+        console.warn('Failed to search posts:', error);
+        if (hasLoadedUnfilteredPostsRef.current) {
+          const fallbackPosts = filterPostsByQuery(
+            unfilteredPostsRef.current,
+            query,
+          );
+          setPosts(fallbackPosts);
+          setServerFilteredFeedQuery(null);
+          setFeedState(fallbackPosts.length > 0 ? 'ready' : 'empty');
+          setFeedError(null);
+          return;
+        }
+
+        setPosts([]);
+        setServerFilteredFeedQuery(null);
+        setFeedState('error');
+        setFeedError(
+          '서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.',
+        );
+      }
+    },
+    [user],
+  );
+
+  const fetchVisiblePosts = useCallback(async () => {
+    const query = feedQueryRef.current.trim();
+    if (query) {
+      await searchPosts(query);
+      return;
+    }
+
+    await fetchPosts();
+  }, [fetchPosts, searchPosts]);
 
   const fetchLifecycleActions = useCallback(async () => {
     if (!user) {
@@ -183,9 +303,9 @@ const HomeScreen = () => {
 
   useFocusEffect(
     useCallback(() => {
-      fetchPosts();
+      fetchVisiblePosts().catch(() => undefined);
       fetchLifecycleActions();
-    }, [fetchLifecycleActions, fetchPosts]),
+    }, [fetchLifecycleActions, fetchVisiblePosts]),
   );
 
   useEffect(() => {
@@ -201,12 +321,12 @@ const HomeScreen = () => {
       nearbyPostsRefreshToken,
       feedRefreshToken,
     };
-    fetchPosts();
+    fetchVisiblePosts().catch(() => undefined);
     fetchLifecycleActions();
   }, [
     feedRefreshToken,
+    fetchVisiblePosts,
     fetchLifecycleActions,
-    fetchPosts,
     nearbyPostsRefreshToken,
   ]);
 
@@ -218,13 +338,34 @@ const HomeScreen = () => {
     setPosts(currentPosts =>
       currentPosts.filter(post => post.id !== requestedPostId),
     );
+    unfilteredPostsRef.current = unfilteredPostsRef.current.filter(
+      post => post.id !== requestedPostId,
+    );
   }, [requestedPostId]);
+
+  useEffect(() => {
+    if (!didMountFeedSearch.current) {
+      didMountFeedSearch.current = true;
+      return;
+    }
+
+    const query = feedQuery.trim();
+    const timeout = setTimeout(() => {
+      if (query) {
+        searchPosts(query).catch(() => undefined);
+      } else {
+        fetchPosts().catch(() => undefined);
+      }
+    }, 300);
+
+    return () => clearTimeout(timeout);
+  }, [feedQuery, fetchPosts, searchPosts]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await Promise.all([fetchPosts(), fetchLifecycleActions()]);
+    await Promise.all([fetchVisiblePosts(), fetchLifecycleActions()]);
     setRefreshing(false);
-  }, [fetchLifecycleActions, fetchPosts]);
+  }, [fetchLifecycleActions, fetchVisiblePosts]);
 
   const openPostDetail = useCallback(
     (postId: number) => {
@@ -544,7 +685,7 @@ const HomeScreen = () => {
               <Text style={styles.feedMore}>지도에서 보기</Text>
             </TouchableOpacity>
           </View>
-          {posts.length > 0 && feedState === 'ready' ? (
+          {shouldShowFeedSearch ? (
             <View style={styles.feedSearchBox}>
               <DSIcon
                 name="magnifying-glass"
@@ -555,14 +696,14 @@ const HomeScreen = () => {
               <TextInput
                 style={styles.feedSearchInput}
                 value={feedQuery}
-                onChangeText={setFeedQuery}
+                onChangeText={updateFeedQuery}
                 placeholder="나눔 식재료 검색"
                 placeholderTextColor={colors.textPlaceholder}
               />
               {isFilteringFeed ? (
                 <TouchableOpacity
                   style={styles.feedSearchClear}
-                  onPress={() => setFeedQuery('')}>
+                  onPress={() => updateFeedQuery('')}>
                   <DSIcon name="xmark" size="small" color="textSecondary" />
                 </TouchableOpacity>
               ) : null}
@@ -615,7 +756,7 @@ const HomeScreen = () => {
               </Text>
               <TouchableOpacity
                 style={styles.retryButton}
-                onPress={() => setFeedQuery('')}>
+                onPress={() => updateFeedQuery('')}>
                 <Text style={styles.retryButtonText}>검색 초기화</Text>
               </TouchableOpacity>
             </View>

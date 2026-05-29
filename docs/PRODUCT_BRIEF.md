@@ -90,6 +90,8 @@ FoodLink는 사용자를 오래 붙잡는 콘텐츠 앱이 아니다. 핵심 지
 - 소셜 로그인, 이메일 verification, 실제 활동 지표 API
 - 진짜 인기 랭킹. 데이터가 쌓이기 전까지 "많이 찾는 식재료"는 후순위 추천 기능이다.
 
+2026-05-29 Post-MVP 제품/계약 결정은 [POST_MVP_PRODUCT_CONTRACT_DECISIONS.md](./POST_MVP_PRODUCT_CONTRACT_DECISIONS.md)를 따른다. 결정 요지는 기능 확장이 아니라 scope 고정이다. AI는 hard block `rejectionReason`과 soft review `reviewReason`을 분리하지만, 현재 모델은 비식재료/스크린샷/저품질/multi-object를 실제로 판별하지 못하므로 정확도 gate는 Phase 4 모델 고도화로 분리한다. 서버 알림 저장소는 Post-MVP source of truth로 채택하되 WebSocket 채팅은 제외한다. 환경 성취 지표는 완료/수령 확인된 나눔 식재료 기준의 backend-computed estimate로만 노출하고, email verification과 social login은 Phase 4 auth expansion으로 묶는다.
+
 ## MVP Flow Contract
 
 | Flow slice       | Entry point    | Must happen                                                                                                                                              | Result state/effect                                             | Explicitly not MVP                          |
@@ -193,7 +195,7 @@ MVP에서 공급자는 `requested` 이후 별도 승인 행동을 하지 않는�
 - 공급자는 정보를 확인/수정하고 공유 냉장고를 선택한다.
 - 등록이 완료되면 근처 사용자에게 푸시 알림을 보낸다.
 - MVP는 실제 보관 검증을 QR/토큰/냉장고 운영자 확인으로 강제하지 않는다.
-- 서버는 `Stale` 분석 결과에 대해 `imageToken`을 발급하지 않고, 무효/만료 토큰으로는 최종 등록을 막는다. 프론트의 나눔 가능 가드는 사용자 경험용이며 서버가 최종 방어선이다. 프론트는 `POST /posts`에 `imageToken`, `fridgeId`, `expirationDate`만 보내고 AI 메타데이터를 재전송하지 않는다.
+- 서버는 `Stale` 분석 결과에 대해 `imageToken`을 발급하지 않고, 무효/만료 토큰으로는 최종 등록을 막는다. 프론트의 나눔 가능 가드는 사용자 경험용이며 서버가 최종 방어선이다. MVP 필수 등록 payload는 `imageToken`, `fridgeId`, `expirationDate`이고 AI 메타데이터를 재전송하지 않는다. Post-MVP multi-object 계약에서는 대표 후보 선택값인 `selectedDetectionId`만 optional로 추가한다.
 
 ### 3. 근처 나눔 식재료 발견
 

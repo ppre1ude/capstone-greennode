@@ -5,8 +5,15 @@
  * @wireframe wireframe-foodlink/homescreen.html (하단바)
  */
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Platform,
+} from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { MainTabParamList } from './types';
 import { colors } from '@/theme';
 import { DSIcon } from '@/design-system';
@@ -32,6 +39,10 @@ const CameraPlaceholder = () => (
 );
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
+
+const TAB_BAR_BASE_HEIGHT = 84;
+const TAB_BAR_BASE_PADDING_BOTTOM = 20;
+const ANDROID_NAVIGATION_BAR_FALLBACK_INSET = 48;
 
 /** 중앙 FAB 카메라 버튼 */
 const CameraTabButton = ({
@@ -104,14 +115,25 @@ const cameraTabButton = ({
 }) => <CameraTabButton onPress={onPress} />;
 
 const MainTab = () => {
+  const insets = useSafeAreaInsets();
   const user = useAuthStore(state => state.user);
   const hasLocation = hasRegisteredLocation(user);
+  const bottomInset =
+    Platform.OS === 'android'
+      ? Math.max(insets.bottom, ANDROID_NAVIGATION_BAR_FALLBACK_INSET)
+      : insets.bottom;
 
   return (
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarStyle: styles.tabBar,
+        tabBarStyle: [
+          styles.tabBar,
+          {
+            height: TAB_BAR_BASE_HEIGHT + bottomInset,
+            paddingBottom: TAB_BAR_BASE_PADDING_BOTTOM + bottomInset,
+          },
+        ],
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textTertiary,
         tabBarLabelStyle: styles.tabLabel,
@@ -167,12 +189,10 @@ const MainTab = () => {
 
 const styles = StyleSheet.create({
   tabBar: {
-    height: 84,
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
     borderTopColor: colors.borderLight,
     paddingTop: 8,
-    paddingBottom: 20,
   },
   tabLabel: {
     fontSize: 10,

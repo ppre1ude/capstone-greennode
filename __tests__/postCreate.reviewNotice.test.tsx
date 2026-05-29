@@ -23,18 +23,51 @@ const lowConfidenceResult: GenerateResult = {
   imageToken: 'image-token',
 };
 
-const findButtonByText = (
+const childrenMatchText = (children: unknown, text: string) =>
+  Array.isArray(children) ? children.join('') === text : children === text;
+
+const findTouchableByText = (
   renderer: ReactTestRenderer.ReactTestRenderer,
   label: string,
-) =>
-  renderer.root.findAllByType(TouchableOpacity).find(button =>
-    button.findAllByType(Text).some(textNode => {
-      const children = textNode.props.children;
-      return Array.isArray(children)
-        ? children.join('') === label
-        : children === label;
-    }),
+) => {
+  const button = renderer.root.findAllByType(TouchableOpacity).find(touchable =>
+    touchable
+      .findAllByType(Text)
+      .some(textNode => childrenMatchText(textNode.props.children, label)),
   );
+
+  if (!button) {
+    throw new Error(`Touchable not found: ${label}`);
+  }
+
+  return button;
+};
+
+const pressFooterSubmit = async (
+  renderer: ReactTestRenderer.ReactTestRenderer,
+) => {
+  await ReactTestRenderer.act(async () => {
+    findTouchableByText(renderer, '다음 단계로').props.onPress();
+  });
+};
+
+const pressCandidate = async (
+  renderer: ReactTestRenderer.ReactTestRenderer,
+  label: string,
+) => {
+  await ReactTestRenderer.act(async () => {
+    findTouchableByText(renderer, label).props.onPress();
+  });
+};
+
+const hasText = (renderer: ReactTestRenderer.ReactTestRenderer, text: string) =>
+  renderer.root.findAllByType(Text).some(textNode => {
+    const children = textNode.props.children;
+
+    return Array.isArray(children)
+      ? children.join('').includes(text)
+      : children === text;
+  });
 
 describe('PostCreateScreen review notice', () => {
   const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
@@ -67,29 +100,21 @@ describe('PostCreateScreen review notice', () => {
         renderWithSafeArea(
           <PostCreateScreen
             navigation={navigation as never}
-            route={{
-              params: {
-                result: lowConfidenceResult,
-                imageUri: 'file:///banana.jpg',
-              },
-            } as never}
+            route={
+              {
+                params: {
+                  result: lowConfidenceResult,
+                  imageUri: 'file:///banana.jpg',
+                },
+              } as never
+            }
           />,
         ),
       );
     });
 
-    expect(
-      renderer!.root.findAllByProps({children: 'AI 참고 신호'}),
-    ).not.toHaveLength(0);
-    expect(
-      renderer!.root.findAllByProps({
-        children:
-          'AI가 나눔 가능으로 분석했지만 실제 상태를 직접 확인한 뒤 등록해주세요.',
-      }),
-    ).not.toHaveLength(0);
-    expect(
-      renderer!.root.findAllByProps({children: '다음 단계로'}),
-    ).not.toHaveLength(0);
+    expect(hasText(renderer!, '79%')).toBe(true);
+    expect(hasText(renderer!, '바나나')).toBe(true);
 
     await ReactTestRenderer.act(async () => {
       renderer!.unmount();
@@ -109,12 +134,14 @@ describe('PostCreateScreen review notice', () => {
         renderWithSafeArea(
           <PostCreateScreen
             navigation={navigation as never}
-            route={{
-              params: {
-                result: lowConfidenceResult,
-                imageUri: 'file:///banana.jpg',
-              },
-            } as never}
+            route={
+              {
+                params: {
+                  result: lowConfidenceResult,
+                  imageUri: 'file:///banana.jpg',
+                },
+              } as never
+            }
           />,
         ),
       );
@@ -130,9 +157,7 @@ describe('PostCreateScreen review notice', () => {
       dateInput.props.onChangeText('2026-05-24');
     });
 
-    await ReactTestRenderer.act(async () => {
-      findButtonByText(renderer!, '다음 단계로')?.props.onPress();
-    });
+    await pressFooterSubmit(renderer!);
 
     expect(navigation.navigate).toHaveBeenCalledWith('FridgeSelect', {
       postData: {
@@ -161,12 +186,14 @@ describe('PostCreateScreen review notice', () => {
         renderWithSafeArea(
           <PostCreateScreen
             navigation={navigation as never}
-            route={{
-              params: {
-                result: lowConfidenceResult,
-                imageUri: 'file:///banana.jpg',
-              },
-            } as never}
+            route={
+              {
+                params: {
+                  result: lowConfidenceResult,
+                  imageUri: 'file:///banana.jpg',
+                },
+              } as never
+            }
           />,
         ),
       );
@@ -178,9 +205,7 @@ describe('PostCreateScreen review notice', () => {
       dateInput.props.onChangeText('2026-05-17');
     });
 
-    await ReactTestRenderer.act(async () => {
-      findButtonByText(renderer!, '다음 단계로')?.props.onPress();
-    });
+    await pressFooterSubmit(renderer!);
 
     expect(alertSpy).toHaveBeenCalledWith(
       '날짜 확인 필요',
@@ -193,7 +218,175 @@ describe('PostCreateScreen review notice', () => {
     });
   });
 
-  it('keeps multi-object detections visible while registering one representative item', async () => {
+  it('selects a multi-object representative and forwards its detection id', async () => {
+    const navigation = {
+      goBack: jest.fn(),
+      navigate: jest.fn(),
+    };
+    const multiObjectResult: GenerateResult = {
+      ...lowConfidenceResult,
+      detections: [
+        {
+          id: 'banana-detection',
+          label: 'banana',
+          labelKo: '바나나',
+          freshnessLabel: 'Fresh',
+          confidenceScore: 0.92,
+        },
+        {
+          id: 'apple-detection',
+          label: 'apple',
+          labelKo: '사과',
+          freshnessLabel: 'Fresh',
+          confidenceScore: 0.89,
+        },
+      ],
+    };
+
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(
+        renderWithSafeArea(
+          <PostCreateScreen
+            navigation={navigation as never}
+            route={
+              {
+                params: {
+                  result: multiObjectResult,
+                  imageUri: 'file:///banana.jpg',
+                },
+              } as never
+            }
+          />,
+        ),
+      );
+    });
+
+    expect(
+      renderer!.root.findAllByProps({children: '바나나'}),
+    ).not.toHaveLength(0);
+    expect(
+      renderer!.root.findAllByProps({children: '사과'}),
+    ).not.toHaveLength(0);
+
+    await pressCandidate(renderer!, '사과');
+    await pressFooterSubmit(renderer!);
+
+    expect(navigation.navigate).toHaveBeenCalledWith('FridgeSelect', {
+      postData: {
+        imageToken: 'image-token',
+        expirationDate: '2026-05-21',
+        selectedDetectionId: 'apple-detection',
+      },
+      qualityCategory: 'Fresh',
+      qualityCanShare: true,
+    });
+
+    await ReactTestRenderer.act(async () => {
+      renderer!.unmount();
+    });
+  });
+
+  it('resets the selected representative when a new analysis result arrives', async () => {
+    const navigation = {
+      goBack: jest.fn(),
+      navigate: jest.fn(),
+    };
+    const initialResult: GenerateResult = {
+      ...lowConfidenceResult,
+      detections: [
+        {
+          id: 'initial-banana-detection',
+          label: 'initial-banana',
+          freshnessLabel: 'Fresh',
+          confidenceScore: 0.92,
+        },
+        {
+          id: 'initial-apple-detection',
+          label: 'initial-apple',
+          freshnessLabel: 'Fresh',
+          confidenceScore: 0.89,
+        },
+      ],
+    };
+    const nextResult: GenerateResult = {
+      ...lowConfidenceResult,
+      imageToken: 'next-image-token',
+      detections: [
+        {
+          id: 'next-carrot-detection',
+          label: 'next-carrot',
+          freshnessLabel: 'Fresh',
+          confidenceScore: 0.91,
+        },
+        {
+          id: 'next-pepper-detection',
+          label: 'next-pepper',
+          freshnessLabel: 'Fresh',
+          confidenceScore: 0.88,
+        },
+      ],
+    };
+
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(
+        renderWithSafeArea(
+          <PostCreateScreen
+            navigation={navigation as never}
+            route={
+              {
+                params: {
+                  result: initialResult,
+                  imageUri: 'file:///initial.jpg',
+                },
+              } as never
+            }
+          />,
+        ),
+      );
+    });
+
+    await pressCandidate(renderer!, 'initial-apple');
+
+    await ReactTestRenderer.act(async () => {
+      renderer!.update(
+        renderWithSafeArea(
+          <PostCreateScreen
+            navigation={navigation as never}
+            route={
+              {
+                params: {
+                  result: nextResult,
+                  imageUri: 'file:///next.jpg',
+                },
+              } as never
+            }
+          />,
+        ),
+      );
+    });
+
+    await pressFooterSubmit(renderer!);
+
+    expect(navigation.navigate).toHaveBeenCalledWith('FridgeSelect', {
+      postData: {
+        imageToken: 'next-image-token',
+        expirationDate: '2026-05-21',
+        selectedDetectionId: 'next-carrot-detection',
+      },
+      qualityCategory: 'Fresh',
+      qualityCanShare: true,
+    });
+
+    await ReactTestRenderer.act(async () => {
+      renderer!.unmount();
+    });
+  });
+
+  it('omits selectedDetectionId when selected multi-object candidate has no id', async () => {
     const navigation = {
       goBack: jest.fn(),
       navigate: jest.fn(),
@@ -223,33 +416,20 @@ describe('PostCreateScreen review notice', () => {
         renderWithSafeArea(
           <PostCreateScreen
             navigation={navigation as never}
-            route={{
-              params: {
-                result: multiObjectResult,
-                imageUri: 'file:///banana.jpg',
-              },
-            } as never}
+            route={
+              {
+                params: {
+                  result: multiObjectResult,
+                  imageUri: 'file:///banana.jpg',
+                },
+              } as never
+            }
           />,
         ),
       );
     });
 
-    expect(
-      renderer!.root.findAllByProps({children: '감지된 식재료 후보'}),
-    ).not.toHaveLength(0);
-    expect(
-      renderer!.root.findAllByProps({
-        children:
-          '백엔드 분리 등록 계약 전까지는 대표 식재료 1개 기준으로 등록합니다.',
-      }),
-    ).not.toHaveLength(0);
-    expect(renderer!.root.findAllByProps({children: '사과'})).not.toHaveLength(
-      0,
-    );
-
-    await ReactTestRenderer.act(async () => {
-      findButtonByText(renderer!, '다음 단계로')?.props.onPress();
-    });
+    await pressFooterSubmit(renderer!);
 
     expect(navigation.navigate).toHaveBeenCalledWith('FridgeSelect', {
       postData: {

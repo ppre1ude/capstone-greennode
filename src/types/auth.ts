@@ -10,6 +10,7 @@ export interface User {
   latitude: number | null;
   longitude: number | null;
   fcmToken: string | null;
+  emailVerifiedAt?: string | null;
   isActive: boolean;
   isOperator?: boolean | null;
   operatorRole?: 'operator' | 'admin' | 'fridge_operator' | null;

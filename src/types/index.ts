@@ -7,6 +7,11 @@ export type {
   UserProfileUpdateRequest,
 } from './auth';
 export type {
+  ImpactSummary,
+  ImpactSummaryPeriod,
+  ServerImpactSummary,
+} from './impact';
+export type {
   Post,
   PostNearbyRead,
   FreshnessLabel,

@@ -1,5 +1,5 @@
 import apiClient from '@/api/client';
-import {getFridgePosts} from '@/api/fridges';
+import { getFridgePosts, getNearbyFridges } from '@/api/fridges';
 
 jest.mock('@/api/client', () => ({
   __esModule: true,
@@ -42,10 +42,33 @@ describe('fridges API contract', () => {
     expect(mockedApiClient.get).toHaveBeenCalledWith(
       '/api/v1/fridges/7/posts',
       {
-        params: {status: 'available'},
+        params: { status: 'available' },
       },
     );
     expect(response.data?.[0].fridgeId).toBe(7);
     expect(response.data?.[0].fridgeName).toBe('전남대 공유 냉장고');
+  });
+
+  it('passes optional server search params to nearby fridges', async () => {
+    mockedApiClient.get.mockResolvedValue({
+      data: {
+        success: true,
+        message: 'ok',
+        data: [],
+      },
+    });
+
+    await getNearbyFridges(35.1, 126.9, 2, ' 광주역 ', 5, 10);
+
+    expect(mockedApiClient.get).toHaveBeenCalledWith('/api/v1/fridges/nearby', {
+      params: {
+        latitude: 35.1,
+        longitude: 126.9,
+        radius_km: 2,
+        skip: 5,
+        limit: 10,
+        q: '광주역',
+      },
+    });
   });
 });

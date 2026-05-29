@@ -359,7 +359,7 @@ Content-Type: multipart/form-data
 }
 ```
 
-> 2026-05-23 canonical 기준: `POST /posts/generate`는 root-level `detectedFruit`, `detectedFruitKo`, `imageToken`, `rejectionReason`, `detections[]`를 내려준다. AI 신선도 판정은 `data.aiAnalysis.category`, `data.aiAnalysis.confidenceScore`, `data.aiAnalysis.isFresh`와 `data.detections[0]`가 같은 대표 객체를 가리키는 것으로 본다. Post 생성/조회 응답의 최종 저장 필드는 root `freshnessLabel`, `confidenceScore`, `detectedFruit`, `detectedFruitKo`다. 프론트 타입은 과거/호환 응답을 방어적으로 받기 위해 root `freshnessLabel`, `confidenceScore`, `isFresh`, `aiAnalysis.rejectionReason`, `aiAnalysis.reviewReason`을 optional로 유지한다.
+> 2026-05-23 canonical 기준: `POST /posts/generate`는 root-level `detectedFruit`, `detectedFruitKo`, `imageToken`, `rejectionReason`, `detections[]`를 내려준다. 2026-05-29 Post-MVP shape 대응으로 root-level `reviewReason`도 방어적으로 받는다. AI 신선도 판정은 `data.aiAnalysis.category`, `data.aiAnalysis.confidenceScore`, `data.aiAnalysis.isFresh`와 `data.detections[0]`가 같은 대표 객체를 가리키는 것으로 본다. Post 생성/조회 응답의 최종 저장 필드는 root `freshnessLabel`, `confidenceScore`, `detectedFruit`, `detectedFruitKo`다. 프론트 타입은 과거/호환 응답을 방어적으로 받기 위해 root `freshnessLabel`, `confidenceScore`, `isFresh`, `aiAnalysis.rejectionReason`, `aiAnalysis.reviewReason`을 optional로 유지한다.
 
 `detections[]` MVP 계약:
 
@@ -445,7 +445,7 @@ const response = await fetch(`${BASE_URL}/api/v1/posts`, {
 
 `Stale` 판정 이미지는 generate 단계에서 임시 저장까지 도달하지 않으므로 `imageToken`이 없다. generate를 우회해 `POST /posts`를 직접 호출해도 유효한 토큰이 없으면 등록되지 않는다.
 
-> 프론트는 기존대로 `fridgeId`, `expirationDate`, `imageToken`만 보낸다. AI 메타데이터를 create payload에 다시 보낼 필요가 없다. 백엔드 우선순위는 서버 sidecar 값 > 프론트 전송 값이며, 프론트가 AI 필드를 보내더라도 서버 보관 값이 우선이다.
+> MVP 필수 payload는 `fridgeId`, `expirationDate`, `imageToken`이다. AI 메타데이터를 create payload에 다시 보낼 필요가 없다. 백엔드 우선순위는 서버 sidecar 값 > 프론트 전송 값이며, 프론트가 AI 필드를 보내더라도 서버 보관 값이 우선이다. Post-MVP multi-object 계약이 활성화되면 프론트는 사용자가 선택한 대표 후보의 `selectedDetectionId`만 optional로 추가 전송한다. `bbox`와 객체별 분리 등록 데이터는 create payload에 보내지 않는다.
 >
 > 2026-05-06 live VM conflict: 공개 fresh fixture로 `generate -> create -> detail`을 실행했을 때 생성된 Post id `2`의 AI 필드가 모두 `null`이었다. 2026-05-08 백엔드 답변 기준 이 현상은 백엔드 버그로 확정됐고, `save_temp_image()`/`move_temp_to_final()` sidecar 저장/복원 방식으로 VM 재배포 완료됐다. 프론트는 기존 null 데이터 fallback을 MVP에서 유지한다.
 
@@ -880,6 +880,144 @@ docker compose logs api | grep FCM
 | Firebase credentials 문제 | `[FCM:share_created] Mock 발송 — Firebase 미초기화` |
 | Mock FCM 발송 | `[Mock FCM] 알림 발송 (3건)` |
 | invalid/expired token | `[FCM:share_created] FAIL token=... code=UNREGISTERED` |
+
+---
+
+## 6-A. Post-MVP 계획 계약
+
+이 섹션은 일부 항목이 아직 live VM에서 보장되는 endpoint가 아닌 2026-05-29 제품/계약 결정이다. 구현 전에는 [POST_MVP_PRODUCT_CONTRACT_DECISIONS.md](./POST_MVP_PRODUCT_CONTRACT_DECISIONS.md), [BACKEND_RESPONSE_TO_POST_MVP_BLOCKERS_2026-05-29.md](./BACKEND_RESPONSE_TO_POST_MVP_BLOCKERS_2026-05-29.md), [VALIDATION_AND_BACKLOG.md](./VALIDATION_AND_BACKLOG.md)를 함께 확인한다.
+
+2026-05-29 live VM 확인 결과는 [BACKEND_POST_MVP_CONTRACT_BLOCKERS_2026-05-29.md](./BACKEND_POST_MVP_CONTRACT_BLOCKERS_2026-05-29.md)에 분리했다. 현재 VM은 알림 endpoint, impact summary, email verification path를 OpenAPI에 노출하지 않고, nearby discovery endpoint에도 `q` parameter가 없다. AI fixture는 explicit `rejectionReason`/`reviewReason` 계약이 아직 충족되지 않는다.
+
+2026-05-29 백엔드 회신 기준 notifications와 server search는 구현 완료로 보고됐지만 live VM/OpenAPI 재검증 전까지 확정하지 않는다. Impact는 회신 내부에서 구현 상태가 상충한다. AI 실제 분류 정확도와 multi-object detection은 현재 모델 한계로 Phase 4 항목이다.
+
+### AI rejection/review reason
+
+`POST /api/v1/posts/generate`는 hard block과 soft review를 분리한다.
+
+| Field | Meaning | App behavior |
+| --- | --- | --- |
+| `rejectionReason` | 등록 차단 사유 | `imageToken` 없음, 등록 흐름 차단 |
+| `reviewReason` | 사용자 재확인 사유 | `imageToken` 있음, `확인 필요` 표시 후 등록 가능 |
+
+Hard block enum은 `stale`, `not_food`, `low_quality`, `screenshot`, `ui_screenshot`이다. Soft review enum은 `review_required`, `multi_object_review`, `low_confidence`, `low_quality`, `screenshot`, `ui_screenshot`이다.
+
+Hard block 응답은 400을 기본으로 한다.
+
+```json
+{
+  "success": false,
+  "message": "식재료 사진으로 확인되지 않았어요.",
+  "data": null,
+  "error": {
+    "code": "AI_REJECTED",
+    "rejectionReason": "not_food"
+  }
+}
+```
+
+프론트 에러 문구 경로는 generic `message`보다 구조화된 `error.rejectionReason`을 우선한다. `stale`은 나눔 기준 미충족, `not_food`/`non_food`/`screenshot`/`ui_screenshot`은 식재료 사진 아님, `low_quality`는 상태 확인 어려움 문구로 번역한다.
+
+Soft review 응답은 기존 generate 200 payload에 `reviewReason`을 추가한다.
+
+현재 AI 모델은 비식재료, 스크린샷/UI, 저품질 이미지를 실제로 판별하지 못한다. 모델 고도화 전에는 full fixture strict 통과가 아니라 reason 필드 shape와 generic 400 제거만 검증한다.
+
+### Multi-object representative selection
+
+다음 Post-MVP increment에서도 `POST /posts`는 나눔 식재료 1개만 만든다. 여러 객체가 감지되면 앱은 대표 후보 1개를 선택하도록 안내한다. 자동 객체별 분리 등록은 별도 후속 기능이다.
+
+```json
+{
+  "reviewReason": "multi_object_review",
+  "selectedDetectionId": "detection-1",
+  "detections": [
+    {
+      "id": "detection-1",
+      "label": "banana",
+      "labelKo": "바나나",
+      "freshnessLabel": "Fresh",
+      "confidenceScore": 0.91,
+      "bbox": {"x": 0.12, "y": 0.18, "width": 0.31, "height": 0.42}
+    }
+  ]
+}
+```
+
+`bbox`는 이미지 기준 0~1 normalized rectangle이며, 기존 `bbox: null`은 호환 값으로 계속 허용한다.
+
+현재 백엔드 AI는 object detection 모델이 아니므로 실제 `detections.length >= 2`와 normalized `bbox`는 Phase 4 모델 도입 후 보장된다.
+
+### Server-backed notifications
+
+서버 저장형 알림은 Post-MVP에서 source of truth가 된다. 로컬 FCM 기록은 offline/foreground fallback cache로 유지한다.
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `GET` | `/api/v1/notifications?unreadOnly=false&skip=0&limit=50` | 계정 알림 목록 |
+| `PATCH` | `/api/v1/notifications/{notificationId}/read` | 단일 읽음 처리 |
+| `PATCH` | `/api/v1/notifications/read-all` | 전체 읽음 처리 |
+| `DELETE` | `/api/v1/notifications/{notificationId}` | 단일 삭제 |
+
+앱 merge rule은 `type + postId + requestId` event key dedupe다. 같은 이벤트가 로컬 FCM 기록과 서버 record에 모두 있으면 서버 record가 우선한다.
+
+백엔드가 구현 완료로 회신했으나, live VM에서 4 endpoint와 권한 규칙을 확인하기 전까지 앱은 기존 로컬 FCM fallback을 유지한다.
+
+### Impact summary
+
+환경 성취 지표는 backend-computed estimate로만 표시한다.
+
+```text
+GET /api/v1/users/me/impact/summary?period=month
+Authorization: Bearer {token}
+```
+
+```json
+{
+  "totalShared": 5,
+  "totalReceived": 3,
+  "completedShares": 8,
+  "estimatedFoodSavedGrams": 1360,
+  "estimatedCarbonSavedGrams": 3400,
+  "calculationVersion": "impact-v1",
+  "computedAt": "2026-05-29T00:00:00Z"
+}
+```
+
+집계 대상은 `completed` 또는 `picked_up`으로 확인된 나눔 식재료뿐이다. UI는 factor source가 확정되기 전까지 `추정 절감`으로 표시한다.
+
+백엔드 회신에서 impact 구현 상태가 상충하므로, live VM response shape 확인 전에는 앱 숫자 UI를 연결하지 않는다.
+프론트 client와 `npm run qa:post-mvp-contracts`는 배포 전환 중 camelCase와 snake_case 응답, 숫자형 문자열을 모두 수용한다. 앱 내부 타입은 `totalShared`, `completedShares`, `estimatedFoodSavedGrams`, `estimatedCarbonSavedGrams`, `calculationVersion`, `computedAt` camelCase 필드로 정규화하되, 지표 값은 숫자 타입으로 고정한다.
+
+### Server search
+
+서버 검색은 별도 global search endpoint가 아니라 기존 discovery endpoint 확장으로 둔다.
+
+```text
+GET /api/v1/posts/nearby?latitude=...&longitude=...&radius_km=2&q=바나나&skip=0&limit=20
+GET /api/v1/fridges/nearby?latitude=...&longitude=...&radius_km=2&q=광주역&skip=0&limit=20
+```
+
+검색 대상은 나눔 식재료명, 공유 냉장고명, 공유 냉장고 주소다. 정렬은 거리 우선, 같은 거리권에서는 최신순이다.
+
+백엔드가 구현 완료로 회신했으므로 OpenAPI에 `q`, `skip`, `limit`가 실제 노출되는지 확인한 뒤 로컬 필터 fallback에서 이관한다.
+
+### Email verification and social login
+
+Email verification과 social login은 이번 immediate scope에서 제외하고 Phase 4 auth expansion으로 묶는다.
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `POST` | `/api/v1/auth/email-verifications` | 인증 메일 발송 |
+| `POST` | `/api/v1/auth/email-verifications/confirm` | 토큰 확인 |
+| `GET` | `/api/v1/auth/me` | `emailVerifiedAt` 반환 |
+
+Verification 전에도 browsing과 위치 등록은 허용할 수 있다. 나눔 식재료 등록, 나눔 신청, 운영자 action을 verification 이후로 제한할지는 Phase 4에서 결정한다. 프론트는 `/auth/me.emailVerifiedAt: null`을 방어적으로 처리할 수 있지만, 실제 email verification flow와 Google/Apple social login 버튼은 backend provider token 교환 endpoint가 준비될 때까지 숨기거나 비활성화한다.
+
+### Operator role management and WebSocket chat
+
+소비자 앱은 role grant/revoke UI를 제공하지 않는다. 앱은 `/auth/me`의 `isOperator`, `operatorRole`, `operatorFridgeIds`로 운영자 콘솔 진입만 제어한다. Role 관리는 backend seed, admin CLI, 또는 별도 web backoffice 범위다.
+
+WebSocket 채팅은 다음 구현 후보에서 제외한다. 알림 저장소와 lifecycle action이 안정화된 뒤 구조화된 문의/요청 메시지를 먼저 검토한다.
 
 ---
 

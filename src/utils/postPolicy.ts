@@ -4,6 +4,7 @@ import type {
   PostStatus,
   ShareRequestStatus,
 } from '@/types';
+import { parseServerLifecycleTimestampMs } from '@/features/inventory/holdPolicy';
 
 type PostOwnershipFields = {
   authorId?: number | null;
@@ -93,6 +94,16 @@ const REVIEW_CATEGORIES = new Set([
   'multi_object_review',
   'multi-object-review',
 ]);
+const REVIEW_REASON_CATEGORIES = new Set([
+  ...REVIEW_CATEGORIES,
+  'low_confidence',
+  'low-confidence',
+  'low_quality',
+  'low-quality',
+  'screenshot',
+  'ui_screenshot',
+  'ui-screenshot',
+]);
 
 const REVIEW_LABEL = '확인 필요';
 export const CONFIDENCE_REVIEW_THRESHOLD_PERCENT = 90;
@@ -149,6 +160,23 @@ const getRejectionReasonQualityMeta = (
   return { label: '사진으로 상태를 확인하기 어려워요', canShare: false };
 };
 
+const getReviewReasonQualityMeta = (
+  reason?: string | null,
+): QualityMeta | null => {
+  if (!reason) {
+    return null;
+  }
+
+  const normalized = reason.toLowerCase();
+
+  if (REVIEW_REASON_CATEGORIES.has(normalized)) {
+    return { label: REVIEW_LABEL, canShare: true };
+  }
+
+  const meta = getQualityMeta(reason);
+  return { ...meta, label: REVIEW_LABEL, canShare: true };
+};
+
 export const getAnalysisQualityMeta = (
   analysis?: Partial<AiAnalysis> | null,
 ): QualityMeta => {
@@ -164,9 +192,9 @@ export const getAnalysisQualityMeta = (
     return rejectionMeta;
   }
 
-  const reviewMeta = getQualityMeta(analysis?.reviewReason);
+  const reviewMeta = getReviewReasonQualityMeta(analysis?.reviewReason);
 
-  if (reviewMeta.label === REVIEW_LABEL) {
+  if (reviewMeta) {
     return reviewMeta;
   }
 
@@ -194,7 +222,17 @@ export const getGenerateResultQualityMeta = (
 
   const analysisMeta = getAnalysisQualityMeta(result?.aiAnalysis);
 
-  if (!analysisMeta.canShare || analysisMeta.label === REVIEW_LABEL) {
+  if (!analysisMeta.canShare) {
+    return analysisMeta;
+  }
+
+  const rootReviewMeta = getReviewReasonQualityMeta(result?.reviewReason);
+
+  if (rootReviewMeta) {
+    return rootReviewMeta;
+  }
+
+  if (analysisMeta.label === REVIEW_LABEL) {
     return analysisMeta;
   }
 
@@ -210,7 +248,11 @@ export const getGenerateResultQualityMeta = (
 export const canShareAnalysisResult = (
   result?: Pick<
     GenerateResult,
-    'aiAnalysis' | 'freshnessLabel' | 'isFresh' | 'rejectionReason'
+    | 'aiAnalysis'
+    | 'freshnessLabel'
+    | 'isFresh'
+    | 'rejectionReason'
+    | 'reviewReason'
   > | null,
 ): boolean => getGenerateResultQualityMeta(result).canShare;
 
@@ -357,7 +399,7 @@ export const formatPostLifecycleDate = (
     return fallback;
   }
 
-  const date = new Date(value);
+  const date = new Date(parseServerLifecycleTimestampMs(value));
   if (Number.isNaN(date.getTime())) {
     return fallback;
   }

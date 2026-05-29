@@ -47,7 +47,7 @@ FoodLink는 사용자가 남는 식재료를 AI로 확인하고, 가까운 공�
 
 ## 현재 구현 상태
 
-2026-05-25 기준으로 핵심 앱 흐름은 실제 Android 기기와 VM API에서 재검증했고, 백엔드 주간 회신의 신규 계약과 이후 runtime QA 결과를 문서에 반영했습니다.
+2026-05-29 기준으로 핵심 앱 흐름은 실제 Android 기기와 VM API에서 재검증했고, 백엔드 주간 회신의 신규 계약, Post-MVP blocker 회신, 이후 runtime QA 결과를 문서에 반영했습니다.
 
 - `generate -> create -> home/detail/map -> request -> requested 제외` 흐름 통과
 - 백엔드 AI 메타데이터 sidecar 저장/복원 수정 반영
@@ -166,6 +166,8 @@ npm run lint
 npm test -- --runInBand
 node ./node_modules/typescript/bin/tsc --noEmit
 npm run qa:ai-fixtures
+npm run qa:ai-fixtures -- --shape-only
+npm run qa:post-mvp-contracts
 npm run mock:api
 ```
 
@@ -176,18 +178,18 @@ npm run mock:api
 - `Stale`은 `나눔 기준에 맞지 않아요`로 안내하고 등록하지 않습니다.
 - `confidenceScore`는 신선도 분류 모델의 softmax max 확률이며, 단독 등록 차단 기준이 아닙니다.
 - `confidenceScore < 0.9`는 `확인 필요` UX로 표시합니다.
-- screenshot/UI false-positive 차단은 MVP 서버 계약에 없으며 Post-MVP rejection reason 후보입니다. 2026-05-23 기준 정상 generate 응답은 root-level `rejectionReason: null`과 단일 객체 `detections[]`를 내려줍니다.
+- screenshot/UI, 비식재료, 저품질, multi-object 실제 판별은 현재 백엔드 AI 모델 범위 밖입니다. 2026-05-29 기준 Post-MVP에서는 먼저 `rejectionReason`/`reviewReason` 응답 shape를 맞추고, 실제 정확도는 Phase 4 모델 고도화 항목으로 분리합니다.
 - API/code의 `Post`는 도메인 문서와 사용자-facing 문구에서 **나눔 식재료**로 번역합니다.
 
 ## 다음 작업 후보
 
 현재 검증 문서 기준 남은 주요 작업은 아래와 같습니다.
 
-- 최신 VM E2E 재검증: `/auth/me` 운영자 힌트와 프로필 운영자 콘솔 게이트는 연결됐으므로, 실제 운영자 계정으로 진입 정책을 다시 확인합니다.
+- 최신 VM E2E 재검증: `/auth/me` 운영자 힌트와 프로필 운영자 콘솔 진입 제어는 연결됐으므로, 실제 운영자 계정으로 진입 정책을 다시 확인합니다.
 - Android 13 실기기 또는 추가 OEM 참고 매트릭스: 기기가 확보되면 Firebase 설정 포함 빌드와 2계정으로 background/terminated 수신을 보강합니다.
-- Post-MVP AI rejection reason 계약 정리
+- Post-MVP AI response shape live VM 검증과 모델 고도화 acceptance 분리
 - 주변 공유 냉장고 없음 상태를 위한 백엔드 필터 또는 fixture 검증
-- 실제 환경 성취 지표 API와 계산식 정의
+- 백엔드가 구현 완료로 회신한 서버 알림/검색과 상태가 상충한 impact summary의 live VM/OpenAPI 재검증. `npm run qa:post-mvp-contracts`가 OpenAPI와 인증 read-only probe를 확인합니다.
 - Inventory/QR PRD v0 기반 최신 VM/실기기 QR 보관·수령 회귀 재검증
 
 ## 문서 지도
@@ -203,6 +205,7 @@ npm run mock:api
 | [docs/INVENTORY_QR_PRD_V0.md](./docs/INVENTORY_QR_PRD_V0.md) | Post-MVP QR 인증, 30분 임시 선점, 냉장고 재고 운영 PRD |
 | [docs/DESIGN_SYSTEM.md](./docs/DESIGN_SYSTEM.md) | 디자인 토큰과 UI 가이드 |
 | [docs/AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md](./docs/AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md) | AI fixture와 카메라 QA 체크리스트 |
+| [docs/BACKEND_RESPONSE_TO_POST_MVP_BLOCKERS_2026-05-29.md](./docs/BACKEND_RESPONSE_TO_POST_MVP_BLOCKERS_2026-05-29.md) | 2026-05-29 백엔드 Post-MVP blocker 회신 검토 |
 
 ## 용어 원칙
 

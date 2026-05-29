@@ -65,9 +65,18 @@ export const getNearbyPosts = async (
   radiusKm: number = 2.0,
   skip: number = 0,
   limit: number = 50,
+  q?: string,
 ): Promise<ApiResponse<PostNearbyRead[]>> => {
+  const trimmedQuery = q?.trim();
   const response = await apiClient.get(`${POSTS_PREFIX}/nearby`, {
-    params: { latitude, longitude, radius_km: radiusKm, skip, limit },
+    params: {
+      latitude,
+      longitude,
+      radius_km: radiusKm,
+      skip,
+      limit,
+      ...(trimmedQuery ? { q: trimmedQuery } : {}),
+    },
   });
   return response.data;
 };

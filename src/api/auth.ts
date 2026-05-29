@@ -15,6 +15,7 @@ import type {
 const AUTH_PREFIX = '/api/v1/auth';
 
 type BackendUser = User & {
+  email_verified_at?: string | null;
   is_operator?: boolean | null;
   operator_role?: User['operatorRole'];
   operator_fridge_ids?: number[] | null;
@@ -22,14 +23,16 @@ type BackendUser = User & {
 
 const normalizeUser = (user: BackendUser): User => ({
   ...user,
+  emailVerifiedAt: user.emailVerifiedAt ?? user.email_verified_at ?? null,
   isOperator: user.isOperator ?? user.is_operator ?? null,
   operatorRole: user.operatorRole ?? user.operator_role ?? null,
-  operatorFridgeIds:
-    user.operatorFridgeIds ?? user.operator_fridge_ids ?? null,
+  operatorFridgeIds: user.operatorFridgeIds ?? user.operator_fridge_ids ?? null,
 });
 
 /** 회원가입 — POST /api/v1/auth/signup */
-export const signup = async (data: SignupRequest): Promise<ApiResponse<User>> => {
+export const signup = async (
+  data: SignupRequest,
+): Promise<ApiResponse<User>> => {
   const response = await apiClient.post(`${AUTH_PREFIX}/signup`, data);
   const payload = response.data as ApiResponse<BackendUser>;
   return {
@@ -51,11 +54,15 @@ export const login = async (
   formBody.append('username', email);
   formBody.append('password', password);
 
-  const response = await apiClient.post(`${AUTH_PREFIX}/login`, formBody.toString(), {
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
+  const response = await apiClient.post(
+    `${AUTH_PREFIX}/login`,
+    formBody.toString(),
+    {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
     },
-  });
+  );
   return response.data;
 };
 

@@ -278,7 +278,7 @@ Montage Android/iOS는 GreenNode의 색상 팔레트 대체재가 아니라 **�
 
 ### 2026-05-26 디자인 리뷰 후속 기준
 
-plan-design-review 기준 현재 앱의 UX/UI 완성도는 약 6/10이다. MVP 핵심 흐름은 보이지만 반복 사용 제품으로 보이려면 lifecycle action 노출과 모바일 마감 품질을 먼저 올린다.
+plan-design-review 기준 현재 앱의 UX/UI 완성도는 약 6/10이다. 원래 MVP 흐름인 등록/발견/신청 접수는 보이지만 반복 사용 제품으로 보이려면 나눔 생명주기 action 노출과 모바일 마감 품질을 먼저 올린다.
 
 디자인 시스템 관점의 우선순위:
 

@@ -1,11 +1,12 @@
 import React from 'react';
-import { Text, TextInput, TouchableOpacity } from 'react-native';
+import { ScrollView, Text, TextInput, TouchableOpacity } from 'react-native';
 import ReactTestRenderer from 'react-test-renderer';
 import HomeScreen from '@/screens/home/HomeScreen';
 import { getNearbyPosts } from '@/api/posts';
 import { getMyPosts, getMyShareRequests } from '@/api/users';
 import { useAuthStore } from '@/store/authStore';
 import { useFeedRefreshStore } from '@/store/feedRefreshStore';
+import type { ApiResponse, PostNearbyRead } from '@/types';
 
 let mockRouteParams:
   | { nearbyPostsRefreshToken?: number; completedPostId?: number }
@@ -59,6 +60,14 @@ const findButtonByText = (
         .findAllByType(Text)
         .some(textNode => textNode.props.children === label),
     );
+
+const flushDebouncedSearch = async () => {
+  await ReactTestRenderer.act(async () => {
+    jest.advanceTimersByTime(350);
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+};
 
 describe('HomeScreen nearby post refresh', () => {
   beforeEach(() => {
@@ -420,6 +429,518 @@ describe('HomeScreen nearby post refresh', () => {
     });
 
     expect(mockNavigate).toHaveBeenCalledWith('Map');
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
+  it('searches nearby posts on the server with a trimmed query', async () => {
+    const applePost = {
+      id: 10,
+      fridgeId: 1,
+      fridgeName: 'Alpha Fridge',
+      detectedFruit: 'apple',
+      detectedFruitKo: 'Apple QA',
+      freshnessLabel: 'Fresh',
+      imageUrl: '/static/posts/10.jpg',
+      expirationDate: '2026-05-08',
+      status: 'available',
+      createdAt: '2026-05-06T00:00:00Z',
+    } as const;
+    const bananaPost = {
+      id: 11,
+      fridgeId: 2,
+      fridgeName: 'Beta Fridge',
+      detectedFruit: 'banana',
+      detectedFruitKo: 'Banana QA',
+      freshnessLabel: 'Mid',
+      imageUrl: '/static/posts/11.jpg',
+      expirationDate: '2026-05-08',
+      status: 'available',
+      createdAt: '2026-05-06T00:00:00Z',
+    } as const;
+    mockedGetNearbyPosts
+      .mockResolvedValueOnce({
+        success: true,
+        message: 'ok',
+        data: [applePost, bananaPost],
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        message: 'ok',
+        data: [bananaPost],
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        message: 'ok',
+        data: [applePost, bananaPost],
+      });
+
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(<HomeScreen />);
+    });
+
+    const searchInput = renderer!.root.findByType(TextInput);
+
+    await ReactTestRenderer.act(async () => {
+      searchInput.props.onChangeText('  banana  ');
+    });
+    await flushDebouncedSearch();
+
+    expect(mockedGetNearbyPosts).toHaveBeenCalledTimes(2);
+    expect(mockedGetNearbyPosts).toHaveBeenLastCalledWith(
+      35.1595,
+      126.9132,
+      2.0,
+      0,
+      20,
+      'banana',
+    );
+    expect(
+      renderer!.root.findAllByProps({ children: 'Banana QA' }),
+    ).not.toHaveLength(0);
+    expect(renderer!.root.findAllByProps({ children: 'Apple QA' })).toHaveLength(
+      0,
+    );
+
+    await ReactTestRenderer.act(async () => {
+      searchInput.props.onChangeText('   ');
+    });
+    await flushDebouncedSearch();
+
+    expect(mockedGetNearbyPosts).toHaveBeenCalledTimes(3);
+    expect(mockedGetNearbyPosts).toHaveBeenLastCalledWith(35.1595, 126.9132);
+    expect(
+      renderer!.root.findAllByProps({ children: 'Apple QA' }),
+    ).not.toHaveLength(0);
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
+  it('trusts server nearby post search results without local re-filtering', async () => {
+    const addressMatchedPost = {
+      id: 12,
+      fridgeId: 3,
+      fridgeName: 'Alpha Fridge',
+      detectedFruit: 'apple',
+      detectedFruitKo: 'Apple QA',
+      freshnessLabel: 'Fresh',
+      imageUrl: '/static/posts/12.jpg',
+      expirationDate: '2026-05-08',
+      status: 'available',
+      createdAt: '2026-05-06T00:00:00Z',
+    } as const;
+    mockedGetNearbyPosts
+      .mockResolvedValueOnce({
+        success: true,
+        message: 'ok',
+        data: [addressMatchedPost],
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        message: 'ok',
+        data: [addressMatchedPost],
+      });
+
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(<HomeScreen />);
+    });
+
+    const searchInput = renderer!.root.findByType(TextInput);
+
+    await ReactTestRenderer.act(async () => {
+      searchInput.props.onChangeText('market address');
+    });
+    await flushDebouncedSearch();
+
+    expect(mockedGetNearbyPosts).toHaveBeenLastCalledWith(
+      35.1595,
+      126.9132,
+      2.0,
+      0,
+      20,
+      'market address',
+    );
+    expect(
+      renderer!.root.findAllByProps({ children: 'Apple QA' }),
+    ).not.toHaveLength(0);
+    expect(
+      renderer!.root.findAllByProps({ children: '검색 결과 1건' }),
+    ).not.toHaveLength(0);
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
+  it('falls back to local nearby post filtering when server search fails', async () => {
+    const applePost = {
+      id: 10,
+      fridgeId: 1,
+      fridgeName: 'Alpha Fridge',
+      detectedFruit: 'apple',
+      detectedFruitKo: 'Apple QA',
+      freshnessLabel: 'Fresh',
+      imageUrl: '/static/posts/10.jpg',
+      expirationDate: '2026-05-08',
+      status: 'available',
+      createdAt: '2026-05-06T00:00:00Z',
+    } as const;
+    const bananaPost = {
+      id: 11,
+      fridgeId: 2,
+      fridgeName: 'Beta Fridge',
+      detectedFruit: 'banana',
+      detectedFruitKo: 'Banana QA',
+      freshnessLabel: 'Mid',
+      imageUrl: '/static/posts/11.jpg',
+      expirationDate: '2026-05-08',
+      status: 'available',
+      createdAt: '2026-05-06T00:00:00Z',
+    } as const;
+    mockedGetNearbyPosts
+      .mockResolvedValueOnce({
+        success: true,
+        message: 'ok',
+        data: [applePost, bananaPost],
+      })
+      .mockRejectedValueOnce(new Error('server search unavailable'));
+
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(<HomeScreen />);
+    });
+
+    const searchInput = renderer!.root.findByType(TextInput);
+
+    await ReactTestRenderer.act(async () => {
+      searchInput.props.onChangeText('banana');
+    });
+    await flushDebouncedSearch();
+
+    expect(mockedGetNearbyPosts).toHaveBeenCalledTimes(2);
+    expect(mockedGetNearbyPosts).toHaveBeenLastCalledWith(
+      35.1595,
+      126.9132,
+      2.0,
+      0,
+      20,
+      'banana',
+    );
+    expect(
+      renderer!.root.findAllByProps({ children: 'Banana QA' }),
+    ).not.toHaveLength(0);
+    expect(renderer!.root.findAllByProps({ children: 'Apple QA' })).toHaveLength(
+      0,
+    );
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
+  it('keeps blank unfiltered results when a stale server search resolves late', async () => {
+    const applePost = {
+      id: 10,
+      fridgeId: 1,
+      fridgeName: 'Alpha Fridge',
+      detectedFruit: 'apple',
+      detectedFruitKo: 'Apple QA',
+      freshnessLabel: 'Fresh',
+      imageUrl: '/static/posts/10.jpg',
+      expirationDate: '2026-05-08',
+      status: 'available',
+      createdAt: '2026-05-06T00:00:00Z',
+    } as const;
+    const bananaPost = {
+      id: 11,
+      fridgeId: 2,
+      fridgeName: 'Beta Fridge',
+      detectedFruit: 'banana',
+      detectedFruitKo: 'Banana QA',
+      freshnessLabel: 'Mid',
+      imageUrl: '/static/posts/11.jpg',
+      expirationDate: '2026-05-08',
+      status: 'available',
+      createdAt: '2026-05-06T00:00:00Z',
+    } as const;
+    let resolveSearch!: (value: ApiResponse<PostNearbyRead[]>) => void;
+    mockedGetNearbyPosts
+      .mockResolvedValueOnce({
+        success: true,
+        message: 'ok',
+        data: [applePost, bananaPost],
+      })
+      .mockReturnValueOnce(
+        new Promise(resolve => {
+          resolveSearch = resolve;
+        }) as ReturnType<typeof getNearbyPosts>,
+      )
+      .mockResolvedValueOnce({
+        success: true,
+        message: 'ok',
+        data: [applePost, bananaPost],
+      });
+
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(<HomeScreen />);
+    });
+
+    const searchInput = renderer!.root.findByType(TextInput);
+
+    await ReactTestRenderer.act(async () => {
+      searchInput.props.onChangeText('banana');
+    });
+    await flushDebouncedSearch();
+
+    await ReactTestRenderer.act(async () => {
+      searchInput.props.onChangeText('');
+    });
+    await flushDebouncedSearch();
+
+    await ReactTestRenderer.act(async () => {
+      resolveSearch({
+        success: true,
+        message: 'ok',
+        data: [bananaPost],
+      });
+      await Promise.resolve();
+    });
+
+    expect(mockedGetNearbyPosts).toHaveBeenCalledTimes(3);
+    expect(
+      renderer!.root.findAllByProps({ children: 'Apple QA' }),
+    ).not.toHaveLength(0);
+    expect(
+      renderer!.root.findAllByProps({ children: 'Banana QA' }),
+    ).not.toHaveLength(0);
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
+  it('keeps server search results when a stale unfiltered refresh resolves late', async () => {
+    const applePost = {
+      id: 10,
+      fridgeId: 1,
+      fridgeName: 'Alpha Fridge',
+      detectedFruit: 'apple',
+      detectedFruitKo: 'Apple QA',
+      freshnessLabel: 'Fresh',
+      imageUrl: '/static/posts/10.jpg',
+      expirationDate: '2026-05-08',
+      status: 'available',
+      createdAt: '2026-05-06T00:00:00Z',
+    } as const;
+    const bananaPost = {
+      id: 11,
+      fridgeId: 2,
+      fridgeName: 'Beta Fridge',
+      detectedFruit: 'banana',
+      detectedFruitKo: 'Banana QA',
+      freshnessLabel: 'Mid',
+      imageUrl: '/static/posts/11.jpg',
+      expirationDate: '2026-05-08',
+      status: 'available',
+      createdAt: '2026-05-06T00:00:00Z',
+    } as const;
+    let resolveRefresh!: (value: ApiResponse<PostNearbyRead[]>) => void;
+    mockedGetNearbyPosts
+      .mockResolvedValueOnce({
+        success: true,
+        message: 'ok',
+        data: [applePost, bananaPost],
+      })
+      .mockReturnValueOnce(
+        new Promise(resolve => {
+          resolveRefresh = resolve;
+        }) as ReturnType<typeof getNearbyPosts>,
+      )
+      .mockResolvedValueOnce({
+        success: true,
+        message: 'ok',
+        data: [bananaPost],
+      });
+
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(<HomeScreen />);
+    });
+
+    const onSearchQueryChange =
+      renderer!.root.findByType(TextInput).props.onChangeText;
+    const scrollView = renderer!.root.findByType(ScrollView);
+    let refreshPromise!: Promise<void>;
+
+    await ReactTestRenderer.act(async () => {
+      refreshPromise = scrollView.props.refreshControl.props.onRefresh();
+      await Promise.resolve();
+    });
+
+    await ReactTestRenderer.act(async () => {
+      onSearchQueryChange('banana');
+    });
+    await flushDebouncedSearch();
+
+    await ReactTestRenderer.act(async () => {
+      resolveRefresh({
+        success: true,
+        message: 'ok',
+        data: [applePost, bananaPost],
+      });
+      await refreshPromise;
+    });
+
+    expect(mockedGetNearbyPosts).toHaveBeenCalledTimes(3);
+    expect(
+      renderer!.root.findAllByProps({ children: 'Banana QA' }),
+    ).not.toHaveLength(0);
+    expect(renderer!.root.findAllByProps({ children: 'Apple QA' })).toHaveLength(
+      0,
+    );
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
+  it('keeps the home search box visible when server search returns no posts', async () => {
+    const applePost = {
+      id: 10,
+      fridgeId: 1,
+      fridgeName: 'Alpha Fridge',
+      detectedFruit: 'apple',
+      detectedFruitKo: 'Apple QA',
+      freshnessLabel: 'Fresh',
+      imageUrl: '/static/posts/10.jpg',
+      expirationDate: '2026-05-08',
+      status: 'available',
+      createdAt: '2026-05-06T00:00:00Z',
+    } as const;
+    mockedGetNearbyPosts
+      .mockResolvedValueOnce({
+        success: true,
+        message: 'ok',
+        data: [applePost],
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        message: 'ok',
+        data: [],
+      });
+
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(<HomeScreen />);
+    });
+
+    const searchInput = renderer!.root.findByType(TextInput);
+
+    await ReactTestRenderer.act(async () => {
+      searchInput.props.onChangeText('missing');
+    });
+    await flushDebouncedSearch();
+
+    expect(renderer!.root.findAllByType(TextInput)).not.toHaveLength(0);
+    expect(
+      renderer!.root.findAllByProps({ children: '검색 결과가 없습니다' }),
+    ).not.toHaveLength(0);
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
+  it('refreshes with the active server query instead of overwriting with unfiltered posts', async () => {
+    const applePost = {
+      id: 10,
+      fridgeId: 1,
+      fridgeName: 'Alpha Fridge',
+      detectedFruit: 'apple',
+      detectedFruitKo: 'Apple QA',
+      freshnessLabel: 'Fresh',
+      imageUrl: '/static/posts/10.jpg',
+      expirationDate: '2026-05-08',
+      status: 'available',
+      createdAt: '2026-05-06T00:00:00Z',
+    } as const;
+    const bananaPost = {
+      id: 11,
+      fridgeId: 2,
+      fridgeName: 'Beta Fridge',
+      detectedFruit: 'banana',
+      detectedFruitKo: 'Banana QA',
+      freshnessLabel: 'Mid',
+      imageUrl: '/static/posts/11.jpg',
+      expirationDate: '2026-05-08',
+      status: 'available',
+      createdAt: '2026-05-06T00:00:00Z',
+    } as const;
+    mockedGetNearbyPosts
+      .mockResolvedValueOnce({
+        success: true,
+        message: 'ok',
+        data: [applePost, bananaPost],
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        message: 'ok',
+        data: [bananaPost],
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        message: 'ok',
+        data: [bananaPost],
+      });
+
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(<HomeScreen />);
+    });
+
+    const searchInput = renderer!.root.findByType(TextInput);
+
+    await ReactTestRenderer.act(async () => {
+      searchInput.props.onChangeText('banana');
+    });
+    await flushDebouncedSearch();
+
+    mockRouteParams = {
+      nearbyPostsRefreshToken: 2026052901,
+    };
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.update(<HomeScreen />);
+      await Promise.resolve();
+    });
+
+    expect(mockedGetNearbyPosts).toHaveBeenLastCalledWith(
+      35.1595,
+      126.9132,
+      2.0,
+      0,
+      20,
+      'banana',
+    );
+    expect(
+      renderer!.root.findAllByProps({ children: 'Banana QA' }),
+    ).not.toHaveLength(0);
+    expect(renderer!.root.findAllByProps({ children: 'Apple QA' })).toHaveLength(
+      0,
+    );
 
     await ReactTestRenderer.act(async () => {
       renderer?.unmount();

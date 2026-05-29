@@ -7,28 +7,73 @@ import type {
 
 const NOTIFICATIONS_PREFIX = '/api/v1/notifications';
 
+type ServerNotificationList =
+  | ServerNotificationRecord[]
+  | {
+      items?: ServerNotificationRecord[];
+      notifications?: ServerNotificationRecord[];
+      results?: ServerNotificationRecord[];
+    };
+
 const toStringOrEmpty = (value: unknown) =>
   value == null ? '' : String(value);
 
+const firstPresent = <T>(...values: Array<T | null | undefined>) =>
+  values.find(value => value != null);
+
+const getServerNotificationItems = (
+  data: ServerNotificationList | null | undefined,
+): ServerNotificationRecord[] => {
+  if (Array.isArray(data)) {
+    return data;
+  }
+
+  if (!data || typeof data !== 'object') {
+    return [];
+  }
+
+  for (const key of ['items', 'notifications', 'results'] as const) {
+    const value = data[key];
+    if (Array.isArray(value)) {
+      return value;
+    }
+  }
+
+  return [];
+};
+
 export const normalizeServerNotification = (
   notification: ServerNotificationRecord,
-): NotificationRecord => ({
-  id: notification.id,
-  type: notification.type,
-  postId: toStringOrEmpty(notification.postId),
-  requestId:
-    notification.requestId == null ? undefined : String(notification.requestId),
-  fruitName: notification.fruitName || '',
-  fridgeName: notification.fridgeName || '',
-  title: notification.title || 'FoodLink 알림',
-  body: notification.body || '',
-  receivedAt:
-    notification.receivedAt ||
-    notification.createdAt ||
-    new Date().toISOString(),
-  readAt: notification.readAt ?? null,
-  source: 'server',
-});
+): NotificationRecord => {
+  const requestId = firstPresent(
+    notification.requestId,
+    notification.request_id,
+  );
+
+  return {
+    id: toStringOrEmpty(notification.id),
+    type: notification.type,
+    postId: toStringOrEmpty(
+      firstPresent(notification.postId, notification.post_id),
+    ),
+    requestId: requestId == null ? undefined : String(requestId),
+    fruitName:
+      firstPresent(notification.fruitName, notification.fruit_name) || '',
+    fridgeName:
+      firstPresent(notification.fridgeName, notification.fridge_name) || '',
+    title: notification.title || 'FoodLink 알림',
+    body: notification.body || '',
+    receivedAt:
+      firstPresent(
+        notification.receivedAt,
+        notification.received_at,
+        notification.createdAt,
+        notification.created_at,
+      ) || new Date().toISOString(),
+    readAt: firstPresent(notification.readAt, notification.read_at) ?? null,
+    source: 'server',
+  };
+};
 
 export const getNotifications = async (
   unreadOnly: boolean = false,
@@ -36,15 +81,14 @@ export const getNotifications = async (
   limit: number = 50,
 ): Promise<ApiResponse<NotificationRecord[]>> => {
   const response = await apiClient.get(NOTIFICATIONS_PREFIX, {
-    params: { unreadOnly, skip, limit },
+    params: { unreadOnly, unread_only: unreadOnly, skip, limit },
   });
-  const payload = response.data as ApiResponse<ServerNotificationRecord[]>;
+  const payload = response.data as ApiResponse<ServerNotificationList>;
+  const serverNotifications = getServerNotificationItems(payload.data);
 
   return {
     ...payload,
-    data: Array.isArray(payload.data)
-      ? payload.data.map(normalizeServerNotification)
-      : [],
+    data: serverNotifications.map(normalizeServerNotification),
   };
 };
 

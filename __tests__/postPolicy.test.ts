@@ -177,6 +177,59 @@ describe('post policy', () => {
     ).toEqual({ label: '확인 필요', canShare: false });
   });
 
+  it('uses root reviewReason as a soft review signal for generated results', () => {
+    expect(
+      getGenerateResultQualityMeta({
+        reviewReason: 'multi_object_review',
+        freshnessLabel: 'Fresh',
+        aiAnalysis: {
+          isFresh: true,
+          confidenceScore: 0.98,
+          category: 'Fresh',
+        },
+      }),
+    ).toEqual(getQualityMeta('multi_object_review'));
+  });
+
+  it('treats hard-block enum strings as soft review when they come through reviewReason', () => {
+    expect(
+      getGenerateResultQualityMeta({
+        reviewReason: 'low_quality',
+        freshnessLabel: 'Fresh',
+        aiAnalysis: {
+          isFresh: true,
+          confidenceScore: 0.98,
+          category: 'Fresh',
+        },
+      }),
+    ).toEqual({ label: '확인 필요', canShare: true });
+
+    expect(
+      getGenerateResultQualityMeta({
+        aiAnalysis: {
+          isFresh: true,
+          confidenceScore: 0.98,
+          category: 'Fresh',
+          reviewReason: 'ui_screenshot',
+        },
+      }),
+    ).toEqual({ label: '확인 필요', canShare: true });
+  });
+
+  it('keeps root rejectionReason blocking ahead of root reviewReason', () => {
+    expect(
+      getGenerateResultQualityMeta({
+        rejectionReason: 'not_food',
+        reviewReason: 'multi_object_review',
+        aiAnalysis: {
+          isFresh: true,
+          confidenceScore: 0.98,
+          category: 'Fresh',
+        },
+      }),
+    ).toEqual({ label: '식재료 사진으로 확인되지 않았어요', canShare: false });
+  });
+
   it('uses authorId as the post ownership contract', () => {
     expect(getPostAuthorId({ authorId: 10 })).toBe(10);
     expect(isPostAuthoredByUser({ authorId: 10 }, 10)).toBe(true);
@@ -311,6 +364,12 @@ describe('post policy', () => {
         expirationDate: '2026-05-31',
       }),
     ).toBe('권장 수령일 2026-05-31');
+  });
+
+  it('formats timezone-less backend lifecycle timestamps the same as UTC timestamps', () => {
+    expect(formatPostLifecycleDate('2026-05-28T11:38:21.707849')).toBe(
+      formatPostLifecycleDate('2026-05-28T11:38:21.707849Z'),
+    );
   });
 
   it('normalizes confidence scores and flags confidence below 90% for review', () => {

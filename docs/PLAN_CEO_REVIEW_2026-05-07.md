@@ -82,7 +82,7 @@ MVP flow가 실제 데이터와 실제 실패 케이스에서 끝까지 성립�
 | Codepath or flow | Failure mode | Rescued? | Test or evidence | User sees |
 | --- | --- | --- | --- | --- |
 | `POST /posts` after valid generate | AI metadata not persisted | Partially | VM/API and real device QA reproduced | Fallback ingredient/status |
-| `/posts/generate` | Screenshot/low-quality/stale passes as Fresh | No, if token issued | VM fixture smoke reproduced | False shareable result |
+| `/posts/generate` | Screenshot/low-quality/stale passes as Fresh | No, if token issued | VM fixture basic check reproduced | False shareable result |
 | `requestShare(postId)` | self request or duplicate request | Yes | VM/API QA 403/409 | CTA becomes non-actionable/error copy |
 | FCM foreground/background/terminated | Message not received or not routed | Unknown | Not yet real-device verified | Silent missed notification |
 | Location permission denied | User cannot save missing coordinates | Yes | Emulator/unit QA | Retry/settings CTA |

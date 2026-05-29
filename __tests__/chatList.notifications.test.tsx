@@ -10,9 +10,10 @@ import {
   markAllServerNotificationsRead,
   markServerNotificationRead,
 } from '@/api/notifications';
+import type {NotificationRecord} from '@/types';
 
 jest.mock('@react-navigation/native', () => ({
-  useFocusEffect: jest.fn((callback: () => void) => {
+  useFocusEffect: jest.fn((callback: () => void | (() => void)) => {
     const ReactForMock = require('react');
     ReactForMock.useEffect(callback, [callback]);
   }),
@@ -46,6 +47,54 @@ const mockedMarkAllServerNotificationsRead =
   markAllServerNotificationsRead as jest.MockedFunction<
     typeof markAllServerNotificationsRead
   >;
+
+const flushPromises = async () => {
+  await Promise.resolve();
+  await Promise.resolve();
+};
+
+const localNotification = (
+  overrides: Partial<NotificationRecord> = {},
+): NotificationRecord => ({
+  id: 'local-message-1',
+  type: 'share_created',
+  postId: '10',
+  fruitName: 'Apples',
+  fridgeName: 'Community fridge',
+  title: 'Local notification',
+  body: 'A local FCM notification',
+  receivedAt: '2026-05-06T00:00:00.000Z',
+  source: 'foreground',
+  ...overrides,
+});
+
+const serverNotification = (
+  overrides: Partial<NotificationRecord> = {},
+): NotificationRecord => ({
+  id: 'server-message-1',
+  type: 'share_requested',
+  postId: '20',
+  requestId: '200',
+  fruitName: 'Bananas',
+  fridgeName: 'Synced fridge',
+  title: 'Server notification',
+  body: 'A server-backed notification',
+  receivedAt: '2026-05-06T00:10:00.000Z',
+  readAt: null,
+  source: 'server',
+  ...overrides,
+});
+
+const renderScreen = async () => {
+  let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+  await ReactTestRenderer.act(async () => {
+    renderer = ReactTestRenderer.create(<ChatListScreen />);
+    await flushPromises();
+  });
+
+  return renderer!;
+};
 
 const findTouchableByText = (
   renderer: ReactTestRenderer.ReactTestRenderer,
@@ -100,171 +149,110 @@ describe('ChatListScreen notifications', () => {
     jest.restoreAllMocks();
   });
 
-  it('shows empty notification inbox', async () => {
-    await ReactTestRenderer.act(async () => {
-      renderer = ReactTestRenderer.create(<ChatListScreen />);
-    });
+  it('fetches server notification records on focus', async () => {
+    renderer = await renderScreen();
 
-    expect(mockedGetNotifications).not.toHaveBeenCalled();
-    expect(
-      renderer!.root.findAllByProps({children: '아직 알림이 없습니다'}),
-    ).not.toHaveLength(0);
+    expect(mockedGetNotifications).toHaveBeenCalledWith(false, 0, 50);
+    expect(useNotificationStore.getState().notifications).toEqual([]);
   });
 
-  it('shows received notification records and opens the selected target', async () => {
-    useNotificationStore.setState({
-      notifications: [
-        {
-          id: 'message-1',
-          type: 'share_created',
-          postId: '10',
-          fruitName: '사과',
-          fridgeName: '전남대 공유 냉장고',
-          title: '근처에 나눔이 등록됐어요',
-          body: '전남대 공유 냉장고에 사과 나눔이 등록됐어요.',
-          receivedAt: '2026-05-06T00:00:00.000Z',
-          source: 'foreground',
-        },
-      ],
+  it('syncs and displays server notification records from focus fetch', async () => {
+    mockedGetNotifications.mockResolvedValueOnce({
+      success: true,
+      message: 'ok',
+      data: [serverNotification()],
     });
 
-    await ReactTestRenderer.act(async () => {
-      renderer = ReactTestRenderer.create(<ChatListScreen />);
-    });
+    renderer = await renderScreen();
 
     expect(
-      renderer!.root.findAllByProps({children: '근처에 나눔이 등록됐어요'}),
+      renderer.root.findAllByProps({children: 'Server notification'}),
     ).not.toHaveLength(0);
-    expect(
-      renderer!.root.findAllByProps({
-        children: '전남대 공유 냉장고에 사과 나눔이 등록됐어요.',
-      }),
-    ).not.toHaveLength(0);
-
-    await ReactTestRenderer.act(async () => {
-      findTouchableByText(renderer!, '근처에 나눔이 등록됐어요').props.onPress();
-    });
-
-    expect(mockedOpenNotificationTarget).toHaveBeenCalledWith(
-      expect.objectContaining({id: 'message-1', postId: '10'}),
-    );
+    expect(useNotificationStore.getState().notifications).toEqual([
+      expect.objectContaining({id: 'server-message-1', source: 'server'}),
+    ]);
   });
 
-  it('marks a notification as read when the user opens it', async () => {
-    jest.spyOn(Date.prototype, 'toISOString').mockReturnValueOnce(
-      '2026-05-06T00:05:00.000Z',
-    );
+  it('keeps local notification records visible when server fetch fails', async () => {
+    mockedGetNotifications.mockRejectedValueOnce(new Error('offline'));
     useNotificationStore.setState({
-      notifications: [
-        {
-          id: 'message-2',
-          type: 'share_requested',
-          postId: '11',
-          requestId: '99',
-          fruitName: '바나나',
-          fridgeName: '광주역 공유 냉장고',
-          title: '나눔 신청이 도착했어요',
-          body: '바나나 나눔에 신청이 들어왔어요.',
-          receivedAt: '2026-05-06T00:00:00.000Z',
-          source: 'foreground',
-        },
-      ],
+      notifications: [localNotification()],
     });
 
-    await ReactTestRenderer.act(async () => {
-      renderer = ReactTestRenderer.create(<ChatListScreen />);
+    renderer = await renderScreen();
+
+    expect(mockedGetNotifications).toHaveBeenCalledWith(false, 0, 50);
+    expect(
+      renderer.root.findAllByProps({children: 'Local notification'}),
+    ).not.toHaveLength(0);
+    expect(useNotificationStore.getState().notifications).toEqual([
+      expect.objectContaining({id: 'local-message-1'}),
+    ]);
+  });
+
+  it('opens local notification records without calling server read', async () => {
+    jest
+      .spyOn(Date.prototype, 'toISOString')
+      .mockReturnValueOnce('2026-05-06T00:05:00.000Z');
+    useNotificationStore.setState({
+      notifications: [localNotification()],
     });
 
-    expect(renderer!.root.findAllByProps({children: '새 알림'})).not.toHaveLength(
-      0,
-    );
+    renderer = await renderScreen();
 
     await ReactTestRenderer.act(async () => {
-      findTouchableByText(renderer!, '나눔 신청이 도착했어요').props.onPress();
+      findTouchableByText(renderer!, 'Local notification').props.onPress();
+      await flushPromises();
     });
 
     expect(useNotificationStore.getState().notifications[0].readAt).toBe(
       '2026-05-06T00:05:00.000Z',
     );
-    expect(renderer!.root.findAllByProps({children: '읽음'})).not.toHaveLength(0);
     expect(mockedOpenNotificationTarget).toHaveBeenCalledWith(
-      expect.objectContaining({id: 'message-2', postId: '11'}),
+      expect.objectContaining({id: 'local-message-1', postId: '10'}),
     );
     expect(mockedMarkServerNotificationRead).not.toHaveBeenCalled();
   });
 
-  it('treats persisted server-source notification records as local-only entries', async () => {
+  it('marks server-source notifications read on open', async () => {
+    jest
+      .spyOn(Date.prototype, 'toISOString')
+      .mockReturnValueOnce('2026-05-06T00:06:00.000Z');
     useNotificationStore.setState({
-      notifications: [
-        {
-          id: 'server-message-2',
-          type: 'share_requested',
-          postId: '11',
-          requestId: '99',
-          fruitName: '바나나',
-          fridgeName: '광주역 공유 냉장고',
-          title: '서버 나눔 신청 알림',
-          body: '바나나 나눔에 신청이 들어왔어요.',
-          receivedAt: '2026-05-06T00:00:00.000Z',
-          source: 'server',
-        },
-      ],
+      notifications: [serverNotification()],
     });
+
+    renderer = await renderScreen();
 
     await ReactTestRenderer.act(async () => {
-      renderer = ReactTestRenderer.create(<ChatListScreen />);
+      findTouchableByText(renderer!, 'Server notification').props.onPress();
+      await flushPromises();
     });
 
-    await ReactTestRenderer.act(async () => {
-      findTouchableByText(renderer!, '서버 나눔 신청 알림').props.onPress();
-      await Promise.resolve();
-    });
-
-    expect(mockedMarkServerNotificationRead).not.toHaveBeenCalled();
+    expect(useNotificationStore.getState().notifications[0].readAt).toBe(
+      '2026-05-06T00:06:00.000Z',
+    );
+    expect(mockedMarkServerNotificationRead).toHaveBeenCalledWith(
+      'server-message-1',
+    );
     expect(mockedOpenNotificationTarget).toHaveBeenCalledWith(
-      expect.objectContaining({id: 'server-message-2', postId: '11'}),
+      expect.objectContaining({id: 'server-message-1', postId: '20'}),
     );
   });
 
-  it('marks every local notification as read without clearing the inbox', async () => {
+  it('marks every notification read and calls server read-all when unread server records exist', async () => {
     useNotificationStore.setState({
       notifications: [
-        {
-          id: 'message-3',
-          type: 'share_created',
-          postId: '12',
-          fruitName: '사과',
-          fridgeName: '전남대 공유 냉장고',
-          title: '근처에 나눔이 등록됐어요',
-          body: '전남대 공유 냉장고에 사과 나눔이 등록됐어요.',
-          receivedAt: '2026-05-06T00:00:00.000Z',
-          source: 'foreground',
-        },
-        {
-          id: 'message-4',
-          type: 'share_requested',
-          postId: '13',
-          requestId: '100',
-          fruitName: '바나나',
-          fridgeName: '광주역 공유 냉장고',
-          title: '나눔 신청이 도착했어요',
-          body: '바나나 나눔에 신청이 들어왔어요.',
-          receivedAt: '2026-05-06T00:01:00.000Z',
-          source: 'background',
-        },
+        localNotification({id: 'local-message-2'}),
+        serverNotification({id: 'server-message-2'}),
       ],
     });
 
-    await ReactTestRenderer.act(async () => {
-      renderer = ReactTestRenderer.create(<ChatListScreen />);
-    });
-
-    expect(
-      renderer!.root.findAllByProps({children: '새 알림 2개가 있습니다'}),
-    ).not.toHaveLength(0);
+    renderer = await renderScreen();
 
     await ReactTestRenderer.act(async () => {
       findTouchableByText(renderer!, '모두 읽음').props.onPress();
+      await flushPromises();
     });
 
     expect(
@@ -272,118 +260,67 @@ describe('ChatListScreen notifications', () => {
         .getState()
         .notifications.every(notification => Boolean(notification.readAt)),
     ).toBe(true);
-    expect(renderer!.root.findAllByProps({children: '새 알림'})).toHaveLength(0);
-    expect(
-      renderer!.root.findAllByProps({children: '나눔 신청이 도착했어요'}),
-    ).not.toHaveLength(0);
-    expect(mockedMarkAllServerNotificationsRead).not.toHaveBeenCalled();
+    expect(mockedMarkAllServerNotificationsRead).toHaveBeenCalledTimes(1);
   });
 
-  it('marks server-source notifications as read locally when using read all', async () => {
+  it('does not call server read-all when only local unread records exist', async () => {
     useNotificationStore.setState({
-      notifications: [
-        {
-          id: 'server-message-3',
-          type: 'share_created',
-          postId: '12',
-          fruitName: '사과',
-          fridgeName: '전남대 공유 냉장고',
-          title: '서버 근처 나눔 알림',
-          body: '전남대 공유 냉장고에 사과 나눔이 등록됐어요.',
-          receivedAt: '2026-05-06T00:00:00.000Z',
-          source: 'server',
-        },
-      ],
+      notifications: [localNotification()],
     });
 
-    await ReactTestRenderer.act(async () => {
-      renderer = ReactTestRenderer.create(<ChatListScreen />);
-    });
+    renderer = await renderScreen();
 
     await ReactTestRenderer.act(async () => {
       findTouchableByText(renderer!, '모두 읽음').props.onPress();
-      await Promise.resolve();
+      await flushPromises();
     });
 
-    expect(mockedMarkAllServerNotificationsRead).not.toHaveBeenCalled();
     expect(
       useNotificationStore
         .getState()
         .notifications.every(notification => Boolean(notification.readAt)),
     ).toBe(true);
+    expect(mockedMarkAllServerNotificationsRead).not.toHaveBeenCalled();
   });
 
-  it('does not fetch server notification records on focus during MVP', async () => {
-    mockedGetNotifications.mockResolvedValueOnce({
-      success: true,
-      message: 'ok',
-      data: [
-        {
-          id: 'server-message-1',
-          type: 'share_created',
-          postId: '14',
-          fruitName: '토마토',
-          fridgeName: '중앙 공유 냉장고',
-          title: '서버 알림',
-          body: '서버에서 동기화된 알림입니다.',
-          receivedAt: '2026-05-06T00:10:00.000Z',
-          readAt: null,
-          source: 'server',
-        },
-      ],
-    });
-
-    await ReactTestRenderer.act(async () => {
-      renderer = ReactTestRenderer.create(<ChatListScreen />);
-      await Promise.resolve();
-    });
-
-    expect(mockedGetNotifications).not.toHaveBeenCalled();
-    expect(
-      renderer!.root.findAllByProps({children: '서버 알림'}),
-    ).toHaveLength(0);
-    expect(useNotificationStore.getState().notifications).toEqual([]);
-  });
-
-  it('clears local inbox records without deleting server-backed records', async () => {
+  it('clears local inbox and best-effort deletes server-source records', async () => {
     useNotificationStore.setState({
       notifications: [
-        {
-          id: 'message-local',
-          type: 'share_created',
-          postId: '20',
-          fruitName: '사과',
-          fridgeName: '전남대 공유 냉장고',
-          title: '로컬 알림',
-          body: '기기에만 저장된 알림입니다.',
-          receivedAt: '2026-05-06T00:00:00.000Z',
-          source: 'foreground',
-        },
-        {
-          id: 'message-server',
-          type: 'share_requested',
-          postId: '21',
-          requestId: '101',
-          fruitName: '바나나',
-          fridgeName: '광주역 공유 냉장고',
-          title: '서버 알림',
-          body: '서버에 저장된 알림입니다.',
-          receivedAt: '2026-05-06T00:01:00.000Z',
-          source: 'server',
-        },
+        localNotification({id: 'message-local'}),
+        serverNotification({id: 'message-server'}),
       ],
     });
 
-    await ReactTestRenderer.act(async () => {
-      renderer = ReactTestRenderer.create(<ChatListScreen />);
-    });
+    renderer = await renderScreen();
 
     await ReactTestRenderer.act(async () => {
       findTouchableByText(renderer!, '비우기').props.onPress();
-      await Promise.resolve();
+      await flushPromises();
     });
 
     expect(useNotificationStore.getState().notifications).toEqual([]);
-    expect(mockedDeleteServerNotification).not.toHaveBeenCalled();
+    expect(mockedDeleteServerNotification).toHaveBeenCalledWith(
+      'message-server',
+    );
+    expect(mockedDeleteServerNotification).toHaveBeenCalledTimes(1);
+  });
+
+  it('clears local inbox even when server delete fails', async () => {
+    mockedDeleteServerNotification.mockRejectedValueOnce(new Error('offline'));
+    useNotificationStore.setState({
+      notifications: [serverNotification({id: 'message-server-failing'})],
+    });
+
+    renderer = await renderScreen();
+
+    await ReactTestRenderer.act(async () => {
+      findTouchableByText(renderer!, '비우기').props.onPress();
+      await flushPromises();
+    });
+
+    expect(useNotificationStore.getState().notifications).toEqual([]);
+    expect(mockedDeleteServerNotification).toHaveBeenCalledWith(
+      'message-server-failing',
+    );
   });
 });

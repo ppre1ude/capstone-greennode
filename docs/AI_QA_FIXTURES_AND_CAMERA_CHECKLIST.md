@@ -1,6 +1,6 @@
 # AI QA Fixtures and Camera Checklist
 
-> 기준일: 2026-05-25
+> 기준일: 2026-05-29
 > 목적: AI 분석 실패 UX, false-positive 정책, 실제 기기 카메라 검증을 반복 가능하게 만든다.
 
 ## Fixture Set
@@ -9,11 +9,11 @@
 | ------------------ | ---------------- | --------------------------------------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------ |
 | `fresh-single`     | 신선 성공        | 외관이 잘 보이는 단일 과일/채소 사진          | `Fresh` 또는 `Mid`, `canShare=true`, 나눔 식재료 등록 진입 가능 | 분석 결과와 작성 화면에 식재료명/상태/신뢰도가 표시된다.                       |
 | `stale-or-rotten`  | 나눔 기준 미충족 | 무름, 곰팡이, 변색이 보이는 과일/채소 사진    | `Stale` 또는 generate 400                                       | 앱은 등록 화면으로 보내지 않고 `나눔 기준에 맞지 않아요` 계열 문구를 보여준다. |
-| `not-food`         | 비식재료         | 책상, 방, 전자기기 등 식재료가 아닌 사진      | generate 400 또는 `확인 필요`                                   | 식재료 나눔으로 바로 등록되지 않는다.                                          |
-| `screenshot-or-ui` | 스크린샷/아이콘  | 앱 화면 캡처, 런처 아이콘, 지도 캡처          | MVP: `Fresh + imageToken` 통과 가능. Post-MVP: generate 400 또는 `확인 필요` | MVP에서는 차단 불가로 허용하되 낮은 confidence면 `확인 필요`로 표시한다.       |
-| `low-quality`      | 흐림/어두움/가림 | 흔들림, 저조도, 부분 가림 사진                | 낮은 confidence 또는 실패                                       | `확인 필요` 또는 재촬영 안내가 표시된다.                                       |
+| `not-food`         | 비식재료         | 책상, 방, 전자기기 등 식재료가 아닌 사진      | 현재 모델: 실제 판별 불가. Phase 4: generate 400 또는 `확인 필요` | 모델 고도화 전에는 report-only로 기록하고, reason 없는 generic 400만 shape gap으로 본다. |
+| `screenshot-or-ui` | 스크린샷/아이콘  | 앱 화면 캡처, 런처 아이콘, 지도 캡처          | 현재 모델: 실제 판별 불가. Phase 4: generate 400 또는 `확인 필요` | MVP/현재 모델에서는 통과 가능하며 낮은 confidence면 `확인 필요`로 표시한다. |
+| `low-quality`      | 흐림/어두움/가림 | 흔들림, 저조도, 부분 가림 사진                | 현재 모델: 실제 품질 판별 불가. Phase 4: 낮은 confidence 또는 실패 | `확인 필요` 또는 재촬영 안내가 표시된다.                                       |
 | `large-image`      | 대용량 이미지    | 8MB 이상 또는 고해상도 원본                   | 8MB 초과는 업로드 전 차단                                       | 앱이 멈추지 않고 명확한 오류 문구를 제공한다.                                  |
-| `multi-object`     | 여러 식재료      | 한 장에 서로 다른 식재료가 2개 이상 있는 사진 | MVP: `detections[]` 단일 객체 래핑, 대표 객체 1개 처리. Post-MVP: 실제 다중 객체 | 실제 `detections.length > 1`, `bbox`, non-null `rejectionReason`은 Post-MVP 검증용으로 둔다. |
+| `multi-object`     | 여러 식재료      | 한 장에 서로 다른 식재료가 2개 이상 있는 사진 | 현재 모델: 실제 감지 불가. Phase 4: `detections.length > 1` | 실제 `detections.length > 1`, normalized `bbox`, `reviewReason=multi_object_review`는 object detection 모델 도입 후 검증한다. |
 
 ## Fixture Storage Rule
 
@@ -41,10 +41,11 @@ FOODLINK_API_BASE_URL=http://localhost:8080 FOODLINK_ACCESS_TOKEN=<token> npm ru
 ```
 
 - report-only mode는 같은 결과를 출력하지만 fixture 실패가 있어도 exit code `0`으로 종료한다.
+- 백엔드 응답 shape만 별도 검증하려면 `--shape-only`를 사용한다. 이 모드는 reason 없는 generic 400을 실패로 유지하되, 현재 모델이 `Fresh + imageToken`으로 통과시키는 정확도 gap은 `model accuracy deferred`로 기록한다.
 - `FOODLINK_ACCESS_TOKEN`은 필수다. 토큰 누락/만료로 401/403이 내려오면 AI rejection 성공으로 보지 않고 인증 실패로 기록한다.
-- 백엔드/AI 수정 후 acceptance gate로 검증할 때는 strict mode를 사용한다. 단, `screenshot-or-ui`는 2026-05-08 백엔드 답변 기준 MVP 허용 케이스이므로 Post-MVP rejection enum 도입 전까지 report-only 관찰 대상으로 둔다.
+- 백엔드/AI 수정 후 acceptance gate로 검증할 때는 strict mode를 사용한다. 단, 2026-05-29 백엔드 회신 기준 현재 모델은 `not-food`, `screenshot-or-ui`, `low-quality`, `multi-object`를 실제로 판별하지 못하므로, 모델 고도화 전에는 full fixture strict를 release gate로 쓰지 않는다.
 - fixture 파일이 없으면 해당 항목은 `skipped`로 기록된다.
-- 실패/검토 케이스는 generate 400, 나눔 기준 미충족 category, 낮은 confidence, 또는 검토 사유 enum 중 하나를 기대한다. MVP에서 screenshot/UI는 예외적으로 통과할 수 있다.
+- 실패/검토 케이스는 Post-MVP shape 검증에서 명시 `rejectionReason` 400 또는 `reviewReason` 200을 기대한다. reason 없는 generic 400은 계약 실패로 기록한다. 실제 분류 정확도는 AI 모델 고도화 전까지 report-only로 기록한다.
 - 백엔드 Phase 1.5 기준 신선도 label은 `Fresh/Mid/Stale`이다. 기존 `Normal`은 `Mid` 그룹으로 번역하고, `Bad/Rotten`은 현재 서버 label이 아닌 방어 호환 label로만 본다.
 - 백엔드 AI는 `unknown`도 반환할 수 있다. `unknown`은 바로 등록 가능한 성공 상태로 보지 않고 `확인 필요` 또는 실패 UX로 기록한다.
 - confidence 테스트는 `0.4`, `0.7`, `1.0`을 포함한다. 제품 기준은 백엔드 활용 가이드를 따라 `0.9` 미만을 `확인 필요` UX로 본다. 따라서 `0.4`와 `0.7`은 확인 필요, `1.0`은 바로 나눔 가능 표시가 기대값이다. 단, 낮은 confidence만으로 등록을 차단하지 않는다.
@@ -52,7 +53,7 @@ FOODLINK_API_BASE_URL=http://localhost:8080 FOODLINK_ACCESS_TOKEN=<token> npm ru
 
 ## False-positive Policy
 
-현재 앱은 이미지 내용을 직접 판별하지 않고 서버의 AI 결과를 신뢰한다. 따라서 비식재료/스크린샷을 막는 1차 책임은 서버/AI 파이프라인에 둔다. 다만 2026-05-08 백엔드 답변 기준 MVP 서버/AI에는 스크린샷/UI 캡처 판별 모델이 없으므로, screenshot/UI false-positive는 MVP에서 허용하고 Post-MVP rejection enum 후보로 관리한다.
+현재 앱은 이미지 내용을 직접 판별하지 않고 서버의 AI 결과를 신뢰한다. 따라서 비식재료/스크린샷을 막는 1차 책임은 서버/AI 파이프라인에 둔다. 다만 2026-05-29 백엔드 회신 기준 현재 서버/AI에는 비식재료, 스크린샷/UI 캡처, 저품질, 다중 객체 감지 모델이 없다. 이 케이스들은 현재 모델에서는 report-only로 관찰하고, Phase 4 모델 고도화 이후 strict acceptance로 승격한다.
 
 앱 책임:
 
@@ -64,8 +65,8 @@ FOODLINK_API_BASE_URL=http://localhost:8080 FOODLINK_ACCESS_TOKEN=<token> npm ru
 
 - 제품 목표상 비식재료, 스크린샷, 앱 아이콘, 실내 배경은 `Fresh` 식재료로 반환하지 않아야 한다. MVP에서는 스크린샷/UI 판별 모델이 없어 이 기준을 강제하지 못한다.
 - `Stale` 또는 `isFresh=false`이면 서버는 generate 400을 반환하고 `imageToken`을 발급하지 않는다.
-- 실패/검토 사유 enum은 Post-MVP 백엔드 항목이다. 2026-05-23 백엔드 회신의 Post-MVP 후보는 `stale`, `not_food`, `low_quality`, `screenshot`, `multi_object_review`다. 앱은 기존 방어 호환으로 `non_food`, `ui_screenshot`, `review_required`도 계속 처리할 수 있다.
-- 200 응답으로 검토 상태를 돌려보낼 때는 root-level `rejectionReason` 또는 호환 필드인 `aiAnalysis.rejectionReason`/`aiAnalysis.reviewReason`을 포함한다. 서버가 400을 반환하는 경우에는 FastAPI `detail`에 같은 사유를 사람이 읽을 수 있는 문구로 담는다.
+- 실패/검토 사유 enum은 Post-MVP 백엔드 항목이다. 2026-05-29 결정 기준 hard block은 `stale`, `not_food`, `low_quality`, `screenshot`, `ui_screenshot`이며, soft review는 `review_required`, `low_confidence`, `low_quality`, `screenshot`, `ui_screenshot`, `multi_object_review`다. 앱은 기존 방어 호환으로 `non_food`도 계속 처리할 수 있다.
+- 200 응답으로 검토 상태를 돌려보낼 때는 root-level `reviewReason` 또는 호환 필드인 `aiAnalysis.reviewReason`을 포함한다. 서버가 400을 반환하는 경우에는 `error.rejectionReason`을 canonical reason으로 담고, FastAPI `detail`은 사람이 읽을 수 있는 보조 문구로만 본다.
 
 ## Actual Android Device Camera Checklist
 
@@ -117,7 +118,7 @@ FOODLINK_API_BASE_URL=http://localhost:8080 FOODLINK_ACCESS_TOKEN=<token> npm ru
   - `temp/real-device-camera-screen.png`: 200, `바나나`, `Fresh`, confidence `0.5377`, `imageToken` 발급.
   - 충돌 문서/기준: 당시 이 문서와 `docs/qa-fixtures/manifest.json`은 `screenshot-or-ui`를 400 또는 `확인 필요`로 기대했다. 2026-05-08 백엔드 답변 기준 MVP에서는 화면 캡처를 `Fresh`로 통과시키는 것이 허용되며, manifest 기대값은 Post-MVP rejection 목표로만 해석한다.
 - 2026-05-07 무기기 fallback 자동 테스트를 추가했다. 카메라 장치 없음 -> 갤러리 선택 -> 분석 결과 이동, generate 400 -> 재촬영/갤러리 대안, 지원하지 않는 이미지 형식의 generate 전 차단, `Stale`/`imageToken` 누락 등록 차단, 낮은 confidence 확인 필요 표시를 테스트로 고정했다.
-- 2026-05-07 fixture 이미지 기반 VM/API smoke QA를 실행했다.
+- 2026-05-07 fixture 이미지 기반 VM/API 기본 동작 점검을 실행했다.
   - `fresh-single`: 통과. `바나나`, `Fresh`, confidence `1`, `imageToken` 발급.
   - `not-food`: 통과. generate 400으로 거부.
   - `multi-object`: 통과로 분류. generate 400으로 거부. 현재 기대값은 대표 객체 1개 또는 review/reject 중 하나다.
@@ -141,3 +142,4 @@ FOODLINK_API_BASE_URL=http://localhost:8080 FOODLINK_ACCESS_TOKEN=<token> npm ru
   - `large-image`: skipped. 로컬 전용 업로드 크기 guard fixture다.
 - 2026-05-25 VM 재검증도 같은 판정이다. `temp/ai-fixtures-report-only-2026-05-25T13-21-33-141Z.txt`에서 `fresh-single`, `not-food`, `multi-object`는 통과했고, `stale-or-rotten`, `screenshot-or-ui`, `low-quality`는 report-only 실패로 남았다.
 - FCM 실제 기기 foreground/background/terminated 수신 QA는 2026-05-25에 닫혔다. `stale-or-rotten`, `screenshot-or-ui`, `low-quality` 차단은 MVP blocker가 아니라 Post-MVP AI/rejection contract 항목이다.
+- 2026-05-29 백엔드 상세 회신으로 현재 AI 서버가 3종 과일 신선도 분류 범위를 벗어나는 비식재료, 스크린샷/UI, 저품질, 다중 객체 감지를 실제로 수행할 수 없음이 확인됐다. 따라서 `npm run qa:ai-fixtures` full strict는 모델 고도화 이후 gate로 두고, 그 전에는 report-only 결과와 응답 shape 계약을 분리해서 본다.

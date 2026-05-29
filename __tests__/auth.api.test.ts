@@ -33,6 +33,7 @@ describe('auth API user normalization', () => {
           is_operator: true,
           operator_role: 'fridge_operator',
           operator_fridge_ids: [1, 3],
+          email_verified_at: null,
           roles: ['member', 'fridge_operator'],
           createdAt: '2026-05-25T00:00:00Z',
           updatedAt: '2026-05-25T00:00:00Z',
@@ -47,7 +48,34 @@ describe('auth API user normalization', () => {
       isOperator: true,
       operatorRole: 'fridge_operator',
       operatorFridgeIds: [1, 3],
+      emailVerifiedAt: null,
     });
+  });
+
+  it('normalizes verified email timestamp from snake_case auth responses', async () => {
+    mockedApiClient.get.mockResolvedValue({
+      data: {
+        success: true,
+        message: 'ok',
+        data: {
+          id: 1,
+          email: 'member@example.com',
+          nickname: 'member',
+          profileImageUrl: null,
+          latitude: 35,
+          longitude: 126,
+          fcmToken: null,
+          isActive: true,
+          email_verified_at: '2026-05-29T00:00:00Z',
+          createdAt: '2026-05-25T00:00:00Z',
+          updatedAt: '2026-05-25T00:00:00Z',
+        },
+      },
+    });
+
+    const response = await getMe();
+
+    expect(response.data?.emailVerifiedAt).toBe('2026-05-29T00:00:00Z');
   });
 
   it('updates the current user profile through PATCH /auth/me', async () => {
