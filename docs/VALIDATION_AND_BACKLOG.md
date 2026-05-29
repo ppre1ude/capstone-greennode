@@ -25,6 +25,7 @@
 - Post-MVP 제품/계약 결정은 2026-05-29 [POST_MVP_PRODUCT_CONTRACT_DECISIONS.md](./POST_MVP_PRODUCT_CONTRACT_DECISIONS.md)에 정리했다. 결정 기준은 `HOLD_SCOPE`이며 AI 차단/검토 사유, 여러 객체 대표 후보, 서버 저장형 알림, 환경 성취 지표, 서버 검색, 이메일 인증, 운영자 권한 관리, 소셜 로그인, WebSocket 채팅 범위를 분리했다.
 - 2026-05-29 Post-MVP 프론트 선반영과 live VM blocker 분리는 [BACKEND_POST_MVP_CONTRACT_BLOCKERS_2026-05-29.md](./BACKEND_POST_MVP_CONTRACT_BLOCKERS_2026-05-29.md)를 따른다. 프론트는 여러 객체 대표 후보 선택/`selectedDetectionId` 전송과 알림함 서버 동기화 fallback을 준비했다. 이후 백엔드 회신으로 notifications/server search는 구현 완료 보고, impact는 상태 확인 필요, AI 정확도와 auth 확장은 후속 범위로 재분류했다.
 - 2026-05-29 백엔드 상세 회신 검토는 [BACKEND_RESPONSE_TO_POST_MVP_BLOCKERS_2026-05-29.md](./BACKEND_RESPONSE_TO_POST_MVP_BLOCKERS_2026-05-29.md)를 따른다. 백엔드는 notifications/server search를 구현 완료로 회신했지만 live VM 재검증이 필요하고, AI 실제 분류 정확도와 multi-object detection은 현재 모델 한계로 Phase 4 항목이다.
+- 2026-05-29 후속 반영으로 홈/지도 검색은 서버 `q`를 우선 호출하고, endpoint 미배포나 실패 시 마지막 unfiltered 목록의 로컬 필터로 fallback한다. `npm run qa:post-mvp-contracts`는 notifications, impact, search `q`를 read-only로 확인하는 재검증 하네스다.
 
 ## 활성 P0
 
@@ -206,10 +207,12 @@ To-do:
 
 - [x] 서버 검색 계약 방향을 결정한다. `GET /posts/nearby`와 `GET /fridges/nearby`에 optional `q`, `skip`, `limit`을 추가하는 방식으로 확장한다.
 - [x] `getNearbyPosts()`와 `getNearbyFridges()`가 optional `q`, `skip`, `limit`을 보낼 수 있게 API client를 확장했다. 화면은 live VM 확인 전까지 기존 로컬 필터 fallback을 유지한다.
+- [x] 홈/지도 검색 화면은 trimmed query가 있으면 서버 `q` 검색을 먼저 호출하고, 실패하면 마지막 unfiltered 결과를 로컬 필터링한다.
+- [x] `npm run qa:post-mvp-contracts` read-only 하네스로 OpenAPI의 notifications/impact/search `q` 노출과 인증 read endpoint response shape를 확인할 수 있다.
 - [x] 백엔드 회신을 반영해 email verification과 social login을 이번 immediate scope에서 제외하고 Phase 4 auth expansion으로 분리한다.
 - [x] WebSocket 채팅 범위를 결정한다. 다음 구현 후보에서 제외하고 알림/신청 lifecycle을 우선한다.
 - [x] Post-MVP 구현 시 server search, email verification, social login, WebSocket chat을 각각 독립 후속 항목으로 분리한다. 2026-05-29 backend blocker 문서에 API 필요 범위와 제외 범위를 분리했다.
-- [ ] 백엔드가 구현 완료로 회신한 server search `q` parameter가 OpenAPI/live VM에 추가됐는지 확인한 뒤 앱 연결 여부를 결정한다.
+- [ ] 백엔드가 구현 완료로 회신한 server search `q` parameter가 OpenAPI/live VM에 추가됐는지 확인하고, 서버 검색이 안정화되면 로컬 fallback 유지 범위를 재결정한다.
 - [x] `/auth/me.emailVerifiedAt`은 nullable 필드로 방어 처리한다.
 - [ ] 실제 email verification/social login flow는 Phase 4에서 별도 계약을 작성한다.
 

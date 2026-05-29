@@ -18,7 +18,7 @@
 | Multi-object representative | 현재 object detection 모델이 없어 실제 다중 객체 감지 불가 | 대표 후보 UI와 `selectedDetectionId`는 방어 준비 상태로 유지 | 실제 `detections.length >= 2`, normalized `bbox`는 Phase 4 모델 교체 후 acceptance |
 | Server-backed notifications | 백엔드 구현 완료로 회신 | live VM/OpenAPI 재배포 확인 전까지는 "reported implemented" | 4 endpoint, 권한 규칙, soft delete를 VM에서 재검증 |
 | Impact/carbon metrics | 요약표는 구현 완료, 본문은 미구현/개발 계획으로 상충 | 상태가 불명확하므로 live VM/OpenAPI 확인 필요 | `totalShared`, `totalReceived`, zero summary, `calculationVersion` 확인 항목 추가 |
-| Server search | nearby `q` 확장 구현 완료로 회신 | live VM/OpenAPI 확인 후 로컬 필터 fallback 유지 여부 결정 | `posts/nearby`, `fridges/nearby`의 `q`, pagination, 정렬 규칙 확인 |
+| Server search | nearby `q` 확장 구현 완료로 회신 | 홈/지도는 서버 `q` 우선 호출 후 실패 시 로컬 필터 fallback | `posts/nearby`, `fridges/nearby`의 `q`, pagination, 정렬 규칙 확인 |
 | Email verification | MVP 제외 권장, `/auth/me.emailVerifiedAt: null`만 선반영 가능 | 전체 인증 flow는 Phase 4 | UI는 인증 전용 flow를 만들지 않음 |
 | Social login | MVP 제외 권장 | 버튼은 비활성 또는 숨김, provider token 교환 endpoint 요구는 Phase 4 | 기존 email/password 로그인 유지 |
 | WebSocket chat | 제외 합의 | 변경 없음 | 알림 저장소/lifecycle 안정화 후 구조화 메시지부터 검토 |
@@ -43,7 +43,7 @@
 
 ## 재검증 계획
 
-1. 백엔드 재배포 후 `/openapi.json`에서 notifications, impact, nearby `q` parameter 노출 확인.
+1. 백엔드 재배포 후 `/openapi.json`에서 notifications, impact, nearby `q` parameter 노출 확인. 프론트 하네스는 `npm run qa:post-mvp-contracts`를 사용한다.
 2. live VM에서 notifications 4 endpoint의 본인/타인 권한, read-all, soft delete 확인.
 3. live VM에서 impact summary 빈 사용자 200 + zero summary와 `calculationVersion`, `computedAt` 확인.
 4. live VM에서 `posts/nearby?q=...`, `fridges/nearby?q=...`의 검색 대상과 정렬 확인.

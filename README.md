@@ -167,6 +167,7 @@ npm test -- --runInBand
 node ./node_modules/typescript/bin/tsc --noEmit
 npm run qa:ai-fixtures
 npm run qa:ai-fixtures -- --shape-only
+npm run qa:post-mvp-contracts
 npm run mock:api
 ```
 
@@ -188,7 +189,7 @@ npm run mock:api
 - Android 13 실기기 또는 추가 OEM 참고 매트릭스: 기기가 확보되면 Firebase 설정 포함 빌드와 2계정으로 background/terminated 수신을 보강합니다.
 - Post-MVP AI response shape live VM 검증과 모델 고도화 acceptance 분리
 - 주변 공유 냉장고 없음 상태를 위한 백엔드 필터 또는 fixture 검증
-- 백엔드가 구현 완료로 회신한 서버 알림/검색과 상태가 상충한 impact summary의 live VM/OpenAPI 재검증
+- 백엔드가 구현 완료로 회신한 서버 알림/검색과 상태가 상충한 impact summary의 live VM/OpenAPI 재검증. `npm run qa:post-mvp-contracts`가 OpenAPI와 인증 read-only probe를 확인합니다.
 - Inventory/QR PRD v0 기반 최신 VM/실기기 QR 보관·수령 회귀 재검증
 
 ## 문서 지도

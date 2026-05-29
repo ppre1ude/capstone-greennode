@@ -68,6 +68,10 @@ const MapScreen = () => {
   const mapRef = useRef<MapView>(null);
   const flatListRef = useRef<FlatList>(null);
   const fridgePostsRequestId = useRef(0);
+  const fridgeSearchRequestId = useRef(0);
+  const didMountFridgeSearch = useRef(false);
+  const unfilteredFridgesRef = useRef<Fridge[]>([]);
+  const hasLoadedUnfilteredFridgesRef = useRef(false);
   const location = getRegisteredLocation(user);
   const displayedFridges = useMemo(
     () => filterFridges(fridges, searchQuery),
@@ -141,9 +145,13 @@ const MapScreen = () => {
   }, []);
 
   const fetchFridges = useCallback(async () => {
+    const requestId = fridgeSearchRequestId.current + 1;
+    fridgeSearchRequestId.current = requestId;
     const registeredLocation = getRegisteredLocation(user);
     if (!registeredLocation) {
       setFridges([]);
+      unfilteredFridgesRef.current = [];
+      hasLoadedUnfilteredFridgesRef.current = false;
       setSelectedFridgeId(null);
       resetFridgePosts();
       setFridgeState('error');
@@ -159,11 +167,18 @@ const MapScreen = () => {
         registeredLocation.longitude,
         2.0,
       );
+      if (fridgeSearchRequestId.current !== requestId) {
+        return;
+      }
       if (response.success && response.data) {
         setFridges(response.data);
+        unfilteredFridgesRef.current = response.data;
+        hasLoadedUnfilteredFridgesRef.current = true;
         setFridgeState(response.data.length > 0 ? 'ready' : 'empty');
       } else {
         setFridges([]);
+        unfilteredFridgesRef.current = [];
+        hasLoadedUnfilteredFridgesRef.current = false;
         setSelectedFridgeId(null);
         resetFridgePosts();
         setFridgeState('error');
@@ -172,8 +187,13 @@ const MapScreen = () => {
         );
       }
     } catch (error) {
+      if (fridgeSearchRequestId.current !== requestId) {
+        return;
+      }
       console.warn('Map: Failed to fetch fridges', error);
       setFridges([]);
+      unfilteredFridgesRef.current = [];
+      hasLoadedUnfilteredFridgesRef.current = false;
       setSelectedFridgeId(null);
       resetFridgePosts();
       setFridgeState('error');
@@ -181,9 +201,87 @@ const MapScreen = () => {
     }
   }, [resetFridgePosts, user]);
 
+  const searchFridges = useCallback(
+    async (query: string) => {
+      const registeredLocation = getRegisteredLocation(user);
+      if (!registeredLocation) {
+        return;
+      }
+
+      const requestId = fridgeSearchRequestId.current + 1;
+      fridgeSearchRequestId.current = requestId;
+      setFridgeState('loading');
+      setFridgeError(null);
+
+      try {
+        const response = await getNearbyFridges(
+          registeredLocation.latitude,
+          registeredLocation.longitude,
+          2.0,
+          query,
+          0,
+          20,
+        );
+        if (fridgeSearchRequestId.current !== requestId) {
+          return;
+        }
+
+        if (response.success && response.data) {
+          setFridges(response.data);
+          setFridgeState(response.data.length > 0 ? 'ready' : 'empty');
+        } else {
+          throw new Error(response.message || 'search failed');
+        }
+      } catch (error) {
+        if (fridgeSearchRequestId.current !== requestId) {
+          return;
+        }
+
+        console.warn('Map: Failed to search fridges', error);
+        if (hasLoadedUnfilteredFridgesRef.current) {
+          const fallbackFridges = filterFridges(
+            unfilteredFridgesRef.current,
+            query,
+          );
+          setFridges(fallbackFridges);
+          setFridgeState(fallbackFridges.length > 0 ? 'ready' : 'empty');
+          setFridgeError(null);
+          return;
+        }
+
+        setFridges([]);
+        setSelectedFridgeId(null);
+        resetFridgePosts();
+        setFridgeState('error');
+        setFridgeError(
+          '서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.',
+        );
+      }
+    },
+    [resetFridgePosts, user],
+  );
+
   useEffect(() => {
     fetchFridges();
   }, [fetchFridges]);
+
+  useEffect(() => {
+    if (!didMountFridgeSearch.current) {
+      didMountFridgeSearch.current = true;
+      return;
+    }
+
+    const query = searchQuery.trim();
+    const timeout = setTimeout(() => {
+      if (query) {
+        searchFridges(query).catch(() => undefined);
+      } else {
+        fetchFridges().catch(() => undefined);
+      }
+    }, 300);
+
+    return () => clearTimeout(timeout);
+  }, [fetchFridges, searchFridges, searchQuery]);
 
   useEffect(() => {
     if (
@@ -593,7 +691,7 @@ const MapScreen = () => {
         ) : (
           <DSCard style={styles.emptyCard}>
             <DSText variant="caption" style={styles.emptyTitle}>
-              {fridges.length > 0
+              {searchQuery.trim() || fridges.length > 0
                 ? '검색 결과가 없습니다'
                 : '근처에 냉장고가 없습니다'}
             </DSText>
@@ -601,7 +699,7 @@ const MapScreen = () => {
               variant="body"
               color="textSecondary"
               style={styles.emptyText}>
-              {fridges.length > 0
+              {searchQuery.trim() || fridges.length > 0
                 ? '다른 동네 이름이나 냉장고 이름으로 검색해보세요.'
                 : '동네 위치를 다시 설정하거나 잠시 후 다시 확인해주세요.'}
             </DSText>

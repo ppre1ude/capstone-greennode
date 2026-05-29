@@ -1,11 +1,11 @@
 import React from 'react';
-import { TouchableOpacity } from 'react-native';
+import { TextInput, TouchableOpacity } from 'react-native';
 import ReactTestRenderer from 'react-test-renderer';
 import MapScreen from '@/screens/map/MapScreen';
 import { getFridgePosts, getNearbyFridges } from '@/api/fridges';
 import { useAuthStore } from '@/store/authStore';
 import { useFeedRefreshStore } from '@/store/feedRefreshStore';
-import type { ApiResponse, PostNearbyRead } from '@/types';
+import type { ApiResponse, Fridge, PostNearbyRead } from '@/types';
 
 const mockRootNavigate = jest.fn();
 
@@ -113,6 +113,14 @@ const findHostByTestId = (
     node => node.props.testID === testID && typeof node.type === 'string',
   );
 
+const flushDebouncedSearch = async () => {
+  await ReactTestRenderer.act(async () => {
+    jest.advanceTimersByTime(350);
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+};
+
 describe('MapScreen fridge posts', () => {
   let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
 
@@ -167,6 +175,7 @@ describe('MapScreen fridge posts', () => {
       renderer?.unmount();
       renderer = undefined;
     });
+    jest.useRealTimers();
   });
 
   it('shows the fridge carousel as the only bottom surface mode before selection', async () => {
@@ -327,6 +336,318 @@ describe('MapScreen fridge posts', () => {
     expect(
       renderer!.root.findAllByProps({ children: '전남대 공유 냉장고' }),
     ).not.toHaveLength(0);
+  });
+
+  it('searches nearby fridges on the server with a trimmed query', async () => {
+    jest.useFakeTimers();
+    const alphaFridge = {
+      id: 7,
+      name: 'Alpha Fridge',
+      address: 'North Market',
+      latitude: 35.1595,
+      longitude: 126.9132,
+      isActive: true,
+      distance: 0.4,
+    } as const;
+    const betaFridge = {
+      id: 8,
+      name: 'Beta Fridge',
+      address: 'South Market',
+      latitude: 35.16,
+      longitude: 126.914,
+      isActive: true,
+      distance: 0.6,
+    } as const;
+    mockedGetNearbyFridges
+      .mockResolvedValueOnce({
+        success: true,
+        message: 'ok',
+        data: [alphaFridge, betaFridge],
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        message: 'ok',
+        data: [betaFridge],
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        message: 'ok',
+        data: [alphaFridge, betaFridge],
+      });
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(<MapScreen />);
+    });
+
+    const searchInput = renderer!.root.findByType(TextInput);
+
+    await ReactTestRenderer.act(async () => {
+      searchInput.props.onChangeText('  beta  ');
+    });
+    await flushDebouncedSearch();
+
+    expect(mockedGetNearbyFridges).toHaveBeenCalledTimes(2);
+    expect(mockedGetNearbyFridges).toHaveBeenLastCalledWith(
+      35.1595,
+      126.9132,
+      2.0,
+      'beta',
+      0,
+      20,
+    );
+    expect(
+      renderer!.root.findAllByProps({ children: 'Beta Fridge' }),
+    ).not.toHaveLength(0);
+    expect(renderer!.root.findAllByProps({ children: 'Alpha Fridge' })).toHaveLength(
+      0,
+    );
+
+    await ReactTestRenderer.act(async () => {
+      searchInput.props.onChangeText('   ');
+    });
+    await flushDebouncedSearch();
+
+    expect(mockedGetNearbyFridges).toHaveBeenCalledTimes(3);
+    expect(mockedGetNearbyFridges).toHaveBeenLastCalledWith(
+      35.1595,
+      126.9132,
+      2.0,
+    );
+    expect(
+      renderer!.root.findAllByProps({ children: 'Alpha Fridge' }),
+    ).not.toHaveLength(0);
+  });
+
+  it('falls back to local fridge filtering when server search fails', async () => {
+    jest.useFakeTimers();
+    const alphaFridge = {
+      id: 7,
+      name: 'Alpha Fridge',
+      address: 'North Market',
+      latitude: 35.1595,
+      longitude: 126.9132,
+      isActive: true,
+      distance: 0.4,
+    } as const;
+    const betaFridge = {
+      id: 8,
+      name: 'Beta Fridge',
+      address: 'South Market',
+      latitude: 35.16,
+      longitude: 126.914,
+      isActive: true,
+      distance: 0.6,
+    } as const;
+    mockedGetNearbyFridges
+      .mockResolvedValueOnce({
+        success: true,
+        message: 'ok',
+        data: [alphaFridge, betaFridge],
+      })
+      .mockRejectedValueOnce(new Error('server search unavailable'));
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(<MapScreen />);
+    });
+
+    const searchInput = renderer!.root.findByType(TextInput);
+
+    await ReactTestRenderer.act(async () => {
+      searchInput.props.onChangeText('beta');
+    });
+    await flushDebouncedSearch();
+
+    expect(mockedGetNearbyFridges).toHaveBeenCalledTimes(2);
+    expect(mockedGetNearbyFridges).toHaveBeenLastCalledWith(
+      35.1595,
+      126.9132,
+      2.0,
+      'beta',
+      0,
+      20,
+    );
+    expect(findHostByTestId(renderer!, 'map-fridge-carousel')).toHaveLength(1);
+    expect(
+      renderer!.root.findAllByProps({ children: 'Beta Fridge' }),
+    ).not.toHaveLength(0);
+    expect(renderer!.root.findAllByProps({ children: 'Alpha Fridge' })).toHaveLength(
+      0,
+    );
+  });
+
+  it('keeps blank unfiltered fridges when a stale server search resolves late', async () => {
+    jest.useFakeTimers();
+    const alphaFridge = {
+      id: 7,
+      name: 'Alpha Fridge',
+      address: 'North Market',
+      latitude: 35.1595,
+      longitude: 126.9132,
+      isActive: true,
+      distance: 0.4,
+    } as const;
+    const betaFridge = {
+      id: 8,
+      name: 'Beta Fridge',
+      address: 'South Market',
+      latitude: 35.16,
+      longitude: 126.914,
+      isActive: true,
+      distance: 0.6,
+    } as const;
+    let resolveSearch!: (value: ApiResponse<Fridge[]>) => void;
+    mockedGetNearbyFridges
+      .mockResolvedValueOnce({
+        success: true,
+        message: 'ok',
+        data: [alphaFridge, betaFridge],
+      })
+      .mockReturnValueOnce(
+        new Promise(resolve => {
+          resolveSearch = resolve;
+        }) as ReturnType<typeof getNearbyFridges>,
+      )
+      .mockResolvedValueOnce({
+        success: true,
+        message: 'ok',
+        data: [alphaFridge, betaFridge],
+      });
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(<MapScreen />);
+    });
+
+    const searchInput = renderer!.root.findByType(TextInput);
+
+    await ReactTestRenderer.act(async () => {
+      searchInput.props.onChangeText('beta');
+    });
+    await flushDebouncedSearch();
+
+    await ReactTestRenderer.act(async () => {
+      searchInput.props.onChangeText('');
+    });
+    await flushDebouncedSearch();
+
+    await ReactTestRenderer.act(async () => {
+      resolveSearch({
+        success: true,
+        message: 'ok',
+        data: [betaFridge],
+      });
+      await Promise.resolve();
+    });
+
+    expect(mockedGetNearbyFridges).toHaveBeenCalledTimes(3);
+    expect(
+      renderer!.root.findAllByProps({ children: 'Alpha Fridge' }),
+    ).not.toHaveLength(0);
+    expect(
+      renderer!.root.findAllByProps({ children: 'Beta Fridge' }),
+    ).not.toHaveLength(0);
+  });
+
+  it('keeps server search results when the initial unfiltered fetch resolves late', async () => {
+    jest.useFakeTimers();
+    const alphaFridge = {
+      id: 7,
+      name: 'Alpha Fridge',
+      address: 'North Market',
+      latitude: 35.1595,
+      longitude: 126.9132,
+      isActive: true,
+      distance: 0.4,
+    } as const;
+    const betaFridge = {
+      id: 8,
+      name: 'Beta Fridge',
+      address: 'South Market',
+      latitude: 35.16,
+      longitude: 126.914,
+      isActive: true,
+      distance: 0.6,
+    } as const;
+    let resolveInitial!: (value: ApiResponse<Fridge[]>) => void;
+    mockedGetNearbyFridges
+      .mockReturnValueOnce(
+        new Promise(resolve => {
+          resolveInitial = resolve;
+        }) as ReturnType<typeof getNearbyFridges>,
+      )
+      .mockResolvedValueOnce({
+        success: true,
+        message: 'ok',
+        data: [betaFridge],
+      });
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(<MapScreen />);
+    });
+
+    const searchInput = renderer!.root.findByType(TextInput);
+
+    await ReactTestRenderer.act(async () => {
+      searchInput.props.onChangeText('beta');
+    });
+    await flushDebouncedSearch();
+
+    await ReactTestRenderer.act(async () => {
+      resolveInitial({
+        success: true,
+        message: 'ok',
+        data: [alphaFridge, betaFridge],
+      });
+      await Promise.resolve();
+    });
+
+    expect(
+      renderer!.root.findAllByProps({ children: 'Beta Fridge' }),
+    ).not.toHaveLength(0);
+    expect(renderer!.root.findAllByProps({ children: 'Alpha Fridge' })).toHaveLength(
+      0,
+    );
+  });
+
+  it('labels empty server fridge search results as search-empty state', async () => {
+    jest.useFakeTimers();
+    const alphaFridge = {
+      id: 7,
+      name: 'Alpha Fridge',
+      address: 'North Market',
+      latitude: 35.1595,
+      longitude: 126.9132,
+      isActive: true,
+      distance: 0.4,
+    } as const;
+    mockedGetNearbyFridges
+      .mockResolvedValueOnce({
+        success: true,
+        message: 'ok',
+        data: [alphaFridge],
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        message: 'ok',
+        data: [],
+      });
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(<MapScreen />);
+    });
+
+    const searchInput = renderer!.root.findByType(TextInput);
+
+    await ReactTestRenderer.act(async () => {
+      searchInput.props.onChangeText('missing');
+    });
+    await flushDebouncedSearch();
+
+    expect(
+      renderer!.root.findAllByProps({ children: '검색 결과가 없습니다' }),
+    ).not.toHaveLength(0);
+    expect(
+      renderer!.root.findAllByProps({ children: '근처에 냉장고가 없습니다' }),
+    ).toHaveLength(0);
   });
 
   it('guards the map when the account has no registered location', async () => {
