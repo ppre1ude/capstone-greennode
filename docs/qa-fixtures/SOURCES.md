@@ -1,6 +1,6 @@
 # AI QA Fixture Sources
 
-These images are small QA fixtures for frontend/API smoke validation. They are
+These images are small QA fixtures for frontend/API basic validation. They are
 not a model-quality evaluation dataset.
 
 | Fixture ID | Local file | Source | Author | License | Notes |
