@@ -916,6 +916,8 @@ Hard block 응답은 400을 기본으로 한다.
 }
 ```
 
+프론트 에러 문구 경로는 generic `message`보다 구조화된 `error.rejectionReason`을 우선한다. `stale`은 나눔 기준 미충족, `not_food`/`non_food`/`screenshot`/`ui_screenshot`은 식재료 사진 아님, `low_quality`는 상태 확인 어려움 문구로 번역한다.
+
 Soft review 응답은 기존 generate 200 payload에 `reviewReason`을 추가한다.
 
 현재 AI 모델은 비식재료, 스크린샷/UI, 저품질 이미지를 실제로 판별하지 못한다. 모델 고도화 전에는 full fixture strict 통과가 아니라 reason 필드 shape와 generic 400 제거만 검증한다.

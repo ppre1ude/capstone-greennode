@@ -221,6 +221,56 @@ describe('CameraScanScreen fallback QA', () => {
     });
   });
 
+  it('shows backend AI rejection reason copy when generate returns generic message', async () => {
+    mockedLaunchImageLibrary.mockResolvedValue({
+      assets: [
+        {
+          uri: 'file:///gallery/not-food.jpg',
+          type: 'image/jpeg',
+          fileName: 'not-food.jpg',
+          fileSize: 310000,
+        },
+      ],
+    });
+    mockedGeneratePost.mockRejectedValue({
+      message: 'Request failed with status code 400',
+      response: {
+        status: 400,
+        data: {
+          success: false,
+          message: 'AI 분석에 실패했습니다.',
+          error: {
+            code: 'AI_REJECTED',
+            rejectionReason: 'not_food',
+          },
+        },
+      },
+    });
+
+    const {renderer, navigation} = await createScreen();
+    const galleryButton = findButtonByText(renderer, '갤러리에서 선택하기');
+
+    await ReactTestRenderer.act(async () => {
+      galleryButton?.props.onPress();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(navigation.replace).not.toHaveBeenCalled();
+    expect(alertSpy).toHaveBeenCalledWith(
+      '분석 실패',
+      '식재료 사진으로 확인되지 않았어요. 다시 촬영해주세요.',
+      [
+        {text: '다시 촬영', style: 'cancel'},
+        {text: '갤러리 선택', onPress: expect.any(Function)},
+      ],
+    );
+
+    await ReactTestRenderer.act(async () => {
+      renderer.unmount();
+    });
+  });
+
   it('blocks unsupported gallery files before calling generate', async () => {
     mockedLaunchImageLibrary.mockResolvedValue({
       assets: [

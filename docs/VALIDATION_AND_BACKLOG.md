@@ -28,6 +28,7 @@
 - 2026-05-29 후속 반영으로 홈/지도 검색은 서버 `q`를 우선 호출하고, endpoint 미배포나 실패 시 마지막 unfiltered 목록의 로컬 필터로 fallback한다. `npm run qa:post-mvp-contracts`는 notifications, impact, search `q`를 read-only로 확인하는 재검증 하네스다.
 - 2026-05-29 추가 후속 반영으로 서버 저장형 알림 client와 `qa:post-mvp-contracts`는 numeric/string `id`, camelCase/snake_case 필드, array 또는 `items`/`notifications`/`results` list wrapper를 모두 방어적으로 수용한다. 알림 목록 query는 `unreadOnly`와 `unread_only`를 전환 호환으로 함께 보낸다.
 - 2026-05-29 추가 후속 반영으로 impact summary client와 `qa:post-mvp-contracts`는 camelCase/snake_case 응답과 숫자 문자열을 앱 내부 camelCase 숫자 타입으로 정규화 가능한 shape로 수용한다. 하네스는 impact `period` query도 검증한다.
+- 2026-05-29 추가 후속 반영으로 AI generate 400 응답이 generic `message`와 구조화된 `error.rejectionReason`을 함께 내려도 앱은 enum 기반 사용자-facing 문구를 우선 표시한다.
 
 ## 활성 P0
 
@@ -139,6 +140,7 @@ To-do:
 - [x] Post-MVP에서 `not_food`, `low_quality`, `screenshot`, `ui_screenshot`, `review_required`, `multi_object_review` 등 실패/검토 사유 enum을 서버 계약에 추가한다. 결정 문서 기준 hard block은 `rejectionReason`, soft review는 `reviewReason`이다.
 - [x] 2026-05-29 백엔드 회신을 반영해 fixture full strict 통과와 response shape 검증을 분리한다. 현재 모델로 `not_food`/`screenshot`/`low_quality` 정확도 gate를 닫을 수 없다.
 - [x] 앱 정책과 fixture 검증 스크립트가 root-level `reviewReason`을 읽고, `npm run qa:ai-fixtures -- --shape-only`로 reason 없는 generic 400과 모델 정확도 gap을 분리한다.
+- [x] 앱 에러 문구 경로가 `error.rejectionReason` hard-block enum을 직접 읽고 generic 400 message보다 우선해 사용자-facing 문구로 번역한다.
 - [ ] 백엔드가 가능한 범위의 AI response shape를 구현한 뒤 reason 없는 generic 400 제거와 `error.rejectionReason`/`data.reviewReason` 노출을 live VM에서 검증한다.
 - [ ] AI 모델 고도화 또는 별도 판별 모델 도입 후 비식재료/스크린샷/저품질 fixture full strict gate를 다시 연다. 최신 report-only 로그는 `temp/ai-fixtures-report-only-20260528T163234Z.txt`다.
 
