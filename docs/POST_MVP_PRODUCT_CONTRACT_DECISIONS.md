@@ -10,19 +10,29 @@
 
 판정: `HOLD_SCOPE`.
 
-Android 기준 MVP 핵심 흐름은 닫혔지만 iOS smoke evidence와 운영자 계정 role 재검증은 아직 남아 있다. 따라서 Post-MVP 기능을 한 번에 확장하지 않고, 다음 구현이 가능한 계약 단위만 확정한다. 우선순위는 사용자 lifecycle 신뢰도에 직접 닿는 항목을 먼저 둔다.
+2026-05-06 기준의 원래 MVP 흐름(`등록 -> 발견 -> 신청 접수`)은 Android 기준으로 닫혔다. 다만 iOS 기본 동작 점검 증거와 실제 운영자 계정 기반 진입 재검증은 아직 남아 있다. 따라서 Post-MVP 기능을 한 번에 확장하지 않고, 다음 구현이 가능한 계약 단위만 확정한다. 우선순위는 사용자 나눔 생명주기 신뢰도에 직접 닿는 항목을 먼저 둔다.
 
 우선순위:
 
-1. AI rejection/review reason 계약과 fixture QA
-2. 서버 저장형 알림 목록/읽음 동기화
-3. Multi-object 대표 객체 선택 정책
+1. 백엔드가 구현 완료로 회신한 notifications/server search와 상태가 상충한 impact summary의 live VM 재검증
+2. AI rejection/review response shape 계약
+3. 서버 저장형 알림 목록/읽음 동기화
 4. 환경 성취 지표 계산식/API
 5. 서버 검색
-6. 이메일 verification
+6. Multi-object 대표 객체 선택 정책과 모델 고도화 분리
 7. 운영자 role 관리 정책
-8. 소셜 로그인
-9. WebSocket 채팅
+8. Email verification/social login Phase 4 분리
+9. WebSocket 채팅 제외
+
+## Backend Response Update
+
+2026-05-29 백엔드 상세 회신 검토 결과는 [BACKEND_RESPONSE_TO_POST_MVP_BLOCKERS_2026-05-29.md](./BACKEND_RESPONSE_TO_POST_MVP_BLOCKERS_2026-05-29.md)를 따른다.
+
+- AI는 현재 모델에서 응답 구조만 맞출 수 있다. 비식재료, 스크린샷, 저품질 이미지의 실제 판별은 AI 모델 재학습/추가 모델 없이는 불가능하다.
+- Multi-object는 현재 object detection 모델이 없어 실제 다중 후보와 normalized `bbox`를 만들 수 없다.
+- Notifications와 server search는 백엔드가 구현 완료로 회신했지만, live VM/OpenAPI에 재노출되기 전까지는 검증 완료로 보지 않는다.
+- Impact는 백엔드 회신 내부에서 구현 상태가 상충하므로 live VM response를 기준으로 확정한다.
+- Email verification과 social login은 이번 즉시 구현 범위에서 제외하고 Phase 4 auth expansion으로 묶는다.
 
 ## Decision 1: AI Rejection And Review Reason
 
@@ -49,6 +59,9 @@ Soft review enum:
 | `review_required` | 상태 또는 식재료 식별 재확인 필요 | 200 | 있음 |
 | `multi_object_review` | 여러 식재료 후보가 감지됨 | 200 | 있음 |
 | `low_confidence` | confidence가 제품 기준 미만 | 200 | 있음 |
+| `low_quality` | 등록은 허용하지만 사진 품질 재확인 필요 | 200 | 있음 |
+| `screenshot` | 실제 식재료 사진 여부 재확인 필요 | 200 | 있음 |
+| `ui_screenshot` | UI 캡처 의심 | 200 | 있음 |
 
 Backend response guideline:
 
@@ -65,6 +78,8 @@ Backend response guideline:
 ```
 
 Review success response는 기존 `POST /posts/generate` 정상 payload에 `reviewReason`을 추가한다.
+
+백엔드 회신 기준 현재 AI 모델은 `not_food`, `screenshot`, `ui_screenshot`, `low_quality`를 실제로 판별하지 못한다. 따라서 `npm run qa:ai-fixtures` full strict 통과는 모델 고도화 이후 gate로 두고, 당장은 reason 없는 generic 400 제거와 응답 shape만 검증한다.
 
 ## Decision 2: Multi-Object UX
 
@@ -106,6 +121,8 @@ Post-MVP contract:
 
 `bbox`는 이미지 기준 0~1 normalized rectangle이다. MVP 호환을 위해 `bbox: null`은 계속 허용한다.
 
+백엔드 회신 기준 현재 모델은 단일 이미지 분류만 가능하므로 실제 `detections.length > 1`과 non-null `bbox`는 Phase 4 object detection 모델 도입 이후 acceptance다. 프론트의 대표 후보 UI와 `selectedDetectionId` 전송은 방어 준비 상태로 유지한다.
+
 ## Decision 3: Server-Backed Notifications
 
 결정: 서버 알림 저장소를 Post-MVP source of truth로 채택한다. 로컬 FCM 기록은 offline/foreground fallback cache로 유지한다.
@@ -123,11 +140,10 @@ Notification record:
 
 ```json
 {
-  "id": "notification-1",
+  "id": 1,
   "type": "share_requested",
   "postId": 42,
   "requestId": 7,
-  "fridgeId": 1,
   "fruitName": "바나나",
   "fridgeName": "광주역 공유냉장고",
   "title": "나눔 신청이 도착했어요",
@@ -143,6 +159,7 @@ Merge rule:
 - 같은 `type + postId + requestId` event key의 로컬 FCM 기록은 server record로 dedupe한다.
 - 서버가 없거나 네트워크 실패면 로컬 FCM 기록만 보여준다.
 - WebSocket은 알림 저장소가 안정화될 때까지 도입하지 않는다.
+- 백엔드가 구현 완료로 회신했으므로 다음 검증은 live VM/OpenAPI에서 4 endpoint, 본인 소유 검증, soft delete를 확인하는 것이다.
 
 ## Decision 4: Impact And Carbon Metrics
 
@@ -163,9 +180,11 @@ Authorization: Bearer {token}
 
 ```json
 {
+  "totalShared": 5,
+  "totalReceived": 3,
   "completedShares": 8,
-  "estimatedFoodSavedGrams": 2400,
-  "estimatedCarbonSavedGrams": 6200,
+  "estimatedFoodSavedGrams": 1360,
+  "estimatedCarbonSavedGrams": 3400,
   "calculationVersion": "impact-v1",
   "computedAt": "2026-05-29T00:00:00Z"
 }
@@ -179,6 +198,8 @@ estimatedCarbonSavedGrams = sum(share.estimatedWeightGrams * categoryCarbonFacto
 ```
 
 `estimatedWeightGrams`와 `categoryCarbonFactor`는 서버 설정 테이블로 관리한다. 출처가 확정되기 전까지 UI 문구는 `추정 절감`으로만 표시한다.
+
+백엔드 회신은 impact 상태를 "구현 완료"와 "완전 미구현/개발 계획"으로 동시에 서술하므로, 앱 연결 전 live VM에서 endpoint 존재와 최종 shape를 확인한다.
 
 ## Decision 5: Server Search
 
@@ -197,12 +218,13 @@ Rules:
 - 검색 대상은 `detectedFruitKo`, `detectedFruit`, 공유 냉장고명, 공유 냉장고 주소다.
 - 홈/지도 로컬 필터는 server search 출시 전 fallback으로 유지한다.
 - 정렬은 거리 우선, 같은 거리권에서는 최신순이다.
+- 백엔드가 `q` 구현 완료로 회신했으므로 OpenAPI parameter와 live response 확인 후 이관한다.
 
-## Decision 6: Email Verification Before Social Login
+## Decision 6: Auth Expansion
 
-결정: 소셜 로그인보다 이메일 verification을 먼저 구현한다.
+결정: email verification과 social login은 이번 immediate Post-MVP 구현에서 제외하고 Phase 4 auth expansion으로 묶는다.
 
-Email verification contract:
+Email verification 후보 contract:
 
 | Method | Path | Purpose |
 | --- | --- | --- |
@@ -214,7 +236,9 @@ Policy:
 
 - browsing과 위치 등록은 verification 전에도 허용한다.
 - 나눔 식재료 등록, 나눔 신청, 운영자 action은 verification 이후로 제한할 수 있다.
-- 소셜 로그인은 Google/Apple만 후속 후보로 둔다. provider가 verified email을 보장하면 `emailVerifiedAt`을 즉시 채울 수 있다.
+- 프론트에서 인증 상태 UI가 필요하면 `/auth/me`에 `emailVerifiedAt: null`을 방어적으로 처리한다.
+- social login은 Google/Apple만 후속 후보로 둔다. provider가 verified email을 보장하면 `emailVerifiedAt`을 즉시 채울 수 있다.
+- social login 버튼은 백엔드 provider token 교환 endpoint가 준비될 때까지 숨기거나 비활성 상태로 둔다.
 
 ## Decision 7: Operator Role Management UI
 
@@ -250,10 +274,10 @@ DELETE /api/v1/admin/operator-roles/{roleId}
 
 ## Next Implementation Slices
 
-1. Backend AI rejection/review enum 구현과 fixture report. 2026-05-29 VM 기준 explicit reason 미충족.
-2. Server notification endpoint 구현 후 앱 알림함 sync 검증. 프론트 fallback sync 경로는 준비됨.
-3. Multi-object 대표 후보 선택 UI와 `selectedDetectionId` 전송 경로. 프론트는 준비됐고 backend 수용/bbox/reviewReason이 남음.
-4. Impact summary endpoint와 `추정 절감` UI 연결. endpoint/factor source가 남음.
-5. Nearby/fridge server search query parameter 구현. OpenAPI `q` parameter 추가가 남음.
-6. Email verification gate 정책 구현. endpoint와 `emailVerifiedAt` 계약이 남음.
+1. 백엔드 재배포 후 OpenAPI/live VM에서 notifications, impact, server search 노출 여부 확인.
+2. Server notification endpoint 확인 후 앱 알림함 sync/read/delete live VM 검증. 프론트 fallback sync 경로는 준비됨.
+3. Nearby/fridge server search `q` parameter 확인 후 로컬 필터 fallback 유지 상태에서 이관.
+4. Impact summary 최종 shape 확인 후 `추정 절감` UI 연결 여부 결정.
+5. AI response shape 구현 후 reason 없는 generic 400 제거 검증. fixture full strict는 모델 고도화 후로 분리.
+6. Multi-object 실제 detection, normalized `bbox`, `selectedDetectionId` 서버 수용은 Phase 4 object detection 모델 도입 뒤 검증.
 7. Admin-only operator role 관리 surface 분리.

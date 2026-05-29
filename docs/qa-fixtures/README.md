@@ -27,21 +27,32 @@ FOODLINK_API_BASE_URL=http://localhost:8080 FOODLINK_ACCESS_TOKEN=<token> npm ru
 ```
 
 Run report-only validation when known backend/AI false-positives are still open
-and you only need an observable QA report. As of 2026-05-08,
-`screenshot-or-ui` is an MVP-allowed backend behavior and should remain
-report-only until a Post-MVP rejection reason contract exists:
+and you only need an observable QA report. As of the 2026-05-29 backend
+response, `not-food`, `screenshot-or-ui`, `low-quality`, and `multi-object`
+accuracy are model-upgrade items, so keep the full fixture set report-only
+until that work lands:
 
 ```bash
 FOODLINK_API_BASE_URL=http://localhost:8080 FOODLINK_ACCESS_TOKEN=<token> npm run qa:ai-fixtures -- --report-only
+```
+
+Run shape-only validation after backend response-shape changes when model
+accuracy is still deferred:
+
+```bash
+FOODLINK_API_BASE_URL=http://localhost:8080 FOODLINK_ACCESS_TOKEN=<token> npm run qa:ai-fixtures -- --shape-only
 ```
 
 Modes:
 
 - Strict mode exits with code `1` when any runnable fixture fails.
 - Report-only mode prints the same pass/fail details but exits with code `0`.
+- Shape-only mode keeps generic 400 responses as failures, accepts explicit
+  `rejectionReason`/`reviewReason`, and records current-model false positives as
+  `model accuracy deferred`.
 - Use report-only for analysis/current-state recording. Use strict mode as the
-  acceptance gate after backend/AI fixes. Keep `screenshot-or-ui` report-only
-  during MVP.
+  acceptance gate after backend/AI fixes. Keep model-accuracy cases report-only
+  until the AI pipeline can actually classify them.
 - Post-MVP strict mode requires explicit `rejectionReason` or `reviewReason`
   for blocked/review fixtures. A generic 400 without a reason is recorded as a
   contract failure.

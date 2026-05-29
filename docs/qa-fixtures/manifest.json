@@ -25,7 +25,7 @@
       "expectedOutcome": "rejected_or_review",
       "expectedRejectionReasons": ["not_food", "non_food"],
       "expectedReviewReasons": ["not_food", "non_food"],
-      "notes": "Desk, room, electronics, or other non-ingredient photo."
+      "notes": "Desk, room, electronics, or other non-ingredient photo. Current backend AI cannot reliably classify this; keep model accuracy report-only until Phase 4."
     },
     {
       "id": "screenshot-or-ui",
@@ -34,7 +34,7 @@
       "expectedOutcome": "rejected_or_review",
       "expectedRejectionReasons": ["screenshot", "ui_screenshot"],
       "expectedReviewReasons": ["screenshot", "ui_screenshot"],
-      "notes": "App screen, map, search result, or icon capture. MVP backend may still return Fresh + imageToken; keep this as a Post-MVP rejection target and run report-only during MVP."
+      "notes": "App screen, map, search result, or icon capture. Current backend AI may return Fresh + imageToken; keep this as a Phase 4 rejection target and run report-only before model upgrade."
     },
     {
       "id": "low-quality",
@@ -49,7 +49,7 @@
         { "confidenceScore": 1.0, "needsReview": false }
       ],
       "expectedRejectionReasons": ["low_quality"],
-      "notes": "Blurred, dark, occluded, or otherwise hard-to-evaluate photo. Low confidence is review, not automatic blocking."
+      "notes": "Blurred, dark, occluded, or otherwise hard-to-evaluate photo. Current backend AI has no quality model; low confidence is review, not automatic blocking."
     },
     {
       "id": "large-image",
@@ -64,7 +64,7 @@
       "localPath": "docs/qa-fixtures/multi-object-review-20260505.jpg",
       "expectedOutcome": "single_representative_or_review",
       "expectedReviewReasons": ["multi_object_review"],
-      "notes": "Two or more different ingredients in one image. Current contract supports one representative object only."
+      "notes": "Two or more different ingredients in one image. Current backend AI is single-image classification, not object detection; actual detections.length >= 2 is Phase 4."
     }
   ]
 }

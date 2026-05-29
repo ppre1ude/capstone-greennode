@@ -33,6 +33,15 @@
 - 발견했던 UI 회귀: `InventoryQrScreen` 하단 action grid와 메인 하단 탭 label이 Android system navigation bar와 겹쳤다. 후속 수정 후 QR `ScrollView` viewport는 navigation bar 시작 y=2952 위에서 끝나고, scroll-bottom 상태의 QR action grid와 홈 탭 label도 navigation bar 위에 위치한다.
 - Post-MVP AI 품질 evidence: 실기기 카메라가 키보드/노트북 사진을 `바나나`, `confidenceScore=0.7`, `확인 필요`로 통과시켰다. 현재 앱은 낮은 confidence 안내를 표시하지만, 비식재료/스크린샷 rejection enum은 여전히 Post-MVP 서버 계약이다.
 
+## 2026-05-29 Post-MVP 백엔드 회신 반영
+
+- 백엔드가 Post-MVP blocker 8개 항목에 답변했고, 프론트 검토 결과는 [BACKEND_RESPONSE_TO_POST_MVP_BLOCKERS_2026-05-29.md](./BACKEND_RESPONSE_TO_POST_MVP_BLOCKERS_2026-05-29.md)에 정리했다.
+- AI는 현재 ResNet-50 단일 분류 모델 한계로 비식재료, 스크린샷/UI, 저품질, 다중 객체를 실제로 판별하지 못한다. 프론트는 `rejectionReason`/`reviewReason` shape 대응을 유지하되, fixture full strict 통과는 Phase 4 모델 고도화 이후 gate로 분리한다.
+- Multi-object 대표 후보 선택 UI와 `selectedDetectionId` 전송 경로는 방어 준비 상태다. 실제 `detections.length >= 2`와 normalized `bbox`는 object detection 모델 도입 후 검증한다.
+- Notifications와 server search는 백엔드가 구현 완료로 회신했다. Impact는 회신 내부에서 구현 상태가 상충한다. 세 항목 모두 live VM/OpenAPI 재검증 전까지 앱 연결 완료로 보지 않는다.
+- Email verification과 social login은 이번 immediate scope에서 제외하고 Phase 4 auth expansion으로 묶는다. WebSocket 채팅 제외 결정은 유지한다.
+- 프론트 후속 반영: root-level `reviewReason`을 앱 정책에 반영하고 `qa:ai-fixtures -- --shape-only` 모드를 추가했다. `getNearbyPosts`/`getNearbyFridges`는 optional `q`를 보낼 수 있으며, `getImpactSummary`와 `emailVerifiedAt` 타입은 live VM 확인 전 연결 준비 상태로 추가했다.
+
 ## 2026-05-28 QA 후속 코드 수정
 
 - `requestExpiresAt`/`storeExpiresAt` 등 backend lifecycle timestamp가 timezone 없이 내려오는 경우 프론트가 UTC로 파싱하도록 수정했다. `Z`/offset timestamp는 같은 UTC instant로 유지하고, JS Date의 lenient parsing은 받지 않는다.
@@ -104,12 +113,12 @@
 - 검증: `__tests__/locationSetup.notificationPermission.test.tsx`에 권한 거부/재시도/설정 열기 회귀 테스트를 추가했고, 해당 테스트와 TypeScript, ESLint를 통과했다.
 - 남은 검증: 실제 Android 기기에서 시스템 권한 팝업의 거부/다시 묻지 않음/설정 복귀 후 재시도 흐름은 별도 QA가 필요하다.
 
-### 2026-05-07 AI fixture smoke QA 업데이트
+### 2026-05-07 AI fixture 기본 동작 점검 업데이트
 
 - 준비: `docs/qa-fixtures/`에 커밋 가능한 이미지 fixture를 추가하고, `docs/qa-fixtures/SOURCES.md`에 출처/라이선스를 기록했다. `large-image`는 로컬 전용이라 커밋하지 않는다.
 - 백엔드 전달용 압축 문서: [BACKEND_AI_FIXTURE_QA_NOTICE_2026-05-07.md](./BACKEND_AI_FIXTURE_QA_NOTICE_2026-05-07.md)에 fixture 결과와 백엔드/AI 수정 요청 기준을 별도 정리했다.
 - 프론트 응답 흐름 QA: `analysisResult.fallback`, `cameraScan.fallback`, `postPolicy`, `posts.api` 테스트 4 suites / 45 tests 통과.
-- 실제 VM API smoke QA: `fresh-single`, `not-food`, `multi-object`는 통과했다.
+- 실제 VM API 기본 동작 점검: `fresh-single`, `not-food`, `multi-object`는 통과했다.
 - 발견한 충돌: `stale-or-rotten`, `screenshot-or-ui`, `low-quality` fixture가 live VM API에서 `Fresh`로 통과했다. 이 결과는 프론트 응답 파싱 오류가 아니라 백엔드/AI false-positive 또는 confidence 산정 정책 이슈로 분류한다.
 
 ### 2026-05-07 QA 후속 업데이트

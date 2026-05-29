@@ -359,7 +359,7 @@ Content-Type: multipart/form-data
 }
 ```
 
-> 2026-05-23 canonical 기준: `POST /posts/generate`는 root-level `detectedFruit`, `detectedFruitKo`, `imageToken`, `rejectionReason`, `detections[]`를 내려준다. AI 신선도 판정은 `data.aiAnalysis.category`, `data.aiAnalysis.confidenceScore`, `data.aiAnalysis.isFresh`와 `data.detections[0]`가 같은 대표 객체를 가리키는 것으로 본다. Post 생성/조회 응답의 최종 저장 필드는 root `freshnessLabel`, `confidenceScore`, `detectedFruit`, `detectedFruitKo`다. 프론트 타입은 과거/호환 응답을 방어적으로 받기 위해 root `freshnessLabel`, `confidenceScore`, `isFresh`, `aiAnalysis.rejectionReason`, `aiAnalysis.reviewReason`을 optional로 유지한다.
+> 2026-05-23 canonical 기준: `POST /posts/generate`는 root-level `detectedFruit`, `detectedFruitKo`, `imageToken`, `rejectionReason`, `detections[]`를 내려준다. 2026-05-29 Post-MVP shape 대응으로 root-level `reviewReason`도 방어적으로 받는다. AI 신선도 판정은 `data.aiAnalysis.category`, `data.aiAnalysis.confidenceScore`, `data.aiAnalysis.isFresh`와 `data.detections[0]`가 같은 대표 객체를 가리키는 것으로 본다. Post 생성/조회 응답의 최종 저장 필드는 root `freshnessLabel`, `confidenceScore`, `detectedFruit`, `detectedFruitKo`다. 프론트 타입은 과거/호환 응답을 방어적으로 받기 위해 root `freshnessLabel`, `confidenceScore`, `isFresh`, `aiAnalysis.rejectionReason`, `aiAnalysis.reviewReason`을 optional로 유지한다.
 
 `detections[]` MVP 계약:
 
@@ -885,9 +885,11 @@ docker compose logs api | grep FCM
 
 ## 6-A. Post-MVP 계획 계약
 
-이 섹션은 아직 live VM에서 보장되는 endpoint가 아니라 2026-05-29 제품/계약 결정 초안이다. 구현 전에는 [POST_MVP_PRODUCT_CONTRACT_DECISIONS.md](./POST_MVP_PRODUCT_CONTRACT_DECISIONS.md)와 [VALIDATION_AND_BACKLOG.md](./VALIDATION_AND_BACKLOG.md)를 함께 확인한다.
+이 섹션은 일부 항목이 아직 live VM에서 보장되는 endpoint가 아닌 2026-05-29 제품/계약 결정이다. 구현 전에는 [POST_MVP_PRODUCT_CONTRACT_DECISIONS.md](./POST_MVP_PRODUCT_CONTRACT_DECISIONS.md), [BACKEND_RESPONSE_TO_POST_MVP_BLOCKERS_2026-05-29.md](./BACKEND_RESPONSE_TO_POST_MVP_BLOCKERS_2026-05-29.md), [VALIDATION_AND_BACKLOG.md](./VALIDATION_AND_BACKLOG.md)를 함께 확인한다.
 
 2026-05-29 live VM 확인 결과는 [BACKEND_POST_MVP_CONTRACT_BLOCKERS_2026-05-29.md](./BACKEND_POST_MVP_CONTRACT_BLOCKERS_2026-05-29.md)에 분리했다. 현재 VM은 알림 endpoint, impact summary, email verification path를 OpenAPI에 노출하지 않고, nearby discovery endpoint에도 `q` parameter가 없다. AI fixture는 explicit `rejectionReason`/`reviewReason` 계약이 아직 충족되지 않는다.
+
+2026-05-29 백엔드 회신 기준 notifications와 server search는 구현 완료로 보고됐지만 live VM/OpenAPI 재검증 전까지 확정하지 않는다. Impact는 회신 내부에서 구현 상태가 상충한다. AI 실제 분류 정확도와 multi-object detection은 현재 모델 한계로 Phase 4 항목이다.
 
 ### AI rejection/review reason
 
@@ -898,7 +900,7 @@ docker compose logs api | grep FCM
 | `rejectionReason` | 등록 차단 사유 | `imageToken` 없음, 등록 흐름 차단 |
 | `reviewReason` | 사용자 재확인 사유 | `imageToken` 있음, `확인 필요` 표시 후 등록 가능 |
 
-Hard block enum은 `stale`, `not_food`, `low_quality`, `screenshot`, `ui_screenshot`이다. Soft review enum은 `review_required`, `multi_object_review`, `low_confidence`이다.
+Hard block enum은 `stale`, `not_food`, `low_quality`, `screenshot`, `ui_screenshot`이다. Soft review enum은 `review_required`, `multi_object_review`, `low_confidence`, `low_quality`, `screenshot`, `ui_screenshot`이다.
 
 Hard block 응답은 400을 기본으로 한다.
 
@@ -915,6 +917,8 @@ Hard block 응답은 400을 기본으로 한다.
 ```
 
 Soft review 응답은 기존 generate 200 payload에 `reviewReason`을 추가한다.
+
+현재 AI 모델은 비식재료, 스크린샷/UI, 저품질 이미지를 실제로 판별하지 못한다. 모델 고도화 전에는 full fixture strict 통과가 아니라 reason 필드 shape와 generic 400 제거만 검증한다.
 
 ### Multi-object representative selection
 
@@ -939,6 +943,8 @@ Soft review 응답은 기존 generate 200 payload에 `reviewReason`을 추가한
 
 `bbox`는 이미지 기준 0~1 normalized rectangle이며, 기존 `bbox: null`은 호환 값으로 계속 허용한다.
 
+현재 백엔드 AI는 object detection 모델이 아니므로 실제 `detections.length >= 2`와 normalized `bbox`는 Phase 4 모델 도입 후 보장된다.
+
 ### Server-backed notifications
 
 서버 저장형 알림은 Post-MVP에서 source of truth가 된다. 로컬 FCM 기록은 offline/foreground fallback cache로 유지한다.
@@ -952,6 +958,8 @@ Soft review 응답은 기존 generate 200 payload에 `reviewReason`을 추가한
 
 앱 merge rule은 `type + postId + requestId` event key dedupe다. 같은 이벤트가 로컬 FCM 기록과 서버 record에 모두 있으면 서버 record가 우선한다.
 
+백엔드가 구현 완료로 회신했으나, live VM에서 4 endpoint와 권한 규칙을 확인하기 전까지 앱은 기존 로컬 FCM fallback을 유지한다.
+
 ### Impact summary
 
 환경 성취 지표는 backend-computed estimate로만 표시한다.
@@ -963,15 +971,19 @@ Authorization: Bearer {token}
 
 ```json
 {
+  "totalShared": 5,
+  "totalReceived": 3,
   "completedShares": 8,
-  "estimatedFoodSavedGrams": 2400,
-  "estimatedCarbonSavedGrams": 6200,
+  "estimatedFoodSavedGrams": 1360,
+  "estimatedCarbonSavedGrams": 3400,
   "calculationVersion": "impact-v1",
   "computedAt": "2026-05-29T00:00:00Z"
 }
 ```
 
 집계 대상은 `completed` 또는 `picked_up`으로 확인된 나눔 식재료뿐이다. UI는 factor source가 확정되기 전까지 `추정 절감`으로 표시한다.
+
+백엔드 회신에서 impact 구현 상태가 상충하므로, live VM response shape 확인 전에는 앱 숫자 UI를 연결하지 않는다.
 
 ### Server search
 
@@ -984,9 +996,11 @@ GET /api/v1/fridges/nearby?latitude=...&longitude=...&radius_km=2&q=광주역&sk
 
 검색 대상은 나눔 식재료명, 공유 냉장고명, 공유 냉장고 주소다. 정렬은 거리 우선, 같은 거리권에서는 최신순이다.
 
+백엔드가 구현 완료로 회신했으므로 OpenAPI에 `q`, `skip`, `limit`가 실제 노출되는지 확인한 뒤 로컬 필터 fallback에서 이관한다.
+
 ### Email verification and social login
 
-이메일 verification을 소셜 로그인보다 먼저 구현한다.
+Email verification과 social login은 이번 immediate scope에서 제외하고 Phase 4 auth expansion으로 묶는다.
 
 | Method | Path | Purpose |
 | --- | --- | --- |
@@ -994,7 +1008,7 @@ GET /api/v1/fridges/nearby?latitude=...&longitude=...&radius_km=2&q=광주역&sk
 | `POST` | `/api/v1/auth/email-verifications/confirm` | 토큰 확인 |
 | `GET` | `/api/v1/auth/me` | `emailVerifiedAt` 반환 |
 
-Verification 전에도 browsing과 위치 등록은 허용할 수 있다. 나눔 식재료 등록, 나눔 신청, 운영자 action은 verification 이후로 제한할 수 있다. 소셜 로그인은 Google/Apple만 후속 후보로 두고, provider가 verified email을 보장하면 `emailVerifiedAt`을 채운다.
+Verification 전에도 browsing과 위치 등록은 허용할 수 있다. 나눔 식재료 등록, 나눔 신청, 운영자 action을 verification 이후로 제한할지는 Phase 4에서 결정한다. 프론트는 `/auth/me.emailVerifiedAt: null`을 방어적으로 처리할 수 있지만, 실제 email verification flow와 Google/Apple social login 버튼은 backend provider token 교환 endpoint가 준비될 때까지 숨기거나 비활성화한다.
 
 ### Operator role management and WebSocket chat
 
