@@ -6,6 +6,7 @@ export type {
   LocationUpdateRequest,
   UserProfileUpdateRequest,
 } from './auth';
+export type { ImpactSummary, ImpactSummaryPeriod } from './impact';
 export type {
   Post,
   PostNearbyRead,

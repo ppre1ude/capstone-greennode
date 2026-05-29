@@ -13,8 +13,14 @@ const manifestPath = path.join(
 const baseUrl = process.env.FOODLINK_API_BASE_URL || 'http://localhost:8080';
 const token = process.env.FOODLINK_ACCESS_TOKEN;
 const reportOnly = process.argv.includes('--report-only');
+const shapeOnly = process.argv.includes('--shape-only');
 const maxUploadImageBytes = 8 * 1024 * 1024;
 const confidenceReviewThreshold = 0.9;
+const reasonRequiredOutcomes = new Set([
+  'rejected',
+  'rejected_or_review',
+  'single_representative_or_review',
+]);
 
 const readManifest = () =>
   JSON.parse(fs.readFileSync(manifestPath, { encoding: 'utf8' }));
@@ -102,6 +108,9 @@ const hasExpectedReason = (fixture, body) => {
 const hasCanonicalReason = body =>
   Boolean(getCanonicalRejectionReason(body) || getCanonicalReviewReason(body));
 
+const hasExplicitExpectedReason = fixture =>
+  getExpectedReasons(fixture).length > 0;
+
 const getExpectedReasonDetail = fixture => {
   const expectedReasons = getExpectedReasons(fixture);
   return expectedReasons.length > 0
@@ -125,7 +134,9 @@ const getAiSummary = body => {
   return `detected=${detectedFruitKo}, category=${category}, confidence=${confidenceScore}, rejectionReason=${rejectionReason}, reviewReason=${reviewReason}`;
 };
 
-const evaluateGenerateResponse = (fixture, status, body) => {
+const evaluateGenerateResponse = (fixture, status, body, options = {}) => {
+  const evaluateShapeOnly = Boolean(options.shapeOnly);
+
   if (fixture.expectedOutcome === 'client_rejected_if_over_8mb') {
     return {
       passed: status === 'client_rejected',
@@ -153,11 +164,17 @@ const evaluateGenerateResponse = (fixture, status, body) => {
   if (status >= 400) {
     const acceptsRejection =
       fixture.expectedOutcome === 'rejected' ||
-      fixture.expectedOutcome === 'rejected_or_review';
+      fixture.expectedOutcome === 'rejected_or_review' ||
+      (evaluateShapeOnly &&
+        fixture.expectedOutcome === 'single_representative_or_review');
     const reasonMatched = hasExpectedReason(fixture, body);
+    const hasRequiredExpectedReason =
+      !evaluateShapeOnly ||
+      !reasonRequiredOutcomes.has(fixture.expectedOutcome) ||
+      hasExplicitExpectedReason(fixture);
 
     return {
-      passed: acceptsRejection && reasonMatched,
+      passed: acceptsRejection && hasRequiredExpectedReason && reasonMatched,
       detail: `server rejected with ${status}: ${getServerMessage(
         body,
       )}${getExpectedReasonDetail(fixture)}`,
@@ -173,6 +190,29 @@ const evaluateGenerateResponse = (fixture, status, body) => {
     (confidenceScore <= 1
       ? confidenceScore < confidenceReviewThreshold
       : confidenceScore < confidenceReviewThreshold * 100);
+
+  if (
+    evaluateShapeOnly &&
+    reasonRequiredOutcomes.has(fixture.expectedOutcome)
+  ) {
+    if (hasCanonicalReason(body)) {
+      return {
+        passed:
+          hasExplicitExpectedReason(fixture) &&
+          hasExpectedReason(fixture, body),
+        detail: getAiSummary(body),
+      };
+    }
+
+    if (isShareableCategory(category)) {
+      return {
+        passed: true,
+        detail: `${getAiSummary(body)}, model accuracy deferred: expected ${
+          fixture.expectedOutcome
+        } without explicit reason`,
+      };
+    }
+  }
 
   if (fixture.expectedOutcome === 'shareable') {
     return {
@@ -260,7 +300,9 @@ const uploadFixture = async fixture => {
   });
   const text = await response.text();
   const body = text ? JSON.parse(text) : {};
-  const result = evaluateGenerateResponse(fixture, response.status, body);
+  const result = evaluateGenerateResponse(fixture, response.status, body, {
+    shapeOnly,
+  });
 
   return {
     id: fixture.id,

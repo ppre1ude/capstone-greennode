@@ -6,6 +6,7 @@ import {
   createPost,
   generatePost,
   getImageUrl,
+  getNearbyPosts,
   requestShare,
 } from '@/api/posts';
 import { API_BASE_URL } from '@/config/api';
@@ -16,6 +17,7 @@ jest.mock('@/api/client', () => {
   return {
     __esModule: true,
     default: {
+      get: jest.fn(),
       post: jest.fn(),
     },
     BASE_URL: actualBaseUrl,
@@ -134,6 +136,7 @@ describe('posts API contract', () => {
       MockXMLHttpRequest as unknown as typeof XMLHttpRequest;
     MockXMLHttpRequest.instances = [];
     MockXMLHttpRequest.nextResponse.status = 200;
+    mockedApiClient.get.mockReset();
     mockedApiClient.post.mockReset();
   });
 
@@ -358,6 +361,29 @@ describe('posts API contract', () => {
     expect(response.data?.request.id).toBe(1);
     expect(response.data?.post.status).toBe('requested');
     expect(response.data?.post.requestExpiresAt).toBe('2026-05-19T14:00:00Z');
+  });
+
+  it('passes optional server search params to nearby posts', async () => {
+    mockedApiClient.get.mockResolvedValue({
+      data: {
+        success: true,
+        message: 'ok',
+        data: [],
+      },
+    });
+
+    await getNearbyPosts(35.1, 126.9, 2, 5, 10, ' 바나나 ');
+
+    expect(mockedApiClient.get).toHaveBeenCalledWith('/api/v1/posts/nearby', {
+      params: {
+        latitude: 35.1,
+        longitude: 126.9,
+        radius_km: 2,
+        skip: 5,
+        limit: 10,
+        q: '바나나',
+      },
+    });
   });
 
   it('calls lifecycle mutation endpoints for requested follow-up actions', async () => {

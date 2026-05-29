@@ -3,7 +3,7 @@
  * @see docs/API_INTEGRATION_CONTRACT.md § 4.9~4.10
  */
 import apiClient from './client';
-import type {ApiResponse, Fridge, PostNearbyRead, PostStatus} from '@/types';
+import type { ApiResponse, Fridge, PostNearbyRead, PostStatus } from '@/types';
 
 const FRIDGES_PREFIX = '/api/v1/fridges';
 
@@ -12,9 +12,21 @@ export const getNearbyFridges = async (
   latitude: number,
   longitude: number,
   radiusKm: number = 2.0,
+  q?: string,
+  skip?: number,
+  limit?: number,
 ): Promise<ApiResponse<Fridge[]>> => {
+  const trimmedQuery = q?.trim();
+  const params = {
+    latitude,
+    longitude,
+    radius_km: radiusKm,
+    ...(trimmedQuery ? { q: trimmedQuery } : {}),
+    ...(skip != null ? { skip } : {}),
+    ...(limit != null ? { limit } : {}),
+  };
   const response = await apiClient.get(`${FRIDGES_PREFIX}/nearby`, {
-    params: {latitude, longitude, radius_km: radiusKm},
+    params,
   });
   return response.data;
 };
@@ -26,7 +38,7 @@ export const getAvailableFridges = async (
   radiusKm: number = 2.0,
 ): Promise<ApiResponse<Fridge[]>> => {
   const response = await apiClient.get(`${FRIDGES_PREFIX}/available`, {
-    params: {latitude, longitude, radius_km: radiusKm},
+    params: { latitude, longitude, radius_km: radiusKm },
   });
   return response.data;
 };
@@ -37,7 +49,7 @@ export const getFridgePosts = async (
   status: PostStatus = 'available',
 ): Promise<ApiResponse<PostNearbyRead[]>> => {
   const response = await apiClient.get(`${FRIDGES_PREFIX}/${fridgeId}/posts`, {
-    params: {status},
+    params: { status },
   });
   return response.data;
 };

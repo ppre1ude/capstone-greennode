@@ -86,4 +86,63 @@ describe('validate-ai-fixtures response evaluation', () => {
 
     expect(result.passed).toBe(false);
   });
+
+  it('shape-only fails rejected-family 400 responses without an explicit expected reason', () => {
+    const result = evaluateGenerateResponse(
+      {
+        expectedOutcome: 'rejected_or_review',
+      },
+      400,
+      {
+        success: false,
+        message: 'generic rejection',
+        error: { rejectionReason: 'not_food' },
+      },
+      { shapeOnly: true },
+    );
+
+    expect(result.passed).toBe(false);
+  });
+
+  it('shape-only accepts 200 Fresh without a reason as deferred model accuracy', () => {
+    const result = evaluateGenerateResponse(
+      {
+        expectedOutcome: 'rejected_or_review',
+        expectedReviewReasons: ['low_quality'],
+      },
+      200,
+      generateBody({ category: 'Fresh' }),
+      { shapeOnly: true },
+    );
+
+    expect(result.passed).toBe(true);
+    expect(result.detail).toContain('model accuracy deferred');
+  });
+
+  it('shape-only fails 200 responses when the explicit reason does not match', () => {
+    const result = evaluateGenerateResponse(
+      {
+        expectedOutcome: 'rejected_or_review',
+        expectedReviewReasons: ['low_quality'],
+      },
+      200,
+      generateBody({ category: 'Fresh', reviewReason: 'not_food' }),
+      { shapeOnly: true },
+    );
+
+    expect(result.passed).toBe(false);
+  });
+
+  it('shape-only still fails shareable fixtures that are not shareable', () => {
+    const result = evaluateGenerateResponse(
+      {
+        expectedOutcome: 'shareable',
+      },
+      200,
+      generateBody({ category: 'Stale' }),
+      { shapeOnly: true },
+    );
+
+    expect(result.passed).toBe(false);
+  });
 });
