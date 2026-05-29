@@ -109,6 +109,9 @@ const hasQueryParameter = (openApi, method, pathname, name) =>
     parameter => parameter.in === 'query' && parameter.name === name,
   );
 
+const hasAnyQueryParameter = (openApi, method, pathname, names) =>
+  names.some(name => hasQueryParameter(openApi, method, pathname, name));
+
 const pass = (id, detail) => ({status: 'passed', id, detail});
 const fail = (id, detail) => ({status: 'failed', id, detail});
 const skip = (id, detail) => ({status: 'skipped', id, detail});
@@ -136,6 +139,35 @@ const evaluateOpenApiContracts = openApi => {
       : fail(id, `${method} ${pathname} missing`),
   );
 
+  results.push(
+    hasAnyQueryParameter(openApi, 'GET', '/api/v1/notifications', [
+      'unreadOnly',
+      'unread_only',
+    ])
+      ? pass(
+          'notifications unread filter openapi',
+          'GET /api/v1/notifications exposes unread filter query parameter',
+        )
+      : fail(
+          'notifications unread filter openapi',
+          'GET /api/v1/notifications missing unreadOnly or unread_only query parameter',
+        ),
+  );
+
+  for (const name of ['skip', 'limit']) {
+    results.push(
+      hasQueryParameter(openApi, 'GET', '/api/v1/notifications', name)
+        ? pass(
+            `notifications ${name} openapi`,
+            `GET /api/v1/notifications exposes query parameter ${name}`,
+          )
+        : fail(
+            `notifications ${name} openapi`,
+            `GET /api/v1/notifications missing query parameter ${name}`,
+          ),
+    );
+  }
+
   for (const [id, pathname] of [
     ['posts search q openapi', '/api/v1/posts/nearby'],
     ['fridges search q openapi', '/api/v1/fridges/nearby'],
@@ -157,6 +189,23 @@ const getData = body => {
   return body;
 };
 
+const getListData = body => {
+  const data = getData(body);
+  if (Array.isArray(data)) {
+    return data;
+  }
+
+  if (data && typeof data === 'object') {
+    for (const key of ['items', 'notifications', 'results']) {
+      if (Array.isArray(data[key])) {
+        return data[key];
+      }
+    }
+  }
+
+  return null;
+};
+
 const failIfApiFailure = (body, id) => {
   if (body?.success === false) {
     return fail(id, body.message || body.detail || 'API response success=false');
@@ -164,14 +213,19 @@ const failIfApiFailure = (body, id) => {
   return null;
 };
 
-const expectArrayBody = (body, id) => {
+const expectArrayBody = (body, id, options = {}) => {
   const apiFailure = failIfApiFailure(body, id);
   if (apiFailure) {
     return apiFailure;
   }
-  const data = getData(body);
+  const data = options.allowListWrapper ? getListData(body) : getData(body);
   if (!Array.isArray(data)) {
-    return fail(id, 'response data must be an array');
+    return fail(
+      id,
+      options.allowListWrapper
+        ? 'response data must be an array or list wrapper'
+        : 'response data must be an array',
+    );
   }
   return {data};
 };
@@ -179,8 +233,16 @@ const expectArrayBody = (body, id) => {
 const hasValue = (object, field) =>
   object && Object.prototype.hasOwnProperty.call(object, field) && object[field] != null;
 
+const hasAnyValue = (object, fields) => fields.some(field => hasValue(object, field));
+const hasAnyOwnKey = (object, fields) =>
+  fields.some(
+    field => object && Object.prototype.hasOwnProperty.call(object, field),
+  );
+
 const validateNotificationsResponse = body => {
-  const arrayResult = expectArrayBody(body, 'notifications response');
+  const arrayResult = expectArrayBody(body, 'notifications response', {
+    allowListWrapper: true,
+  });
   if (arrayResult.status === 'failed') {
     return arrayResult;
   }
@@ -192,10 +254,15 @@ const validateNotificationsResponse = body => {
     return !(
       hasValue(item, 'id') &&
       hasValue(item, 'type') &&
-      hasValue(item, 'postId') &&
+      hasAnyValue(item, ['postId', 'post_id']) &&
+      hasAnyValue(item, ['fruitName', 'fruit_name']) &&
+      hasAnyValue(item, ['fridgeName', 'fridge_name']) &&
       hasValue(item, 'title') &&
       hasValue(item, 'body') &&
-      (hasValue(item, 'createdAt') || hasValue(item, 'receivedAt'))
+      hasAnyOwnKey(item, ['readAt', 'read_at']) &&
+      (item.type !== 'share_requested' ||
+        hasAnyValue(item, ['requestId', 'request_id'])) &&
+      hasAnyValue(item, ['createdAt', 'created_at', 'receivedAt', 'received_at'])
     );
   });
 
@@ -330,7 +397,8 @@ const buildAuthenticatedProbePlan = accessToken => {
     {
       id: 'notifications probe',
       method: 'GET',
-      pathname: '/api/v1/notifications?unreadOnly=false&skip=0&limit=50',
+      pathname:
+        '/api/v1/notifications?unreadOnly=false&unread_only=false&skip=0&limit=50',
       validate: validateNotificationsResponse,
     },
     {

@@ -43,12 +43,29 @@ export interface NotificationRecord {
 
 export type ServerNotificationRecord = Omit<
   Partial<NotificationRecord>,
-  'postId' | 'requestId' | 'source'
+  | 'id'
+  | 'postId'
+  | 'requestId'
+  | 'fruitName'
+  | 'fridgeName'
+  | 'receivedAt'
+  | 'readAt'
+  | 'source'
 > & {
-  id: string;
+  id: string | number;
   type: FoodLinkNotificationType;
   postId?: string | number | null;
+  post_id?: string | number | null;
   requestId?: string | number | null;
+  request_id?: string | number | null;
+  fruitName?: string | null;
+  fruit_name?: string | null;
+  fridgeName?: string | null;
+  fridge_name?: string | null;
   receivedAt?: string | null;
+  received_at?: string | null;
   createdAt?: string | null;
+  created_at?: string | null;
+  readAt?: string | null;
+  read_at?: string | null;
 };

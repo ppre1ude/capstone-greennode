@@ -26,6 +26,7 @@
 - 2026-05-29 Post-MVP 프론트 선반영과 live VM blocker 분리는 [BACKEND_POST_MVP_CONTRACT_BLOCKERS_2026-05-29.md](./BACKEND_POST_MVP_CONTRACT_BLOCKERS_2026-05-29.md)를 따른다. 프론트는 여러 객체 대표 후보 선택/`selectedDetectionId` 전송과 알림함 서버 동기화 fallback을 준비했다. 이후 백엔드 회신으로 notifications/server search는 구현 완료 보고, impact는 상태 확인 필요, AI 정확도와 auth 확장은 후속 범위로 재분류했다.
 - 2026-05-29 백엔드 상세 회신 검토는 [BACKEND_RESPONSE_TO_POST_MVP_BLOCKERS_2026-05-29.md](./BACKEND_RESPONSE_TO_POST_MVP_BLOCKERS_2026-05-29.md)를 따른다. 백엔드는 notifications/server search를 구현 완료로 회신했지만 live VM 재검증이 필요하고, AI 실제 분류 정확도와 multi-object detection은 현재 모델 한계로 Phase 4 항목이다.
 - 2026-05-29 후속 반영으로 홈/지도 검색은 서버 `q`를 우선 호출하고, endpoint 미배포나 실패 시 마지막 unfiltered 목록의 로컬 필터로 fallback한다. `npm run qa:post-mvp-contracts`는 notifications, impact, search `q`를 read-only로 확인하는 재검증 하네스다.
+- 2026-05-29 추가 후속 반영으로 서버 저장형 알림 client와 `qa:post-mvp-contracts`는 numeric/string `id`, camelCase/snake_case 필드, array 또는 `items`/`notifications`/`results` list wrapper를 모두 방어적으로 수용한다. 알림 목록 query는 `unreadOnly`와 `unread_only`를 전환 호환으로 함께 보낸다.
 
 ## 활성 P0
 
@@ -181,6 +182,7 @@ To-do:
 - [x] 알림함은 MVP에서 FCM 수신 기록과 로컬 AsyncStorage 읽음 상태로 유지하고, 서버 저장형 목록/읽음 API는 Post-MVP 설계로 분리한다.
 - [x] 서버 저장형 알림 API 계약을 설계한다. `GET /notifications`, `PATCH /notifications/{id}/read`, `PATCH /notifications/read-all`, `DELETE /notifications/{id}` 기준이다.
 - [x] 앱 알림함은 focus 시 서버 알림을 fetch/merge하고 read/read-all/delete를 best-effort 호출한다. endpoint 실패 시 로컬 FCM 기록 fallback을 유지한다.
+- [x] 서버 알림 응답의 numeric/string `id`, snake_case 필드, list wrapper 변형을 앱 정규화와 read-only 계약 하네스에서 수용한다. 목록 query는 `unreadOnly`/`unread_only`, `skip`, `limit` 노출을 하네스에서 확인한다.
 - [ ] 백엔드 재배포 후 `/api/v1/notifications` 계열 4 endpoint가 OpenAPI/live VM에 노출되는지 확인하고 앱 알림함 server sync를 검증한다. 2026-05-29 프론트 확인 시점의 기존 VM은 404/미노출이었다.
 
 ### 실제 지표와 탄소 절감 표시

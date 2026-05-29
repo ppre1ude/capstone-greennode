@@ -92,6 +92,14 @@ describe('post-MVP backend contract helpers', () => {
           status: 'passed',
         }),
         expect.objectContaining({
+          id: 'notifications unread filter openapi',
+          status: 'passed',
+        }),
+        expect.objectContaining({
+          id: 'notifications limit openapi',
+          status: 'passed',
+        }),
+        expect.objectContaining({
           id: 'fridges search q openapi',
           status: 'passed',
         }),
@@ -137,7 +145,8 @@ describe('post-MVP backend contract helpers', () => {
         expect.objectContaining({
           id: 'notifications probe',
           method: 'GET',
-          pathname: '/api/v1/notifications?unreadOnly=false&skip=0&limit=50',
+          pathname:
+            '/api/v1/notifications?unreadOnly=false&unread_only=false&skip=0&limit=50',
         }),
         expect.objectContaining({
           id: 'impact summary probe',
@@ -156,15 +165,61 @@ describe('post-MVP backend contract helpers', () => {
           id: '1',
           type: 'share_created',
           postId: 10,
+          fruitName: 'Banana',
+          fridgeName: 'Main fridge',
           title: 'New share',
           body: 'Banana is available',
           createdAt: '2026-05-29T00:00:00Z',
+          readAt: null,
         },
       ],
     });
 
     expect(result.status).toBe('passed');
     expect(validateNotificationsResponse({success: false}).status).toBe('failed');
+    expect(
+      validateNotificationsResponse({
+        success: true,
+        data: [
+          {
+            id: 'broken',
+            type: 'share_requested',
+            postId: 10,
+            fruitName: 'Banana',
+            fridgeName: 'Main fridge',
+            title: 'Request',
+            body: 'Someone requested banana',
+            createdAt: '2026-05-29T00:00:00Z',
+            readAt: null,
+          },
+        ],
+      }).status,
+    ).toBe('failed');
+  });
+
+  it('validates snake_case notification records in list wrappers', () => {
+    expect(
+      validateNotificationsResponse({
+        success: true,
+        data: {
+          items: [
+            {
+              id: 1,
+              type: 'share_requested',
+              post_id: 10,
+              request_id: 3,
+              fruit_name: 'banana',
+              fridge_name: 'Main fridge',
+              title: 'Request',
+              body: 'Someone requested banana',
+              created_at: '2026-05-29T00:00:00Z',
+              read_at: null,
+            },
+          ],
+          total: 1,
+        },
+      }).status,
+    ).toBe('passed');
   });
 
   it('validates impact summary response shape', () => {
@@ -234,6 +289,24 @@ describe('post-MVP backend contract helpers', () => {
     expect(validateNearbyPostsResponse({success: true, data: {}}).status).toBe(
       'failed',
     );
+    expect(
+      validateNearbyPostsResponse({
+        success: true,
+        data: {
+          items: [
+            {
+              id: 1,
+              status: 'available',
+              fridgeId: 2,
+              fridgeName: 'Station fridge',
+              imageUrl: '/static/posts/1.jpg',
+              expirationDate: '2026-06-01',
+              createdAt: '2026-05-29T00:00:00Z',
+            },
+          ],
+        },
+      }).status,
+    ).toBe('failed');
     expect(
       validateNearbyFridgesResponse({
         success: true,
