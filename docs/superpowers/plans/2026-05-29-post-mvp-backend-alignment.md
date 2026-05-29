@@ -18,11 +18,11 @@
 - Test: `__tests__/home.nearbyRefresh.test.tsx`
 - Test: `__tests__/map.fridgePosts.test.tsx`
 
-- [ ] Home search input sends trimmed non-empty query to `getNearbyPosts(latitude, longitude, radius, skip, limit, q)`.
-- [ ] Home keeps loaded unfiltered feed for blank search and falls back to local filtering if the server query fails.
-- [ ] Map search input sends trimmed non-empty query to `getNearbyFridges(latitude, longitude, radius, q, skip, limit)`.
-- [ ] Map keeps loaded unfiltered fridge list for blank search and falls back to local filtering if the server query fails.
-- [ ] Focused tests cover server query calls and fallback behavior.
+- [x] Home search input sends trimmed non-empty query to `getNearbyPosts(latitude, longitude, radius, skip, limit, q)`.
+- [x] Home keeps loaded unfiltered feed for blank search and falls back to local filtering if the server query fails.
+- [x] Map search input sends trimmed non-empty query to `getNearbyFridges(latitude, longitude, radius, q, skip, limit)`.
+- [x] Map keeps loaded unfiltered fridge list for blank search and falls back to local filtering if the server query fails.
+- [x] Focused tests cover server query calls and fallback behavior.
 
 ### Task 2: Post-MVP Read-Only Contract Harness
 
@@ -31,11 +31,11 @@
 - Modify: `package.json`
 - Test: `__tests__/postMvpBackendContracts.script.test.js`
 
-- [ ] Add a read-only script that checks `/openapi.json` for notifications, impact summary, and discovery `q` parameters.
-- [ ] When `FOODLINK_ACCESS_TOKEN` is present, probe notifications list, impact summary, posts search, and fridges search without mutating data.
-- [ ] Write a timestamped JSON report under `temp/`.
-- [ ] Exit non-zero only on failed required checks; skipped authenticated probes must be explicit when token is missing.
-- [ ] Add Jest tests for OpenAPI parsing, missing-token skip, and response shape validation helpers.
+- [x] Add a read-only script that checks `/openapi.json` for notifications, impact summary, and discovery `q` parameters.
+- [x] When `FOODLINK_ACCESS_TOKEN` is present, probe notifications list, impact summary, posts search, and fridges search without mutating data.
+- [x] Write a timestamped JSON report under `temp/`.
+- [x] Exit non-zero only on failed required checks; skipped authenticated probes must be explicit when token is missing.
+- [x] Add Jest tests for OpenAPI parsing, missing-token skip, and response shape validation helpers.
 
 ### Task 3: Documentation And Verification
 
@@ -44,6 +44,20 @@
 - Modify: `docs/VALIDATION_AND_BACKLOG.md`
 - Modify: `docs/BACKEND_RESPONSE_TO_POST_MVP_BLOCKERS_2026-05-29.md`
 
-- [ ] Document the new search behavior and read-only contract command.
-- [ ] Keep impact UI marked as blocked pending live response shape.
-- [ ] Run focused tests, full Jest, typecheck, lint, and `git diff --check`.
+- [x] Document the new search behavior and read-only contract command.
+- [x] Keep impact UI marked as blocked pending live response shape.
+- [x] Run focused tests, full Jest, typecheck, lint, and `git diff --check`.
+
+### Follow-up: Impact Response Compatibility
+
+**Files:**
+- Modify: `src/api/impact.ts`
+- Modify: `src/types/impact.ts`
+- Modify: `scripts/validate-post-mvp-backend-contracts.js`
+- Test: `__tests__/impact.api.test.ts`
+- Test: `__tests__/postMvpBackendContracts.script.test.js`
+
+- [x] Normalize camelCase/snake_case impact summary fields into the app camelCase type.
+- [x] Keep impact totals optional while preserving zero summary response support.
+- [x] Check the impact `period` query parameter in the read-only OpenAPI harness.
+- [x] Keep numeric impact UI blocked until live VM final shape is verified.

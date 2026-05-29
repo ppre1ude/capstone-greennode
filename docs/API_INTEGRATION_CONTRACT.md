@@ -984,6 +984,7 @@ Authorization: Bearer {token}
 집계 대상은 `completed` 또는 `picked_up`으로 확인된 나눔 식재료뿐이다. UI는 factor source가 확정되기 전까지 `추정 절감`으로 표시한다.
 
 백엔드 회신에서 impact 구현 상태가 상충하므로, live VM response shape 확인 전에는 앱 숫자 UI를 연결하지 않는다.
+프론트 client와 `npm run qa:post-mvp-contracts`는 배포 전환 중 camelCase와 snake_case 응답, 숫자형 문자열을 모두 수용한다. 앱 내부 타입은 `totalShared`, `completedShares`, `estimatedFoodSavedGrams`, `estimatedCarbonSavedGrams`, `calculationVersion`, `computedAt` camelCase 필드로 정규화하되, 지표 값은 숫자 타입으로 고정한다.
 
 ### Server search
 

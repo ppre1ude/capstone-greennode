@@ -27,6 +27,7 @@
 - 2026-05-29 백엔드 상세 회신 검토는 [BACKEND_RESPONSE_TO_POST_MVP_BLOCKERS_2026-05-29.md](./BACKEND_RESPONSE_TO_POST_MVP_BLOCKERS_2026-05-29.md)를 따른다. 백엔드는 notifications/server search를 구현 완료로 회신했지만 live VM 재검증이 필요하고, AI 실제 분류 정확도와 multi-object detection은 현재 모델 한계로 Phase 4 항목이다.
 - 2026-05-29 후속 반영으로 홈/지도 검색은 서버 `q`를 우선 호출하고, endpoint 미배포나 실패 시 마지막 unfiltered 목록의 로컬 필터로 fallback한다. `npm run qa:post-mvp-contracts`는 notifications, impact, search `q`를 read-only로 확인하는 재검증 하네스다.
 - 2026-05-29 추가 후속 반영으로 서버 저장형 알림 client와 `qa:post-mvp-contracts`는 numeric/string `id`, camelCase/snake_case 필드, array 또는 `items`/`notifications`/`results` list wrapper를 모두 방어적으로 수용한다. 알림 목록 query는 `unreadOnly`와 `unread_only`를 전환 호환으로 함께 보낸다.
+- 2026-05-29 추가 후속 반영으로 impact summary client와 `qa:post-mvp-contracts`는 camelCase/snake_case 응답과 숫자 문자열을 앱 내부 camelCase 숫자 타입으로 정규화 가능한 shape로 수용한다. 하네스는 impact `period` query도 검증한다.
 
 ## 활성 P0
 
@@ -197,6 +198,7 @@ To-do:
 - [x] 프로필 mock 통계를 제거하거나 준비 중 상태로 바꾼다.
 - [x] 실제 지표로 유지하려면 계산식과 API 계약이 문서화된다. `GET /users/me/impact/summary`와 `estimatedWeightGrams * categoryCarbonFactor` 기준이다.
 - [x] `getImpactSummary()` API client와 `ImpactSummary` 타입을 추가했다. live VM 확인 전이라 홈/프로필 숫자 UI는 아직 연결하지 않는다.
+- [x] `getImpactSummary()`가 camelCase/snake_case 응답을 정규화하고, read-only 하네스가 `period` query와 impact response shape를 확인한다.
 - [ ] 백엔드 재배포 후 `/api/v1/users/me/impact/summary`의 OpenAPI/live VM 존재 여부, 빈 사용자 zero summary, `calculationVersion`, `computedAt`, `totalShared`/`totalReceived` 최종 shape를 확인한다. 확인 전에는 앱에 숫자 UI를 연결하지 않는다.
 
 ### 서버 검색, 인증, 채팅 Post-MVP 결정

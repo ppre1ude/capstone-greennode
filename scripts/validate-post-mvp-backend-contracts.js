@@ -164,9 +164,21 @@ const evaluateOpenApiContracts = openApi => {
         : fail(
             `notifications ${name} openapi`,
             `GET /api/v1/notifications missing query parameter ${name}`,
-          ),
+        ),
     );
   }
+
+  results.push(
+    hasQueryParameter(openApi, 'GET', '/api/v1/users/me/impact/summary', 'period')
+      ? pass(
+          'impact period openapi',
+          'GET /api/v1/users/me/impact/summary exposes query parameter period',
+        )
+      : fail(
+          'impact period openapi',
+          'GET /api/v1/users/me/impact/summary missing query parameter period',
+        ),
+  );
 
   for (const [id, pathname] of [
     ['posts search q openapi', '/api/v1/posts/nearby'],
@@ -238,6 +250,19 @@ const hasAnyOwnKey = (object, fields) =>
   fields.some(
     field => object && Object.prototype.hasOwnProperty.call(object, field),
   );
+const firstPresentValue = (object, fields) => {
+  for (const field of fields) {
+    if (hasValue(object, field)) {
+      return object[field];
+    }
+  }
+  return undefined;
+};
+const isNumberLike = value =>
+  typeof value === 'number' ||
+  (typeof value === 'string' &&
+    value.trim() !== '' &&
+    Number.isFinite(Number(value)));
 
 const validateNotificationsResponse = body => {
   const arrayResult = expectArrayBody(body, 'notifications response', {
@@ -282,32 +307,63 @@ const validateImpactSummaryResponse = body => {
     return fail('impact summary response', 'response data must be an object');
   }
 
-  for (const field of [
-    'completedShares',
-    'estimatedFoodSavedGrams',
-    'estimatedCarbonSavedGrams',
+  for (const [label, fields] of [
+    ['completedShares', ['completedShares', 'completed_shares']],
+    [
+      'estimatedFoodSavedGrams',
+      ['estimatedFoodSavedGrams', 'estimated_food_saved_grams'],
+    ],
+    [
+      'estimatedCarbonSavedGrams',
+      ['estimatedCarbonSavedGrams', 'estimated_carbon_saved_grams'],
+    ],
   ]) {
-    if (typeof data[field] !== 'number') {
-      return fail('impact summary response', `${field} must be a number`);
+    if (!isNumberLike(firstPresentValue(data, fields))) {
+      return fail('impact summary response', `${label} must be a number`);
     }
   }
 
-  for (const field of ['totalShared', 'totalReceived']) {
-    if (field in data && typeof data[field] !== 'number') {
-      return fail('impact summary response', `${field} must be a number when present`);
+  for (const [label, fields] of [
+    ['totalShared', ['totalShared', 'total_shared']],
+    ['totalReceived', ['totalReceived', 'total_received']],
+  ]) {
+    const value = firstPresentValue(data, fields);
+    if (
+      value != null &&
+      !isNumberLike(value)
+    ) {
+      return fail('impact summary response', `${label} must be a number when present`);
     }
   }
 
-  if (!data.calculationVersion || typeof data.calculationVersion !== 'string') {
+  const calculationVersion = firstPresentValue(data, [
+    'calculationVersion',
+    'calculation_version',
+  ]);
+  const computedAt = firstPresentValue(data, ['computedAt', 'computed_at']);
+  const completedShares = firstPresentValue(data, [
+    'completedShares',
+    'completed_shares',
+  ]);
+
+  if (
+    !calculationVersion ||
+    typeof calculationVersion !== 'string' ||
+    !calculationVersion.trim()
+  ) {
     return fail('impact summary response', 'calculationVersion must be a string');
   }
-  if (!data.computedAt || Number.isNaN(Date.parse(data.computedAt))) {
+  if (
+    !computedAt ||
+    typeof computedAt !== 'string' ||
+    Number.isNaN(Date.parse(computedAt))
+  ) {
     return fail('impact summary response', 'computedAt must be a valid date string');
   }
 
   return pass(
     'impact summary response',
-    `completedShares=${data.completedShares}, version=${data.calculationVersion}`,
+    `completedShares=${completedShares}, version=${calculationVersion}`,
   );
 };
 

@@ -100,6 +100,10 @@ describe('post-MVP backend contract helpers', () => {
           status: 'passed',
         }),
         expect.objectContaining({
+          id: 'impact period openapi',
+          status: 'passed',
+        }),
+        expect.objectContaining({
           id: 'fridges search q openapi',
           status: 'passed',
         }),
@@ -247,6 +251,62 @@ describe('post-MVP backend contract helpers', () => {
           estimatedCarbonSavedGrams: 0,
           calculationVersion: 'impact-v1',
           computedAt: 'not-a-date',
+        },
+      }).status,
+    ).toBe('failed');
+
+    expect(
+      validateImpactSummaryResponse({
+        success: true,
+        data: {
+          total_shared: 0,
+          total_received: 0,
+          completed_shares: 0,
+          estimated_food_saved_grams: 0,
+          estimated_carbon_saved_grams: 0,
+          calculation_version: 'impact-v1',
+          computed_at: '2026-05-29T00:00:00Z',
+        },
+      }).status,
+    ).toBe('passed');
+
+    expect(
+      validateImpactSummaryResponse({
+        success: true,
+        data: {
+          total_shared: null,
+          total_received: null,
+          completed_shares: '0',
+          estimated_food_saved_grams: '0',
+          estimated_carbon_saved_grams: '0',
+          calculation_version: 'impact-v1',
+          computed_at: '2026-05-29T00:00:00Z',
+        },
+      }).status,
+    ).toBe('passed');
+
+    expect(
+      validateImpactSummaryResponse({
+        success: true,
+        data: {
+          completed_shares: 'zero',
+          estimated_food_saved_grams: 0,
+          estimated_carbon_saved_grams: 0,
+          calculation_version: 'impact-v1',
+          computed_at: '2026-05-29T00:00:00Z',
+        },
+      }).status,
+    ).toBe('failed');
+
+    expect(
+      validateImpactSummaryResponse({
+        success: true,
+        data: {
+          completed_shares: 0,
+          estimated_food_saved_grams: 0,
+          estimated_carbon_saved_grams: 0,
+          calculation_version: '   ',
+          computed_at: '2026-05-29T00:00:00Z',
         },
       }).status,
     ).toBe('failed');
