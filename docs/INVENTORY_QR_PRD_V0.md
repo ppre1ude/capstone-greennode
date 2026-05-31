@@ -8,7 +8,7 @@
 
 ## Problem Statement
 
-FoodLink MVP는 AI 분석부터 `available -> requested`까지의 디지털 루프를 검증했다. 하지만 아직 공급자가 실제로 선택한 공유 냉장고에 식재료를 넣었는지, 수요자가 제한 시간 안에 실제로 수령했는지는 증명하지 못한다.
+FoodLink의 **농산물 등록 흐름**은 스캔, AI 분석, 결과 확인, 공유 냉장고 선택까지의 디지털 루프를 검증했다. 하지만 QR 인증 없이는 공급자가 실제로 선택한 공유 냉장고에 식재료를 넣었는지, 수요자가 제한 시간 안에 실제로 수령했는지는 증명하지 못한다.
 
 이 공백은 세 가지 제품 리스크를 만든다.
 
@@ -16,7 +16,7 @@ FoodLink MVP는 AI 분석부터 `available -> requested`까지의 디지털 루�
 - 수요자가 신청만 하고 가져가지 않으면 다른 사용자가 계속 막힌다.
 - 냉장고 운영자가 물리적 식재료를 식별, 만료, 폐기, 감사할 수 있는 기준이 없다.
 
-다음 제품 레이어는 앱 상태 전환과 실제 냉장고 앞 행동을 연결해야 한다. 단, MVP를 무거운 창고 관리 시스템으로 만들지 않아야 한다.
+다음 제품 레이어는 앱 상태 전환과 실제 냉장고 앞 행동을 연결해야 한다. 단, 농산물 등록 흐름을 무거운 창고 관리 시스템으로 만들지 않아야 한다.
 
 ## Solution
 
@@ -141,7 +141,7 @@ generated
 
 규칙:
 
-- QR 흐름이 켜진 경우 `POST /posts` 또는 vNext 대체 endpoint는 public `available`이 아니라 `pending_store`를 만든다.
+- 정식 제품 흐름에서 `POST /posts` 또는 vNext 대체 endpoint는 public `available`이 아니라 `pending_store`를 만든다.
 - `pending_store`는 홈, 지도, 냉장고 available 목록에 노출하지 않는다.
 - 공급자는 선택한 공유 냉장고 QR을 10분 안에 스캔해야 한다.
 - 보관 인증이 성공하면 `available`로 전환하고 라벨 코드를 만든다.
@@ -279,8 +279,8 @@ QR 도입 후 동작:
 - `pending_store`를 생성한다.
 - `postId`, `fridgeId`, `storeExpiresAt`, QR 안내를 반환한다.
 - nearby/fridge available 목록에는 노출하지 않는다.
-- 기존 MVP 흐름은 `flow` 미전송 또는 `"direct"`로 유지한다.
-- QR 흐름은 `flow: "fridge_qr"`를 전송한다.
+- 정식 제품 흐름은 `flow: "fridge_qr"`로 `pending_store`를 만든다.
+- FoodLink 제품에는 QR 없는 별도 생성 흐름을 두지 않는다. 과거 데이터나 서버 호환 경로가 남아 있어도 프론트는 사용하지 않는다.
 
 ### Confirm Store
 
@@ -475,8 +475,8 @@ AI 분석 완료 -> 냉장고 선택 -> QR 인증 -> 등록 완료
 
 ## Rollout Plan
 
-1. 실제 FCM 기기 QA가 닫힐 때까지 현재 MVP `available -> requested` 구현은 유지한다.
-2. Inventory/QR 도메인 모델과 백엔드 schema를 feature flag 또는 vNext API path 뒤에 추가한다.
+1. Inventory/QR 도메인 모델과 백엔드 schema를 정식 제품 흐름으로 둔다.
+2. 과거 API 호환/QA 데이터가 남아 있어도 새 사용자 흐름은 항상 `pending_store` 생성으로 시작한다.
 3. QR parser와 scanner module을 먼저 만들고 로컬 테스트를 붙인다.
 4. 공급자 `pending_store` 흐름을 구현한다. 프론트는 `flow: "fridge_qr"` 등록과 confirm-store 호출을 선행 구현했다.
 5. 수요자 30분 임시 선점과 confirm-pickup 흐름을 구현한다. 프론트는 `requestExpiresAt` countdown과 confirm-pickup 호출을 선행 구현했다.
@@ -486,7 +486,7 @@ AI 분석 완료 -> 냉장고 선택 -> QR 인증 -> 등록 완료
 
 ## Open Questions
 
-1. `POST /posts`가 바로 `pending_store`를 만들도록 바꿀 것인가, 아니면 현재 MVP 계약 보호를 위해 새 inventory endpoint를 둘 것인가?
+1. [x] `POST /posts`는 정식 제품 흐름에서 `pending_store`를 만든다. 보관 QR 인증 전까지 홈/지도/냉장고 available 목록에 노출하지 않는다.
 2. 수령 완료 최종 상태명을 `completed`, `picked_up`, 또는 `completed + picked_up event` 중 무엇으로 둘 것인가?
 3. 첫 출시에서 GPS 근접 검증까지 요구할 것인가, 아니면 QR-only 인증으로 시작할 것인가?
 4. 공식 보관 정책과 별개로 FoodLink 서비스 노출 기한의 최대 cap을 둘 것인가?

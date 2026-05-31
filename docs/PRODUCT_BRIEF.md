@@ -76,15 +76,16 @@ FoodLink는 사용자를 오래 붙잡는 콘텐츠 앱이 아니다. 핵심 지
 - `Fresh/Mid` 계열은 사용자에게 `상태가 좋아 보여요`와 `나눔 가능`으로 통합 표시한다.
 - `Stale`은 사용자에게 `나눔 기준에 맞지 않아요`로 안내하고 등록하지 않는다. `not_food`, `low_quality`, `screenshot` 계열 rejection reason은 Post-MVP 백엔드 항목이다. 2026-05-23 기준 MVP 정상 응답의 root-level `rejectionReason`은 `null`이고, `detections[]`는 단일 대표 객체 래핑이다. 특히 screenshot/UI 캡처는 MVP 서버가 차단할 수 없어 `Fresh + imageToken`으로 통과할 수 있으며, 이 경우 앱은 `확인 필요` 표시만 하고 등록은 허용한다.
 - `confidenceScore`는 Stage 2 신선도 분류 모델의 softmax max 확률이며, 차단 기준이 아니라 보조 표시/검토 신호로만 사용한다. 제품 기준은 백엔드 활용 가이드를 따라 0.9 미만을 `확인 필요` 구간으로 본다.
-- 공급자는 공유 냉장고를 선택해 나눔 식재료를 등록한다.
-- 등록 완료 후 근처 사용자에게 푸시 알림을 보낸다.
+- 공급자는 공유 냉장고를 선택해 나눔 식재료 생명주기를 시작한다.
+- 보관 QR 인증 전까지 나눔 식재료는 `pending_store`이며, 근처 사용자 목록이나 푸시 알림에 노출하지 않는다.
+- 보관 QR 인증이 끝나 `available`이 된 뒤 근처 사용자에게 푸시 알림을 보낸다.
 - 수요자는 홈/알림/지도에서 나눔 식재료를 확인하고 `나눔 신청하기`를 누른다.
-- MVP 상태 흐름은 `available -> requested`까지다. `requested`는 신청 접수이지 예약 확정이나 수령 완료가 아니다.
+- 정식 상태 흐름은 `pending_store -> available -> requested -> completed`다. `requested`는 신청 접수와 30분 임시 선점이지 예약 확정이나 수령 완료가 아니다.
 
-아래 항목은 제품 범위에는 포함되지만 MVP 구현 범위에서는 제외한다.
+아래 항목은 정식 생명주기와 별개의 사용자 flow로 만들지 않는다.
 
-- QR 코드, 비밀번호 토큰, 보관 사진, 냉장고 운영자 확인 기반 실제 보관 검증. QR 기반 보관/수령 검증은 [INVENTORY_QR_PRD_V0.md](./INVENTORY_QR_PRD_V0.md)에서 Post-MVP 방향으로 채택했다.
-- `reserved`, `completed`, `cancelled`, `expired`의 전체 앱 플로우
+- QR 코드, 비밀번호 토큰, 보관 사진, 냉장고 운영자 확인은 실제 보관/수령 검증 수단 후보이며, 기본 제품 흐름은 QR 보관/수령 인증이다.
+- `reserved` 상태. 정식 QR 흐름에서는 신청 접수/임시 선점과 수령 완료 사이에 별도 예약 확정 상태를 두지 않는다.
 - 냉장고 운영자 화면. 2026-05-23 기준 operator summary/items/dispose 최소 API 계약은 확정됐지만, 운영자 테스트 데이터와 백엔드 VM 재배포 후 runtime QA가 필요하다.
 - WebSocket 기반 실시간 채팅
 - 소셜 로그인, 이메일 verification, 실제 활동 지표 API
@@ -92,23 +93,23 @@ FoodLink는 사용자를 오래 붙잡는 콘텐츠 앱이 아니다. 핵심 지
 
 2026-05-29 Post-MVP 제품/계약 결정은 [POST_MVP_PRODUCT_CONTRACT_DECISIONS.md](./POST_MVP_PRODUCT_CONTRACT_DECISIONS.md)를 따른다. 결정 요지는 기능 확장이 아니라 scope 고정이다. AI는 hard block `rejectionReason`과 soft review `reviewReason`을 분리하지만, 현재 모델은 비식재료/스크린샷/저품질/multi-object를 실제로 판별하지 못하므로 정확도 gate는 Phase 4 모델 고도화로 분리한다. 서버 알림 저장소는 Post-MVP source of truth로 채택하되 WebSocket 채팅은 제외한다. 환경 성취 지표는 완료/수령 확인된 나눔 식재료 기준의 backend-computed estimate로만 노출하고, email verification과 social login은 Phase 4 auth expansion으로 묶는다.
 
-## MVP Flow Contract
+## Product Flow Contract
 
-| Flow slice       | Entry point    | Must happen                                                                                                                                              | Result state/effect                                             | Explicitly not MVP                          |
+| Flow slice       | Entry point    | Must happen                                                                                                                                              | Result state/effect                                             | Explicitly excluded                         |
 | ---------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- | ------------------------------------------- |
-| 남는 식재료 등록 | 카메라, 갤러리 | AI 분석 결과를 보여주고, 나눔 기준 통과 항목만 등록 정보 확인으로 보낸다.                                                                                | `POST /posts` 성공 후 `status=available`, 근처 사용자 푸시 발송 | QR/토큰/냉장고 운영자 확인으로 실제 보관 여부 강제 |
+| 농산물 등록 흐름 | 카메라, 갤러리 | AI 분석 결과를 보여주고, 나눔 기준 통과 항목만 공유 냉장고 선택과 보관 QR 인증으로 보낸다.                                                               | `POST /posts` 성공 후 `status=pending_store`, 보관 QR 인증 대기 | QR 없는 별도 생성 flow                      |
 | 나눔 기준 미충족 | AI 분석 결과   | 현재 백엔드 기준 `Stale`은 등록 흐름으로 보내지 않는다. screenshot/UI 캡처는 MVP에서 차단 불가이므로 통과 가능하며, 비식재료/저품질 사진은 Post-MVP rejection reason 계약 전까지 false-positive 검증 대상으로 둔다. | 사용자에게 `나눔 기준에 맞지 않아요` 또는 `확인 필요` 계열 문구 표시 | 부패/상함/썩음 같은 확정 판정 표현          |
 | 근처 나눔 발견   | 홈, 푸시 알림  | 홈은 냉장고보다 available 나눔 식재료를 먼저 보여준다.                                                                                                   | 상세 화면에서 보관 공유 냉장고와 신청 CTA 확인                  | 실제 인기 랭킹, 채팅 기반 탐색              |
 | 공유 냉장고 탐색 | 지도           | 지도는 주변 공유 냉장고와 냉장고 안의 available 나눔 식재료를 탐색하게 한다.                                                                             | 냉장고 기준으로 상세/신청 흐름에 진입                           | 지도를 홈 피드의 대체 화면으로 사용         |
-| 나눔 신청        | 상세 화면      | 첫 신청을 접수하면 `available -> requested`로 전환하는 것을 MVP 기준 흐름으로 둔다.                                                                      | 신청 접수 알림, 추가 신청 CTA 비활성화                          | 예약 확정, 수령 완료, 공급자 승인/거절      |
+| 나눔 신청        | 상세 화면      | 보관 QR 인증으로 `available`이 된 나눔 식재료만 신청할 수 있고, 첫 신청 접수 후 `requested`로 전환한다.                                                   | 신청 접수/30분 임시 선점, 추가 신청 CTA 비활성화                | 예약 확정, 공급자 승인/거절                 |
 | 환경 성취 확인   | 등록 완료 후   | 사용자의 좋은 행동을 숫자로 확인시키는 보조 레이어로만 제공한다.                                                                                         | 안도감/완료감 이후 보조 지표 노출                               | 핵심 가치나 수익 모델을 대체하는 1차 동기   |
 
 `나눔 신청`의 첫 신청 잠금 정책은 현재 제품 가정이다. 기존 회의에서 최종 확정이 보류된 항목이므로, 기획자가 다른 결정을 내리면 이 문서와 [VALIDATION_AND_BACKLOG.md](./VALIDATION_AND_BACKLOG.md)에 충돌 기준과 변경 이유를 함께 남긴다.
 백엔드 Phase 1.5는 이 제품 가정에 맞춰 첫 신청 접수 후 `requested`로 전환하고, 작성자 본인 신청은 403, 중복/경합 신청은 409로 거절하도록 구현했다.
 
-## Post-MVP Inventory And QR Direction
+## Inventory And QR Direction
 
-2026-05-19 기획 결정으로 공유 냉장고의 QR 인증, 냉장고 운영자 역할, 30분 임시 선점 흐름을 Post-MVP 방향으로 채택했다. 현재 MVP의 `available -> requested` 계약은 유지하지만, QR 흐름이 도입되면 `requested`는 단순 신청 접수가 아니라 30분 동안 다른 사용자의 신청을 막는 임시 선점 상태가 된다.
+공유 냉장고의 QR 인증, 냉장고 운영자 역할, 30분 임시 선점 흐름은 별도 사용자 flow가 아니라 FoodLink 나눔 생명주기의 정식 검증 레이어다. `requested`는 단순 신청 접수만이 아니라 30분 동안 다른 사용자의 신청을 막는 임시 선점 상태다.
 
 핵심 방향:
 
@@ -211,10 +212,10 @@ MVP에서 공급자는 `requested` 이후 별도 승인 행동을 하지 않는�
 
 ### 5. 나눔 신청과 푸시 알림
 
-- 등록 완료 후 근처 사용자에게 푸시 알림을 보낸다.
+- 보관 QR 인증 후 근처 사용자에게 푸시 알림을 보낸다.
 - 수요자는 상세 화면에서 `나눔 신청하기`를 누른다.
-- MVP 목표 상태 전환은 `available -> requested`다.
-- `requested`는 신청 접수이며 예약 확정이 아니다.
+- 신청 상태 전환은 `available -> requested`다.
+- `requested`는 신청 접수와 30분 임시 선점이며 예약 확정이 아니다.
 - 백엔드는 `POST /posts/{id}/requests`, `share_requested` 알림, 403/409 상태 처리를 구현했다. 프론트는 상세 CTA와 로컬 알림함을 이 계약에 맞게 연결했다. 2026-05-21 emulator foreground/background QA는 통과했고, terminated/physical 2-device QA는 2026-05-23 백엔드 FCM priority/log 재배포 후 재검증한다.
 - 채팅은 MVP에서 보류하고 알림함/신청 흐름으로 축소한다.
 
