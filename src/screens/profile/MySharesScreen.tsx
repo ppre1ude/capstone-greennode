@@ -16,14 +16,12 @@ import type { RootStackParamList } from '@/navigation/types';
 import {
   cancelPost,
   cancelShareRequest,
-  completePost,
 } from '@/api/posts';
 import { getMyPosts, getMyShareRequests } from '@/api/users';
 import { useFeedRefreshStore } from '@/store/feedRefreshStore';
 import type { Post, UserShareRequestItem } from '@/types';
 import {
   canCancelPost,
-  canCompletePost,
   getPostDisplayName,
   getPostLifecycleDeadlineLabel,
   getPostStatusLabel,
@@ -155,7 +153,6 @@ const MySharesScreen = ({ route, navigation }: Props) => {
   const renderPostCard = (post: Post) => {
     const actionKeyPrefix = `post-${post.id}`;
     const canCancel = canCancelPost(post);
-    const canComplete = canCompletePost(post);
     const fridgeLabel = post.fridgeName || `냉장고 #${post.fridgeId}`;
 
     return (
@@ -214,26 +211,6 @@ const MySharesScreen = ({ route, navigation }: Props) => {
                       `${actionKeyPrefix}-cancel`,
                       '나눔을 취소했습니다.',
                       () => cancelPost(post.id),
-                    ),
-                )
-              }
-            />
-          ) : null}
-          {canComplete ? (
-            <DSButton
-              label="완료 처리"
-              variant="outlined"
-              size="small"
-              loading={pendingActionKey === `${actionKeyPrefix}-complete`}
-              onPress={() =>
-                confirmLifecycleAction(
-                  '나눔을 완료할까요?',
-                  'QR 수령 없이 수동 완료 처리합니다.',
-                  () =>
-                    runLifecycleAction(
-                      `${actionKeyPrefix}-complete`,
-                      '나눔을 완료했습니다.',
-                      () => completePost(post.id),
                     ),
                 )
               }

@@ -5,7 +5,6 @@ import MySharesScreen from '@/screens/profile/MySharesScreen';
 import {
   cancelPost,
   cancelShareRequest,
-  completePost,
 } from '@/api/posts';
 import { getMyPosts, getMyShareRequests } from '@/api/users';
 import type { Post, UserShareRequestItem } from '@/types';
@@ -25,7 +24,6 @@ jest.mock('@/api/users', () => ({
 jest.mock('@/api/posts', () => ({
   cancelPost: jest.fn(),
   cancelShareRequest: jest.fn(),
-  completePost: jest.fn(),
 }));
 
 const mockedGetMyPosts = getMyPosts as jest.MockedFunction<typeof getMyPosts>;
@@ -34,7 +32,6 @@ const mockedGetMyShareRequests =
 const mockedCancelPost = cancelPost as jest.MockedFunction<typeof cancelPost>;
 const mockedCancelShareRequest =
   cancelShareRequest as jest.MockedFunction<typeof cancelShareRequest>;
-const mockedCompletePost = completePost as jest.MockedFunction<typeof completePost>;
 
 const basePost: Post = {
   id: 31,
@@ -155,11 +152,6 @@ describe('MySharesScreen', () => {
       message: 'ok',
       data: null,
     });
-    mockedCompletePost.mockResolvedValue({
-      success: true,
-      message: 'ok',
-      data: null,
-    });
   });
 
   afterEach(() => {
@@ -228,7 +220,7 @@ describe('MySharesScreen', () => {
     });
   });
 
-  it('cancels or completes requested shares without exposing manual expiry', async () => {
+  it('cancels requested posted shares without exposing manual complete or expiry', async () => {
     const requestedPost: Post = {
       ...basePost,
       id: 32,
@@ -253,12 +245,9 @@ describe('MySharesScreen', () => {
       await Promise.resolve();
     });
 
-    await ReactTestRenderer.act(async () => {
-      findTouchableByText(renderer!, '완료 처리').props.onPress();
-    });
-    await confirmLastAlert();
-    expect(mockedCompletePost).toHaveBeenCalledWith(32);
-
+    expect(() => findTouchableByText(renderer!, '완료 처리')).toThrow(
+      'Touchable with text "완료 처리" not found',
+    );
     await ReactTestRenderer.act(async () => {
       findTouchableByText(renderer!, '나눔 취소').props.onPress();
     });

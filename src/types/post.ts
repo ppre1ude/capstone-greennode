@@ -11,8 +11,6 @@ export type PostStatus =
   | 'disposed'
   | 'cancelled';
 
-export type PostCreateFlow = 'direct' | 'fridge_qr';
-
 export type PostStorageZone = 'GENERAL' | 'ETHYLENE_SEPARATED';
 
 export type FreshnessLabel = 'Fresh' | 'Mid' | 'Stale' | 'unknown';
@@ -116,7 +114,7 @@ export interface PostCreateData {
   expirationDate: string;
   imageToken: string;
   selectedDetectionId?: string;
-  flow?: PostCreateFlow;
+  flow?: 'fridge_qr';
 }
 
 export type ShareRequestStatus =

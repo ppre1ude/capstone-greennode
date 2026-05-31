@@ -18,7 +18,7 @@ import type { RootStackParamList } from '@/navigation/types';
 import { getAvailableFridges } from '@/api/fridges';
 import { createPost } from '@/api/posts';
 import { useAuthStore } from '@/store/authStore';
-import type { Fridge, PostCreateFlow } from '@/types';
+import type { Fridge } from '@/types';
 import { getApiErrorMessage } from '@/utils/apiError';
 import {
   getRegisteredLocation,
@@ -119,7 +119,7 @@ const FridgeSelectScreen = ({ route, navigation }: Props) => {
     fetchFridges(registeredLocation.latitude, registeredLocation.longitude);
   }, [fetchFridges, user]);
 
-  const handleComplete = async (flow: PostCreateFlow = 'direct') => {
+  const handleComplete = async () => {
     if (!selectedFridgeId || !postData) {
       return;
     }
@@ -141,26 +141,21 @@ const FridgeSelectScreen = ({ route, navigation }: Props) => {
       const response = await createPost({
         ...postData,
         fridgeId: selectedFridgeId,
-        ...(flow === 'fridge_qr' ? { flow } : {}),
+        flow: 'fridge_qr',
       });
 
       if (response.success && response.data) {
-        if (flow === 'fridge_qr') {
-          navigation.replace('InventoryQr', {
-            mode: 'store',
-            postId: response.data.id,
-            fridgePublicCode: selectedFridge?.publicCode,
-            fridgeName: selectedFridge?.name,
-            fridgeLocation: selectedFridge?.address,
-            pendingExpiresAt: resolvePendingStoreExpiresAt(
-              response.data.storeExpiresAt,
-              response.data.createdAt,
-            ),
-          });
-          return;
-        }
-
-        navigation.replace('PostComplete', { postId: response.data.id });
+        navigation.replace('InventoryQr', {
+          mode: 'store',
+          postId: response.data.id,
+          fridgePublicCode: selectedFridge?.publicCode,
+          fridgeName: selectedFridge?.name,
+          fridgeLocation: selectedFridge?.address,
+          pendingExpiresAt: resolvePendingStoreExpiresAt(
+            response.data.storeExpiresAt,
+            response.data.createdAt,
+          ),
+        });
       } else {
         Alert.alert(
           '등록 실패',
@@ -317,25 +312,13 @@ const FridgeSelectScreen = ({ route, navigation }: Props) => {
       {location ? (
         <DSScreenFooter style={styles.footer}>
           <DSButton
-            label="나눔 완료하기"
-            fullWidth
-            loading={isSubmitting}
-            loadingLabel="처리 중"
-            onPress={() => handleComplete('direct')}
-            disabled={!selectedFridgeId || !postData || isSubmitting}
-          />
-
-          <DSButton
             testID="fridge-select-qr-submit"
-            label="QR 입고로 등록하기"
-            variant="outlined"
+            label="보관 QR 인증하기"
             fullWidth
             loading={isSubmitting}
             loadingLabel="처리 중"
-            onPress={() => handleComplete('fridge_qr')}
+            onPress={handleComplete}
             disabled={!selectedFridgeId || !postData || isSubmitting}
-            style={styles.qrSubmitButton}
-            textStyle={styles.qrSubmitButtonText}
           />
         </DSScreenFooter>
       ) : null}
