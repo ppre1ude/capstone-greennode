@@ -1,16 +1,22 @@
 export {};
 
+import path from 'path';
+
 const fs = jest.requireActual('fs') as {
   readFileSync: (filePath: string, encoding: 'utf8') => string;
 };
+
+const resolveProjectPath = (relativePath: string) => path.resolve(__dirname, '..', relativePath);
 
 const activeFlowContractFiles = [
   'src/types/post.ts',
   'src/screens/post/FridgeSelectScreen.tsx',
   'docs/INVENTORY_QR_PRD_V0.md',
-];
+].map(resolveProjectPath);
 
-const appLifecycleFiles = ['src/api/posts.ts', 'src/screens/profile/MySharesScreen.tsx'];
+const appLifecycleFiles = ['src/api/posts.ts', 'src/screens/profile/MySharesScreen.tsx'].map(
+  resolveProjectPath,
+);
 
 describe('post creation flow contract', () => {
   it('does not expose direct creation as a product flow', () => {
