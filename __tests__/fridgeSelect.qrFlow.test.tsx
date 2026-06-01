@@ -160,6 +160,9 @@ describe('FridgeSelectScreen QR flow', () => {
   it('creates a pending-store post and opens store QR confirmation with backend expiry', async () => {
     const { navigation, renderer } = await renderScreen();
 
+    expect(findButtonByText(renderer, '나눔 완료하기')).toBeUndefined();
+    expect(findButtonByText(renderer, '보관 QR 인증하기')).toBeTruthy();
+
     await selectFridgeAndSubmitQr(renderer);
 
     expect(mockedCreatePost).toHaveBeenCalledWith({

@@ -386,8 +386,7 @@ export const canCancelPost = (post: PostLifecycleFields): boolean =>
   post.status === 'available' ||
   post.status === 'requested';
 
-export const canCompletePost = (post: PostLifecycleFields): boolean =>
-  post.status === 'requested';
+export const canCompletePost = (_post: PostLifecycleFields): boolean => false;
 
 export const canExpirePost = (_post: PostLifecycleFields): boolean => false;
 

@@ -2,7 +2,6 @@ import apiClient from '@/api/client';
 import {
   cancelPost,
   cancelShareRequest,
-  completePost,
   createPost,
   generatePost,
   getImageUrl,
@@ -396,7 +395,6 @@ describe('posts API contract', () => {
     });
 
     await cancelPost(10);
-    await completePost(10);
     await cancelShareRequest(99);
 
     expect(mockedApiClient.post).toHaveBeenNthCalledWith(
@@ -405,10 +403,6 @@ describe('posts API contract', () => {
     );
     expect(mockedApiClient.post).toHaveBeenNthCalledWith(
       2,
-      '/api/v1/posts/10/complete',
-    );
-    expect(mockedApiClient.post).toHaveBeenNthCalledWith(
-      3,
       '/api/v1/users/me/share-requests/99/cancel',
     );
   });

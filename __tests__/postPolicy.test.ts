@@ -299,7 +299,7 @@ describe('post policy', () => {
     expect(canCancelPost({ status: 'pending_store' })).toBe(true);
     expect(canCancelPost({ status: 'available' })).toBe(true);
     expect(canCancelPost({ status: 'requested' })).toBe(true);
-    expect(canCompletePost({ status: 'requested' })).toBe(true);
+    expect(canCompletePost({ status: 'requested' })).toBe(false);
     expect(canCompletePost({ status: 'available' })).toBe(false);
     expect(canExpirePost({ status: 'available' })).toBe(false);
     expect(canExpirePost({ status: 'requested' })).toBe(false);

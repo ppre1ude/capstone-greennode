@@ -136,16 +136,15 @@ Host NHN-Cloud-Server
 | 10  | DELETE | /api/v1/posts/{id}          | 나눔 식재료 삭제          | ✅   |
 | 11  | POST   | /api/v1/posts/{id}/requests | 나눔 신청                 | ✅   |
 | 12  | POST   | /api/v1/posts/{id}/cancel   | 작성자 나눔 취소          | ✅   |
-| 13  | POST   | /api/v1/posts/{id}/complete | 작성자 직거래 완료        | ✅   |
-| 14  | GET    | /api/v1/users/me/posts      | 내 나눔 목록              | ✅   |
-| 15  | GET    | /api/v1/users/me/share-requests | 받은 나눔/신청 목록   | ✅   |
-| 16  | POST   | /api/v1/users/me/share-requests/{id}/cancel | 신청자 취소 | ✅ |
-| 17  | GET    | /api/v1/fridges/nearby      | 근처 냉장고 현황          | ✅   |
-| 18  | GET    | /api/v1/fridges/available   | 등록 가능 냉장고          | ✅   |
-| 19  | GET    | /api/v1/fridges/{id}/posts  | 냉장고별 나눔 식재료 조회 | ✅   |
-| 20  | GET    | /api/v1/operator/fridges/{fridgeId}/inventory/summary | 운영자 inventory 요약 | ✅ |
-| 21  | GET    | /api/v1/operator/fridges/{fridgeId}/inventory/items | 운영자 inventory 품목 조회 | ✅ |
-| 22  | PATCH  | /api/v1/operator/items/{postId}/dispose | 운영자 폐기 처분 | ✅ |
+| 13  | GET    | /api/v1/users/me/posts      | 내 나눔 목록              | ✅   |
+| 14  | GET    | /api/v1/users/me/share-requests | 받은 나눔/신청 목록   | ✅   |
+| 15  | POST   | /api/v1/users/me/share-requests/{id}/cancel | 신청자 취소 | ✅ |
+| 16  | GET    | /api/v1/fridges/nearby      | 근처 냉장고 현황          | ✅   |
+| 17  | GET    | /api/v1/fridges/available   | 등록 가능 냉장고          | ✅   |
+| 18  | GET    | /api/v1/fridges/{id}/posts  | 냉장고별 나눔 식재료 조회 | ✅   |
+| 19  | GET    | /api/v1/operator/fridges/{fridgeId}/inventory/summary | 운영자 inventory 요약 | ✅ |
+| 20  | GET    | /api/v1/operator/fridges/{fridgeId}/inventory/items | 운영자 inventory 품목 조회 | ✅ |
+| 21  | PATCH  | /api/v1/operator/items/{postId}/dispose | 운영자 폐기 처분 | ✅ |
 
 ### 백엔드 구현 완료, 프론트 연동 필요
 
@@ -495,7 +494,7 @@ Authorization: Bearer {token}
 
 > 서버 `message`에 구형 표현인 `게시글`이 남아 있을 수 있다. 실제 서버 응답 증거로는 기록하되, 앱 UI와 제품 문서에서는 **나눔 식재료**로 번역한다.
 >
-> `status: "available"`은 현재 검증된 **나눔 상태**다. 일반 흐름은 `available -> requested -> completed`이며, 작성자/신청자 취소는 `cancelled`, 서버 배치 만료는 `expired`로 전이된다. `requested`는 수요자의 나눔 신청이 접수된 상태이며 예약 확정이 아니다. `reserved`는 사용하지 않는다.
+> `status: "available"`은 보관 QR 인증이 끝나 수요자가 신청할 수 있는 **나눔 상태**다. 정식 QR 흐름은 `pending_store -> available -> requested -> completed`이며, 작성자/신청자 취소는 `cancelled`, 서버 배치/lazy-expire 만료는 `expired`로 전이된다. `requested`는 수요자의 나눔 신청이 접수되고 30분 임시 선점이 걸린 상태이며 예약 확정이 아니다. `reserved`는 사용하지 않는다.
 >
 > 작성자 여부 판단은 `authorId` 기준으로 처리한다. 구형 fixture의 `userId`는 호환용 fallback으로만 본다.
 >
@@ -587,16 +586,15 @@ Authorization: Bearer {token}
 
 응답은 `{ request, post }[]` 중첩 구조다. `post.fridgeName`, `post.labelCode`, `post.storageZone`, `post.requestExpiresAt`, `post.imageUrl`, `post.expirationDate`를 화면 표시와 QR 재진입에 사용한다. 목록 API는 fridge `publicCode`를 노출하지 않는다.
 
-작성자 lifecycle mutation:
+작성자 취소 mutation:
 
 ```text
 POST /api/v1/posts/{post_id}/cancel
-POST /api/v1/posts/{post_id}/complete
 Authorization: Bearer {token}
 ```
 
 - cancel: `available`, `requested`, `pending_store`에서 작성자 본인만 가능하다. `requested` 취소 시 연결된 `ShareRequest`도 `cancelled`가 된다.
-- complete: 일반 직거래 나눔에서 작성자가 `requested -> completed`로 완료 처리한다.
+- 작성자 완료 API는 앱 제품 흐름에서 사용하지 않는다. 정식 완료 기준은 수요자 `confirm-pickup`이다.
 - expire: 사용자 호출 API를 사용하지 않는다. 만료는 서버 배치가 처리한다.
 
 신청자 취소:
