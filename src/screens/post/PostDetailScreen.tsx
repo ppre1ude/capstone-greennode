@@ -38,7 +38,10 @@ import { useAuthStore } from '@/store/authStore';
 import { useFeedRefreshStore } from '@/store/feedRefreshStore';
 import { useTrustFeedbackStore } from '@/store/trustFeedbackStore';
 import type { Post } from '@/types';
-import { getProviderTrustBadges } from '@/features/trust/feedback';
+import {
+  getProviderTrustBadges,
+  isOpenShareReportStatus,
+} from '@/features/trust/feedback';
 import { getApiErrorMessage } from '@/utils/apiError';
 import {
   formatInventoryHoldRemaining,
@@ -265,7 +268,9 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
     review => review.providerId === post.authorId,
   );
   const providerReports = Object.values(trustReports).filter(
-    report => report.providerId === post.authorId,
+    report =>
+      report.providerId === post.authorId &&
+      isOpenShareReportStatus(report.status),
   );
   const trustBadges = getProviderTrustBadges({
     completedShares: providerReviews.length,

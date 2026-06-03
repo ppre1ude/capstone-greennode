@@ -17,6 +17,8 @@ export type ShareReportReasonId =
   | 'missing_or_not_found'
   | 'inappropriate_listing';
 
+export type ShareReportStatus = 'open' | 'reviewing' | 'resolved' | 'dismissed';
+
 export type ShareFeedbackTag<TId extends string> = {
   id: TId;
   label: string;
@@ -61,7 +63,7 @@ export const ISSUE_FEEDBACK_TAGS: ShareFeedbackTag<ShareFeedbackIssueTagId>[] = 
   {id: 'condition_needs_check', label: '상태 확인이 필요했어요'},
 ];
 
-export const REPORT_REASON_TAGS: ShareFeedbackTag<ShareReportReasonId>[] = [
+export const REPORT_REASON_OPTIONS: ShareFeedbackTag<ShareReportReasonId>[] = [
   {id: 'different_from_photo', label: '등록 사진과 실제 식재료가 달라요'},
   {id: 'condition_needs_check', label: '수령한 식재료 상태 확인이 필요해요'},
   {id: 'label_or_zone_mismatch', label: '라벨/보관 위치가 맞지 않았어요'},
@@ -71,6 +73,9 @@ export const REPORT_REASON_TAGS: ShareFeedbackTag<ShareReportReasonId>[] = [
 
 export const canLeaveShareFeedback = (item: FeedbackEligibility): boolean =>
   item.request?.status === 'completed' && item.post?.status === 'completed';
+
+export const isOpenShareReportStatus = (status: ShareReportStatus): boolean =>
+  status === 'open' || status === 'reviewing';
 
 export const getProviderTrustBadges = ({
   completedShares = 0,

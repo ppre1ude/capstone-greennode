@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 수령 QR 인증 완료 건에만 태그 기반 평가/신고를 열고, 나눔 상세와 프로필에 공급자 신뢰 뱃지를 노출한다.
+**Goal:** 수령 QR 인증 완료 건에만 태그 기반 평가와 운영자 처리용 신고를 열고, 나눔 상세와 프로필에 공급자 신뢰 뱃지를 노출한다.
 
 **Architecture:** 평가는 `ShareRequest` 1건에 귀속하고, 데모 앱은 Zustand 로컬 상태로 제출 결과를 즉시 반영한다. 백엔드에는 같은 모델을 실제 저장/API 계약으로 요청하는 문서를 추가한다.
 

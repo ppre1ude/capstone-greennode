@@ -3,6 +3,7 @@ import type {
   ShareFeedbackIssueTagId,
   ShareFeedbackPositiveTagId,
   ShareReportReasonId,
+  ShareReportStatus,
 } from '@/features/trust/feedback';
 
 export type ShareReviewRecord = {
@@ -18,12 +19,13 @@ export type ShareReportRecord = {
   requestId: number;
   postId: number;
   providerId: number;
-  reasonIds: ShareReportReasonId[];
+  reasonId: ShareReportReasonId;
+  status: ShareReportStatus;
   createdAt: string;
 };
 
 type SubmitReviewInput = Omit<ShareReviewRecord, 'createdAt'>;
-type SubmitReportInput = Omit<ShareReportRecord, 'createdAt'>;
+type SubmitReportInput = Omit<ShareReportRecord, 'createdAt' | 'status'>;
 
 type TrustFeedbackState = {
   reviews: Record<number, ShareReviewRecord>;
@@ -53,6 +55,7 @@ export const useTrustFeedbackStore = create<TrustFeedbackState>(set => ({
         ...state.reports,
         [report.requestId]: {
           ...report,
+          status: 'open',
           createdAt: new Date().toISOString(),
         },
       },

@@ -84,7 +84,7 @@ describe('ShareFeedbackScreen', () => {
     });
   });
 
-  it('records selected report reasons separately from review tags', async () => {
+  it('records one report reason as an operator review case', async () => {
     let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
 
     await ReactTestRenderer.act(async () => {
@@ -98,6 +98,7 @@ describe('ShareFeedbackScreen', () => {
 
     await ReactTestRenderer.act(async () => {
       findTouchableByText(renderer!, '이미 없거나 찾을 수 없었어요').props.onPress();
+      findTouchableByText(renderer!, '부적절한 등록이에요').props.onPress();
     });
 
     await ReactTestRenderer.act(async () => {
@@ -108,13 +109,55 @@ describe('ShareFeedbackScreen', () => {
       requestId: 55,
       postId: 41,
       providerId: 4,
-      reasonIds: ['missing_or_not_found'],
+      reasonId: 'inappropriate_listing',
+      status: 'open',
     });
     expect(alertSpy).toHaveBeenCalledWith(
       '신고 접수',
       '운영자 검토가 필요한 항목으로 기록했습니다.',
     );
     expect(navigation.goBack).toHaveBeenCalled();
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
+  it('renders report reasons as radio options instead of feedback chips', async () => {
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(
+        <ShareFeedbackScreen
+          navigation={navigation as never}
+          route={{ params: { ...routeParams, initialMode: 'report' } } as never}
+        />,
+      );
+    });
+
+    const reasonRows = renderer!.root.findAll(
+      node =>
+        node.type === TouchableOpacity &&
+        node.props.accessibilityRole === 'radio',
+    );
+
+    expect(reasonRows).toHaveLength(5);
+    expect(reasonRows[0].props.accessibilityState).toMatchObject({
+      checked: false,
+    });
+
+    await ReactTestRenderer.act(async () => {
+      findTouchableByText(renderer!, '등록 사진과 실제 식재료가 달라요').props.onPress();
+    });
+
+    const selectedReasonRows = renderer!.root.findAll(
+      node =>
+        node.type === TouchableOpacity &&
+        node.props.accessibilityRole === 'radio' &&
+        node.props.accessibilityState?.checked,
+    );
+
+    expect(selectedReasonRows).toHaveLength(1);
 
     await ReactTestRenderer.act(async () => {
       renderer?.unmount();

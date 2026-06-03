@@ -13,7 +13,7 @@ import type { RootStackParamList } from '@/navigation/types';
 import {
   ISSUE_FEEDBACK_TAGS,
   POSITIVE_FEEDBACK_TAGS,
-  REPORT_REASON_TAGS,
+  REPORT_REASON_OPTIONS,
   type ShareFeedbackIssueTagId,
   type ShareFeedbackPositiveTagId,
   type ShareReportReasonId,
@@ -44,14 +44,13 @@ const ShareFeedbackScreen = ({ route, navigation }: Props) => {
     ShareFeedbackPositiveTagId[]
   >([]);
   const [issueTagIds, setIssueTagIds] = useState<ShareFeedbackIssueTagId[]>([]);
-  const [reportReasonIds, setReportReasonIds] = useState<
-    ShareReportReasonId[]
-  >([]);
+  const [reportReasonId, setReportReasonId] =
+    useState<ShareReportReasonId | null>(null);
   const submitReview = useTrustFeedbackStore(state => state.submitReview);
   const submitReport = useTrustFeedbackStore(state => state.submitReport);
 
   const canSubmitReview = positiveTagIds.length + issueTagIds.length > 0;
-  const canSubmitReport = reportReasonIds.length > 0;
+  const canSubmitReport = reportReasonId !== null;
   const modeTitle = mode === 'review' ? '수령 경험 평가' : '신고하기';
   const modeDescription = useMemo(
     () =>
@@ -78,7 +77,7 @@ const ShareFeedbackScreen = ({ route, navigation }: Props) => {
   };
 
   const handleSubmitReport = () => {
-    if (!canSubmitReport) {
+    if (reportReasonId === null) {
       return;
     }
 
@@ -86,7 +85,7 @@ const ShareFeedbackScreen = ({ route, navigation }: Props) => {
       requestId,
       postId,
       providerId,
-      reasonIds: reportReasonIds,
+      reasonId: reportReasonId,
     });
     Alert.alert('신고 접수', '운영자 검토가 필요한 항목으로 기록했습니다.');
     navigation.goBack();
@@ -191,21 +190,40 @@ const ShareFeedbackScreen = ({ route, navigation }: Props) => {
           <>
             <View style={styles.section}>
               <DSText variant="bodyBold" style={styles.sectionTitle}>
-                신고 사유
+                운영자 처리 분류
               </DSText>
-              <View style={styles.tagWrap}>
-                {REPORT_REASON_TAGS.map(reason => (
-                  <DSChip
-                    key={reason.id}
-                    label={reason.label}
-                    selected={reportReasonIds.includes(reason.id)}
-                    tone="error"
-                    variant="outlined"
-                    onPress={() =>
-                      setReportReasonIds(current => toggleId(current, reason.id))
-                    }
-                  />
-                ))}
+              <View style={styles.reportOptionList}>
+                {REPORT_REASON_OPTIONS.map(reason => {
+                  const selected = reportReasonId === reason.id;
+
+                  return (
+                    <TouchableOpacity
+                      key={reason.id}
+                      accessibilityLabel={reason.label}
+                      accessibilityRole="radio"
+                      accessibilityState={{checked: selected}}
+                      activeOpacity={0.82}
+                      onPress={() => setReportReasonId(reason.id)}
+                      style={[
+                        styles.reportOption,
+                        selected ? styles.reportOptionSelected : null,
+                      ]}>
+                      <View
+                        style={[
+                          styles.radioOuter,
+                          selected ? styles.radioOuterSelected : null,
+                        ]}>
+                        {selected ? <View style={styles.radioInner} /> : null}
+                      </View>
+                      <DSText
+                        variant="bodyBold"
+                        color={selected ? 'error' : 'textPrimary'}
+                        style={styles.reportOptionText}>
+                        {reason.label}
+                      </DSText>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             </View>
 
@@ -282,6 +300,46 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
+  },
+  reportOptionList: {
+    gap: 10,
+  },
+  reportOption: {
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderColor: colors.border,
+    borderRadius: 12,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 12,
+    minHeight: 56,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  reportOptionSelected: {
+    backgroundColor: '#FFF5F5',
+    borderColor: colors.error,
+  },
+  reportOptionText: {
+    flex: 1,
+  },
+  radioOuter: {
+    alignItems: 'center',
+    borderColor: colors.border,
+    borderRadius: 10,
+    borderWidth: 2,
+    height: 20,
+    justifyContent: 'center',
+    width: 20,
+  },
+  radioOuterSelected: {
+    borderColor: colors.error,
+  },
+  radioInner: {
+    backgroundColor: colors.error,
+    borderRadius: 5,
+    height: 10,
+    width: 10,
   },
   submitButton: {
     marginTop: 8,

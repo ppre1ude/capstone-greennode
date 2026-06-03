@@ -1,6 +1,6 @@
 # Backend Trust Feedback Contract Request
 
-> 목적: 수령 QR 인증 이후에만 가능한 태그 기반 평가/신고 시스템과 공급자 신뢰 요약 API를 백엔드 계약으로 요청한다.
+> 목적: 수령 QR 인증 이후에만 가능한 태그 기반 평가, 운영자 처리용 신고 시스템, 공급자 신뢰 요약 API를 백엔드 계약으로 요청한다.
 > 기준일: 2026-06-04
 > 프론트 데모 상태: 로컬 Zustand 상태로 평가/신고 제출과 신뢰 뱃지 반영 UI 구현
 
@@ -12,7 +12,7 @@
 - 평가/신고는 `ShareRequest.status=completed`이고 연결된 `Post.status=completed`인 경우에만 허용한다.
 - 수령 QR 인증이 완료되지 않은 신청자는 평가/신고할 수 없다.
 - 별점은 이번 범위에서 제외한다. 평가는 태그 선택형으로만 저장한다.
-- 신고는 평가와 분리한다. 신고는 운영자 검토 대상이며 공급자 공개 점수처럼 즉시 노출하지 않는다.
+- 신고는 평가와 분리한다. 신고는 태그 피드백이 아니라 운영자 검토 큐에 들어가는 단일 사유 분류 건이며, 공급자 공개 점수처럼 즉시 노출하지 않는다.
 - 사용자-facing 문구에서 `썩음`, `상함` 같은 표현은 쓰지 않고 `상태 확인 필요`, `나눔 기준 확인 필요` 계열로 완화한다.
 
 ## 신규 모델
@@ -48,7 +48,7 @@ UNIQUE(request_id, requester_id)
   "postId": 41,
   "providerId": 4,
   "requesterId": 3,
-  "reasonIds": ["missing_or_not_found"],
+  "reasonId": "missing_or_not_found",
   "status": "open",
   "createdAt": "2026-06-04T12:05:00Z",
   "updatedAt": "2026-06-04T12:05:00Z"
@@ -60,6 +60,15 @@ UNIQUE(request_id, requester_id)
 ```text
 open | reviewing | resolved | dismissed
 ```
+
+상태 의미:
+
+| status | 의미 |
+| --- | --- |
+| `open` | 신고 접수 후 아직 운영자가 확인하지 않음 |
+| `reviewing` | 운영자가 확인 중 |
+| `resolved` | 조치 완료 |
+| `dismissed` | 조치 불필요로 종결 |
 
 ## 태그 enum
 
@@ -81,7 +90,7 @@ open | reviewing | resolved | dismissed
 | `pickup_location_unclear` | 수령 위치가 헷갈렸어요 |
 | `condition_needs_check` | 상태 확인이 필요했어요 |
 
-### report reasonIds
+### report reasonId
 
 | id | 사용자 문구 |
 | --- | --- |
@@ -150,7 +159,7 @@ Content-Type: application/json
 
 ```json
 {
-  "reasonIds": ["missing_or_not_found"]
+  "reasonId": "missing_or_not_found"
 }
 ```
 
@@ -166,7 +175,7 @@ Content-Type: application/json
     "postId": 41,
     "providerId": 4,
     "requesterId": 3,
-    "reasonIds": ["missing_or_not_found"],
+    "reasonId": "missing_or_not_found",
     "status": "open",
     "createdAt": "2026-06-04T12:05:00Z",
     "updatedAt": "2026-06-04T12:05:00Z"
@@ -180,6 +189,23 @@ Content-Type: application/json
 - 403: 해당 `ShareRequest`의 requester가 아님
 - 409: `ShareRequest.status` 또는 `Post.status`가 `completed`가 아님
 - 422: 지원하지 않는 reason id
+
+운영자 처리 API 후보:
+
+```text
+GET /api/v1/admin/share-reports?status=open
+PATCH /api/v1/admin/share-reports/{reportId}
+```
+
+처리 요청:
+
+```json
+{
+  "status": "reviewing"
+}
+```
+
+MVP 데모에서는 관리자 처리 화면까지 구현하지 않지만, 백엔드는 `status`를 기준으로 운영자 검토 목록을 만들 수 있어야 한다.
 
 ### 3. 공급자 신뢰 요약 조회
 
