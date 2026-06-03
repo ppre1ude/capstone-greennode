@@ -201,6 +201,7 @@ npm run mock:api
 | 문서 | 역할 |
 | --- | --- |
 | [docs/PRODUCT_BRIEF.md](./docs/PRODUCT_BRIEF.md) | 제품 비전, MVP 경계, 사용자 흐름 |
+| [docs/FINAL_PRESENTATION_PLANNING_2026-06-03.md](./docs/FINAL_PRESENTATION_PLANNING_2026-06-03.md) | 최종 발표용 기획 요약, 페르소나, 주차별 진행사항 |
 | [docs/DOMAIN_MODEL.md](./docs/DOMAIN_MODEL.md) | FoodLink 도메인 용어와 상태 모델 |
 | [docs/API_INTEGRATION_CONTRACT.md](./docs/API_INTEGRATION_CONTRACT.md) | API 접속, 요청/응답 계약, FCM 계약 |
 | [docs/DESIGN_SYSTEM.md](./docs/DESIGN_SYSTEM.md) | 디자인 토큰, DS 컴포넌트 레이어, UI 마이그레이션 규칙 |
