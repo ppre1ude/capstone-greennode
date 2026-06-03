@@ -11,13 +11,15 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { DSButton, DSCard, DSChip, DSIcon, DSText } from '@/design-system';
 import type { RootStackParamList } from '@/navigation/types';
 import {
-  ISSUE_FEEDBACK_TAGS,
-  POSITIVE_FEEDBACK_TAGS,
-  REPORT_REASON_OPTIONS,
-  type ShareFeedbackIssueTagId,
-  type ShareFeedbackPositiveTagId,
+  SHARE_REPORT_REASON_OPTIONS,
   type ShareReportReasonId,
-} from '@/features/trust/feedback';
+} from '@/features/trust/report';
+import {
+  SHARE_REVIEW_ISSUE_TAGS,
+  SHARE_REVIEW_POSITIVE_TAGS,
+  type ShareReviewIssueTagId,
+  type ShareReviewPositiveTagId,
+} from '@/features/trust/review';
 import { useTrustFeedbackStore } from '@/store/trustFeedbackStore';
 import { colors } from '@/theme';
 import { getHeaderTopPadding } from '@/utils/safeArea';
@@ -41,9 +43,9 @@ const ShareFeedbackScreen = ({ route, navigation }: Props) => {
   } = route.params;
   const [mode, setMode] = useState<FeedbackMode>(initialMode);
   const [positiveTagIds, setPositiveTagIds] = useState<
-    ShareFeedbackPositiveTagId[]
+    ShareReviewPositiveTagId[]
   >([]);
-  const [issueTagIds, setIssueTagIds] = useState<ShareFeedbackIssueTagId[]>([]);
+  const [issueTagIds, setIssueTagIds] = useState<ShareReviewIssueTagId[]>([]);
   const [reportReasonId, setReportReasonId] =
     useState<ShareReportReasonId | null>(null);
   const submitReview = useTrustFeedbackStore(state => state.submitReview);
@@ -144,7 +146,7 @@ const ShareFeedbackScreen = ({ route, navigation }: Props) => {
                 좋았던 점
               </DSText>
               <View style={styles.tagWrap}>
-                {POSITIVE_FEEDBACK_TAGS.map(tag => (
+                {SHARE_REVIEW_POSITIVE_TAGS.map(tag => (
                   <DSChip
                     key={tag.id}
                     label={tag.label}
@@ -164,7 +166,7 @@ const ShareFeedbackScreen = ({ route, navigation }: Props) => {
                 아쉬웠던 점
               </DSText>
               <View style={styles.tagWrap}>
-                {ISSUE_FEEDBACK_TAGS.map(tag => (
+                {SHARE_REVIEW_ISSUE_TAGS.map(tag => (
                   <DSChip
                     key={tag.id}
                     label={tag.label}
@@ -193,7 +195,7 @@ const ShareFeedbackScreen = ({ route, navigation }: Props) => {
                 운영자 처리 분류
               </DSText>
               <View style={styles.reportOptionList}>
-                {REPORT_REASON_OPTIONS.map(reason => {
+                {SHARE_REPORT_REASON_OPTIONS.map(reason => {
                   const selected = reportReasonId === reason.id;
 
                   return (

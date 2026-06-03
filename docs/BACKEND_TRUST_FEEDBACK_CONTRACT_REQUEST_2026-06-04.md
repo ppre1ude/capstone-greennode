@@ -3,6 +3,7 @@
 > 목적: 수령 QR 인증 이후에만 가능한 태그 기반 평가, 운영자 처리용 신고 시스템, 공급자 신뢰 요약 API를 백엔드 계약으로 요청한다.
 > 기준일: 2026-06-04
 > 프론트 데모 상태: 로컬 Zustand 상태로 평가/신고 제출과 신뢰 뱃지 반영 UI 구현
+> 운영 모델: [TRUST_FEEDBACK_OPERATING_MODEL.md](./TRUST_FEEDBACK_OPERATING_MODEL.md)
 
 ---
 

@@ -1,17 +1,19 @@
 import { create } from 'zustand';
 import type {
-  ShareFeedbackIssueTagId,
-  ShareFeedbackPositiveTagId,
   ShareReportReasonId,
   ShareReportStatus,
-} from '@/features/trust/feedback';
+} from '@/features/trust/report';
+import type {
+  ShareReviewIssueTagId,
+  ShareReviewPositiveTagId,
+} from '@/features/trust/review';
 
 export type ShareReviewRecord = {
   requestId: number;
   postId: number;
   providerId: number;
-  positiveTagIds: ShareFeedbackPositiveTagId[];
-  issueTagIds: ShareFeedbackIssueTagId[];
+  positiveTagIds: ShareReviewPositiveTagId[];
+  issueTagIds: ShareReviewIssueTagId[];
   createdAt: string;
 };
 

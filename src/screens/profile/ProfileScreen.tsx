@@ -26,10 +26,8 @@ import {
 } from '@/design-system';
 import { colors } from '@/theme';
 import type { User } from '@/types';
-import {
-  getProviderTrustBadges,
-  isOpenShareReportStatus,
-} from '@/features/trust/feedback';
+import { getProviderTrustBadges } from '@/features/trust/feedback';
+import { isOpenShareReportStatus } from '@/features/trust/report';
 import { getHeaderTopPadding } from '@/utils/safeArea';
 import type { MainTabParamList, RootStackParamList } from '@/navigation/types';
 

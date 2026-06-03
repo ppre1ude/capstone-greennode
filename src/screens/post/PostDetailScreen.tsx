@@ -38,10 +38,8 @@ import { useAuthStore } from '@/store/authStore';
 import { useFeedRefreshStore } from '@/store/feedRefreshStore';
 import { useTrustFeedbackStore } from '@/store/trustFeedbackStore';
 import type { Post } from '@/types';
-import {
-  getProviderTrustBadges,
-  isOpenShareReportStatus,
-} from '@/features/trust/feedback';
+import { getProviderTrustBadges } from '@/features/trust/feedback';
+import { isOpenShareReportStatus } from '@/features/trust/report';
 import { getApiErrorMessage } from '@/utils/apiError';
 import {
   formatInventoryHoldRemaining,
