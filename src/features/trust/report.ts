@@ -5,7 +5,20 @@ export type ShareReportReasonId =
   | 'missing_or_not_found'
   | 'inappropriate_listing';
 
-export type ShareReportStatus = 'open' | 'reviewing' | 'resolved' | 'dismissed';
+export type ShareReportStatus = 'open' | 'reviewing' | 'closed';
+
+export type ShareReportResolution =
+  | 'pending'
+  | 'dismissed'
+  | 'violation_confirmed';
+
+export type ShareReportAction =
+  | 'none'
+  | 'warning_issued'
+  | 'post_hidden'
+  | 'post_removed'
+  | 'temporary_share_restricted'
+  | 'account_suspended';
 
 export type ShareReportReasonOption = {
   id: ShareReportReasonId;
@@ -20,5 +33,5 @@ export const SHARE_REPORT_REASON_OPTIONS: ShareReportReasonOption[] = [
   {id: 'inappropriate_listing', label: '부적절한 등록이에요'},
 ];
 
-export const isOpenShareReportStatus = (status: ShareReportStatus): boolean =>
+export const isActiveShareReportStatus = (status: ShareReportStatus): boolean =>
   status === 'open' || status === 'reviewing';

@@ -39,7 +39,6 @@ import { useFeedRefreshStore } from '@/store/feedRefreshStore';
 import { useTrustFeedbackStore } from '@/store/trustFeedbackStore';
 import type { Post } from '@/types';
 import { getProviderTrustBadges } from '@/features/trust/feedback';
-import { isOpenShareReportStatus } from '@/features/trust/report';
 import { getApiErrorMessage } from '@/utils/apiError';
 import {
   formatInventoryHoldRemaining,
@@ -78,7 +77,6 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
     state => state.requestNearbyPostsRefresh,
   );
   const trustReviews = useTrustFeedbackStore(state => state.reviews);
-  const trustReports = useTrustFeedbackStore(state => state.reports);
 
   const [post, setPost] = useState<Post | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -265,17 +263,11 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
   const providerReviews = Object.values(trustReviews).filter(
     review => review.providerId === post.authorId,
   );
-  const providerReports = Object.values(trustReports).filter(
-    report =>
-      report.providerId === post.authorId &&
-      isOpenShareReportStatus(report.status),
-  );
   const trustBadges = getProviderTrustBadges({
     completedShares: providerReviews.length,
     positiveReviewCount: providerReviews.filter(
       review => review.positiveTagIds.length > 0,
     ).length,
-    openReportCount: providerReports.length,
   });
   const daysLeft = Math.ceil(
     (new Date(post.expirationDate).getTime() - new Date().getTime()) /

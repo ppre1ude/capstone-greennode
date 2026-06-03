@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import type {
+  ShareReportAction,
   ShareReportReasonId,
+  ShareReportResolution,
   ShareReportStatus,
 } from '@/features/trust/report';
 import type {
@@ -23,11 +25,16 @@ export type ShareReportRecord = {
   providerId: number;
   reasonId: ShareReportReasonId;
   status: ShareReportStatus;
+  resolution: ShareReportResolution;
+  action: ShareReportAction;
   createdAt: string;
 };
 
 type SubmitReviewInput = Omit<ShareReviewRecord, 'createdAt'>;
-type SubmitReportInput = Omit<ShareReportRecord, 'createdAt' | 'status'>;
+type SubmitReportInput = Omit<
+  ShareReportRecord,
+  'action' | 'createdAt' | 'resolution' | 'status'
+>;
 
 type TrustFeedbackState = {
   reviews: Record<number, ShareReviewRecord>;
@@ -58,6 +65,8 @@ export const useTrustFeedbackStore = create<TrustFeedbackState>(set => ({
         [report.requestId]: {
           ...report,
           status: 'open',
+          resolution: 'pending',
+          action: 'none',
           createdAt: new Date().toISOString(),
         },
       },

@@ -13,7 +13,7 @@
 - 평가/신고는 `ShareRequest.status=completed`이고 연결된 `Post.status=completed`인 경우에만 허용한다.
 - 수령 QR 인증이 완료되지 않은 신청자는 평가/신고할 수 없다.
 - 별점은 이번 범위에서 제외한다. 평가는 태그 선택형으로만 저장한다.
-- 신고는 평가와 분리한다. 신고는 태그 피드백이 아니라 운영자 검토 큐에 들어가는 단일 사유 분류 건이며, 공급자 공개 점수처럼 즉시 노출하지 않는다.
+- 신고는 평가와 분리한다. 신고는 태그 피드백이 아니라 운영자 검토 큐에 들어가는 단일 사유 분류 건이며, 공급자 공개 점수나 공개 뱃지로 노출하지 않는다.
 - 사용자-facing 문구에서 `썩음`, `상함` 같은 표현은 쓰지 않고 `상태 확인 필요`, `나눔 기준 확인 필요` 계열로 완화한다.
 
 ## 신규 모델
@@ -51,6 +51,8 @@ UNIQUE(request_id, requester_id)
   "requesterId": 3,
   "reasonId": "missing_or_not_found",
   "status": "open",
+  "resolution": "pending",
+  "action": "none",
   "createdAt": "2026-06-04T12:05:00Z",
   "updatedAt": "2026-06-04T12:05:00Z"
 }
@@ -59,7 +61,7 @@ UNIQUE(request_id, requester_id)
 `status` 후보:
 
 ```text
-open | reviewing | resolved | dismissed
+open | reviewing | closed
 ```
 
 상태 의미:
@@ -68,8 +70,31 @@ open | reviewing | resolved | dismissed
 | --- | --- |
 | `open` | 신고 접수 후 아직 운영자가 확인하지 않음 |
 | `reviewing` | 운영자가 확인 중 |
-| `resolved` | 조치 완료 |
-| `dismissed` | 조치 불필요로 종결 |
+| `closed` | 운영자 판단과 조치 기록 완료 |
+
+`resolution` 후보:
+
+```text
+pending | dismissed | violation_confirmed
+```
+
+`action` 후보:
+
+```text
+none | warning_issued | post_hidden | post_removed | temporary_share_restricted | account_suspended
+```
+
+처리 의미:
+
+| resolution | action 후보 | 의미 |
+| --- | --- | --- |
+| `pending` | `none` | 아직 판단 전 |
+| `dismissed` | `none` | 문제 없음 또는 증거 부족 |
+| `violation_confirmed` | `warning_issued` | 경고 |
+| `violation_confirmed` | `post_hidden` | 나눔 비공개 |
+| `violation_confirmed` | `post_removed` | 나눔 삭제 |
+| `violation_confirmed` | `temporary_share_restricted` | 일정 기간 등록/나눔 제한 |
+| `violation_confirmed` | `account_suspended` | 계정 정지 |
 
 ## 태그 enum
 
@@ -178,6 +203,8 @@ Content-Type: application/json
     "requesterId": 3,
     "reasonId": "missing_or_not_found",
     "status": "open",
+    "resolution": "pending",
+    "action": "none",
     "createdAt": "2026-06-04T12:05:00Z",
     "updatedAt": "2026-06-04T12:05:00Z"
   }
@@ -202,11 +229,13 @@ PATCH /api/v1/admin/share-reports/{reportId}
 
 ```json
 {
-  "status": "reviewing"
+  "status": "closed",
+  "resolution": "violation_confirmed",
+  "action": "warning_issued"
 }
 ```
 
-MVP 데모에서는 관리자 처리 화면까지 구현하지 않지만, 백엔드는 `status`를 기준으로 운영자 검토 목록을 만들 수 있어야 한다.
+MVP 데모에서는 관리자 처리 화면까지 구현하지 않지만, 백엔드는 `status`, `resolution`, `action`을 기준으로 운영자 검토 목록과 제재 이력을 만들 수 있어야 한다. 신고 처리 결과는 공개 프로필이나 나눔 상세에 노출하지 않는다.
 
 ### 3. 공급자 신뢰 요약 조회
 
@@ -227,13 +256,10 @@ Authorization: Bearer {token}
     "positiveReviewCount": 9,
     "matchedPhotoCount": 8,
     "easyToFindCount": 7,
-    "openReportCount": 0,
-    "resolvedReportCount": 1,
     "badges": [
       "store_qr_verified",
       "completed_pickup",
-      "positive_reviews",
-      "no_recent_open_reports"
+      "positive_reviews"
     ],
     "computedAt": "2026-06-04T12:10:00Z"
   }
@@ -246,7 +272,6 @@ Authorization: Bearer {token}
 QR 보관 인증
 수령 완료 {completedShares}회
 좋은 평가 {positiveReviewCount}회
-최근 신고 검토 없음 또는 신고 검토 {openReportCount}건
 ```
 
 ## 프론트 데모와 실제 API 연결 차이
@@ -265,3 +290,4 @@ QR 보관 인증
 - [ ] 작성자 본인은 자기 나눔 평가 불가
 - [ ] 미지원 태그 422
 - [ ] 신고 생성 후 운영자 검토 목록에 노출
+- [ ] 신고 처리 결과와 제재 이력은 공개 프로필/상세에 미노출

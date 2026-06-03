@@ -27,7 +27,6 @@ import {
 import { colors } from '@/theme';
 import type { User } from '@/types';
 import { getProviderTrustBadges } from '@/features/trust/feedback';
-import { isOpenShareReportStatus } from '@/features/trust/report';
 import { getHeaderTopPadding } from '@/utils/safeArea';
 import type { MainTabParamList, RootStackParamList } from '@/navigation/types';
 
@@ -123,7 +122,6 @@ const ProfileScreen = () => {
   const setUser = useAuthStore(state => state.setUser);
   const logoutStore = useAuthStore(state => state.logout);
   const trustReviews = useTrustFeedbackStore(state => state.reviews);
-  const trustReports = useTrustFeedbackStore(state => state.reports);
   const navigation = useNavigation<ProfileNavigation>();
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
@@ -139,19 +137,13 @@ const ProfileScreen = () => {
     const providerReviews = Object.values(trustReviews).filter(
       review => review.providerId === userId,
     );
-    const providerReports = Object.values(trustReports).filter(
-      report =>
-        report.providerId === userId && isOpenShareReportStatus(report.status),
-    );
-
     return getProviderTrustBadges({
       completedShares: providerReviews.length,
       positiveReviewCount: providerReviews.filter(
         review => review.positiveTagIds.length > 0,
       ).length,
-      openReportCount: providerReports.length,
     });
-  }, [trustReports, trustReviews, user?.id]);
+  }, [trustReviews, user?.id]);
 
   useEffect(() => {
     if (isEditingProfile) {
@@ -380,8 +372,7 @@ const ProfileScreen = () => {
               variant="small"
               color="textTertiary"
               style={styles.trustDesc}>
-              수령 완료 뒤 남겨진 평가와 신고 검토 결과가 공급자 신뢰로
-              쌓입니다.
+              QR 생명주기와 수령 경험 평가가 공급자 신뢰로 쌓입니다.
             </DSText>
           </DSCard>
 

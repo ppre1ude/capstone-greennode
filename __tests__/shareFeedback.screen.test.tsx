@@ -111,6 +111,8 @@ describe('ShareFeedbackScreen', () => {
       providerId: 4,
       reasonId: 'inappropriate_listing',
       status: 'open',
+      resolution: 'pending',
+      action: 'none',
     });
     expect(alertSpy).toHaveBeenCalledWith(
       '신고 접수',

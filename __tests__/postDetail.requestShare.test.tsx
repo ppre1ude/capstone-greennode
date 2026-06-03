@@ -205,7 +205,10 @@ describe('PostDetailScreen share request', () => {
     ).not.toHaveLength(0);
     expect(
       renderer.root.findAllByProps({ children: '최근 신고 검토 없음' }),
-    ).not.toHaveLength(0);
+    ).toHaveLength(0);
+    expect(
+      renderer.root.findAllByProps({ children: '신고 검토 1건' }),
+    ).toHaveLength(0);
 
     await ReactTestRenderer.act(async () => {
       renderer.unmount();

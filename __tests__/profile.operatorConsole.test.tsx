@@ -237,7 +237,7 @@ describe('ProfileScreen operator console entry', () => {
 
     expectTextVisible(renderer!, '공급자 신뢰', true);
     expectTextVisible(renderer!, 'QR 보관 인증', true);
-    expectTextVisible(renderer!, '최근 신고 검토 없음', true);
+    expectTextVisible(renderer!, '최근 신고 검토 없음', false);
     expectTextVisible(renderer!, '신선도 온도', false);
 
     await ReactTestRenderer.act(async () => {

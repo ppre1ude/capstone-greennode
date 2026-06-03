@@ -4,7 +4,7 @@ import {
 } from '@/features/trust/feedback';
 import {
   SHARE_REPORT_REASON_OPTIONS,
-  isOpenShareReportStatus,
+  isActiveShareReportStatus,
 } from '@/features/trust/report';
 import {
   SHARE_REVIEW_ISSUE_TAGS,
@@ -40,14 +40,19 @@ describe('trust feedback policy', () => {
       getProviderTrustBadges({
         completedShares: 12,
         positiveReviewCount: 9,
-        openReportCount: 0,
       }).map(badge => badge.label),
-    ).toEqual([
-      'QR 보관 인증',
-      '수령 완료 12회',
-      '좋은 평가 9회',
-      '최근 신고 검토 없음',
-    ]);
+    ).toEqual(['QR 보관 인증', '수령 완료 12회', '좋은 평가 9회']);
+  });
+
+  it('never exposes report state as public trust badges', () => {
+    expect(
+      getProviderTrustBadges({
+        completedShares: 12,
+        positiveReviewCount: 9,
+      })
+        .map(badge => badge.label)
+        .join(' '),
+    ).not.toMatch(/신고|검토|위반|제재/);
   });
 
   it('keeps review tags separate from operator report reasons', () => {
@@ -63,10 +68,9 @@ describe('trust feedback policy', () => {
     expect(SHARE_REPORT_REASON_OPTIONS).not.toBe(SHARE_REVIEW_ISSUE_TAGS);
   });
 
-  it('treats only active report statuses as open report work', () => {
-    expect(isOpenShareReportStatus('open')).toBe(true);
-    expect(isOpenShareReportStatus('reviewing')).toBe(true);
-    expect(isOpenShareReportStatus('resolved')).toBe(false);
-    expect(isOpenShareReportStatus('dismissed')).toBe(false);
+  it('treats only active report statuses as operator work', () => {
+    expect(isActiveShareReportStatus('open')).toBe(true);
+    expect(isActiveShareReportStatus('reviewing')).toBe(true);
+    expect(isActiveShareReportStatus('closed')).toBe(false);
   });
 });
