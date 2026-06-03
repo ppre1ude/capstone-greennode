@@ -1,0 +1,240 @@
+# Backend Trust Feedback Contract Request
+
+> 목적: 수령 QR 인증 이후에만 가능한 태그 기반 평가/신고 시스템과 공급자 신뢰 요약 API를 백엔드 계약으로 요청한다.
+> 기준일: 2026-06-04
+> 프론트 데모 상태: 로컬 Zustand 상태로 평가/신고 제출과 신뢰 뱃지 반영 UI 구현
+
+---
+
+## 결정 요약
+
+- 평가/신고 단위는 `ShareRequest` 1건이다.
+- 평가/신고는 `ShareRequest.status=completed`이고 연결된 `Post.status=completed`인 경우에만 허용한다.
+- 수령 QR 인증이 완료되지 않은 신청자는 평가/신고할 수 없다.
+- 별점은 이번 범위에서 제외한다. 평가는 태그 선택형으로만 저장한다.
+- 신고는 평가와 분리한다. 신고는 운영자 검토 대상이며 공급자 공개 점수처럼 즉시 노출하지 않는다.
+- 사용자-facing 문구에서 `썩음`, `상함` 같은 표현은 쓰지 않고 `상태 확인 필요`, `나눔 기준 확인 필요` 계열로 완화한다.
+
+## 신규 모델
+
+### ShareReview
+
+```json
+{
+  "id": 1,
+  "requestId": 55,
+  "postId": 41,
+  "providerId": 4,
+  "requesterId": 3,
+  "positiveTagIds": ["good_condition", "matched_photo"],
+  "issueTagIds": ["different_from_photo"],
+  "createdAt": "2026-06-04T12:00:00Z",
+  "updatedAt": "2026-06-04T12:00:00Z"
+}
+```
+
+권장 unique constraint:
+
+```text
+UNIQUE(request_id, requester_id)
+```
+
+### ShareReport
+
+```json
+{
+  "id": 1,
+  "requestId": 55,
+  "postId": 41,
+  "providerId": 4,
+  "requesterId": 3,
+  "reasonIds": ["missing_or_not_found"],
+  "status": "open",
+  "createdAt": "2026-06-04T12:05:00Z",
+  "updatedAt": "2026-06-04T12:05:00Z"
+}
+```
+
+`status` 후보:
+
+```text
+open | reviewing | resolved | dismissed
+```
+
+## 태그 enum
+
+### positiveTagIds
+
+| id | 사용자 문구 |
+| --- | --- |
+| `good_condition` | 상태가 좋아요 |
+| `matched_photo` | 사진과 비슷해요 |
+| `easy_to_find` | 찾기 쉬웠어요 |
+| `want_again` | 다시 받고 싶어요 |
+
+### issueTagIds
+
+| id | 사용자 문구 |
+| --- | --- |
+| `different_from_photo` | 사진과 달라요 |
+| `label_hard_to_find` | 라벨을 찾기 어려웠어요 |
+| `pickup_location_unclear` | 수령 위치가 헷갈렸어요 |
+| `condition_needs_check` | 상태 확인이 필요했어요 |
+
+### report reasonIds
+
+| id | 사용자 문구 |
+| --- | --- |
+| `different_from_photo` | 등록 사진과 실제 식재료가 달라요 |
+| `condition_needs_check` | 수령한 식재료 상태 확인이 필요해요 |
+| `label_or_zone_mismatch` | 라벨/보관 위치가 맞지 않았어요 |
+| `missing_or_not_found` | 이미 없거나 찾을 수 없었어요 |
+| `inappropriate_listing` | 부적절한 등록이에요 |
+
+## 요청 API
+
+### 1. 수령 경험 평가 생성
+
+```text
+POST /api/v1/share-requests/{requestId}/review
+Authorization: Bearer {token}
+Content-Type: application/json
+```
+
+요청:
+
+```json
+{
+  "positiveTagIds": ["good_condition", "matched_photo"],
+  "issueTagIds": ["label_hard_to_find"]
+}
+```
+
+응답:
+
+```json
+{
+  "success": true,
+  "message": "수령 경험 평가가 저장되었습니다.",
+  "data": {
+    "id": 1,
+    "requestId": 55,
+    "postId": 41,
+    "providerId": 4,
+    "requesterId": 3,
+    "positiveTagIds": ["good_condition", "matched_photo"],
+    "issueTagIds": ["label_hard_to_find"],
+    "createdAt": "2026-06-04T12:00:00Z",
+    "updatedAt": "2026-06-04T12:00:00Z"
+  }
+}
+```
+
+권한/상태 규칙:
+
+- 401: 미인증
+- 403: 해당 `ShareRequest`의 requester가 아님
+- 409: 이미 평가한 request
+- 409: `ShareRequest.status` 또는 `Post.status`가 `completed`가 아님
+- 422: 지원하지 않는 tag id
+
+### 2. 신고 생성
+
+```text
+POST /api/v1/share-requests/{requestId}/report
+Authorization: Bearer {token}
+Content-Type: application/json
+```
+
+요청:
+
+```json
+{
+  "reasonIds": ["missing_or_not_found"]
+}
+```
+
+응답:
+
+```json
+{
+  "success": true,
+  "message": "신고가 접수되었습니다.",
+  "data": {
+    "id": 1,
+    "requestId": 55,
+    "postId": 41,
+    "providerId": 4,
+    "requesterId": 3,
+    "reasonIds": ["missing_or_not_found"],
+    "status": "open",
+    "createdAt": "2026-06-04T12:05:00Z",
+    "updatedAt": "2026-06-04T12:05:00Z"
+  }
+}
+```
+
+권한/상태 규칙:
+
+- 401: 미인증
+- 403: 해당 `ShareRequest`의 requester가 아님
+- 409: `ShareRequest.status` 또는 `Post.status`가 `completed`가 아님
+- 422: 지원하지 않는 reason id
+
+### 3. 공급자 신뢰 요약 조회
+
+```text
+GET /api/v1/users/{userId}/trust-summary
+Authorization: Bearer {token}
+```
+
+응답:
+
+```json
+{
+  "success": true,
+  "message": "공급자 신뢰 요약 조회 성공",
+  "data": {
+    "userId": 4,
+    "completedShares": 12,
+    "positiveReviewCount": 9,
+    "matchedPhotoCount": 8,
+    "easyToFindCount": 7,
+    "openReportCount": 0,
+    "resolvedReportCount": 1,
+    "badges": [
+      "store_qr_verified",
+      "completed_pickup",
+      "positive_reviews",
+      "no_recent_open_reports"
+    ],
+    "computedAt": "2026-06-04T12:10:00Z"
+  }
+}
+```
+
+프론트 표시 기준:
+
+```text
+QR 보관 인증
+수령 완료 {completedShares}회
+좋은 평가 {positiveReviewCount}회
+최근 신고 검토 없음 또는 신고 검토 {openReportCount}건
+```
+
+## 프론트 데모와 실제 API 연결 차이
+
+현재 프론트 데모는 API 배포 전에도 발표 시연이 가능하도록 로컬 상태에 저장한다. 백엔드 API가 준비되면 다음 경로로 교체한다.
+
+- `ShareFeedbackScreen`의 평가 제출 -> `POST /share-requests/{requestId}/review`
+- `ShareFeedbackScreen`의 신고 제출 -> `POST /share-requests/{requestId}/report`
+- `PostDetailScreen`, `ProfileScreen`의 뱃지 -> `GET /users/{userId}/trust-summary`
+
+## QA 체크리스트
+
+- [ ] `requested` 상태 신청은 평가/신고 거절
+- [ ] `completed` 상태 신청은 평가/신고 허용
+- [ ] 동일 requester/request 중복 평가 409
+- [ ] 작성자 본인은 자기 나눔 평가 불가
+- [ ] 미지원 태그 422
+- [ ] 신고 생성 후 운영자 검토 목록에 노출

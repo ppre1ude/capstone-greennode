@@ -228,6 +228,23 @@ describe('ProfileScreen operator console entry', () => {
     });
   });
 
+  it('shows the provider trust surface instead of the old freshness temperature placeholder', async () => {
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(<ProfileScreen />);
+    });
+
+    expectTextVisible(renderer!, '공급자 신뢰', true);
+    expectTextVisible(renderer!, 'QR 보관 인증', true);
+    expectTextVisible(renderer!, '최근 신고 검토 없음', true);
+    expectTextVisible(renderer!, '신선도 온도', false);
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
   it('keeps Post-MVP menu entries out of the primary profile surface', async () => {
     let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
 

@@ -38,6 +38,14 @@ export type RootStackParamList = {
   PostCreate: {result: GenerateResult; imageUri: string};
   PostComplete: {postId: number};
   PostDetail: {postId: number};
+  ShareFeedback: {
+    requestId: number;
+    postId: number;
+    providerId: number;
+    fruitName: string;
+    fridgeName: string;
+    initialMode?: 'review' | 'report';
+  };
   MyShares:
     | {
         initialTab?: 'posted' | 'received';

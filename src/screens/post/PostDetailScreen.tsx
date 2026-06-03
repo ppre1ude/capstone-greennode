@@ -36,7 +36,9 @@ import {
 } from '@/api/posts';
 import { useAuthStore } from '@/store/authStore';
 import { useFeedRefreshStore } from '@/store/feedRefreshStore';
+import { useTrustFeedbackStore } from '@/store/trustFeedbackStore';
 import type { Post } from '@/types';
+import { getProviderTrustBadges } from '@/features/trust/feedback';
 import { getApiErrorMessage } from '@/utils/apiError';
 import {
   formatInventoryHoldRemaining,
@@ -74,6 +76,8 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
   const requestNearbyPostsRefresh = useFeedRefreshStore(
     state => state.requestNearbyPostsRefresh,
   );
+  const trustReviews = useTrustFeedbackStore(state => state.reviews);
+  const trustReports = useTrustFeedbackStore(state => state.reports);
 
   const [post, setPost] = useState<Post | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -257,6 +261,19 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
     : null;
   const canConfirmPickup =
     !isMyPost && post.status === 'requested' && !isRequestHoldExpired;
+  const providerReviews = Object.values(trustReviews).filter(
+    review => review.providerId === post.authorId,
+  );
+  const providerReports = Object.values(trustReports).filter(
+    report => report.providerId === post.authorId,
+  );
+  const trustBadges = getProviderTrustBadges({
+    completedShares: providerReviews.length,
+    positiveReviewCount: providerReviews.filter(
+      review => review.positiveTagIds.length > 0,
+    ).length,
+    openReportCount: providerReports.length,
+  });
   const daysLeft = Math.ceil(
     (new Date(post.expirationDate).getTime() - new Date().getTime()) /
       (1000 * 3600 * 24),
@@ -350,6 +367,26 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
               ? `AI 참고 신호는 ${confidencePercent}%이며, 실제 상태는 수령 전 확인이 필요해요.`
               : 'AI 분석은 참고용이며, 실제 상태는 수령 전 확인이 필요해요.'}
           </Text>
+
+          <View style={styles.trustSection}>
+            <Text style={styles.sectionTitle}>공급자 신뢰</Text>
+            <View style={styles.trustBadgeWrap}>
+              {trustBadges.map(badge => (
+                <DSChip
+                  key={badge.id}
+                  label={badge.label}
+                  tone={badge.tone}
+                  size="small"
+                  variant="outlined"
+                  style={styles.trustBadge}
+                />
+              ))}
+            </View>
+            <Text style={styles.trustDescription}>
+              QR 보관과 수령 인증 이후의 평가가 쌓이면 이 공급자의 신뢰
+              신호로 반영됩니다.
+            </Text>
+          </View>
         </View>
       </ScrollView>
 

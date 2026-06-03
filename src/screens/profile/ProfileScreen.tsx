@@ -6,12 +6,13 @@
  *
  * @wireframe wireframe-foodlink/profile.html
  */
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, StyleSheet, ScrollView, Alert, StatusBar } from 'react-native';
 import { useNavigation, type CompositeNavigationProp } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuthStore } from '@/store/authStore';
+import { useTrustFeedbackStore } from '@/store/trustFeedbackStore';
 import { updateProfile } from '@/api/auth';
 import {
   DSButton,
@@ -25,6 +26,7 @@ import {
 } from '@/design-system';
 import { colors } from '@/theme';
 import type { User } from '@/types';
+import { getProviderTrustBadges } from '@/features/trust/feedback';
 import { getHeaderTopPadding } from '@/utils/safeArea';
 import type { MainTabParamList, RootStackParamList } from '@/navigation/types';
 
@@ -119,6 +121,8 @@ const ProfileScreen = () => {
   const user = useAuthStore(state => state.user);
   const setUser = useAuthStore(state => state.setUser);
   const logoutStore = useAuthStore(state => state.logout);
+  const trustReviews = useTrustFeedbackStore(state => state.reviews);
+  const trustReports = useTrustFeedbackStore(state => state.reports);
   const navigation = useNavigation<ProfileNavigation>();
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
@@ -129,6 +133,23 @@ const ProfileScreen = () => {
   const visibleAccountMenuItems = ACCOUNT_MENU_ITEMS.filter(
     item => item.id !== 'operator-console' || canAccessOperatorConsole(user),
   );
+  const trustBadges = useMemo(() => {
+    const userId = user?.id;
+    const providerReviews = Object.values(trustReviews).filter(
+      review => review.providerId === userId,
+    );
+    const providerReports = Object.values(trustReports).filter(
+      report => report.providerId === userId,
+    );
+
+    return getProviderTrustBadges({
+      completedShares: providerReviews.length,
+      positiveReviewCount: providerReviews.filter(
+        review => review.positiveTagIds.length > 0,
+      ).length,
+      openReportCount: providerReports.length,
+    });
+  }, [trustReports, trustReviews, user?.id]);
 
   useEffect(() => {
     if (isEditingProfile) {
@@ -329,27 +350,36 @@ const ProfileScreen = () => {
             </View>
           ) : null}
 
-          {/* 신뢰도 온도 (프로그레스) */}
           <DSCard variant="plain" style={styles.trustBox}>
             <View style={styles.trustHeader}>
               <DSText variant="bodyBold" style={styles.trustTitle}>
-                신선도 온도
+                공급자 신뢰
               </DSText>
               <DSChip
-                label="준비 중"
+                label="QR 기반"
                 tone="primary"
                 size="small"
                 style={styles.trustScore}
               />
             </View>
-            <View style={styles.progressBarBg}>
-              <View style={[styles.progressBarFill, styles.progressBarEmpty]} />
+            <View style={styles.trustBadgeWrap}>
+              {trustBadges.map(badge => (
+                <DSChip
+                  key={badge.id}
+                  label={badge.label}
+                  tone={badge.tone}
+                  size="small"
+                  variant="outlined"
+                  style={styles.profileTrustBadge}
+                />
+              ))}
             </View>
             <DSText
               variant="small"
               color="textTertiary"
               style={styles.trustDesc}>
-              나눔 기록이 쌓이면 활동 지표가 표시됩니다.
+              수령 완료 뒤 남겨진 평가와 신고 검토 결과가 공급자 신뢰로
+              쌓입니다.
             </DSText>
           </DSCard>
 
@@ -526,6 +556,15 @@ const styles = StyleSheet.create({
   },
   trustScore: {
     alignSelf: 'center',
+  },
+  trustBadgeWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 10,
+  },
+  profileTrustBadge: {
+    backgroundColor: '#FFFFFF',
   },
   progressBarBg: {
     height: 8,

@@ -33,6 +33,12 @@
 - 발견했던 UI 회귀: `InventoryQrScreen` 하단 action grid와 메인 하단 탭 label이 Android system navigation bar와 겹쳤다. 후속 수정 후 QR `ScrollView` viewport는 navigation bar 시작 y=2952 위에서 끝나고, scroll-bottom 상태의 QR action grid와 홈 탭 label도 navigation bar 위에 위치한다.
 - Post-MVP AI 품질 evidence: 실기기 카메라가 키보드/노트북 사진을 `바나나`, `confidenceScore=0.7`, `확인 필요`로 통과시켰다. 현재 앱은 낮은 confidence 안내를 표시하지만, 비식재료/스크린샷 rejection enum은 여전히 Post-MVP 서버 계약이다.
 
+## 2026-06-04 공급자 신뢰 피드백 데모 업데이트
+
+- 수령 QR 인증으로 `completed`가 된 받은 나눔에만 `평가하기`/`신고하기`를 노출하는 프론트 데모를 추가했다.
+- 평가는 별점 없이 태그 기반으로 처리한다. 긍정 태그와 불만족 태그를 분리하고, 신고는 별도 운영자 검토 요청으로 저장한다.
+- 나눔 상세와 프로필에 `공급자 신뢰` 뱃지를 노출한다. 현재 데모는 로컬 Zustand 상태로 즉시 반영하고, 백엔드 요청 계약은 [BACKEND_TRUST_FEEDBACK_CONTRACT_REQUEST_2026-06-04.md](./BACKEND_TRUST_FEEDBACK_CONTRACT_REQUEST_2026-06-04.md)에 분리했다.
+
 ## 2026-05-29 Post-MVP 백엔드 회신 반영
 
 - 백엔드가 Post-MVP blocker 8개 항목에 답변했고, 프론트 검토 결과는 [BACKEND_RESPONSE_TO_POST_MVP_BLOCKERS_2026-05-29.md](./BACKEND_RESPONSE_TO_POST_MVP_BLOCKERS_2026-05-29.md)에 정리했다.

@@ -188,6 +188,30 @@ describe('PostDetailScreen share request', () => {
     });
   });
 
+  it('shows provider trust badges on the share detail', async () => {
+    const renderer = await createScreen();
+
+    expect(
+      renderer.root.findAllByProps({ children: '공급자 신뢰' }),
+    ).not.toHaveLength(0);
+    expect(
+      renderer.root.findAllByProps({ children: 'QR 보관 인증' }),
+    ).not.toHaveLength(0);
+    expect(
+      renderer.root.findAllByProps({ children: '수령 완료 0회' }),
+    ).not.toHaveLength(0);
+    expect(
+      renderer.root.findAllByProps({ children: '좋은 평가 0회' }),
+    ).not.toHaveLength(0);
+    expect(
+      renderer.root.findAllByProps({ children: '최근 신고 검토 없음' }),
+    ).not.toHaveLength(0);
+
+    await ReactTestRenderer.act(async () => {
+      renderer.unmount();
+    });
+  });
+
   it('treats 409 conflict as a normal race result and disables the CTA', async () => {
     mockedRequestShare.mockRejectedValue({
       response: {
