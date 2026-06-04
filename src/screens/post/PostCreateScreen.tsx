@@ -252,8 +252,7 @@ const PostCreateScreen = ({ route, navigation }: Props) => {
               style={styles.detectionCard}>
               <Text style={styles.detectionTitle}>감지된 식재료 후보</Text>
               <Text style={styles.detectionHint}>
-                백엔드 분리 등록 계약 전까지는 대표 식재료 1개 기준으로
-                등록합니다.
+                대표 식재료 1개를 선택해 등록합니다.
               </Text>
               {detections.map((detection, index) => (
                 <TouchableOpacity
@@ -283,7 +282,7 @@ const PostCreateScreen = ({ route, navigation }: Props) => {
             <Text style={styles.summaryTitle}>등록될 나눔 식재료</Text>
             <Text style={styles.summaryName}>{representativeName}</Text>
             <Text style={styles.summaryDescription}>
-              공유 냉장고를 선택하면 이 식재료가 나눔 가능 상태로 등록됩니다.
+              공유 냉장고를 선택하면 QR 보관 인증 대기 상태로 생성됩니다.
             </Text>
           </DSCard>
 

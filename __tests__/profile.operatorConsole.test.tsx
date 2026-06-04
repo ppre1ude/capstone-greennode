@@ -92,7 +92,7 @@ describe('ProfileScreen operator console entry', () => {
       data: {
         ...useAuthStore.getState().user!,
         nickname: '테스터 수정',
-        profileImageUrl: '/static/uploads/profile/avatar.jpg',
+        profileImageUrl: 'https://example.com/profile.jpg',
         updatedAt: '2026-05-27T00:00:00Z',
       },
     });
@@ -218,7 +218,7 @@ describe('ProfileScreen operator console entry', () => {
     expectTextVisible(renderer!, '내 나눔 관리', true);
     expectTextVisible(renderer!, '받은 나눔 관리', true);
     expectTextVisible(renderer!, '알림함', true);
-    expectTextVisible(renderer!, '냉장고 QR 인증', true);
+    expectTextVisible(renderer!, '냉장고 QR 인증', false);
 
     await ReactTestRenderer.act(async () => {
       findTouchableByText(renderer!, '내 나눔 관리').props.onPress();
@@ -243,12 +243,6 @@ describe('ProfileScreen operator console entry', () => {
     expect(mockNavigate).toHaveBeenCalledWith('Chat');
 
     await ReactTestRenderer.act(async () => {
-      findTouchableByText(renderer!, '냉장고 QR 인증').props.onPress();
-    });
-
-    expect(mockParentNavigate).toHaveBeenCalledWith('InventoryQr');
-
-    await ReactTestRenderer.act(async () => {
       renderer?.unmount();
     });
   });
@@ -266,8 +260,15 @@ describe('ProfileScreen operator console entry', () => {
     expectTextVisible(renderer!, 'QR 보관 인증', true);
     expectTextVisible(renderer!, '수령 완료 12회', true);
     expectTextVisible(renderer!, '좋은 평가 9회', true);
+    expectTextVisible(renderer!, '수령 완료', true);
+    expectTextVisible(renderer!, '12건', true);
+    expectTextVisible(renderer!, '좋은 평가', true);
+    expectTextVisible(renderer!, '9건', true);
     expectTextVisible(renderer!, '최근 신고 검토 없음', false);
     expectTextVisible(renderer!, '신선도 온도', false);
+    expectTextVisible(renderer!, '보유 포인트', false);
+    expectTextVisible(renderer!, '탄소 절감량', false);
+    expectTextVisible(renderer!, '준비 중', false);
 
     await ReactTestRenderer.act(async () => {
       renderer?.unmount();
@@ -305,9 +306,13 @@ describe('ProfileScreen operator console entry', () => {
     const [nicknameInput, profileImageInput] =
       renderer!.root.findAllByType(TextInput);
 
+    expect(profileImageInput.props.placeholder).toBe(
+      'https://example.com/profile.jpg',
+    );
+
     await ReactTestRenderer.act(async () => {
       nicknameInput.props.onChangeText('테스터 수정');
-      profileImageInput.props.onChangeText('/static/uploads/profile/avatar.jpg');
+      profileImageInput.props.onChangeText('https://example.com/profile.jpg');
     });
 
     await ReactTestRenderer.act(async () => {
@@ -317,11 +322,11 @@ describe('ProfileScreen operator console entry', () => {
 
     expect(mockedUpdateProfile).toHaveBeenCalledWith({
       nickname: '테스터 수정',
-      profileImageUrl: '/static/uploads/profile/avatar.jpg',
+      profileImageUrl: 'https://example.com/profile.jpg',
     });
     expect(useAuthStore.getState().user).toMatchObject({
       nickname: '테스터 수정',
-      profileImageUrl: '/static/uploads/profile/avatar.jpg',
+      profileImageUrl: 'https://example.com/profile.jpg',
     });
     expect(alertSpy).toHaveBeenCalledWith(
       '프로필 수정 완료',

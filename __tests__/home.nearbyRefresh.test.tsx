@@ -381,6 +381,12 @@ describe('HomeScreen nearby post refresh', () => {
     expect(renderer!.root.findAllByProps({ children: '3건' })).not.toHaveLength(
       0,
     );
+    expect(
+      renderer!.root.findAllByProps({ children: '탄소 절감' }),
+    ).toHaveLength(0);
+    expect(
+      renderer!.root.findAllByProps({ children: '준비 중' }),
+    ).toHaveLength(0);
 
     await ReactTestRenderer.act(async () => {
       findButtonByText(renderer!, '수령 QR 열기')?.props.onPress();

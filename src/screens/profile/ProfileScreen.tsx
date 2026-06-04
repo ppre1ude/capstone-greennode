@@ -1,7 +1,7 @@
 /**
  * ProfileScreen — 내 정보 탭 (Phase 6)
  *
- * 유저 정보, 준비 중인 활동 지표, 설정 메뉴 표시.
+ * 유저 정보, 신뢰 활동 지표, 설정 메뉴 표시.
  * 로그아웃 기능을 포함.
  *
  * @wireframe wireframe-foodlink/profile.html
@@ -36,7 +36,6 @@ import type { MainTabParamList, RootStackParamList } from '@/navigation/types';
 type ProfileMenuItemId =
   | 'location'
   | 'operator-console'
-  | 'inventory-qr'
   | 'my-posts'
   | 'history'
   | 'notifications';
@@ -67,11 +66,6 @@ const LIFECYCLE_MENU_ITEMS: ProfileMenuItem[] = [
     id: 'notifications',
     title: '알림함',
     icon: 'bell',
-  },
-  {
-    id: 'inventory-qr',
-    title: '냉장고 QR 인증',
-    icon: 'qrcode',
   },
 ];
 
@@ -263,10 +257,6 @@ const ProfileScreen = () => {
         rootNavigation?.navigate('FridgeOperatorConsole');
         return;
 
-      case 'inventory-qr':
-        rootNavigation?.navigate('InventoryQr');
-        return;
-
       case 'my-posts':
         rootNavigation?.navigate('MyShares', { initialTab: 'posted' });
         return;
@@ -351,7 +341,7 @@ const ProfileScreen = () => {
                 onChangeText={setDraftProfileImageUrl}
                 autoCapitalize="none"
                 autoCorrect={false}
-                placeholder="/static/uploads/profile/avatar.jpg"
+                placeholder="https://example.com/profile.jpg"
                 caption="이미지 주소를 비우면 기본 아바타를 사용합니다."
               />
               <View style={styles.profileEditActions}>
@@ -405,16 +395,22 @@ const ProfileScreen = () => {
             </DSText>
           </DSCard>
 
-          {/* 포인트 & 탄소절감량 */}
+          {/* 신뢰 활동 지표 */}
           <View style={styles.statsRow}>
             <View style={styles.statBox}>
               <DSText
                 variant="caption"
                 color="textSecondary"
                 style={styles.statTitle}>
-                보유 포인트
+                수령 완료
               </DSText>
-              <DSChip label="준비 중" size="large" style={styles.statValue} />
+              <DSChip
+                label={
+                  trustSummary ? `${trustSummary.completedShares}건` : '확인 중'
+                }
+                size="large"
+                style={styles.statValue}
+              />
             </View>
             <View style={styles.divider} />
             <View style={styles.statBox}>
@@ -422,9 +418,17 @@ const ProfileScreen = () => {
                 variant="caption"
                 color="textSecondary"
                 style={styles.statTitle}>
-                탄소 절감량
+                좋은 평가
               </DSText>
-              <DSChip label="준비 중" size="large" style={styles.statValue} />
+              <DSChip
+                label={
+                  trustSummary
+                    ? `${trustSummary.positiveReviewCount}건`
+                    : '확인 중'
+                }
+                size="large"
+                style={styles.statValue}
+              />
             </View>
           </View>
         </DSCard>

@@ -66,7 +66,7 @@ const hasText = (renderer: ReactTestRenderer.ReactTestRenderer, text: string) =>
 
     return Array.isArray(children)
       ? children.join('').includes(text)
-      : children === text;
+      : typeof children === 'string' && children.includes(text);
   });
 
 describe('PostCreateScreen review notice', () => {
@@ -282,6 +282,65 @@ describe('PostCreateScreen review notice', () => {
       qualityCategory: 'Fresh',
       qualityCanShare: true,
     });
+
+    await ReactTestRenderer.act(async () => {
+      renderer!.unmount();
+    });
+  });
+
+  it('explains representative selection and QR store verification without backend contract wording', async () => {
+    const navigation = {
+      goBack: jest.fn(),
+      navigate: jest.fn(),
+    };
+    const multiObjectResult: GenerateResult = {
+      ...lowConfidenceResult,
+      detections: [
+        {
+          id: 'banana-detection',
+          label: 'banana',
+          labelKo: '바나나',
+          freshnessLabel: 'Fresh',
+          confidenceScore: 0.92,
+        },
+        {
+          id: 'apple-detection',
+          label: 'apple',
+          labelKo: '사과',
+          freshnessLabel: 'Fresh',
+          confidenceScore: 0.89,
+        },
+      ],
+    };
+
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(
+        renderWithSafeArea(
+          <PostCreateScreen
+            navigation={navigation as never}
+            route={
+              {
+                params: {
+                  result: multiObjectResult,
+                  imageUri: 'file:///banana.jpg',
+                },
+              } as never
+            }
+          />,
+        ),
+      );
+    });
+
+    expect(hasText(renderer!, '백엔드 분리 등록 계약')).toBe(false);
+    expect(hasText(renderer!, '대표 식재료 1개를 선택해 등록합니다.')).toBe(
+      true,
+    );
+    expect(hasText(renderer!, '나눔 가능 상태로 등록')).toBe(false);
+    expect(hasText(renderer!, 'QR 보관 인증 대기 상태로 생성됩니다.')).toBe(
+      true,
+    );
 
     await ReactTestRenderer.act(async () => {
       renderer!.unmount();

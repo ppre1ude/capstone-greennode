@@ -195,6 +195,12 @@ describe('ShareFeedbackScreen', () => {
         node.props.accessibilityRole === 'radio',
     );
 
+    expect(
+      renderer!.root.findAllByProps({ children: '신고 사유 선택' }),
+    ).not.toHaveLength(0);
+    expect(
+      renderer!.root.findAllByProps({ children: '운영자 처리 분류' }),
+    ).toHaveLength(0);
     expect(reasonRows).toHaveLength(5);
     expect(reasonRows[0].props.accessibilityState).toMatchObject({
       checked: false,

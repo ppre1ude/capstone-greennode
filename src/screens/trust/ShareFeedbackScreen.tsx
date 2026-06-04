@@ -231,7 +231,7 @@ const ShareFeedbackScreen = ({ route, navigation }: Props) => {
           <>
             <View style={styles.section}>
               <DSText variant="bodyBold" style={styles.sectionTitle}>
-                운영자 처리 분류
+                신고 사유 선택
               </DSText>
               <View style={styles.reportOptionList}>
                 {SHARE_REPORT_REASON_OPTIONS.map(reason => {

@@ -289,6 +289,7 @@ plan-design-review 기준 현재 앱의 UX/UI 완성도는 약 6/10이다. 원�
 2. QR productization
    - 실제 사용자 route에서는 `테스트`, `프로토타입`, `초기화`, `보관 QR 테스트`, `수령 QR 테스트` 같은 내부 QA 문구를 노출하지 않는다.
    - API-backed QR 보관/수령은 `냉장고 QR 인증`, `보관 인증`, `수령 인증` 같은 제품 언어로 표시한다.
+   - QR 화면 진입은 `mode`와 `postId`가 있는 보관/수령 생명주기 경로에서만 노출하고, 프로필 같은 일반 메뉴에서 무파라미터 QR 샘플 화면으로 직접 보내지 않는다.
    - prototype-only 조작은 개발/QA 전용 route 또는 fixture 화면으로 분리한다.
 3. Emoji removal
    - action, navigation, input, button slot에서 emoji를 제거하고 `DSIcon` 또는 image asset으로 치환한다.
