@@ -57,16 +57,14 @@ export type RootStackParamList = {
         fridgeName?: string;
       }
     | undefined;
-  InventoryQr:
-    | {
-        mode?: 'store' | 'pickup';
-        postId?: number;
-        fridgePublicCode?: string;
-        fridgeName?: string;
-        fridgeLocation?: string;
-        pendingExpiresAt?: string;
-      }
-    | undefined;
+  InventoryQr: {
+    mode: 'store' | 'pickup';
+    postId: number;
+    fridgePublicCode?: string;
+    fridgeName?: string;
+    fridgeLocation?: string;
+    pendingExpiresAt?: string;
+  };
   FridgeSelect: {
     postData?: Omit<PostCreateData, 'fridgeId'>;
     qualityCategory?: string;

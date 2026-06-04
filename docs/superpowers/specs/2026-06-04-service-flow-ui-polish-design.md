@@ -76,3 +76,9 @@
 - P1: 로그인 오류의 `SSH 터널`, 신고 화면의 `운영자 처리 분류`, 프로필 이미지 `/static/uploads/...` placeholder 같은 내부/개발 문구를 사용자용 문구로 교체했다.
 - P1: 홈/프로필의 visible `준비 중` 지표를 제거했다. 홈은 `진행 중인 나눔`, 프로필은 수령 완료/좋은 평가 신뢰 요약을 표시하며, impact 숫자는 live VM 확인 전까지 연결하지 않는다.
 - 검증: P0/P1 화면 테스트, QR lifecycle 회귀 테스트, trust/impact 계약 테스트, `npx tsc --noEmit`, `git diff --check`를 통과했다.
+
+## 2026-06-05 P2 진행 결과
+
+- P2: `InventoryQr` route params를 `mode/postId` 필수 계약으로 바꾸고, params 없는 직접 진입은 샘플/시뮬레이션 액션 대신 안내 화면과 `돌아가기` CTA만 표시하도록 차단했다.
+- P2: 제품 QR 화면에서 `보관 QR 스캔`, `수령 QR 스캔`, `다른 냉장고 스캔`, `다시 시작` 같은 시뮬레이션 액션을 제거하고 native scanner 기반 post-backed 인증 경로만 유지했다.
+- 검증: `inventoryQr`, `fridgeSelect`, `postDetail`, `myShares`, `home` QR lifecycle 회귀 테스트와 `npx tsc --noEmit`을 통과했다.

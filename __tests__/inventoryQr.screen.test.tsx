@@ -112,6 +112,16 @@ const InventoryQrScreen = (
   props: React.ComponentProps<typeof InventoryQrScreenBase>,
 ) => renderWithSafeArea(<InventoryQrScreenBase {...props} />);
 
+const storeQrRoute = {
+  params: {
+    mode: 'store',
+    postId: 10,
+    fridgePublicCode: 'GJ-STATION-001',
+    fridgeName: '광주역 앞 공유냉장고',
+    fridgeLocation: '광주 북구 중흥동',
+  },
+} as const;
+
 const originalPlatformOS = Platform.OS;
 
 const setPlatformOS = (os: typeof Platform.OS) => {
@@ -125,7 +135,7 @@ const renderInventoryQrScreenWithBottomInset = (bottomInset: number) =>
   renderWithSafeArea(
     <InventoryQrScreenBase
       navigation={{ goBack: jest.fn() } as any}
-      route={{ params: undefined } as any}
+      route={storeQrRoute as any}
     />,
     bottomInset,
   );
@@ -256,14 +266,48 @@ describe('InventoryQrScreen', () => {
     });
   });
 
-  it('renders the QR and inventory verification surface without internal QA language', async () => {
+  it('guards params-less QR routes without exposing simulation actions', async () => {
+    const navigation = { goBack: jest.fn() };
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(
+        <InventoryQrScreen
+          navigation={navigation as any}
+          route={{ params: undefined } as any}
+        />,
+      );
+    });
+
+    const textContent = getTextContent(renderer!);
+
+    expect(textContent).toContain('QR 인증 정보를 찾을 수 없습니다');
+    expect(textContent).toContain('내 나눔이나 진행 중인 나눔에서 다시 열어주세요.');
+    expect(textContent).toContain('돌아가기');
+    expect(textContent).not.toContain('보관 QR 스캔');
+    expect(textContent).not.toContain('수령 QR 스캔');
+    expect(textContent).not.toContain('다른 냉장고 스캔');
+    expect(textContent).not.toContain('다시 시작');
+
+    await ReactTestRenderer.act(async () => {
+      findTouchableByText(renderer!, '돌아가기').props.onPress();
+    });
+
+    expect(navigation.goBack).toHaveBeenCalled();
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
+  it('renders the post-backed QR and inventory verification surface without internal QA language', async () => {
     let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
 
     await ReactTestRenderer.act(async () => {
       renderer = ReactTestRenderer.create(
         <InventoryQrScreen
           navigation={{ goBack: jest.fn() } as any}
-          route={{ params: undefined } as any}
+          route={storeQrRoute as any}
         />,
       );
     });
@@ -272,13 +316,13 @@ describe('InventoryQrScreen', () => {
 
     expect(textContent).toContain('냉장고 QR 인증');
     expect(textContent).toContain('광주역 앞 공유냉장고');
-    expect(textContent).toContain('05:00');
+    expect(textContent).toContain('10:00');
     expect(textContent).toContain('등록 대기');
     expect(textContent).toContain('라벨은 보관 인증 후 표시');
-    expect(textContent).toContain('보관 QR 스캔');
-    expect(textContent).toContain('수령 QR 스캔');
-    expect(textContent).toContain('다른 냉장고 스캔');
-    expect(textContent).toContain('다시 시작');
+    expect(textContent).not.toContain('보관 QR 스캔');
+    expect(textContent).not.toContain('수령 QR 스캔');
+    expect(textContent).not.toContain('다른 냉장고 스캔');
+    expect(textContent).not.toContain('다시 시작');
     expect(textContent).not.toContain('냉장고 QR 흐름 테스트');
     expect(textContent).not.toContain('\uD504\uB85C\uD1A0\uD0C0\uC785');
     expect(textContent).not.toContain('보관 QR 테스트');
@@ -387,29 +431,39 @@ describe('InventoryQrScreen', () => {
     });
   });
 
-  it('simulates a valid store QR scan and reveals label instructions', async () => {
+  it('reveals label instructions after a post-backed store QR confirmation', async () => {
+    mockedConfirmStore.mockResolvedValue({
+      success: true,
+      message: '입고 인증이 완료되었습니다. 등록번호 #03을 라벨에 적어주세요.',
+      data: {
+        postId: 10,
+        status: 'available',
+        labelCode: '#03',
+        storageZone: 'GENERAL',
+        storageDeadlineAt: '2026-06-18T05:30:00Z',
+        storedAt: '2026-05-19T05:30:00Z',
+      },
+    });
+
     let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
 
     await ReactTestRenderer.act(async () => {
       renderer = ReactTestRenderer.create(
         <InventoryQrScreen
           navigation={{ goBack: jest.fn() } as any}
-          route={{ params: undefined } as any}
+          route={storeQrRoute as any}
         />,
       );
     });
 
-    await ReactTestRenderer.act(async () => {
-      findTouchableByText(renderer!, '보관 QR 스캔').props.onPress();
-      await Promise.resolve();
-    });
+    await scanNativeQrValue('foodlink://fridges/GJ-STATION-001/verify');
 
     const textContent = getTextContent(renderer!);
 
     expect(textContent).toContain(
-      '보관 인증 완료. 라벨 코드를 식재료에 붙여주세요.',
+      '입고 인증이 완료되었습니다. 등록번호 #03을 라벨에 적어주세요.',
     );
-    expect(textContent).toContain('#0042');
+    expect(textContent).toContain('#03');
     expect(textContent).toContain('토마토');
     expect(textContent).toContain('일반 구역');
     expect(textContent).toContain('보관 정책 안내');
@@ -422,26 +476,24 @@ describe('InventoryQrScreen', () => {
     });
   });
 
-  it('blocks a mismatched fridge QR scan', async () => {
+  it('blocks a mismatched fridge QR scan on a post-backed route', async () => {
     let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
 
     await ReactTestRenderer.act(async () => {
       renderer = ReactTestRenderer.create(
         <InventoryQrScreen
           navigation={{ goBack: jest.fn() } as any}
-          route={{ params: undefined } as any}
+          route={storeQrRoute as any}
         />,
       );
     });
 
-    await ReactTestRenderer.act(async () => {
-      findTouchableByText(renderer!, '다른 냉장고 스캔').props.onPress();
-      await Promise.resolve();
-    });
+    await scanNativeQrValue('foodlink://fridges/GJ-WRONG-999/verify');
 
     expect(getTextContent(renderer!)).toContain(
       '선택한 냉장고 QR이 아닙니다. 다시 확인해주세요.',
     );
+    expect(mockedConfirmStore).not.toHaveBeenCalled();
 
     await ReactTestRenderer.act(async () => {
       renderer?.unmount();
