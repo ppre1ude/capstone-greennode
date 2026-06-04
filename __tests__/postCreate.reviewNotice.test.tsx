@@ -113,7 +113,8 @@ describe('PostCreateScreen review notice', () => {
       );
     });
 
-    expect(hasText(renderer!, '79%')).toBe(true);
+    expect(hasText(renderer!, '79%')).toBe(false);
+    expect(hasText(renderer!, 'AI 참고 신호')).toBe(false);
     expect(hasText(renderer!, '바나나')).toBe(true);
 
     await ReactTestRenderer.act(async () => {

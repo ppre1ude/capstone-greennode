@@ -56,7 +56,7 @@ AI/정책 기준상 나눔 식재료로 등록하지 않는 상태. 사용자에
 _Avoid_: 부패, 상함, 썩음, 나쁨, AI 실패
 
 **확인 필요**:
-AI 신뢰도, 사진 품질, 여러 객체 감지 등으로 사용자가 상태를 한 번 더 살펴봐야 하는 검토 신호.
+AI 검토 신호, 사진 품질, 여러 객체 감지 등으로 사용자가 상태를 한 번 더 살펴봐야 하는 검토 신호.
 _Avoid_: 실패, 등록 불가, 부패 의심
 
 **공유 냉장고**:
@@ -142,8 +142,8 @@ _Avoid_: 핵심 가치 제안, 등록 이유의 1순위
 - AI 분석은 대표 **식재료** 하나에 대해 하나의 **신선도 등급**과 하나의 **나눔 가능 여부**를 만든다.
 - `Fresh`와 `Mid` 계열 **신선도 등급**은 사용자 흐름에서 모두 `상태가 좋아 보여요`와 `나눔 가능`으로 통합 표시한다. 기존 프론트 문서의 `Normal`은 `Mid`와 같은 그룹이다.
 - `Stale`은 **나눔 기준 미충족**으로 보고 등록하지 않는다. `unknown`은 바로 등록 가능한 상태로 보지 않고 확인/실패 상태로 처리한다. `Bad`, `Rotten`은 현재 백엔드 label은 아니지만 구형/후속 label로 내려오면 같은 차단 그룹으로 다룬다.
-- `not_food`, `non_food`, `low_quality` 계열은 서버가 rejection/review 신호를 주면 **나눔 기준 미충족** 또는 식재료 사진 확인 실패로 보고 등록하지 않는다. 단, 2026-05-08 MVP 서버 계약에서 `screenshot`, `ui_screenshot` 계열은 별도 판별 모델이 없어 `Fresh + imageToken`으로 통과할 수 있으며, 이 경우 낮은 confidence는 **확인 필요**로만 표시하고 등록은 허용한다. `screenshot`, `ui_screenshot`은 Post-MVP rejection reason 후보로 관리한다.
-- `confidenceScore`는 Stage 2 신선도 분류 모델의 softmax max 확률이다. 객체 탐지 confidence나 식재료 여부 confidence가 아니며, 단독 차단 기준으로 쓰지 않는다.
+- `not_food`, `non_food`, `low_quality` 계열은 서버가 rejection/review 신호를 주면 **나눔 기준 미충족** 또는 식재료 사진 확인 실패로 보고 등록하지 않는다. 단, 2026-05-08 MVP 서버 계약에서 `screenshot`, `ui_screenshot` 계열은 별도 판별 모델이 없어 `Fresh + imageToken`으로 통과할 수 있으며, 이 경우 낮은 confidence는 숫자 없는 **확인 필요**로만 표시하고 등록은 허용한다. `screenshot`, `ui_screenshot`은 Post-MVP rejection reason 후보로 관리한다.
+- `confidenceScore`는 Stage 2 신선도 분류 모델의 softmax max 확률이다. 객체 탐지 confidence나 식재료 여부 confidence가 아니며, 단독 차단 기준으로 쓰지 않는다. 사용자/운영자 UI에는 원값, 소수, 퍼센트 같은 정량 신뢰도 표현을 노출하지 않는다.
 - 하나의 **나눔 식재료**는 작성자 한 명과 **공유 냉장고** 하나에 속한다.
 - 하나의 **공유 냉장고**에는 0개 이상의 **나눔 식재료**가 연결될 수 있다.
 - 홈은 사용자가 먼저 **나눔 식재료**를 찾는 화면이다.
@@ -208,10 +208,10 @@ _Avoid_: 핵심 가치 제안, 등록 이유의 1순위
 > **Domain expert:** "주요 흐름에서는 합칩니다. 둘 다 `상태가 좋아 보여요`와 `나눔 가능`으로 보여주고, 내부 정책과 QA에서만 구분하세요. 기존 문서의 Normal은 Mid 그룹으로 번역합니다."
 >
 > **Dev:** "confidence가 45%면 등록을 막나요?"
-> **Domain expert:** "아니요. `confidenceScore`는 신선도 분류 모델이 Fresh/Mid/Stale 중 하나로 분류한 softmax max 확률입니다. 0.9 미만이면 `확인 필요`로 표시하지만, 값만으로 등록을 막지는 않습니다."
+> **Domain expert:** "아니요. `confidenceScore`는 신선도 분류 모델이 Fresh/Mid/Stale 중 하나로 분류한 softmax max 확률입니다. 0.9 미만이면 숫자 없이 `확인 필요`로 표시하지만, 값만으로 등록을 막지는 않습니다."
 >
 > **Dev:** "스크린샷이 `Fresh + imageToken`으로 통과하면 프론트가 막아야 하나요?"
-> **Domain expert:** "MVP에서는 막지 않습니다. 서버가 screenshot/UI 판별 모델을 갖고 있지 않으므로 현재 계약은 통과 허용이고, 프론트는 낮은 confidence를 `확인 필요`로만 표시합니다. 차단은 Post-MVP rejection reason이 내려온 뒤 적용합니다."
+> **Domain expert:** "MVP에서는 막지 않습니다. 서버가 screenshot/UI 판별 모델을 갖고 있지 않으므로 현재 계약은 통과 허용이고, 프론트는 낮은 confidence를 숫자 없는 `확인 필요`로만 표시합니다. 차단은 Post-MVP rejection reason이 내려온 뒤 적용합니다."
 >
 > **Dev:** "수요자가 나눔 신청을 누르면 예약 확정인가요?"
 > **Domain expert:** "아니요. `requested`는 신청 접수와 30분 임시 선점입니다. 예약 확정이 아니고, 수령 QR 인증이 끝나야 나눔 완료입니다."
@@ -227,7 +227,7 @@ _Avoid_: 핵심 가치 제안, 등록 이유의 1순위
 - `Normal`과 `Mid`가 섞여 쓰였다. 해결: 현재 백엔드 label은 `Mid`, 기존 프론트 문서의 `Normal`은 같은 나눔 가능 그룹으로 번역한다.
 - `Bad/Rotten`은 현재 백엔드 label이 아니다. 해결: 현재 서버 계약에서는 `Stale`만 나눔 기준 미충족 label로 보고, `Bad/Rotten`은 방어적 호환 label로만 차단한다.
 - `confidenceScore`의 의미가 불명확했다. 해결: Stage 2 신선도 분류 모델의 softmax max 확률이며, 단독 등록 차단 기준으로 쓰지 않는다.
-- confidence 표시 threshold는 백엔드 활용 가이드를 따라 0.9 미만으로 확정했다. 단, 낮은 confidence만으로 등록을 차단하지 않고 `확인 필요` UX로만 사용한다.
+- confidence 검토 threshold는 백엔드 활용 가이드를 따라 0.9 미만으로 확정했다. 단, 낮은 confidence만으로 등록을 차단하지 않고 숫자 없는 `확인 필요` UX로만 사용한다.
 - `screenshot`/`ui_screenshot` 처리 범위가 불명확했다. 해결: 2026-05-08 MVP 계약에서는 서버가 `Fresh + imageToken`을 반환하면 등록을 허용하고, Post-MVP rejection reason 후보로만 관리한다.
 - 첫 신청 이후 추가 신청 차단은 백엔드에서 구현됐다. 해결: 첫 신청 접수 후 `requested`로 전환하고 추가 신청은 409로 거절한다.
 - `관리자`가 시스템 admin인지 냉장고 현장 운영자인지 불명확했다. 해결: 냉장고 상태 파악, 점검, 폐기, 수령 확인을 수행하는 역할은 **냉장고 운영자**로 부른다.

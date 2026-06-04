@@ -50,7 +50,6 @@ import {
   parseServerLifecycleTimestampMs,
 } from '@/features/inventory/holdPolicy';
 import {
-  getConfidencePercent,
   getPostDisplayName,
   getPostStatusLabel,
   getQualityMeta,
@@ -241,7 +240,6 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
   const isMyPost = isPostAuthoredByUser(post, user?.id);
   const displayName = getPostDisplayName(post);
   const quality = getQualityMeta(post.freshnessLabel);
-  const confidencePercent = getConfidencePercent(post.confidenceScore);
   const statusLabel = getPostStatusLabel(post.status);
   const canRequestShare = !isMyPost && post.status === 'available';
   const requestButtonLabel = isRequesting
@@ -365,9 +363,7 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
 
           <Text style={styles.sectionTitle}>AI 분석 정보</Text>
           <Text style={styles.description}>
-            {confidencePercent != null
-              ? `AI 참고 신호는 ${confidencePercent}%이며, 실제 상태는 수령 전 확인이 필요해요.`
-              : 'AI 분석은 참고용이며, 실제 상태는 수령 전 확인이 필요해요.'}
+            AI 분석은 참고용이며, 실제 상태는 수령 전 확인이 필요해요.
           </Text>
 
           <View style={styles.trustSection}>

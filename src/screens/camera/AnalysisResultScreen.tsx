@@ -36,7 +36,6 @@ import {
   getResultDetections,
 } from '@/utils/aiDetections';
 import {
-  getConfidencePercent,
   getGenerateResultQualityMeta,
   needsAnalysisReview,
 } from '@/utils/postPolicy';
@@ -47,9 +46,6 @@ const AnalysisResultScreen = ({ route, navigation }: Props) => {
   const { result, imageUri } = route.params;
 
   const quality = getGenerateResultQualityMeta(result);
-  const confidencePercent = getConfidencePercent(
-    result.confidenceScore ?? result.aiAnalysis?.confidenceScore,
-  );
   const needsReview =
     quality.canShare &&
     (quality.label === '확인 필요' ||
@@ -182,21 +178,6 @@ const AnalysisResultScreen = ({ route, navigation }: Props) => {
               color="textPrimary"
               style={styles.infoValue}>
               {quality.label}
-            </DSText>
-          </View>
-
-          <View style={styles.infoRow}>
-            <DSText
-              variant="caption"
-              color="textSecondary"
-              style={styles.infoLabel}>
-              AI 참고 신호
-            </DSText>
-            <DSText
-              variant="bodyBold"
-              color="textPrimary"
-              style={styles.infoValue}>
-              {confidencePercent != null ? `${confidencePercent}%` : '미제공'}
             </DSText>
           </View>
 

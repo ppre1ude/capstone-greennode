@@ -35,7 +35,6 @@ import {
   getResultDetections,
 } from '@/utils/aiDetections';
 import {
-  getConfidencePercent,
   getGenerateResultQualityMeta,
   needsAnalysisReview,
 } from '@/utils/postPolicy';
@@ -121,9 +120,6 @@ const PostCreateScreen = ({ route, navigation }: Props) => {
     result.aiAnalysis?.detectedFruit ||
     '알 수 없음';
   const quality = getGenerateResultQualityMeta(result);
-  const confidencePercent = getConfidencePercent(
-    result.confidenceScore ?? result.aiAnalysis?.confidenceScore,
-  );
   const needsReview =
     quality.canShare &&
     (quality.label === '확인 필요' ||
@@ -225,17 +221,6 @@ const PostCreateScreen = ({ route, navigation }: Props) => {
             <View style={styles.analysisItem}>
               <Text style={styles.analysisLabel}>상태 안내</Text>
               <Text style={styles.analysisValue}>{quality.label}</Text>
-            </View>
-            <View style={styles.analysisDivider} />
-            <View style={styles.analysisItem}>
-              <Text style={styles.analysisLabel}>AI 참고 신호</Text>
-              <Text
-                style={[
-                  styles.analysisValue,
-                  needsReview && styles.analysisValueWarning,
-                ]}>
-                {confidencePercent != null ? `${confidencePercent}%` : '미제공'}
-              </Text>
             </View>
           </DSCard>
           {needsReview && (

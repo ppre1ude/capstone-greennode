@@ -181,7 +181,7 @@ describe('PostDetailScreen share request', () => {
     expect(requestButton).toBeTruthy();
     expect(
       renderer.root.findAllByProps({
-        children: 'AI 참고 신호는 95%이며, 실제 상태는 수령 전 확인이 필요해요.',
+        children: 'AI 분석은 참고용이며, 실제 상태는 수령 전 확인이 필요해요.',
       }),
     ).not.toHaveLength(0);
     expect(

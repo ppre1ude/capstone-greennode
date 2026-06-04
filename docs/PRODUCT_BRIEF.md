@@ -75,7 +75,7 @@ FoodLink는 사용자를 오래 붙잡는 콘텐츠 앱이 아니다. 핵심 지
 - 백엔드 AI label은 `Fresh/Mid/Stale`이다. `Mid`는 기존 프론트 문서의 `Normal` 그룹으로 번역한다.
 - `Fresh/Mid` 계열은 사용자에게 `상태가 좋아 보여요`와 `나눔 가능`으로 통합 표시한다.
 - `Stale`은 사용자에게 `나눔 기준에 맞지 않아요`로 안내하고 등록하지 않는다. `not_food`, `low_quality`, `screenshot` 계열 rejection reason은 Post-MVP 백엔드 항목이다. 2026-05-23 기준 MVP 정상 응답의 root-level `rejectionReason`은 `null`이고, `detections[]`는 단일 대표 객체 래핑이다. 특히 screenshot/UI 캡처는 MVP 서버가 차단할 수 없어 `Fresh + imageToken`으로 통과할 수 있으며, 이 경우 앱은 `확인 필요` 표시만 하고 등록은 허용한다.
-- `confidenceScore`는 Stage 2 신선도 분류 모델의 softmax max 확률이며, 차단 기준이 아니라 보조 표시/검토 신호로만 사용한다. 제품 기준은 백엔드 활용 가이드를 따라 0.9 미만을 `확인 필요` 구간으로 본다.
+- `confidenceScore`는 Stage 2 신선도 분류 모델의 softmax max 확률이며, 차단 기준이 아니라 내부 검토 신호로만 사용한다. 제품 기준은 백엔드 활용 가이드를 따라 0.9 미만을 `확인 필요` 구간으로 보되, 사용자/운영자 UI에는 원값, 소수, 퍼센트, `AI 참고 신호 92%` 같은 정량 신호를 노출하지 않는다.
 - 공급자는 공유 냉장고를 선택해 나눔 식재료 생명주기를 시작한다.
 - 보관 QR 인증 전까지 나눔 식재료는 `pending_store`이며, 근처 사용자 목록이나 푸시 알림에 노출하지 않는다.
 - 보관 QR 인증이 끝나 `available`이 된 뒤 근처 사용자에게 푸시 알림을 보낸다.
@@ -187,7 +187,7 @@ MVP에서 공급자는 `requested` 이후 별도 승인 행동을 하지 않는�
 - 사진 한 장으로 대표 식재료와 내부 신선도 등급을 분석한다.
 - 기획/백엔드 목표: YOLOv8 기반 객체 탐지, ResNet-50 기반 신선도 분류.
 - 현재 백엔드 계약: `POST /api/v1/posts/generate`가 대표 식재료, `Fresh/Mid/Stale` 신선도 등급, `isFresh`, `confidenceScore`, `imageToken`을 반환한다. LLM은 비활성화되어 있다. generate는 Post row를 만들지 않지만, 2026-05-08 백엔드 수정 후 서버 임시 저장소에 이미지와 AI 메타데이터 sidecar를 저장하고 `POST /posts` 시점에 복원한다.
-- 현재 앱 정책: `Fresh/Mid`는 나눔 가능으로 통합 표시, `Stale`은 등록 차단, 낮은 confidence는 차단이 아니라 보조 표시.
+- 현재 앱 정책: `Fresh/Mid`는 나눔 가능으로 통합 표시, `Stale`은 등록 차단, 낮은 confidence는 차단이 아니라 `확인 필요` 정성 안내로만 표시한다. confidence 숫자/퍼센트는 화면에 표시하지 않는다.
 
 ### 2. 나눔 식재료 등록
 

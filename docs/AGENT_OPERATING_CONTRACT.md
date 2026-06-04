@@ -17,6 +17,9 @@
 - MUST keep work scoped to the smallest coherent task that can be verified.
 - MUST use domain terms from [DOMAIN_MODEL.md](./DOMAIN_MODEL.md). Do not invent
   alternate names for established FoodLink concepts.
+- MUST keep `confidenceScore` as an internal review signal. Do not expose AI
+  confidence as numbers, decimals, percentages, or copy such as `AI 참고 신호
+  92%` in user-facing or operator-facing UI.
 - SHOULD use installed skills by workflow need, not by habit. Small mechanical
   edits do not need a full planning pipeline.
 

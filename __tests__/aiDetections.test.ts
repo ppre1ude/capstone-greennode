@@ -44,7 +44,7 @@ describe('ai detection helpers', () => {
         freshnessLabel: 'Fresh',
         confidenceScore: 0.94,
       }),
-    ).toBe('상태가 좋아 보여요 · 94%');
+    ).toBe('상태가 좋아 보여요');
     expect(getDetectionSummary({freshnessLabel: 'unknown'})).toBe(
       '사진으로 상태를 확인하기 어려워요',
     );

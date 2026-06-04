@@ -90,7 +90,7 @@ white/90    → 글래스모피즘 뱃지
 | `bodyBold` | 15px | SemiBold (600)  | 강조 본문                              |
 | `caption`  | 13px | Bold (700)      | 뱃지 텍스트, 보조 정보                 |
 | `small`    | 11px | Medium (500)    | 카메라 인디케이터, 힌트                |
-| `tiny`     | 10px | Bold (700)      | 탭바 레이블, 신선도 퍼센트             |
+| `tiny`     | 10px | Bold (700)      | 탭바 레이블, 보조 배지                 |
 | `micro`    | 9px  | Bold (700)      | 마커 거리 표시                         |
 
 ### Line Height
@@ -100,6 +100,14 @@ white/90    → 글래스모피즘 뱃지
 | Heading         | `tight` (1.2)   |
 | Body            | `relaxed` (1.6) |
 | Caption / Small | `normal` (1.4)  |
+
+---
+
+### AI Confidence Display
+
+- `confidenceScore`는 내부 검토/분기 신호이며 사용자와 운영자 화면에 숫자, 소수, 퍼센트로 표시하지 않는다.
+- `AI 참고 신호 92%`, `신뢰도 0.94`, `상태가 좋아 보여요 · 94%` 같은 정량 문구는 금지한다.
+- 화면에는 `나눔 가능`, `확인 필요`, `상태가 좋아 보여요`, `사진으로 상태를 확인하기 어려워요`처럼 정성 라벨과 실제 확인 안내만 사용한다.
 
 ---
 
