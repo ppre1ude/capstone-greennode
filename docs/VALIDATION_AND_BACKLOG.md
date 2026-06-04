@@ -16,6 +16,8 @@
 
 - 과거 MVP 검증 범위는 **농산물 등록 흐름**과 `available -> requested` 신청 접수까지였다. 이 기준은 Android/API 검증으로 이미 닫혔다.
 - 현재 정식 도메인 기준은 `농산물 등록 흐름 -> 보관 QR 인증 -> available -> 신청 접수/임시 선점 -> 수령 QR 인증 -> 완료`다. `냉장고 QR 인증`, `진행 중인 나눔`, `내 나눔/받은 나눔`, `운영자 콘솔 진입`, `알림/나눔 생명주기 확장`을 API/화면 연결 기준으로 검증했다.
+- 2026-06-03 `direct` 등록 흐름 제거에 맞춘 백엔드 API 구조 변경 요청은 [BACKEND_QR_LIFECYCLE_DIRECT_FLOW_HANDOFF_2026-06-03.md](./BACKEND_QR_LIFECYCLE_DIRECT_FLOW_HANDOFF_2026-06-03.md)에 정리했다. 백엔드 회신 요약은 [BACKEND_QR_LIFECYCLE_RESPONSE_2026-06-03.md](./BACKEND_QR_LIFECYCLE_RESPONSE_2026-06-03.md)를 따른다. 핵심은 `POST /posts`의 정식 제품 흐름을 `flow="fridge_qr"` 기반 `pending_store` 생성으로 고정하고, 보관 QR 인증 후에만 `available`로 노출하는 것이다.
+- 2026-06-04 trust feedback 백엔드 회신은 [BACKEND_TRUST_FEEDBACK_RESPONSE_2026-06-04.md](./BACKEND_TRUST_FEEDBACK_RESPONSE_2026-06-04.md)를 따른다. 프론트는 평가/신고를 실제 `/share-requests/{requestId}/review|report` API로 보내고, 공급자 신뢰 뱃지는 `/users/{userId}/trust-summary`를 source of truth로 사용한다.
 - 2026-05-28 SM-S928N Android 15 실기기 QA에서 신청 만료 시각 해석, 홈 진행 중 나눔, 받은 나눔 수령 QR, QR 화면과 하단 탭바 safe-area 재검증까지 닫았다.
 - 2026-05-27 백엔드 기능 계약은 프론트 API client와 화면에 연결됐다.
 - 알림 탭은 MVP에서 FCM 수신 기록과 로컬 AsyncStorage 읽음 상태만 사용한다. 서버 저장형 알림 API는 Post-MVP다.
@@ -36,24 +38,26 @@
 
 - 분류: QA blocker
 - 배경: 프론트 연결은 끝났지만 최신 백엔드 live VM에서 실제 mutation matrix를 다시 닫아야 한다.
-- 현재 상태: 2026-05-28 `localhost:8080 -> NHN Cloud VM:80` SSH tunnel 연결 후 mutate 하네스가 통과했다. 스크립트는 프로필 PATCH, 내 나눔/받은 나눔 응답 형태, 나눔 생명주기 정상 경로, 403 권한 거부, 409 중복 신청, 400 available 완료 거부를 검증한다. 비운영자/상태 변경 검증표는 닫혔고, 이 항목의 잔여 범위는 운영자 계정 환경변수 확보 후 프로필의 운영자 콘솔 진입 제어 재검증뿐이다.
-- 기대 동작: 실제 VM에서 profile PATCH, my posts/share requests, lifecycle mutation, 200/403/409와 상태 규칙 위반 400 matrix를 통과한다.
-- 검증 방법: tunnel(`localhost:8080 -> NHN Cloud VM:80`)을 연 뒤 `$env:FOODLINK_API_BASE_URL='http://localhost:8080'; npm run qa:backend-contracts -- --mutate`.
+- 현재 상태: 2026-05-28 `localhost:8080 -> NHN Cloud VM:80` SSH tunnel 연결 후 당시 mutate 하네스가 통과했다. 2026-06-03/04 백엔드 회신 반영으로 하네스는 direct/manual complete 경로를 제거하고 `pending_store -> confirm-store -> available -> request -> confirm-pickup -> completed`, trust review/report, operator inventory fixture 검증을 사용하도록 갱신했다. 최신 VM 재실행이 남아 있다.
+- 기대 동작: 실제 VM에서 profile PATCH, my posts/share requests, QR lifecycle mutation, trust review/report, operator summary/items/dispose, 403/409 상태 규칙 matrix를 통과한다.
+- 검증 방법: tunnel(`localhost:8080 -> NHN Cloud VM:80`)을 연 뒤 `$env:FOODLINK_API_BASE_URL='http://localhost:8080'; $env:FOODLINK_QA_FRIDGE_ID='1'; $env:FOODLINK_QA_FRIDGE_PUBLIC_CODE='GJ-STATION-001'; npm run qa:backend-contracts -- --mutate`.
 - 산출물: `temp/backend-feature-contract-e2e-20260528T143053Z.json`.
 
 To-do:
 
 - [x] `GET /users/me/posts`, `GET /users/me/share-requests`, `PATCH /auth/me` API client 연결
-- [x] `/posts/{id}/cancel|complete`, `/users/me/share-requests/{id}/cancel` API client 연결
+- [x] `/posts/{id}/cancel`, `/users/me/share-requests/{id}/cancel`, `/inventory/confirm-store`, `/inventory/confirm-pickup` API client 연결
 - [x] 내 나눔/받은 나눔 화면 진입점 연결
 - [x] profile PATCH 폼 연결
 - [x] read-only preflight 하네스 준비
 - [x] SSH tunnel 연결 후 live VM mutate E2E 실행
 - [x] my posts/share requests 최신 VM 응답 확인
 - [x] profile PATCH 최신 VM 응답 확인
-- [x] lifecycle happy path mutation 확인: available cancel, request 후 author complete, request 후 requester cancel
-- [x] lifecycle 403/409 matrix를 하네스 또는 수동 QA로 보강. `temp/backend-feature-contract-e2e-20260528T143053Z.json`에서 author/requester/observer 계정으로 403 권한 거부, requested 중복 신청 409, available 완료 시도 400을 확인했다.
-- [ ] 운영자 계정 환경변수 확보 시 운영자 계정에서만 프로필의 운영자 콘솔 진입점이 보이는지 확인
+- [x] lifecycle happy path mutation 확인: available cancel, request 후 QR pickup, request 후 requester cancel
+- [x] lifecycle 403/409 matrix를 하네스 또는 수동 QA로 보강. 2026-06-04 하네스는 pending_store request 409, 작성자 본인 신청 403, 비작성자 취소 403, 비신청자 pickup 403, 중복 신청 409를 확인하도록 갱신했다.
+- [x] trust feedback review/report와 공개 trust summary shape를 하네스에 추가
+- [x] 운영자 계정 fixture와 담당 냉장고 fixture 기본값을 하네스에 반영
+- [ ] 최신 VM에서 QR lifecycle/trust/operator 갱신 하네스 재실행
 
 ### 신청 만료 시각 timezone 해석 수정
 

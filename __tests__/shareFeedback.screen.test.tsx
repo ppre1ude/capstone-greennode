@@ -2,7 +2,20 @@ import React from 'react';
 import { Alert, TouchableOpacity } from 'react-native';
 import ReactTestRenderer from 'react-test-renderer';
 import ShareFeedbackScreen from '@/screens/trust/ShareFeedbackScreen';
+import { createShareReport, createShareReview } from '@/api/trust';
 import { useTrustFeedbackStore } from '@/store/trustFeedbackStore';
+
+jest.mock('@/api/trust', () => ({
+  createShareReview: jest.fn(),
+  createShareReport: jest.fn(),
+}));
+
+const mockedCreateShareReview = createShareReview as jest.MockedFunction<
+  typeof createShareReview
+>;
+const mockedCreateShareReport = createShareReport as jest.MockedFunction<
+  typeof createShareReport
+>;
 
 const findTouchableByText = (
   renderer: ReactTestRenderer.ReactTestRenderer,
@@ -38,6 +51,38 @@ describe('ShareFeedbackScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     alertSpy.mockClear();
+    mockedCreateShareReview.mockResolvedValue({
+      success: true,
+      message: '수령 경험 평가가 저장되었습니다.',
+      data: {
+        id: 1,
+        requestId: 55,
+        postId: 41,
+        providerId: 4,
+        requesterId: 3,
+        positiveTagIds: ['good_condition'],
+        issueTagIds: ['different_from_photo'],
+        createdAt: '2026-06-04T12:00:00.000Z',
+        updatedAt: '2026-06-04T12:00:00.000Z',
+      },
+    });
+    mockedCreateShareReport.mockResolvedValue({
+      success: true,
+      message: '신고가 접수되었습니다.',
+      data: {
+        id: 2,
+        requestId: 55,
+        postId: 41,
+        providerId: 4,
+        requesterId: 3,
+        reasonId: 'inappropriate_listing',
+        status: 'open',
+        resolution: 'pending',
+        action: 'none',
+        createdAt: '2026-06-04T12:05:00.000Z',
+        updatedAt: '2026-06-04T12:05:00.000Z',
+      },
+    });
     useTrustFeedbackStore.getState().resetTrustFeedback();
   });
 
@@ -66,6 +111,10 @@ describe('ShareFeedbackScreen', () => {
       findTouchableByText(renderer!, '평가 제출').props.onPress();
     });
 
+    expect(mockedCreateShareReview).toHaveBeenCalledWith(55, {
+      positiveTagIds: ['good_condition'],
+      issueTagIds: ['different_from_photo'],
+    });
     expect(useTrustFeedbackStore.getState().reviews[55]).toMatchObject({
       requestId: 55,
       postId: 41,
@@ -75,7 +124,7 @@ describe('ShareFeedbackScreen', () => {
     });
     expect(alertSpy).toHaveBeenCalledWith(
       '평가 완료',
-      '수령 경험이 공급자 신뢰에 반영되었습니다.',
+      '수령 경험 평가가 저장되었습니다.',
     );
     expect(navigation.goBack).toHaveBeenCalled();
 
@@ -105,6 +154,9 @@ describe('ShareFeedbackScreen', () => {
       findTouchableByText(renderer!, '신고 제출').props.onPress();
     });
 
+    expect(mockedCreateShareReport).toHaveBeenCalledWith(55, {
+      reasonId: 'inappropriate_listing',
+    });
     expect(useTrustFeedbackStore.getState().reports[55]).toMatchObject({
       requestId: 55,
       postId: 41,
@@ -116,7 +168,7 @@ describe('ShareFeedbackScreen', () => {
     });
     expect(alertSpy).toHaveBeenCalledWith(
       '신고 접수',
-      '운영자 검토가 필요한 항목으로 기록했습니다.',
+      '신고가 접수되었습니다.',
     );
     expect(navigation.goBack).toHaveBeenCalled();
 

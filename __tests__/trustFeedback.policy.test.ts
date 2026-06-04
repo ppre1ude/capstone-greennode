@@ -40,8 +40,19 @@ describe('trust feedback policy', () => {
       getProviderTrustBadges({
         completedShares: 12,
         positiveReviewCount: 9,
+        badges: ['store_qr_verified', 'completed_pickup', 'positive_reviews'],
       }).map(badge => badge.label),
     ).toEqual(['QR 보관 인증', '수령 완료 12회', '좋은 평가 9회']);
+  });
+
+  it('hides QR trust badge when backend summary does not include it', () => {
+    expect(
+      getProviderTrustBadges({
+        completedShares: 12,
+        positiveReviewCount: 9,
+        badges: ['completed_pickup', 'positive_reviews'],
+      }).map(badge => badge.label),
+    ).toEqual(['수령 완료 12회', '좋은 평가 9회']);
   });
 
   it('never exposes report state as public trust badges', () => {
@@ -49,6 +60,7 @@ describe('trust feedback policy', () => {
       getProviderTrustBadges({
         completedShares: 12,
         positiveReviewCount: 9,
+        badges: ['store_qr_verified', 'completed_pickup', 'positive_reviews'],
       })
         .map(badge => badge.label)
         .join(' '),

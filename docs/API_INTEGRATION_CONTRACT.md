@@ -145,6 +145,9 @@ Host NHN-Cloud-Server
 | 19  | GET    | /api/v1/operator/fridges/{fridgeId}/inventory/summary | 운영자 inventory 요약 | ✅ |
 | 20  | GET    | /api/v1/operator/fridges/{fridgeId}/inventory/items | 운영자 inventory 품목 조회 | ✅ |
 | 21  | PATCH  | /api/v1/operator/items/{postId}/dispose | 운영자 폐기 처분 | ✅ |
+| 22  | POST   | /api/v1/share-requests/{requestId}/review | 수령 경험 평가 생성 | ✅ |
+| 23  | POST   | /api/v1/share-requests/{requestId}/report | 나눔 신고 생성 | ✅ |
+| 24  | GET    | /api/v1/users/{userId}/trust-summary | 공급자 신뢰 요약 조회 | ✅ |
 
 ### 백엔드 구현 완료, 프론트 연동 필요
 
@@ -741,6 +744,78 @@ Dispose 일관성 기준:
 - 테스트 데이터: `QA3-A` available, `QA3-E` expired, `QA3-R` requested.
 - 결과: 무인증 summary 401, 비운영자 summary/items/dispose 403, fridge 3 summary `total=0` 및 items `[]`, fridge 999999 summary 404, requested dispose 409, available/expired dispose 200, disposed 항목은 operator items와 `/fridges/1/posts?status=available`에서 제외.
 - 원본 evidence: `temp/operator-inventory-vm-qa-20260525.json`.
+
+### 4.14 Trust feedback, report, provider summary
+
+2026-06-04 백엔드 회신 기준 실제 endpoint가 확정됐다. 상세 운영 기준은 [TRUST_FEEDBACK_OPERATING_MODEL.md](./TRUST_FEEDBACK_OPERATING_MODEL.md)와 [BACKEND_TRUST_FEEDBACK_RESPONSE_2026-06-04.md](./BACKEND_TRUST_FEEDBACK_RESPONSE_2026-06-04.md)를 따른다.
+
+평가 생성:
+
+```text
+POST /api/v1/share-requests/{requestId}/review
+Authorization: Bearer {token}
+Content-Type: application/json
+```
+
+```json
+{
+  "positiveTagIds": ["good_condition", "matched_photo"],
+  "issueTagIds": ["label_hard_to_find"]
+}
+```
+
+신고 생성:
+
+```text
+POST /api/v1/share-requests/{requestId}/report
+Authorization: Bearer {token}
+Content-Type: application/json
+```
+
+```json
+{
+  "reasonId": "missing_or_not_found"
+}
+```
+
+권한/상태 기준:
+
+| 상황 | 상태 |
+| --- | --- |
+| 미인증 | 401 |
+| 요청자 불일치 또는 작성자 본인 자기 나눔 평가/신고 | 403 |
+| 신청 또는 나눔 식재료가 `completed`가 아님 | 409 |
+| 중복 평가 | 409 |
+| 미지원 평가 태그 또는 신고 사유 | 422 |
+
+공급자 신뢰 요약:
+
+```text
+GET /api/v1/users/{userId}/trust-summary
+Authorization: Bearer {token}
+```
+
+```json
+{
+  "success": true,
+  "data": {
+    "userId": 4,
+    "completedShares": 12,
+    "positiveReviewCount": 9,
+    "matchedPhotoCount": 8,
+    "easyToFindCount": 7,
+    "badges": ["store_qr_verified", "completed_pickup", "positive_reviews"],
+    "computedAt": "2026-06-04T12:10:00.000Z"
+  }
+}
+```
+
+프론트 표시 기준:
+
+- `badges`에 `store_qr_verified`가 있으면 `QR 보관 인증` 뱃지 표시.
+- `completedShares`는 `수령 완료 {n}회`.
+- `positiveReviewCount`는 `좋은 평가 {n}회`.
+- 신고 처리 상태, 신고 건수, 제재 이력은 공개 상세/프로필에 표시하지 않는다.
 
 ---
 

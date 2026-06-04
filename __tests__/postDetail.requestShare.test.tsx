@@ -3,6 +3,7 @@ import { Alert, Text, TouchableOpacity } from 'react-native';
 import ReactTestRenderer from 'react-test-renderer';
 import PostDetailScreen from '@/screens/post/PostDetailScreen';
 import { getPostDetail, requestShare } from '@/api/posts';
+import { getUserTrustSummary } from '@/api/trust';
 import { useAuthStore } from '@/store/authStore';
 import { useFeedRefreshStore } from '@/store/feedRefreshStore';
 import type { Post } from '@/types';
@@ -17,11 +18,18 @@ jest.mock('@/api/posts', () => ({
   requestShare: jest.fn(),
 }));
 
+jest.mock('@/api/trust', () => ({
+  getUserTrustSummary: jest.fn(),
+}));
+
 const mockedGetPostDetail = getPostDetail as jest.MockedFunction<
   typeof getPostDetail
 >;
 const mockedRequestShare = requestShare as jest.MockedFunction<
   typeof requestShare
+>;
+const mockedGetUserTrustSummary = getUserTrustSummary as jest.MockedFunction<
+  typeof getUserTrustSummary
 >;
 
 const basePost: Post = {
@@ -99,6 +107,23 @@ describe('PostDetailScreen share request', () => {
       success: true,
       message: 'ok',
       data: basePost,
+    });
+    mockedGetUserTrustSummary.mockResolvedValue({
+      success: true,
+      message: '공급자 신뢰 요약 조회 성공',
+      data: {
+        userId: 1,
+        completedShares: 12,
+        positiveReviewCount: 9,
+        matchedPhotoCount: 8,
+        easyToFindCount: 7,
+        badges: [
+          'store_qr_verified',
+          'completed_pickup',
+          'positive_reviews',
+        ],
+        computedAt: '2026-06-04T12:10:00.000Z',
+      },
     });
     useAuthStore.setState({
       user: {
@@ -191,6 +216,7 @@ describe('PostDetailScreen share request', () => {
   it('shows provider trust badges on the share detail', async () => {
     const renderer = await createScreen();
 
+    expect(mockedGetUserTrustSummary).toHaveBeenCalledWith(1);
     expect(
       renderer.root.findAllByProps({ children: '공급자 신뢰' }),
     ).not.toHaveLength(0);
@@ -198,10 +224,10 @@ describe('PostDetailScreen share request', () => {
       renderer.root.findAllByProps({ children: 'QR 보관 인증' }),
     ).not.toHaveLength(0);
     expect(
-      renderer.root.findAllByProps({ children: '수령 완료 0회' }),
+      renderer.root.findAllByProps({ children: '수령 완료 12회' }),
     ).not.toHaveLength(0);
     expect(
-      renderer.root.findAllByProps({ children: '좋은 평가 0회' }),
+      renderer.root.findAllByProps({ children: '좋은 평가 9회' }),
     ).not.toHaveLength(0);
     expect(
       renderer.root.findAllByProps({ children: '최근 신고 검토 없음' }),

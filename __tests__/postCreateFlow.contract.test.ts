@@ -18,6 +18,10 @@ const appLifecycleFiles = ['src/api/posts.ts', 'src/screens/profile/MySharesScre
   resolveProjectPath,
 );
 
+const backendContractHarnessPath = resolveProjectPath(
+  'scripts/validate-backend-feature-contracts.js',
+);
+
 describe('post creation flow contract', () => {
   it('does not expose direct creation as a product flow', () => {
     const filesWithDirectFlow = activeFlowContractFiles.filter(relativePath =>
@@ -28,10 +32,25 @@ describe('post creation flow contract', () => {
   });
 
   it('does not expose author manual completion as an app lifecycle action', () => {
-    const filesWithManualCompletion = appLifecycleFiles.filter(relativePath =>
+    const filesWithManualCompletion = [
+      ...appLifecycleFiles,
+      backendContractHarnessPath,
+    ].filter(relativePath =>
       /completePost|\/complete\b/.test(fs.readFileSync(relativePath, 'utf8')),
     );
 
     expect(filesWithManualCompletion).toEqual([]);
+  });
+
+  it('validates backend mutations through the QR lifecycle instead of direct flow', () => {
+    const harness = fs.readFileSync(backendContractHarnessPath, 'utf8');
+
+    expect(harness).not.toMatch(/flow:\s*['"]direct['"]/);
+    expect(harness).toMatch(/flow:\s*['"]fridge_qr['"]/);
+    expect(harness).toContain('/api/v1/inventory/confirm-store');
+    expect(harness).toContain('/api/v1/inventory/confirm-pickup');
+    expect(harness).toContain('/api/v1/share-requests/');
+    expect(harness).toContain('/review');
+    expect(harness).toContain('/report');
   });
 });

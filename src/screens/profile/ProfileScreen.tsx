@@ -12,8 +12,11 @@ import { useNavigation, type CompositeNavigationProp } from '@react-navigation/n
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuthStore } from '@/store/authStore';
-import { useTrustFeedbackStore } from '@/store/trustFeedbackStore';
 import { updateProfile } from '@/api/auth';
+import {
+  getUserTrustSummary,
+  type ProviderTrustSummaryResponse,
+} from '@/api/trust';
 import {
   DSButton,
   DSCard,
@@ -121,10 +124,11 @@ const ProfileScreen = () => {
   const user = useAuthStore(state => state.user);
   const setUser = useAuthStore(state => state.setUser);
   const logoutStore = useAuthStore(state => state.logout);
-  const trustReviews = useTrustFeedbackStore(state => state.reviews);
   const navigation = useNavigation<ProfileNavigation>();
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [trustSummary, setTrustSummary] =
+    useState<ProviderTrustSummaryResponse | null>(null);
   const [draftNickname, setDraftNickname] = useState(user?.nickname ?? '');
   const [draftProfileImageUrl, setDraftProfileImageUrl] = useState(
     user?.profileImageUrl ?? '',
@@ -132,18 +136,15 @@ const ProfileScreen = () => {
   const visibleAccountMenuItems = ACCOUNT_MENU_ITEMS.filter(
     item => item.id !== 'operator-console' || canAccessOperatorConsole(user),
   );
-  const trustBadges = useMemo(() => {
-    const userId = user?.id;
-    const providerReviews = Object.values(trustReviews).filter(
-      review => review.providerId === userId,
-    );
-    return getProviderTrustBadges({
-      completedShares: providerReviews.length,
-      positiveReviewCount: providerReviews.filter(
-        review => review.positiveTagIds.length > 0,
-      ).length,
-    });
-  }, [trustReviews, user?.id]);
+  const trustBadges = useMemo(
+    () =>
+      getProviderTrustBadges({
+        completedShares: trustSummary?.completedShares ?? 0,
+        positiveReviewCount: trustSummary?.positiveReviewCount ?? 0,
+        badges: trustSummary?.badges ?? [],
+      }),
+    [trustSummary],
+  );
 
   useEffect(() => {
     if (isEditingProfile) {
@@ -153,6 +154,34 @@ const ProfileScreen = () => {
     setDraftNickname(user?.nickname ?? '');
     setDraftProfileImageUrl(user?.profileImageUrl ?? '');
   }, [isEditingProfile, user?.nickname, user?.profileImageUrl]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    if (!user?.id) {
+      setTrustSummary(null);
+      return () => {
+        isMounted = false;
+      };
+    }
+
+    getUserTrustSummary(user.id)
+      .then(response => {
+        if (isMounted) {
+          setTrustSummary(response.data);
+        }
+      })
+      .catch(error => {
+        console.warn('Failed to fetch profile trust summary:', error);
+        if (isMounted) {
+          setTrustSummary(null);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.id]);
 
   const handleLogout = () => {
     Alert.alert('로그아웃', '정말 로그아웃 하시겠습니까?', [

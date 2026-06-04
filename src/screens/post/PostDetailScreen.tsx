@@ -34,9 +34,12 @@ import {
   getImageUrl,
   requestShare,
 } from '@/api/posts';
+import {
+  getUserTrustSummary,
+  type ProviderTrustSummaryResponse,
+} from '@/api/trust';
 import { useAuthStore } from '@/store/authStore';
 import { useFeedRefreshStore } from '@/store/feedRefreshStore';
-import { useTrustFeedbackStore } from '@/store/trustFeedbackStore';
 import type { Post } from '@/types';
 import { getProviderTrustBadges } from '@/features/trust/feedback';
 import { getApiErrorMessage } from '@/utils/apiError';
@@ -76,9 +79,10 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
   const requestNearbyPostsRefresh = useFeedRefreshStore(
     state => state.requestNearbyPostsRefresh,
   );
-  const trustReviews = useTrustFeedbackStore(state => state.reviews);
 
   const [post, setPost] = useState<Post | null>(null);
+  const [providerTrustSummary, setProviderTrustSummary] =
+    useState<ProviderTrustSummaryResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isRequesting, setIsRequesting] = useState(false);
@@ -90,6 +94,13 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
       const response = await getPostDetail(postId);
       if (response.success && response.data) {
         setPost(response.data);
+        try {
+          const trustResponse = await getUserTrustSummary(response.data.authorId);
+          setProviderTrustSummary(trustResponse.data);
+        } catch (error) {
+          console.warn('Failed to fetch provider trust summary', error);
+          setProviderTrustSummary(null);
+        }
       } else {
         Alert.alert(
           '오류',
@@ -260,14 +271,10 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
     : null;
   const canConfirmPickup =
     !isMyPost && post.status === 'requested' && !isRequestHoldExpired;
-  const providerReviews = Object.values(trustReviews).filter(
-    review => review.providerId === post.authorId,
-  );
   const trustBadges = getProviderTrustBadges({
-    completedShares: providerReviews.length,
-    positiveReviewCount: providerReviews.filter(
-      review => review.positiveTagIds.length > 0,
-    ).length,
+    completedShares: providerTrustSummary?.completedShares ?? 0,
+    positiveReviewCount: providerTrustSummary?.positiveReviewCount ?? 0,
+    badges: providerTrustSummary?.badges ?? [],
   });
   const daysLeft = Math.ceil(
     (new Date(post.expirationDate).getTime() - new Date().getTime()) /

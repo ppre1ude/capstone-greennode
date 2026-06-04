@@ -4,6 +4,7 @@ import ReactTestRenderer from 'react-test-renderer';
 import ProfileScreen from '@/screens/profile/ProfileScreen';
 import { useAuthStore } from '@/store/authStore';
 import { updateProfile } from '@/api/auth';
+import { getUserTrustSummary } from '@/api/trust';
 
 const mockParentNavigate = jest.fn();
 const mockNavigate = jest.fn();
@@ -19,8 +20,15 @@ jest.mock('@/api/auth', () => ({
   updateProfile: jest.fn(),
 }));
 
+jest.mock('@/api/trust', () => ({
+  getUserTrustSummary: jest.fn(),
+}));
+
 const mockedUpdateProfile = updateProfile as jest.MockedFunction<
   typeof updateProfile
+>;
+const mockedGetUserTrustSummary = getUserTrustSummary as jest.MockedFunction<
+  typeof getUserTrustSummary
 >;
 
 const findTouchableByText = (
@@ -86,6 +94,23 @@ describe('ProfileScreen operator console entry', () => {
         nickname: '테스터 수정',
         profileImageUrl: '/static/uploads/profile/avatar.jpg',
         updatedAt: '2026-05-27T00:00:00Z',
+      },
+    });
+    mockedGetUserTrustSummary.mockResolvedValue({
+      success: true,
+      message: '공급자 신뢰 요약 조회 성공',
+      data: {
+        userId: 1,
+        completedShares: 12,
+        positiveReviewCount: 9,
+        matchedPhotoCount: 8,
+        easyToFindCount: 7,
+        badges: [
+          'store_qr_verified',
+          'completed_pickup',
+          'positive_reviews',
+        ],
+        computedAt: '2026-06-04T12:10:00.000Z',
       },
     });
   });
@@ -233,10 +258,14 @@ describe('ProfileScreen operator console entry', () => {
 
     await ReactTestRenderer.act(async () => {
       renderer = ReactTestRenderer.create(<ProfileScreen />);
+      await Promise.resolve();
     });
 
     expectTextVisible(renderer!, '공급자 신뢰', true);
+    expect(mockedGetUserTrustSummary).toHaveBeenCalledWith(1);
     expectTextVisible(renderer!, 'QR 보관 인증', true);
+    expectTextVisible(renderer!, '수령 완료 12회', true);
+    expectTextVisible(renderer!, '좋은 평가 9회', true);
     expectTextVisible(renderer!, '최근 신고 검토 없음', false);
     expectTextVisible(renderer!, '신선도 온도', false);
 

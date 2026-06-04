@@ -20,8 +20,10 @@ import {
   type ShareReviewIssueTagId,
   type ShareReviewPositiveTagId,
 } from '@/features/trust/review';
+import { createShareReport, createShareReview } from '@/api/trust';
 import { useTrustFeedbackStore } from '@/store/trustFeedbackStore';
 import { colors } from '@/theme';
+import { getApiErrorMessage } from '@/utils/apiError';
 import { getHeaderTopPadding } from '@/utils/safeArea';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ShareFeedback'>;
@@ -48,6 +50,7 @@ const ShareFeedbackScreen = ({ route, navigation }: Props) => {
   const [issueTagIds, setIssueTagIds] = useState<ShareReviewIssueTagId[]>([]);
   const [reportReasonId, setReportReasonId] =
     useState<ShareReportReasonId | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const submitReview = useTrustFeedbackStore(state => state.submitReview);
   const submitReport = useTrustFeedbackStore(state => state.submitReport);
 
@@ -62,35 +65,69 @@ const ShareFeedbackScreen = ({ route, navigation }: Props) => {
     [mode],
   );
 
-  const handleSubmitReview = () => {
-    if (!canSubmitReview) {
+  const handleSubmitReview = async () => {
+    if (!canSubmitReview || isSubmitting) {
       return;
     }
 
-    submitReview({
-      requestId,
-      postId,
-      providerId,
-      positiveTagIds,
-      issueTagIds,
-    });
-    Alert.alert('평가 완료', '수령 경험이 공급자 신뢰에 반영되었습니다.');
-    navigation.goBack();
+    setIsSubmitting(true);
+    try {
+      const response = await createShareReview(requestId, {
+        positiveTagIds,
+        issueTagIds,
+      });
+      const review = response.data;
+
+      submitReview({
+        requestId: review?.requestId ?? requestId,
+        postId: review?.postId ?? postId,
+        providerId: review?.providerId ?? providerId,
+        positiveTagIds: review?.positiveTagIds ?? positiveTagIds,
+        issueTagIds: review?.issueTagIds ?? issueTagIds,
+      });
+      Alert.alert(
+        '평가 완료',
+        response.message || '수령 경험 평가가 저장되었습니다.',
+      );
+      navigation.goBack();
+    } catch (error) {
+      Alert.alert(
+        '평가 실패',
+        getApiErrorMessage(error, '수령 경험 평가를 저장하지 못했습니다.'),
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleSubmitReport = () => {
-    if (reportReasonId === null) {
+  const handleSubmitReport = async () => {
+    if (reportReasonId === null || isSubmitting) {
       return;
     }
 
-    submitReport({
-      requestId,
-      postId,
-      providerId,
-      reasonId: reportReasonId,
-    });
-    Alert.alert('신고 접수', '운영자 검토가 필요한 항목으로 기록했습니다.');
-    navigation.goBack();
+    setIsSubmitting(true);
+    try {
+      const response = await createShareReport(requestId, {
+        reasonId: reportReasonId,
+      });
+      const report = response.data;
+
+      submitReport({
+        requestId: report?.requestId ?? requestId,
+        postId: report?.postId ?? postId,
+        providerId: report?.providerId ?? providerId,
+        reasonId: report?.reasonId ?? reportReasonId,
+      });
+      Alert.alert('신고 접수', response.message || '신고가 접수되었습니다.');
+      navigation.goBack();
+    } catch (error) {
+      Alert.alert(
+        '신고 실패',
+        getApiErrorMessage(error, '신고를 접수하지 못했습니다.'),
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -183,7 +220,9 @@ const ShareFeedbackScreen = ({ route, navigation }: Props) => {
 
             <DSButton
               label="평가 제출"
-              disabled={!canSubmitReview}
+              disabled={!canSubmitReview || isSubmitting}
+              loading={isSubmitting}
+              loadingLabel="제출 중"
               onPress={handleSubmitReview}
               style={styles.submitButton}
             />
@@ -232,7 +271,9 @@ const ShareFeedbackScreen = ({ route, navigation }: Props) => {
             <DSButton
               label="신고 제출"
               color="danger"
-              disabled={!canSubmitReport}
+              disabled={!canSubmitReport || isSubmitting}
+              loading={isSubmitting}
+              loadingLabel="제출 중"
               onPress={handleSubmitReport}
               style={styles.submitButton}
             />

@@ -39,7 +39,8 @@
 | `src/features/trust/review.ts` | 평가 태그 타입과 라벨만 관리 |
 | `src/features/trust/report.ts` | 신고 사유, 신고 작업 상태, 판단 결과, 운영 조치만 관리 |
 | `src/features/trust/feedback.ts` | 평가 가능 조건과 공급자 신뢰 뱃지 계산만 관리 |
-| `src/store/trustFeedbackStore.ts` | 데모용 로컬 평가/신고 저장소 |
+| `src/api/trust.ts` | 실제 평가/신고 생성과 공급자 신뢰 요약 조회 API client |
+| `src/store/trustFeedbackStore.ts` | 현재 세션에서 평가 완료 표시를 유지하는 보조 캐시 |
 | `src/screens/trust/ShareFeedbackScreen.tsx` | 수령 완료 건의 평가/신고 입력 UI |
 
 구조 규칙:
@@ -107,10 +108,21 @@ open -> reviewing -> closed
 }
 ```
 
-상세 API 요청은 [BACKEND_TRUST_FEEDBACK_CONTRACT_REQUEST_2026-06-04.md](./BACKEND_TRUST_FEEDBACK_CONTRACT_REQUEST_2026-06-04.md)를 따른다.
+프론트는 아래 실제 API를 source of truth로 사용한다.
+
+```text
+POST /api/v1/share-requests/{requestId}/review
+POST /api/v1/share-requests/{requestId}/report
+GET  /api/v1/users/{userId}/trust-summary
+```
+
+`GET /users/{userId}/trust-summary`의 `badges`에 `store_qr_verified`가 있을 때만 `QR 보관 인증` 공개 뱃지를 표시한다. `completedShares`와 `positiveReviewCount`는 각각 `수령 완료 {n}회`, `좋은 평가 {n}회`로 표시한다. 신고 상태, 신고 건수, 제재 이력은 이 응답에 기대하지 않는다.
+
+상세 API 요청은 [BACKEND_TRUST_FEEDBACK_CONTRACT_REQUEST_2026-06-04.md](./BACKEND_TRUST_FEEDBACK_CONTRACT_REQUEST_2026-06-04.md)와 [BACKEND_TRUST_FEEDBACK_RESPONSE_2026-06-04.md](./BACKEND_TRUST_FEEDBACK_RESPONSE_2026-06-04.md)를 따른다.
 
 ## 검증 기준
 
-- `__tests__/shareFeedback.screen.test.tsx`: 신고 사유가 radio option으로 렌더링되고 단일 `reasonId`, `open`, `pending`, `none`으로 저장되는지 검증
+- `__tests__/trust.api.test.ts`: review/report/trust-summary endpoint와 request payload 검증
+- `__tests__/shareFeedback.screen.test.tsx`: 신고 사유가 radio option으로 렌더링되고 실제 API 호출 후 단일 `reasonId`, `open`, `pending`, `none`으로 캐시되는지 검증
 - `__tests__/trustFeedback.policy.test.ts`: 평가 태그와 신고 사유가 분리된 도메인 카탈로그인지, 신고 상태가 공개 뱃지로 노출되지 않는지 검증
 - Android 에뮬레이터 QA: 신고 기본/선택 화면 스크린샷으로 라디오 UI 확인

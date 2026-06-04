@@ -19,6 +19,7 @@ type FeedbackEligibility = {
 export type ProviderTrustSummary = {
   completedShares?: number;
   positiveReviewCount?: number;
+  badges?: string[];
 };
 
 export const canLeaveShareFeedback = (item: FeedbackEligibility): boolean =>
@@ -27,14 +28,20 @@ export const canLeaveShareFeedback = (item: FeedbackEligibility): boolean =>
 export const getProviderTrustBadges = ({
   completedShares = 0,
   positiveReviewCount = 0,
+  badges,
 }: ProviderTrustSummary): ProviderTrustBadge[] => {
-  return [
-    {
+  const trustBadges: ProviderTrustBadge[] = [];
+
+  if (badges?.includes('store_qr_verified')) {
+    trustBadges.push({
       id: 'store-qr-verified',
       label: 'QR 보관 인증',
       tone: 'primary',
       iconName: 'qrcode',
-    },
+    });
+  }
+
+  trustBadges.push(
     {
       id: 'completed-shares',
       label: `수령 완료 ${completedShares}회`,
@@ -47,5 +54,7 @@ export const getProviderTrustBadges = ({
       tone: 'success',
       iconName: 'heart',
     },
-  ];
+  );
+
+  return trustBadges;
 };
