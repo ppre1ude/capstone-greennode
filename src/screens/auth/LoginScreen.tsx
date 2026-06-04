@@ -10,7 +10,7 @@ import { View, StyleSheet, StatusBar, TouchableOpacity } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AuthStackParamList } from '@/navigation/types';
 import { DSButton, DSIcon, DSText } from '@/design-system';
-import { colors } from '@/theme';
+import { colors, fontFamily } from '@/theme';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 
@@ -182,6 +182,7 @@ const styles = StyleSheet.create({
   },
   termsText: {
     flex: 1,
+    fontFamily: fontFamily.regular,
     fontSize: 13,
     color: colors.textTertiary,
     lineHeight: 20,
