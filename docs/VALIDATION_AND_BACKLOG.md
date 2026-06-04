@@ -38,10 +38,10 @@
 
 - 분류: QA blocker
 - 배경: 프론트 연결은 끝났지만 최신 백엔드 live VM에서 실제 mutation matrix를 다시 닫아야 한다.
-- 현재 상태: 2026-05-28 `localhost:8080 -> NHN Cloud VM:80` SSH tunnel 연결 후 당시 mutate 하네스가 통과했다. 2026-06-03/04 백엔드 회신 반영으로 하네스는 direct/manual complete 경로를 제거하고 `pending_store -> confirm-store -> available -> request -> confirm-pickup -> completed`, trust review/report, operator inventory fixture 검증을 사용하도록 갱신했다. 최신 VM 재실행이 남아 있다.
+- 현재 상태: 2026-05-28 `localhost:8080 -> NHN Cloud VM:80` SSH tunnel 연결 후 당시 mutate 하네스가 통과했다. 2026-06-03/04 백엔드 회신 반영으로 하네스는 direct/manual complete 경로를 제거하고 `pending_store -> confirm-store -> available -> request -> confirm-pickup -> completed`, trust review/report, operator inventory fixture 검증을 사용하도록 갱신했다. 2026-06-04 read-only preflight는 `localhost:8080`의 `/openapi.json`과 `/docs`에 모두 닿지 않아 실패했다. 최신 VM 터널 연결 후 재실행이 남아 있다.
 - 기대 동작: 실제 VM에서 profile PATCH, my posts/share requests, QR lifecycle mutation, trust review/report, operator summary/items/dispose, 403/409 상태 규칙 matrix를 통과한다.
 - 검증 방법: tunnel(`localhost:8080 -> NHN Cloud VM:80`)을 연 뒤 `$env:FOODLINK_API_BASE_URL='http://localhost:8080'; $env:FOODLINK_QA_FRIDGE_ID='1'; $env:FOODLINK_QA_FRIDGE_PUBLIC_CODE='GJ-STATION-001'; npm run qa:backend-contracts -- --mutate`.
-- 산출물: `temp/backend-feature-contract-e2e-20260528T143053Z.json`.
+- 산출물: `temp/backend-feature-contract-e2e-20260528T143053Z.json`, `temp/backend-feature-contract-e2e-20260604T093822Z.json`(터널 미연결 preflight 실패).
 
 To-do:
 
