@@ -181,6 +181,30 @@ describe('LocationSetupScreen notification permission flow', () => {
     expect(copyStyle.flexShrink).toBe(1);
   });
 
+  it('renders GIS and GPS visual signals in the location map area', async () => {
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(renderLocationSetup());
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(findHostByTestId(renderer!, 'location-map-visual')).toBeTruthy();
+    expect(
+      renderer!.root.findAllByProps({ children: '동네 위치 확인' }),
+    ).not.toHaveLength(0);
+    expect(
+      renderer!.root.findAllByProps({ children: '정확도 우선' }),
+    ).not.toHaveLength(0);
+    expect(
+      renderer!.root.findAllByProps({ children: '35.1595, 126.9132' }),
+    ).not.toHaveLength(0);
+    expect(
+      renderer!.root.findAllByProps({ children: '공유 냉장고' }),
+    ).not.toHaveLength(0);
+  });
+
   it('keeps a recoverable in-screen path when Android location permission is denied', async () => {
     jest
       .spyOn(PermissionsAndroid, 'request')

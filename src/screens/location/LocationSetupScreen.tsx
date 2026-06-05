@@ -247,6 +247,16 @@ const LocationSetupScreen = ({ route, navigation }: Props) => {
       : notificationStatus === 'ready'
       ? '설정 완료'
       : '나눔 알림 받기';
+  const gpsStatusLabel = isFetching
+    ? 'GPS 탐색 중'
+    : location
+    ? '동네 위치 확인'
+    : '위치 확인 필요';
+  const coordinateLabel = location
+    ? `${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`
+    : locationIssue
+    ? '좌표 미확정'
+    : '위치 신호 대기';
 
   const handlePrimaryLocationIssueAction = () => {
     if (locationIssue === 'permissionBlocked') {
@@ -287,7 +297,60 @@ const LocationSetupScreen = ({ route, navigation }: Props) => {
       {/* 지도 영역 */}
       <View style={styles.mapArea}>
         {/* 배경 (실제 지도는 Phase 5에서 react-native-maps로 교체) */}
-        <View style={styles.mapPlaceholder}>
+        <View style={styles.mapPlaceholder} testID="location-map-visual">
+          <View style={styles.mapGridLayer}>
+            <View
+              style={[
+                styles.mapGridLine,
+                styles.mapGridHorizontal,
+                styles.mapGridHorizontalTop,
+              ]}
+            />
+            <View
+              style={[
+                styles.mapGridLine,
+                styles.mapGridHorizontal,
+                styles.mapGridHorizontalBottom,
+              ]}
+            />
+            <View
+              style={[
+                styles.mapGridLine,
+                styles.mapGridVertical,
+                styles.mapGridVerticalLeft,
+              ]}
+            />
+            <View
+              style={[
+                styles.mapGridLine,
+                styles.mapGridVertical,
+                styles.mapGridVerticalRight,
+              ]}
+            />
+          </View>
+
+          <View style={[styles.mapRoad, styles.mapRoadPrimary]} />
+          <View style={[styles.mapRoad, styles.mapRoadSecondary]} />
+          <View style={[styles.mapRoad, styles.mapRoadNeighborhood]} />
+          <View style={styles.mapWaterway} />
+
+          <View style={styles.gpsStatusChip}>
+            <DSIcon name="location-crosshairs" size="xsmall" color="info" />
+            <Text style={styles.gpsStatusText}>{gpsStatusLabel}</Text>
+          </View>
+
+          <View style={styles.coordinateChip}>
+            <Text style={styles.coordinateLabel}>정확도 우선</Text>
+            <Text style={styles.coordinateValue}>{coordinateLabel}</Text>
+          </View>
+
+          <View style={styles.fridgeMapMarker}>
+            <View style={styles.fridgeMarkerIcon}>
+              <DSIcon name="building" size="xsmall" color="primary" />
+            </View>
+            <Text style={styles.fridgeMarkerLabel}>공유 냉장고</Text>
+          </View>
+
           <DSIcon
             name="map-location-dot"
             size={60}

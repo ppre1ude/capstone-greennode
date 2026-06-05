@@ -102,6 +102,7 @@ To-do:
 
 - [x] Android emulator/실기기 screenshot에서 주요 fixed footer CTA가 system navigation bar와 겹치지 않는다. 2026-05-28 SM-S928N Android 15 release QA에서 QR `ScrollView` bounds `[0,304][1440,2952]`, `navigationBarBackground` bounds `[0,2952][1440,3120]`을 확인했고 scroll-bottom 상태의 QR action grid 전체가 y=2015~2351에 위치했다. 홈 탭 label도 y=2805~2852로 navigation bar 위에 있다. 증거는 `temp/android-device-qa-20260528T234844/21-inventory-qr-fixed.png`, `22-inventory-qr-fixed-bottom.png`, `23-home-tabbar-fixed.png`다.
 - [x] 지도에서 냉장고 선택 시 하단 primary surface가 하나로 정리되어 지도와 냉장고 내부 목록의 위계가 명확하다.
+- [x] 위치 설정 화면의 mock 지도는 도로망, 격자, GPS 상태, 좌표, 공유 냉장고 표식을 함께 보여 빈 지도 placeholder로 보이지 않는다. 2026-06-05 `Medium_Phone_API_36.1` release APK에서 `동네 위치 확인`, `정확도 우선`, `반경 2km`, `공유 냉장고`, 하단 알림 카드와 CTA가 한 화면에 겹침 없이 표시되는 것을 확인했다. 증거는 `.superpowers/brainstorm/codex-20260604225244/content/location-setup-gis-map-after.png`다.
 - [x] `InventoryQrScreen` 하단 `보관 QR 스캔`/`수령 QR 스캔`/`다른 냉장고 스캔`/`다시 시작` action을 safe-area 위로 올리거나 `DSScreenFooter` 패턴으로 옮긴다. QR `ScrollView` viewport와 메인 탭바에 Android navigation fallback inset 회귀 테스트를 추가했다.
 
 ## 활성 P1
