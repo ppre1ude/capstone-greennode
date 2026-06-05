@@ -73,6 +73,21 @@ const getTextContent = (renderer: ReactTestRenderer.ReactTestRenderer) =>
     .findAllByType(Text)
     .map(node => flattenText(node.props.children));
 
+const findTextNodeByText = (
+  renderer: ReactTestRenderer.ReactTestRenderer,
+  text: string,
+) => {
+  const textNode = renderer.root
+    .findAllByType(Text)
+    .find(node => flattenText(node.props.children) === text);
+
+  if (!textNode) {
+    throw new Error(`Text "${text}" not found`);
+  }
+
+  return textNode;
+};
+
 const hasCountdownBadge = (textContent: string[]) =>
   textContent.some(text => /^\d{2}:\d{2}$/.test(text));
 
@@ -539,6 +554,52 @@ describe('InventoryQrScreen', () => {
     expect(textContent).toContain('카메라로 QR 스캔');
     expect(textContent).not.toContain('보관 QR 인증');
     expect(textContent).not.toContain('라벨은 보관 인증 후 표시');
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
+  it('keeps the QR action heading compact and spaced from the scanner surface', async () => {
+    setPlatformOS('android');
+
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(
+        <InventoryQrScreen
+          navigation={{ goBack: jest.fn() } as any}
+          route={
+            {
+              params: {
+                mode: 'pickup',
+                postId: 10,
+                fridgePublicCode: 'GJ-STATION-001',
+                fridgeName: '광주역 앞 공유냉장고',
+                fridgeLocation: '광주 북구 중흥동',
+              },
+            } as any
+          }
+        />,
+      );
+    });
+
+    const actionTitleStyle = StyleSheet.flatten(
+      findTextNodeByText(renderer!, '수령 인증').props.style,
+    );
+    const actionFrameStyle = StyleSheet.flatten(
+      renderer!.root.findByProps({ testID: 'inventory-qr-action-frame' })
+        .props.style,
+    );
+    const fallbackTitleStyle = StyleSheet.flatten(
+      findTextNodeByText(renderer!, '냉장고 코드로 인증').props.style,
+    );
+
+    expect(actionTitleStyle.fontSize).toBe(14);
+    expect(actionTitleStyle.fontWeight).toBe('700');
+    expect(actionFrameStyle.marginTop).toBe(12);
+    expect(fallbackTitleStyle.fontSize).toBe(15);
+    expect(fallbackTitleStyle.textAlign).toBe('left');
 
     await ReactTestRenderer.act(async () => {
       renderer?.unmount();

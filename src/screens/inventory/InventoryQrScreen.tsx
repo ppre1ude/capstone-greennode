@@ -33,7 +33,7 @@ import {
 import { confirmPickup, confirmStore } from '@/api/inventory';
 import type { ConfirmPickupResult, ConfirmStoreResult } from '@/api/inventory';
 import { useFeedRefreshStore } from '@/store/feedRefreshStore';
-import { colors } from '@/theme';
+import { colors, spacing } from '@/theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'InventoryQr'>;
 type InventoryQrRouteParams = RootStackParamList['InventoryQr'];
@@ -372,15 +372,22 @@ const InventoryQrContent = ({ navigation, params }: InventoryQrContentProps) => 
           testID="inventory-qr-progress"
         />
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{actionCopy.sectionTitle}</Text>
+        <View style={styles.qrActionSection}>
+          <View style={styles.qrActionHeader}>
+            <View style={styles.qrActionAccent} />
+            <Text style={styles.qrActionTitle}>{actionCopy.sectionTitle}</Text>
+          </View>
 
-          <QrScannerShell
-            enableNativeScanner
-            key={`${scanMode}-${scannerSession}`}
-            onValidScan={handleValidScan}
-            testID="inventory-qr-scanner"
-          />
+          <View
+            testID="inventory-qr-action-frame"
+            style={styles.qrActionFrame}>
+            <QrScannerShell
+              enableNativeScanner
+              key={`${scanMode}-${scannerSession}`}
+              onValidScan={handleValidScan}
+              testID="inventory-qr-scanner"
+            />
+          </View>
 
           <Text style={styles.scanMessage}>{scanMessage}</Text>
           {isConfirming ? (
@@ -579,11 +586,37 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.textSecondary,
   },
+  qrActionSection: {
+    backgroundColor: colors.background,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    padding: spacing.lg,
+  },
+  qrActionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  qrActionAccent: {
+    width: 4,
+    height: 16,
+    borderRadius: 999,
+    backgroundColor: colors.secondary,
+  },
+  qrActionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  qrActionFrame: {
+    marginTop: spacing.md,
+  },
   scanMessage: {
-    marginTop: 12,
+    marginTop: 10,
     fontSize: 13,
     lineHeight: 19,
-    color: colors.textPrimary,
+    color: colors.textSecondary,
   },
   confirmingRow: {
     flexDirection: 'row',

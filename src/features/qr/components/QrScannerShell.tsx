@@ -17,6 +17,7 @@ import {
   useCameraPermission,
   useObjectOutput,
 } from 'react-native-vision-camera';
+import { colors, spacing } from '@/theme';
 import { parseFoodLinkQrPayload } from '../utils/qrPayload';
 import type { FridgeQrVerificationTarget } from '../types';
 
@@ -251,13 +252,14 @@ const styles = StyleSheet.create({
   },
   scanFrame: {
     alignItems: 'center',
-    borderColor: '#1E623B',
+    backgroundColor: '#F8FCF4',
+    borderColor: '#DDEBD9',
     borderRadius: 8,
-    borderWidth: 2,
+    borderWidth: 1,
     minHeight: 160,
     justifyContent: 'center',
     overflow: 'hidden',
-    padding: 16,
+    padding: spacing.md,
     width: '100%',
   },
   nativeFallback: {
@@ -305,23 +307,23 @@ const styles = StyleSheet.create({
   },
   manualCodePanel: {
     alignItems: 'stretch',
-    backgroundColor: '#F8FBF8',
+    backgroundColor: 'transparent',
     borderRadius: 8,
-    gap: 10,
-    padding: 14,
+    gap: spacing.sm,
+    padding: 0,
     width: '100%',
   },
   manualCodeTitle: {
-    color: '#1A1A1A',
-    fontSize: 17,
-    fontWeight: '800',
-    textAlign: 'center',
+    color: colors.textPrimary,
+    fontSize: 15,
+    fontWeight: '700',
+    textAlign: 'left',
   },
   manualCodeText: {
-    color: '#666666',
-    fontSize: 13,
-    lineHeight: 19,
-    textAlign: 'center',
+    color: colors.textSecondary,
+    fontSize: 12,
+    lineHeight: 18,
+    textAlign: 'left',
   },
   manualCodeInput: {
     minHeight: 44,
