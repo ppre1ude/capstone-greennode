@@ -1,10 +1,18 @@
 import React from 'react';
-import { Text, TouchableOpacity } from 'react-native';
+import {
+  Platform,
+  Text,
+  TextInput,
+  TouchableOpacity,
+} from 'react-native';
 import ReactTestRenderer from 'react-test-renderer';
 
 let mockHasCameraPermission = true;
 let mockCameraDevice: unknown = { id: 'back' };
 const mockRequestCameraPermission = jest.fn();
+const mockUseObjectOutput = jest.fn((_options?: unknown) => ({
+  testID: 'mock-object-output',
+}));
 
 jest.mock('react-native-vision-camera', () => {
   const ReactForMock = require('react');
@@ -20,7 +28,7 @@ jest.mock('react-native-vision-camera', () => {
       hasPermission: mockHasCameraPermission,
       requestPermission: mockRequestCameraPermission,
     })),
-    useObjectOutput: jest.fn(() => ({ testID: 'mock-object-output' })),
+    useObjectOutput: (options: unknown) => mockUseObjectOutput(options),
   };
 });
 
@@ -129,10 +137,23 @@ describe('buildFridgeQrVerificationUrl', () => {
 });
 
 describe('QrScannerShell', () => {
+  const originalPlatformOS = Platform.OS;
+
+  const setPlatformOS = (os: typeof Platform.OS) => {
+    Object.defineProperty(Platform, 'OS', {
+      configurable: true,
+      value: os,
+    });
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
     mockHasCameraPermission = true;
     mockCameraDevice = { id: 'back' };
+    mockUseObjectOutput.mockImplementation(() => ({
+      testID: 'mock-object-output',
+    }));
+    setPlatformOS(originalPlatformOS);
   });
 
   it('calls onValidScan with a parsed fridge target when rawValue is valid', async () => {
@@ -243,6 +264,66 @@ describe('QrScannerShell', () => {
         .map(node => node.props.children)
         .join(''),
     ).toContain('후면 카메라를 찾을 수 없습니다');
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
+  it('allows Android users to submit a fridge code when native object output is unavailable', async () => {
+    setPlatformOS('android');
+    mockUseObjectOutput.mockImplementation(() => {
+      throw new Error('CameraObjectOutput is not available on Android');
+    });
+    const onValidScan = jest.fn();
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(
+        React.createElement(QrScannerShell, {
+          testID: 'qr-shell',
+          enableNativeScanner: true,
+          onValidScan,
+        }),
+      );
+      await Promise.resolve();
+    });
+
+    const visibleText = renderer!.root
+      .findAllByType(Text)
+      .map(node => node.props.children)
+      .join('');
+
+    expect(visibleText).toContain('냉장고 코드로 인증');
+    expect(mockUseObjectOutput).not.toHaveBeenCalled();
+
+    await ReactTestRenderer.act(async () => {
+      renderer!.root
+        .findByType(TextInput)
+        .props.onChangeText('FL-DRAGON-01');
+      await Promise.resolve();
+    });
+
+    const submitButton = renderer!.root.findAllByType(TouchableOpacity).find(
+      node =>
+        node
+          .findAllByType(Text)
+          .some(textNode => textNode.props.children === '코드로 인증'),
+    );
+
+    expect(submitButton).toBeTruthy();
+
+    await ReactTestRenderer.act(async () => {
+      submitButton!.props.onPress();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(onValidScan).toHaveBeenCalledWith({
+      type: 'fridge-verification',
+      fridgePublicCode: 'FL-DRAGON-01',
+      source: 'plain-code',
+    });
 
     await ReactTestRenderer.act(async () => {
       renderer?.unmount();

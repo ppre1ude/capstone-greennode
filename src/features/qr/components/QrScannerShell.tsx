@@ -1,5 +1,12 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import {
   Camera,
   isScannedCode,
@@ -35,8 +42,21 @@ export const QrScannerShell = ({
 }: QrScannerShellProps) => {
   const deliveredRawValueRef = useRef<string | null>(null);
   const [nativeRawValue, setNativeRawValue] = useState<string | null>(null);
+  const [manualFridgeCode, setManualFridgeCode] = useState('');
   const scanValue = rawValue ?? lastScannedValue ?? nativeRawValue ?? null;
   const visibleLastScannedValue = lastScannedValue ?? rawValue ?? null;
+  const nativeObjectOutputUnavailable =
+    enableNativeScanner && Platform.OS === 'android';
+  const normalizedManualFridgeCode = manualFridgeCode.trim();
+  const canSubmitManualFridgeCode = normalizedManualFridgeCode.length > 0;
+
+  const handleSubmitManualFridgeCode = useCallback(() => {
+    if (!canSubmitManualFridgeCode) {
+      return;
+    }
+
+    setNativeRawValue(normalizedManualFridgeCode);
+  }, [canSubmitManualFridgeCode, normalizedManualFridgeCode]);
 
   useEffect(() => {
     if (typeof scanValue !== 'string') {
@@ -63,16 +83,56 @@ export const QrScannerShell = ({
   return (
     <View testID={testID} style={styles.container}>
       <View style={styles.scanFrame}>
-        {enableNativeScanner ? (
-          <NativeQrScanner
-            onRawValue={setNativeRawValue}
-            testID={`${testID}-native-camera`}
-          />
-        ) : null}
-        <Text style={styles.title}>냉장고 QR 스캔</Text>
-        <Text style={styles.description}>
-          공유 냉장고에 붙은 FoodLink QR을 카메라에 맞춰주세요.
-        </Text>
+        {nativeObjectOutputUnavailable ? (
+          <View style={styles.manualCodePanel}>
+            <Text style={styles.manualCodeTitle}>냉장고 코드로 인증</Text>
+            <Text style={styles.manualCodeText}>
+              QR 자동 인식이 지원되지 않는 환경에서는 냉장고에 적힌
+              FoodLink 코드를 입력해주세요.
+            </Text>
+            <TextInput
+              autoCapitalize="characters"
+              autoCorrect={false}
+              onChangeText={setManualFridgeCode}
+              onSubmitEditing={handleSubmitManualFridgeCode}
+              placeholder="예: FL-DRAGON-01"
+              placeholderTextColor="#999999"
+              returnKeyType="done"
+              style={styles.manualCodeInput}
+              value={manualFridgeCode}
+            />
+            <TouchableOpacity
+              disabled={!canSubmitManualFridgeCode}
+              onPress={handleSubmitManualFridgeCode}
+              style={[
+                styles.manualCodeButton,
+                !canSubmitManualFridgeCode &&
+                  styles.manualCodeButtonDisabled,
+              ]}>
+              <Text
+                style={[
+                  styles.manualCodeButtonText,
+                  !canSubmitManualFridgeCode &&
+                    styles.manualCodeButtonTextDisabled,
+                ]}>
+                코드로 인증
+              </Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <>
+            {enableNativeScanner ? (
+              <NativeQrScanner
+                onRawValue={setNativeRawValue}
+                testID={`${testID}-native-camera`}
+              />
+            ) : null}
+            <Text style={styles.title}>냉장고 QR 스캔</Text>
+            <Text style={styles.description}>
+              공유 냉장고에 붙은 FoodLink QR을 카메라에 맞춰주세요.
+            </Text>
+          </>
+        )}
       </View>
       {visibleLastScannedValue ? (
         <Text testID={`${testID}-last-value`} style={styles.lastValue}>
@@ -162,11 +222,8 @@ const NativeQrScanner = ({ onRawValue, testID }: NativeQrScannerProps) => {
 const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E9ECEF',
-    borderRadius: 8,
-    borderWidth: 1,
-    padding: 16,
+    backgroundColor: 'transparent',
+    width: '100%',
   },
   scanFrame: {
     alignItems: 'center',
@@ -199,6 +256,59 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
     textAlign: 'center',
+  },
+  manualCodePanel: {
+    alignItems: 'stretch',
+    backgroundColor: '#F8FBF8',
+    borderRadius: 8,
+    gap: 10,
+    padding: 14,
+    width: '100%',
+  },
+  manualCodeTitle: {
+    color: '#1A1A1A',
+    fontSize: 17,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+  manualCodeText: {
+    color: '#666666',
+    fontSize: 13,
+    lineHeight: 19,
+    textAlign: 'center',
+  },
+  manualCodeInput: {
+    minHeight: 44,
+    borderColor: '#DDE5DD',
+    borderRadius: 8,
+    borderWidth: 1,
+    backgroundColor: '#FFFFFF',
+    color: '#1A1A1A',
+    fontSize: 14,
+    fontWeight: '700',
+    paddingHorizontal: 12,
+    textAlign: 'center',
+  },
+  manualCodeButton: {
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 8,
+    backgroundColor: '#1E623B',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  manualCodeButtonDisabled: {
+    backgroundColor: '#E9ECEF',
+  },
+  manualCodeButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+  manualCodeButtonTextDisabled: {
+    color: '#999999',
   },
   permissionButton: {
     minHeight: 40,

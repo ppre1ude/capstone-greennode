@@ -335,10 +335,10 @@ const InventoryQrContent = ({ navigation, params }: InventoryQrContentProps) => 
           { paddingBottom: contentBottomPadding },
         ]}>
         <View style={styles.notice}>
-          <Text style={styles.noticeTitle}>QR 인증 준비</Text>
+          <Text style={styles.noticeTitle}>냉장고 앞에서 확인</Text>
           <Text style={styles.noticeText}>
-            선택한 냉장고의 QR을 스캔하면 보관 또는 수령 상태가
-            업데이트됩니다.
+            선택한 냉장고의 QR 또는 FoodLink 코드를 확인하면 보관/수령
+            상태가 업데이트됩니다.
           </Text>
         </View>
 
@@ -535,22 +535,22 @@ const styles = StyleSheet.create({
     color: colors.textOnPrimary,
   },
   notice: {
-    backgroundColor: '#FFF7ED',
+    backgroundColor: '#F8FCF4',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#FED7AA',
-    padding: 14,
+    borderColor: '#DDEBD9',
+    padding: 12,
   },
   noticeTitle: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#9A3412',
+    color: colors.primary,
   },
   noticeText: {
     marginTop: 4,
     fontSize: 12,
     lineHeight: 18,
-    color: '#9A3412',
+    color: colors.textSecondary,
   },
   section: {
     backgroundColor: colors.background,
