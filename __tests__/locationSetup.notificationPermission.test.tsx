@@ -181,6 +181,40 @@ describe('LocationSetupScreen notification permission flow', () => {
     expect(copyStyle.flexShrink).toBe(1);
   });
 
+  it('uses the design palette to make the notification prompt feel intentional', async () => {
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(renderLocationSetup());
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    const notificationPanel = findHostByTestId(
+      renderer!,
+      'location-notification-panel',
+    );
+    const panelStyle = StyleSheet.flatten(
+      notificationPanel.props.style,
+    ) as ViewStyle;
+    expect(panelStyle.backgroundColor).toBe('#F8FCF4');
+    expect(panelStyle.borderColor).toBe('rgba(98, 142, 78, 0.24)');
+
+    const iconSurface = findHostByTestId(
+      renderer!,
+      'location-notification-icon',
+    );
+    const iconStyle = StyleSheet.flatten(iconSurface.props.style) as ViewStyle;
+    expect(iconStyle.backgroundColor).toBe('#E8F5E9');
+
+    const accent = findHostByTestId(
+      renderer!,
+      'location-notification-accent',
+    );
+    const accentStyle = StyleSheet.flatten(accent.props.style) as ViewStyle;
+    expect(accentStyle.backgroundColor).toBe('#ABB863');
+  });
+
   it('renders GIS and GPS visual signals in the location map area', async () => {
     let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
 

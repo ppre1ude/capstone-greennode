@@ -130,14 +130,18 @@ const ProfileScreen = () => {
   const visibleAccountMenuItems = ACCOUNT_MENU_ITEMS.filter(
     item => item.id !== 'operator-console' || canAccessOperatorConsole(user),
   );
+  const currentTrustSummary =
+    trustSummary?.userId === user?.id ? trustSummary : null;
+  const completedSharesCount = currentTrustSummary?.completedShares ?? 0;
+  const positiveReviewCount = currentTrustSummary?.positiveReviewCount ?? 0;
   const trustBadges = useMemo(
     () =>
       getProviderTrustBadges({
-        completedShares: trustSummary?.completedShares ?? 0,
-        positiveReviewCount: trustSummary?.positiveReviewCount ?? 0,
-        badges: trustSummary?.badges ?? [],
+        completedShares: completedSharesCount,
+        positiveReviewCount,
+        badges: currentTrustSummary?.badges ?? [],
       }),
-    [trustSummary],
+    [completedSharesCount, positiveReviewCount, currentTrustSummary?.badges],
   );
 
   useEffect(() => {
@@ -159,10 +163,15 @@ const ProfileScreen = () => {
       };
     }
 
-    getUserTrustSummary(user.id)
+    const requestedUserId = user.id;
+    setTrustSummary(null);
+    getUserTrustSummary(requestedUserId)
       .then(response => {
         if (isMounted) {
-          setTrustSummary(response.data);
+          const summary = response.data;
+          setTrustSummary(
+            summary?.userId === requestedUserId ? summary : null,
+          );
         }
       })
       .catch(error => {
@@ -366,10 +375,10 @@ const ProfileScreen = () => {
           <DSCard variant="plain" style={styles.trustBox}>
             <View style={styles.trustHeader}>
               <DSText variant="bodyBold" style={styles.trustTitle}>
-                공급자 신뢰
+                나눔 신뢰 지표
               </DSText>
               <DSChip
-                label="QR 기반"
+                label="QR 인증"
                 tone="primary"
                 size="small"
                 style={styles.trustScore}
@@ -391,7 +400,7 @@ const ProfileScreen = () => {
               variant="small"
               color="textTertiary"
               style={styles.trustDesc}>
-              QR 생명주기와 수령 경험 평가가 공급자 신뢰로 쌓입니다.
+              나눔 약속과 받은 긍정 평가가 건강한 나눔 커뮤니티를 만듭니다.
             </DSText>
           </DSCard>
 
@@ -405,9 +414,7 @@ const ProfileScreen = () => {
                 수령 완료
               </DSText>
               <DSChip
-                label={
-                  trustSummary ? `${trustSummary.completedShares}건` : '확인 중'
-                }
+                label={`${completedSharesCount}건`}
                 size="large"
                 style={styles.statValue}
               />
@@ -418,14 +425,10 @@ const ProfileScreen = () => {
                 variant="caption"
                 color="textSecondary"
                 style={styles.statTitle}>
-                좋은 평가
+                긍정 평가
               </DSText>
               <DSChip
-                label={
-                  trustSummary
-                    ? `${trustSummary.positiveReviewCount}건`
-                    : '확인 중'
-                }
+                label={`${positiveReviewCount}건`}
                 size="large"
                 style={styles.statValue}
               />

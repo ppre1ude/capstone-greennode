@@ -50,7 +50,7 @@ export const getProviderTrustBadges = ({
     },
     {
       id: 'positive-reviews',
-      label: `좋은 평가 ${positiveReviewCount}회`,
+      label: `긍정 평가 ${positiveReviewCount}회`,
       tone: 'success',
       iconName: 'heart',
     },

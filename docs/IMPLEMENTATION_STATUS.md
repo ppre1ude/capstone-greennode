@@ -37,7 +37,7 @@
 
 - 수령 QR 인증으로 `completed`가 된 받은 나눔에만 `평가하기`/`신고하기`를 노출하는 프론트 데모를 추가했다.
 - 평가는 별점 없이 태그 기반으로 처리한다. 긍정 태그와 불만족 태그를 분리하고, 신고는 라디오형 단일 사유와 `open`, `pending`, `none` 상태를 가진 별도 운영자 검토 요청으로 저장한다.
-- 나눔 상세와 프로필에 `공급자 신뢰` 뱃지를 노출한다. 공개 뱃지는 `QR 보관 인증`, `수령 완료`, `좋은 평가`처럼 긍정/검증 신호만 포함하고 신고 건수/제재 이력은 노출하지 않는다. 현재 데모는 로컬 Zustand 상태로 즉시 반영하고, 신뢰 피드백 운영 모델은 [TRUST_FEEDBACK_OPERATING_MODEL.md](./TRUST_FEEDBACK_OPERATING_MODEL.md), 백엔드 요청 계약은 [BACKEND_TRUST_FEEDBACK_CONTRACT_REQUEST_2026-06-04.md](./BACKEND_TRUST_FEEDBACK_CONTRACT_REQUEST_2026-06-04.md)에 분리했다.
+- 나눔 상세와 프로필에 `나눔 신뢰 지표` 뱃지를 노출한다. 공개 뱃지는 `QR 보관 인증`, `수령 완료`, `긍정 평가`처럼 긍정/검증 신호만 포함하고 신고 건수/제재 이력은 노출하지 않는다. 현재 데모는 로컬 Zustand 상태로 즉시 반영하고, 신뢰 피드백 운영 모델은 [TRUST_FEEDBACK_OPERATING_MODEL.md](./TRUST_FEEDBACK_OPERATING_MODEL.md), 백엔드 요청 계약은 [BACKEND_TRUST_FEEDBACK_CONTRACT_REQUEST_2026-06-04.md](./BACKEND_TRUST_FEEDBACK_CONTRACT_REQUEST_2026-06-04.md)에 분리했다.
 
 ## 2026-05-29 Post-MVP 백엔드 회신 반영
 
@@ -207,7 +207,7 @@
 | 나눔 신청                  | 프론트 코드 연동 완료, 실제 기기 QA 통과 | 프론트는 `requestShare(postId)`, 상세 CTA, 201/403/409 UX, 홈/지도 refresh store를 구현했다. 2026-05-08 실제 Android 기기에서 신청 완료 alert, 상세 `신청 접수` 전환, 지도 냉장고 내부 목록 즉시 제거를 확인했다. |
 | FCM                        | debug/release/physical/emulator QA 통과 | 2026-05-21 emulator QA에서 `share_created`, `share_requested` 실제 send success 1 / failure 0, foreground 수신/로컬 알림 탭 기록, background system notification 표시와 tap의 `PostDetail` 라우팅을 확인했다. 2026-05-25 실기기+emulator 2계정 QA에서 debug foreground/background/terminated, 기존 task onNewIntent, fresh install, 로그아웃 후 로그인 defer, release background/process-killed/lockscreen tap routing, Android 14 API 34 Pixel AVD release background/stop-app tap routing을 확인했다. Android 13 또는 추가 OEM은 참고 매트릭스다. |
 | 채팅                       | 보류                                     | 정적 채팅 mock 데이터는 제거했다. WebSocket/API 계약은 없다. |
-| 통계/탄소 절감             | 정리됨                                   | 실제 지표 API가 없는 홈/프로필 mock 숫자는 제거했다. 홈은 주변 나눔/진행 중인 나눔, 프로필은 수령 완료/좋은 평가 신뢰 요약을 표시한다. impact 숫자는 live VM 확인 전까지 연결하지 않는다. |
+| 통계/탄소 절감             | 정리됨                                   | 실제 지표 API가 없는 홈/프로필 mock 숫자는 제거했다. 홈은 주변 나눔/진행 중인 나눔, 프로필은 수령 완료/긍정 평가 신뢰 요약을 표시한다. impact 숫자는 live VM 확인 전까지 연결하지 않는다. |
 | 검색                       | 부분 구현, 서버 검색 Post-MVP            | MVP 검색은 홈 나눔 식재료명/냉장고명 로컬 필터와 지도 공유 냉장고 이름/주소 로컬 필터로 제한했다. 2026-05-23 백엔드 회신 기준 서버 검색은 MVP 미포함이며, 필요 시 nearby API의 optional `q` 파라미터로 확장한다. |
 
 ---

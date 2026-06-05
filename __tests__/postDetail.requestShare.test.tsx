@@ -218,7 +218,7 @@ describe('PostDetailScreen share request', () => {
 
     expect(mockedGetUserTrustSummary).toHaveBeenCalledWith(1);
     expect(
-      renderer.root.findAllByProps({ children: '공급자 신뢰' }),
+      renderer.root.findAllByProps({ children: '나눔 신뢰 지표' }),
     ).not.toHaveLength(0);
     expect(
       renderer.root.findAllByProps({ children: 'QR 보관 인증' }),
@@ -227,7 +227,7 @@ describe('PostDetailScreen share request', () => {
       renderer.root.findAllByProps({ children: '수령 완료 12회' }),
     ).not.toHaveLength(0);
     expect(
-      renderer.root.findAllByProps({ children: '좋은 평가 9회' }),
+      renderer.root.findAllByProps({ children: '긍정 평가 9회' }),
     ).not.toHaveLength(0);
     expect(
       renderer.root.findAllByProps({ children: '최근 신고 검토 없음' }),

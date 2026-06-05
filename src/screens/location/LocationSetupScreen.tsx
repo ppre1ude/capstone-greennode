@@ -422,16 +422,27 @@ const LocationSetupScreen = ({ route, navigation }: Props) => {
           padded={false}
           style={styles.notificationPanel}>
           <View
-            testID="location-notification-copy"
-            style={styles.notificationTextGroup}>
-            <Text style={styles.notificationTitle}>나눔 알림</Text>
-            <Text style={styles.notificationHint}>
-              {notificationStatus === 'ready'
-                ? '알림 받을 준비가 됐어요'
-                : notificationStatus === 'unavailable'
-                ? '알림 권한이 꺼져 있어요'
-                : '근처 나눔과 신청 소식을 알려드릴게요'}
-            </Text>
+            testID="location-notification-accent"
+            style={styles.notificationAccent}
+          />
+          <View style={styles.notificationHeaderRow}>
+            <View
+              testID="location-notification-icon"
+              style={styles.notificationIconSurface}>
+              <DSIcon name="bell" size="small" color="primary" />
+            </View>
+            <View
+              testID="location-notification-copy"
+              style={styles.notificationTextGroup}>
+              <Text style={styles.notificationTitle}>나눔 알림</Text>
+              <Text style={styles.notificationHint}>
+                {notificationStatus === 'ready'
+                  ? '알림 받을 준비가 됐어요'
+                  : notificationStatus === 'unavailable'
+                  ? '알림 권한이 꺼져 있어요'
+                  : '근처 나눔과 신청 소식을 알려드릴게요'}
+              </Text>
+            </View>
           </View>
           <DSButton
             label={notificationButtonLabel}

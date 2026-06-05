@@ -367,7 +367,7 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
           </Text>
 
           <View style={styles.trustSection}>
-            <Text style={styles.sectionTitle}>공급자 신뢰</Text>
+            <Text style={styles.sectionTitle}>나눔 신뢰 지표</Text>
             <View style={styles.trustBadgeWrap}>
               {trustBadges.map(badge => (
                 <DSChip
@@ -381,8 +381,8 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
               ))}
             </View>
             <Text style={styles.trustDescription}>
-              QR 보관과 수령 인증 이후의 평가가 쌓이면 이 공급자의 신뢰
-              신호로 반영됩니다.
+              나눔 약속과 받은 긍정 평가가 건강한 나눔 커뮤니티를
+              만듭니다.
             </Text>
           </View>
         </View>

@@ -814,7 +814,7 @@ Authorization: Bearer {token}
 
 - `badges`에 `store_qr_verified`가 있으면 `QR 보관 인증` 뱃지 표시.
 - `completedShares`는 `수령 완료 {n}회`.
-- `positiveReviewCount`는 `좋은 평가 {n}회`.
+- `positiveReviewCount`는 사용자-facing 화면에서 `긍정 평가 {n}회`.
 - 신고 처리 상태, 신고 건수, 제재 이력은 공개 상세/프로필에 표시하지 않는다.
 
 ---

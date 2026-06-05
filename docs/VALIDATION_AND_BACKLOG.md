@@ -102,7 +102,9 @@ To-do:
 
 - [x] Android emulator/실기기 screenshot에서 주요 fixed footer CTA가 system navigation bar와 겹치지 않는다. 2026-05-28 SM-S928N Android 15 release QA에서 QR `ScrollView` bounds `[0,304][1440,2952]`, `navigationBarBackground` bounds `[0,2952][1440,3120]`을 확인했고 scroll-bottom 상태의 QR action grid 전체가 y=2015~2351에 위치했다. 홈 탭 label도 y=2805~2852로 navigation bar 위에 있다. 증거는 `temp/android-device-qa-20260528T234844/21-inventory-qr-fixed.png`, `22-inventory-qr-fixed-bottom.png`, `23-home-tabbar-fixed.png`다.
 - [x] 지도에서 냉장고 선택 시 하단 primary surface가 하나로 정리되어 지도와 냉장고 내부 목록의 위계가 명확하다.
-- [x] 위치 설정 화면의 mock 지도는 도로망, 격자, GPS 상태, 좌표, 공유 냉장고 표식을 함께 보여 빈 지도 placeholder로 보이지 않는다. 2026-06-05 `Medium_Phone_API_36.1` release APK에서 `동네 위치 확인`, `정확도 우선`, `반경 2km`, `공유 냉장고`, 하단 알림 카드와 CTA가 한 화면에 겹침 없이 표시되는 것을 확인했다. 증거는 `.superpowers/brainstorm/codex-20260604225244/content/location-setup-gis-map-after.png`다.
+- [x] 위치 설정 화면의 mock 지도는 도로망, 격자, GPS 상태, 좌표, 공유 냉장고 표식을 함께 보여 빈 지도 placeholder로 보이지 않는다. 2026-06-05 `Medium_Phone_API_36.1` release APK에서 `동네 위치 확인`, `정확도 우선`, `반경 2km`, `공유 냉장고`, 하단 알림 카드와 CTA가 한 화면에 겹침 없이 표시되는 것을 확인했다. 증거는 `docs/qa-evidence/ui-polish-20260605/location-setup-gis-map-after.png`다.
+- [x] 위치 설정 하단 알림 패널은 `DESIGN_SYSTEM.md` 팔레트 규칙에 맞춰 연한 surface tint, accent 상단 라인, primaryLight 아이콘 배지를 사용한다. 2026-06-05 `Medium_Phone_API_36.1` release APK에서 지도, 위치 카드, 알림 패널, CTA가 겹치지 않는 것을 확인했다. 증거는 `docs/qa-evidence/ui-polish-20260605/location-notification-panel-polish.png`다.
+- [x] 프로필 나눔 신뢰 지표는 trust-summary 조회 대기/실패 시 `확인 중` placeholder 없이 `0회`/`0건` fallback을 일관되게 표시한다. 2026-06-05 `Medium_Phone_API_36.1` release APK에서 공개 신고/제재 정보 없이 수령 완료와 긍정 평가 0건만 표시되는 것을 확인했다. 증거는 `docs/qa-evidence/ui-polish-20260605/profile-trust-zero-counters.png`다.
 - [x] `InventoryQrScreen` 하단 `보관 QR 스캔`/`수령 QR 스캔`/`다른 냉장고 스캔`/`다시 시작` action을 safe-area 위로 올리거나 `DSScreenFooter` 패턴으로 옮긴다. QR `ScrollView` viewport와 메인 탭바에 Android navigation fallback inset 회귀 테스트를 추가했다.
 
 ## 활성 P1
@@ -196,13 +198,13 @@ To-do:
 ### 실제 지표와 탄소 절감 표시
 
 - 분류: 정책/데이터 계약
-- 배경: MVP에서는 mock 통계와 탄소 절감 표시를 운영성 UI에서 제거했다. 홈은 주변 나눔/진행 중인 나눔, 프로필은 수령 완료/좋은 평가 신뢰 요약처럼 이미 연결된 운영 지표만 보여준다. 2026-05-29 결정으로 환경 성취 지표는 backend-computed estimate로만 노출한다. 백엔드 회신은 impact를 구현 완료로 요약했지만 본문에는 완전 미구현/개발 계획으로 적어 상태가 상충한다.
+- 배경: MVP에서는 mock 통계와 탄소 절감 표시를 운영성 UI에서 제거했다. 홈은 주변 나눔/진행 중인 나눔, 프로필은 수령 완료/긍정 평가 신뢰 요약처럼 이미 연결된 운영 지표만 보여준다. 2026-05-29 결정으로 환경 성취 지표는 backend-computed estimate로만 노출한다. 백엔드 회신은 impact를 구현 완료로 요약했지만 본문에는 완전 미구현/개발 계획으로 적어 상태가 상충한다.
 - 기대 동작: 실제 지표로 유지하려면 완료/수령 확인된 나눔 식재료만 집계하고 `추정 절감`으로 표시한다.
 
 To-do:
 
 - [x] 홈 탄소 절감 mock 값은 운영성 UI에서 제거된다.
-- [x] 프로필 mock 통계를 제거하고 수령 완료/좋은 평가 신뢰 요약으로 교체한다.
+- [x] 프로필 mock 통계를 제거하고 수령 완료/긍정 평가 신뢰 요약으로 교체한다.
 - [x] 실제 지표로 유지하려면 계산식과 API 계약이 문서화된다. `GET /users/me/impact/summary`와 `estimatedWeightGrams * categoryCarbonFactor` 기준이다.
 - [x] `getImpactSummary()` API client와 `ImpactSummary` 타입을 추가했다. live VM 확인 전이라 홈/프로필 숫자 UI는 아직 연결하지 않는다.
 - [x] `getImpactSummary()`가 camelCase/snake_case 응답을 정규화하고, read-only 하네스가 `period` query와 impact response shape를 확인한다.
