@@ -3,7 +3,7 @@
  *
  * - 위치 헤더 (현재 동네 + 알림)
  * - AI 스캔 히어로 배너
- * - 통계 카드 (주변 나눔, 진행 중인 나눔)
+ * - 통계 카드 (주변 나눔, 오늘 추천)
  * - 근처 실시간 나눔 피드
  * - Pull-to-refresh
  *
@@ -648,9 +648,11 @@ const HomeScreen = () => {
             </Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={styles.statLabel}>진행 중인 나눔</Text>
+            <Text style={styles.statLabel}>오늘 추천</Text>
             <Text style={[styles.statValue, { color: colors.primary }]}>
-              {activeActionCount > 0 ? `${activeActionCount}건` : '없음'}
+              {recommendedPosts.length > 0
+                ? `${recommendedPosts.length}건`
+                : '없음'}
             </Text>
           </View>
         </View>

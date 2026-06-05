@@ -1065,6 +1065,16 @@ describe('HomeScreen nearby post refresh', () => {
     ).not.toHaveLength(0);
     expect(
       renderer!.root.findAllByProps({
+        children: '오늘 추천',
+      }),
+    ).not.toHaveLength(0);
+    expect(
+      renderer!.root.findAllByProps({
+        children: '2건',
+      }),
+    ).not.toHaveLength(0);
+    expect(
+      renderer!.root.findAllByProps({
         children: '권장 수령일이 가까운 나눔을 먼저 보여드려요.',
       }),
     ).not.toHaveLength(0);

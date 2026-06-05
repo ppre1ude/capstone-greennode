@@ -147,6 +147,7 @@ white/90    → 글래스모피즘 뱃지
 - 하단 고정 CTA는 `DSScreenFooter`를 사용하고, 화면별 `paddingBottom`을 직접 고정하지 않는다.
 - 하단 안내 카드 안에서 긴 설명과 CTA가 함께 있을 때는 한 줄 `row`로 경쟁시키지 않는다. 설명 그룹을 먼저 배치하고 CTA는 아래 줄에 두어 좁은 화면에서도 글자와 버튼이 겹치지 않게 한다.
 - 지도 검색창처럼 상단에 떠 있는 컨트롤은 고정 `top` 값 대신 `getHeaderTopPadding()`을 사용해 Android status bar와 iOS safe area를 피한다.
+- 한 화면의 인접한 허브/통계 카드가 같은 상태 라벨과 같은 카운트를 반복하지 않게 한다. 예를 들어 홈의 `진행 중인 나눔`은 action hub가 담당하고, 통계 카드는 `주변 나눔`, `오늘 추천`처럼 다른 의사결정 신호를 요약한다.
 
 ### Notice / Notification Panels
 
