@@ -4,7 +4,10 @@ import ReactTestRenderer from 'react-test-renderer';
 import MainTab from '@/navigation/MainTab';
 
 let mockCapturedNavigatorProps: {
-  screenOptions?: { tabBarStyle?: unknown };
+  screenOptions?: {
+    tabBarButton?: (props: unknown) => React.ReactNode;
+    tabBarStyle?: unknown;
+  };
 } = {};
 let mockSafeAreaBottomInset = 0;
 
@@ -113,5 +116,15 @@ describe('MainTab bottom safe-area handling', () => {
 
     expect(tabBarStyle.height).toBe(118);
     expect(tabBarStyle.paddingBottom).toBe(54);
+  });
+
+  it('uses a custom tab button to suppress oversized Android native ripple', async () => {
+    setPlatformOS('android');
+
+    await renderMainTabAndGetTabBarStyle(0);
+
+    expect(mockCapturedNavigatorProps.screenOptions?.tabBarButton).toEqual(
+      expect.any(Function),
+    );
   });
 });

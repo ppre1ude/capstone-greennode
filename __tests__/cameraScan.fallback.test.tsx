@@ -97,6 +97,12 @@ describe('CameraScanScreen fallback QA', () => {
 
     const {renderer} = await createScreen();
 
+    expect(
+      renderer.root.findAllByProps({testID: 'camera-fallback-surface'}),
+    ).not.toHaveLength(0);
+    expect(
+      renderer.root.findAllByProps({testID: 'camera-fallback-preview'}),
+    ).not.toHaveLength(0);
     expect(findButtonByText(renderer, '권한 다시 요청')).toBeTruthy();
     expect(findButtonByText(renderer, '설정 열기')).toBeTruthy();
     expect(findButtonByText(renderer, '갤러리에서 선택하기')).toBeTruthy();
@@ -153,6 +159,12 @@ describe('CameraScanScreen fallback QA', () => {
     const {renderer, navigation} = await createScreen();
     const galleryButton = findButtonByText(renderer, '갤러리에서 선택하기');
 
+    expect(
+      renderer.root.findAllByProps({testID: 'camera-fallback-surface'}),
+    ).not.toHaveLength(0);
+    expect(
+      renderer.root.findAllByProps({testID: 'camera-fallback-preview'}),
+    ).not.toHaveLength(0);
     expect(galleryButton).toBeTruthy();
 
     await ReactTestRenderer.act(async () => {

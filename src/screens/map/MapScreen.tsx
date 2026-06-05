@@ -49,6 +49,13 @@ import {
 } from '@/design-system/components';
 import { styles } from './MapScreen.styles';
 
+const FALLBACK_MARKER_POSITIONS = [
+  { top: '42%', left: '52%' },
+  { top: '56%', left: '33%' },
+  { top: '34%', left: '70%' },
+  { top: '64%', left: '62%' },
+] as const;
+
 const MapScreen = () => {
   const user = useAuthStore(state => state.user);
   const requestedPostId = useFeedRefreshStore(state => state.requestedPostId);
@@ -65,6 +72,7 @@ const MapScreen = () => {
     'idle' | 'loading' | 'ready' | 'empty' | 'error'
   >('idle');
   const [fridgePostsError, setFridgePostsError] = useState<string | null>(null);
+  const [nativeMapLoaded, setNativeMapLoaded] = useState(false);
   const mapRef = useRef<MapView>(null);
   const flatListRef = useRef<FlatList>(null);
   const fridgePostsRequestId = useRef(0);
@@ -94,6 +102,27 @@ const MapScreen = () => {
   const openLocationSetup = useCallback(() => {
     navigation.getParent()?.navigate('LocationSetup', { allowBack: true });
   }, [navigation]);
+
+  const handleNativeMapLoaded = useCallback(() => {
+    setNativeMapLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    if (!nativeMapLoaded || displayedFridges.length === 0) {
+      return;
+    }
+
+    mapRef.current?.fitToCoordinates?.(
+      displayedFridges.map(fridge => ({
+        latitude: fridge.latitude,
+        longitude: fridge.longitude,
+      })),
+      {
+        edgePadding: { top: 180, right: 80, bottom: 390, left: 80 },
+        animated: true,
+      },
+    );
+  }, [displayedFridges, nativeMapLoaded]);
 
   const resetFridgePosts = useCallback(() => {
     fridgePostsRequestId.current += 1;
@@ -519,6 +548,50 @@ const MapScreen = () => {
     );
   };
 
+  const renderMapFallbackLayer = () => (
+    <View
+      pointerEvents="none"
+      style={styles.mapFallbackLayer}
+      testID="map-visual-fallback">
+      <View style={styles.mapDistrictNorth} />
+      <View style={styles.mapDistrictSouth} />
+      <View
+        style={[styles.mapFallbackRoad, styles.mapFallbackRoadPrimary]}
+        testID="map-visual-fallback-road"
+      />
+      <View
+        style={[styles.mapFallbackRoad, styles.mapFallbackRoadSecondary]}
+        testID="map-visual-fallback-road"
+      />
+      <View
+        style={[styles.mapFallbackRoad, styles.mapFallbackRoadTertiary]}
+        testID="map-visual-fallback-road"
+      />
+      <View style={styles.mapFallbackGpsRing}>
+        <View style={styles.mapFallbackGpsDot} />
+      </View>
+      {displayedFridges.slice(0, 4).map((fridge, index) => (
+        <View
+          key={fridge.id}
+          style={[
+            styles.mapFallbackMarker,
+            FALLBACK_MARKER_POSITIONS[index % FALLBACK_MARKER_POSITIONS.length],
+          ]}
+          testID="map-visual-fallback-marker">
+          <View style={styles.mapFallbackMarkerIcon}>
+            <DSIcon name="building" size="xsmall" color="textOnPrimary" />
+          </View>
+          <DSText
+            numberOfLines={1}
+            variant="small"
+            style={styles.mapFallbackMarkerLabel}>
+            {fridge.name}
+          </DSText>
+        </View>
+      ))}
+    </View>
+  );
+
   if (!location || !initialRegion) {
     return (
       <View style={styles.container}>
@@ -587,9 +660,11 @@ const MapScreen = () => {
       {/* 지도 영역 */}
       <MapView
         ref={mapRef}
+        testID="map-native-view"
         style={StyleSheet.absoluteFill}
         provider={PROVIDER_DEFAULT}
         initialRegion={initialRegion}
+        onMapLoaded={handleNativeMapLoaded}
         showsMyLocationButton={false}>
         {/* 반경 표시 원 */}
         <Circle
@@ -626,6 +701,8 @@ const MapScreen = () => {
           </Marker>
         ))}
       </MapView>
+
+      {!nativeMapLoaded ? renderMapFallbackLayer() : null}
 
       {/* 내 위치 이동 버튼 */}
       <TouchableOpacity

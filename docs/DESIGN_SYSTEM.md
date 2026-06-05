@@ -311,6 +311,9 @@ Montage Android/iOS는 GreenNode의 색상 팔레트 대체재가 아니라 **�
 - 지도 화면의 검색 입력, 냉장고 카드/시트, retry/refresh/detail/sheet 액션은 `DSTextField`, `DSCard`, `DSChip`, `DSButton`, `DSListCell` 조합으로 치환했다.
 - 액션 아이콘은 `DSIcon`을 `leading`/`trailing` slot에 넣고, 지도 마커와 현재 위치 버튼처럼 MapView 상호작용에 직접 연결된 화면 고유 glyph도 후속 마이그레이션에서 vector icon 또는 asset으로 치환한다.
 - `DSChip.selected`는 실제 선택 UI에만 사용하고, 지도 냉장고의 `운영중` 표시는 static status라 `tone="primary"`를 사용한다.
+- 네이티브 지도 타일이 검게 실패하거나 늦게 로드되는 환경에서도 화면이 빈 캔버스처럼 보이지 않도록, 지도 화면에는 브랜드 톤의 비상호작용 fallback 지도 레이어를 둔다.
+- 네이티브 지도가 정상 로드되면 fallback 레이어를 숨기고, 반환된 공유 냉장고 좌표가 화면 안에 들어오도록 지도 viewport를 냉장고 좌표 기준으로 보정한다.
+- AI 스캔은 실제 카메라 preview가 없는 에뮬레이터/권한 거부 상태에서도 검정 빈 화면만 보여주지 않는다. 브랜드 톤 배경, 촬영 프레임 힌트, 갤러리 fallback CTA를 함께 제공한다.
 
 ### 2026-05-26 디자인 리뷰 후속 기준
 

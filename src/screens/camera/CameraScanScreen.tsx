@@ -186,16 +186,66 @@ const CameraScanScreen = ({ navigation }: Props) => {
     }
   };
 
-  if (!hasPermission) {
-    return (
-      <View style={styles.centerContainer}>
+  const renderCameraFallback = (
+    title: string,
+    description: string,
+    actions: React.ReactNode,
+  ) => (
+    <View style={styles.fallbackContainer} testID="camera-fallback-surface">
+      <StatusBar barStyle="dark-content" backgroundColor={colors.primaryLight} />
+      <TouchableOpacity
+        accessibilityLabel="닫기"
+        onPress={() => navigation.goBack()}
+        style={styles.fallbackCloseButton}>
+        <DSIcon name="xmark" size="large" color="primary" />
+      </TouchableOpacity>
+
+      <View style={styles.fallbackContent}>
+        <View style={styles.fallbackPreview} testID="camera-fallback-preview">
+          <View style={styles.fallbackPreviewGlow} />
+          <View style={styles.fallbackFrame}>
+            <View style={[styles.corner, styles.topLeft]} />
+            <View style={[styles.corner, styles.topRight]} />
+            <View style={[styles.corner, styles.bottomLeft]} />
+            <View style={[styles.corner, styles.bottomRight]} />
+            <View style={styles.fallbackCameraIcon}>
+              <DSIcon name="camera" size="large" color="primary" />
+            </View>
+          </View>
+          <DSText
+            variant="caption"
+            color="primary"
+            align="center"
+            style={styles.fallbackPreviewCaption}>
+            사진 한 장으로 신선도 확인
+          </DSText>
+        </View>
+
+        <DSText
+          variant="heading2"
+          color="textPrimary"
+          align="center"
+          style={styles.fallbackTitle}>
+          {title}
+        </DSText>
         <DSText
           variant="body"
-          color="textOnPrimary"
+          color="textSecondary"
           align="center"
-          style={styles.permissionText}>
-          카메라 권한이 필요합니다.
+          style={styles.fallbackDescription}>
+          {description}
         </DSText>
+
+        <View style={styles.fallbackActions}>{actions}</View>
+      </View>
+    </View>
+  );
+
+  if (!hasPermission) {
+    return renderCameraFallback(
+      '카메라 권한이 필요합니다.',
+      '식재료 사진을 촬영하려면 권한을 허용해주세요. 바로 촬영이 어렵다면 갤러리 사진으로도 분석할 수 있어요.',
+      <>
         <DSButton
           label="권한 다시 요청"
           size="medium"
@@ -217,20 +267,15 @@ const CameraScanScreen = ({ navigation }: Props) => {
           style={styles.galleryFallbackButton}
           onPress={handleGallery}
         />
-      </View>
+      </>,
     );
   }
 
   if (device == null) {
-    return (
-      <View style={styles.centerContainer}>
-        <DSText
-          variant="body"
-          color="textOnPrimary"
-          align="center"
-          style={styles.permissionText}>
-          사용 가능한 카메라가 없습니다.
-        </DSText>
+    return renderCameraFallback(
+      '사용 가능한 카메라가 없습니다.',
+      '현재 기기에서는 카메라를 찾지 못했어요. 갤러리 사진을 선택하면 같은 분석 흐름으로 이어집니다.',
+      <>
         {/* 에뮬레이터 환경을 위한 갤러리 버튼 폴백 */}
         <DSButton
           label="갤러리에서 선택하기"
@@ -238,7 +283,7 @@ const CameraScanScreen = ({ navigation }: Props) => {
           style={styles.galleryFallbackButton}
           onPress={handleGallery}
         />
-      </View>
+      </>,
     );
   }
 

@@ -12,7 +12,11 @@ import {
   TouchableOpacity,
   Platform,
 } from 'react-native';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import {
+  createBottomTabNavigator,
+  type BottomTabBarButtonProps,
+} from '@react-navigation/bottom-tabs';
+import { PlatformPressable } from '@react-navigation/elements';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { MainTabParamList } from './types';
 import { colors } from '@/theme';
@@ -114,6 +118,14 @@ const cameraTabButton = ({
   onPress?: React.ComponentProps<typeof TouchableOpacity>['onPress'];
 }) => <CameraTabButton onPress={onPress} />;
 
+const defaultTabButton = (props: BottomTabBarButtonProps) => (
+  <PlatformPressable
+    {...props}
+    pressColor="transparent"
+    pressOpacity={0.72}
+  />
+);
+
 const MainTab = () => {
   const insets = useSafeAreaInsets();
   const user = useAuthStore(state => state.user);
@@ -136,6 +148,7 @@ const MainTab = () => {
         ],
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textTertiary,
+        tabBarButton: defaultTabButton,
         tabBarLabelStyle: styles.tabLabel,
       }}>
       <Tab.Screen
