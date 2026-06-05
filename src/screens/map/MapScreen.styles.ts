@@ -1,5 +1,6 @@
-import { StyleSheet, Platform } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { colors } from '@/theme';
+import { getHeaderTopPadding } from '@/utils/safeArea';
 
 export const styles = StyleSheet.create({
   container: {
@@ -8,7 +9,7 @@ export const styles = StyleSheet.create({
   },
   header: {
     position: 'absolute',
-    top: Platform.OS === 'ios' ? 56 : 24,
+    top: getHeaderTopPadding(8),
     left: 16,
     right: 16,
     zIndex: 10,

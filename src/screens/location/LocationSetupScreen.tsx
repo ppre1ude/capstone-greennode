@@ -354,10 +354,13 @@ const LocationSetupScreen = ({ route, navigation }: Props) => {
       {/* CTA */}
       <DSScreenFooter style={styles.footer} testID="location-setup-footer">
         <DSCard
+          testID="location-notification-panel"
           variant="outlined"
           padded={false}
           style={styles.notificationPanel}>
-          <View style={styles.notificationTextGroup}>
+          <View
+            testID="location-notification-copy"
+            style={styles.notificationTextGroup}>
             <Text style={styles.notificationTitle}>나눔 알림</Text>
             <Text style={styles.notificationHint}>
               {notificationStatus === 'ready'

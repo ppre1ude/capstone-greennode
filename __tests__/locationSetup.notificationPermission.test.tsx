@@ -3,8 +3,10 @@ import {
   Linking,
   PermissionsAndroid,
   Platform,
+  StyleSheet,
   Text,
   TouchableOpacity,
+  ViewStyle,
 } from 'react-native';
 import Geolocation from 'react-native-geolocation-service';
 import ReactTestRenderer from 'react-test-renderer';
@@ -42,6 +44,14 @@ const findButtonByText = (
         ? children.join('') === label
         : children === label;
     }),
+  );
+
+const findHostByTestId = (
+  renderer: ReactTestRenderer.ReactTestRenderer,
+  testID: string,
+) =>
+  renderer.root.find(
+    node => node.props.testID === testID && typeof node.type === 'string',
   );
 
 describe('LocationSetupScreen notification permission flow', () => {
@@ -140,6 +150,35 @@ describe('LocationSetupScreen notification permission flow', () => {
       longitude: 126.9132,
       fcmToken: 'fcm-token',
     });
+  });
+
+  it('stacks the notification prompt so long copy does not compete with the CTA', async () => {
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(renderLocationSetup());
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    const notificationPanel = findHostByTestId(
+      renderer!,
+      'location-notification-panel',
+    );
+    const panelStyle = StyleSheet.flatten(
+      notificationPanel.props.style,
+    ) as ViewStyle;
+
+    expect(panelStyle.flexDirection).toBe('column');
+    expect(panelStyle.alignItems).toBe('stretch');
+
+    const copyGroup = findHostByTestId(
+      renderer!,
+      'location-notification-copy',
+    );
+    const copyStyle = StyleSheet.flatten(copyGroup.props.style) as ViewStyle;
+    expect(copyStyle.flex).toBeUndefined();
+    expect(copyStyle.flexShrink).toBe(1);
   });
 
   it('keeps a recoverable in-screen path when Android location permission is denied', async () => {

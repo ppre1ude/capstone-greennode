@@ -134,6 +134,12 @@ white/90    → 글래스모피즘 뱃지
 | 페이지 하단 여백 (탭바 위) | 32px (`3xl`)  |
 | SafeArea 상단              | 시스템 기본값 |
 
+### Safe-Area Fixed Surfaces
+
+- 하단 고정 CTA는 `DSScreenFooter`를 사용하고, 화면별 `paddingBottom`을 직접 고정하지 않는다.
+- 하단 안내 카드 안에서 긴 설명과 CTA가 함께 있을 때는 한 줄 `row`로 경쟁시키지 않는다. 설명 그룹을 먼저 배치하고 CTA는 아래 줄에 두어 좁은 화면에서도 글자와 버튼이 겹치지 않게 한다.
+- 지도 검색창처럼 상단에 떠 있는 컨트롤은 고정 `top` 값 대신 `getHeaderTopPadding()`을 사용해 Android status bar와 iOS safe area를 피한다.
+
 ### 카드 & 컨테이너
 
 | 속성                      | 값              |
