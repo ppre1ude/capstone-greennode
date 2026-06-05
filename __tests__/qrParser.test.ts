@@ -156,6 +156,27 @@ describe('QrScannerShell', () => {
     setPlatformOS(originalPlatformOS);
   });
 
+  const pressButtonWithText = async (
+    renderer: ReactTestRenderer.ReactTestRenderer,
+    text: string,
+  ) => {
+    const button = renderer.root.findAllByType(TouchableOpacity).find(
+      node =>
+        node
+          .findAllByType(Text)
+          .some(textNode => textNode.props.children === text),
+    );
+
+    if (!button) {
+      throw new Error(`Button with text "${text}" not found`);
+    }
+
+    await ReactTestRenderer.act(async () => {
+      button.props.onPress();
+      await Promise.resolve();
+    });
+  };
+
   it('calls onValidScan with a parsed fridge target when rawValue is valid', async () => {
     const onValidScan = jest.fn();
     let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
@@ -207,7 +228,46 @@ describe('QrScannerShell', () => {
     });
   });
 
+  it('opens the native QR camera only after the user starts scanning', async () => {
+    setPlatformOS('ios');
+    const onValidScan = jest.fn();
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(
+        React.createElement(QrScannerShell, {
+          testID: 'qr-shell',
+          enableNativeScanner: true,
+          onValidScan,
+        }),
+      );
+      await Promise.resolve();
+    });
+
+    const initialText = renderer!.root
+      .findAllByType(Text)
+      .map(node => node.props.children)
+      .join('');
+
+    expect(initialText).toContain('카메라로 QR 스캔');
+    expect(mockUseObjectOutput).not.toHaveBeenCalled();
+
+    await pressButtonWithText(renderer!, '카메라로 QR 스캔');
+
+    expect(mockUseObjectOutput).toHaveBeenCalled();
+    expect(
+      renderer!.root.findAllByProps({
+        nativeID: 'qr-shell-native-camera',
+      }),
+    ).not.toHaveLength(0);
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
   it('shows a permission recovery action when native scanning lacks camera permission', async () => {
+    setPlatformOS('ios');
     mockHasCameraPermission = false;
     const onValidScan = jest.fn();
     let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
@@ -223,6 +283,8 @@ describe('QrScannerShell', () => {
       await Promise.resolve();
     });
 
+    await pressButtonWithText(renderer!, '카메라로 QR 스캔');
+
     expect(
       renderer!.root
         .findAllByType(Text)
@@ -231,7 +293,7 @@ describe('QrScannerShell', () => {
     ).toContain('카메라 권한이 필요합니다');
 
     await ReactTestRenderer.act(async () => {
-      renderer!.root.findByType(TouchableOpacity).props.onPress();
+      renderer!.root.findAllByType(TouchableOpacity)[0].props.onPress();
       await Promise.resolve();
     });
 
@@ -243,6 +305,7 @@ describe('QrScannerShell', () => {
   });
 
   it('shows a no-camera fallback when native scanning cannot find a back camera', async () => {
+    setPlatformOS('ios');
     mockCameraDevice = null;
     const onValidScan = jest.fn();
     let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
@@ -257,6 +320,8 @@ describe('QrScannerShell', () => {
       );
       await Promise.resolve();
     });
+
+    await pressButtonWithText(renderer!, '카메라로 QR 스캔');
 
     expect(
       renderer!.root

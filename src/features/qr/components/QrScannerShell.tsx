@@ -43,6 +43,7 @@ export const QrScannerShell = ({
   const deliveredRawValueRef = useRef<string | null>(null);
   const [nativeRawValue, setNativeRawValue] = useState<string | null>(null);
   const [manualFridgeCode, setManualFridgeCode] = useState('');
+  const [isNativeScannerOpen, setIsNativeScannerOpen] = useState(false);
   const scanValue = rawValue ?? lastScannedValue ?? nativeRawValue ?? null;
   const visibleLastScannedValue = lastScannedValue ?? rawValue ?? null;
   const nativeObjectOutputUnavailable =
@@ -57,6 +58,10 @@ export const QrScannerShell = ({
 
     setNativeRawValue(normalizedManualFridgeCode);
   }, [canSubmitManualFridgeCode, normalizedManualFridgeCode]);
+
+  const handleOpenNativeScanner = useCallback(() => {
+    setIsNativeScannerOpen(true);
+  }, []);
 
   useEffect(() => {
     if (typeof scanValue !== 'string') {
@@ -119,14 +124,33 @@ export const QrScannerShell = ({
               </Text>
             </TouchableOpacity>
           </View>
+        ) : enableNativeScanner && isNativeScannerOpen ? (
+          <>
+            <NativeQrScanner
+              onRawValue={setNativeRawValue}
+              testID={`${testID}-native-camera`}
+            />
+            <Text style={styles.title}>냉장고 QR 스캔</Text>
+            <Text style={styles.description}>
+              공유 냉장고에 붙은 FoodLink QR을 카메라에 맞춰주세요.
+            </Text>
+          </>
+        ) : enableNativeScanner ? (
+          <View style={styles.scannerStartPanel}>
+            <Text style={styles.title}>냉장고 QR 스캔</Text>
+            <Text style={styles.description}>
+              공유 냉장고 앞에서 카메라를 열고 QR을 화면 중앙에 맞춰주세요.
+            </Text>
+            <TouchableOpacity
+              onPress={handleOpenNativeScanner}
+              style={styles.openCameraButton}>
+              <Text style={styles.openCameraButtonText}>
+                카메라로 QR 스캔
+              </Text>
+            </TouchableOpacity>
+          </View>
         ) : (
           <>
-            {enableNativeScanner ? (
-              <NativeQrScanner
-                onRawValue={setNativeRawValue}
-                testID={`${testID}-native-camera`}
-              />
-            ) : null}
             <Text style={styles.title}>냉장고 QR 스캔</Text>
             <Text style={styles.description}>
               공유 냉장고에 붙은 FoodLink QR을 카메라에 맞춰주세요.
@@ -255,6 +279,28 @@ const styles = StyleSheet.create({
     color: '#666666',
     fontSize: 12,
     lineHeight: 18,
+    textAlign: 'center',
+  },
+  scannerStartPanel: {
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 6,
+    width: '100%',
+  },
+  openCameraButton: {
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 8,
+    backgroundColor: '#1E623B',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    width: '100%',
+  },
+  openCameraButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '800',
     textAlign: 'center',
   },
   manualCodePanel: {

@@ -38,8 +38,6 @@ import { colors } from '@/theme';
 type Props = NativeStackScreenProps<RootStackParamList, 'InventoryQr'>;
 type InventoryQrRouteParams = RootStackParamList['InventoryQr'];
 
-type ScanMode = 'store' | 'pickup';
-
 const LABEL_SAMPLE = {
   labelCode: '#0042',
   itemName: '토마토',
@@ -140,9 +138,28 @@ const InventoryQrContent = ({ navigation, params }: InventoryQrContentProps) => 
   const fridgeName = params.fridgeName ?? UNKNOWN_FRIDGE_CODE_LABEL;
   const fridgeLocation =
     params.fridgeLocation ?? '냉장고 앞에서 QR을 스캔하면 서버가 확인합니다.';
-  const [scanMode, setScanMode] = useState<ScanMode>(params.mode);
+  const scanMode = params.mode;
+  const actionCopy =
+    scanMode === 'store'
+      ? {
+          headerTitle: '보관 QR 인증',
+          headerSubtitle: '냉장고 앞에서 실제 보관을 확인합니다',
+          noticeTitle: '보관할 냉장고 앞에서 확인',
+          noticeText:
+            '선택한 냉장고의 QR 또는 FoodLink 코드를 확인하면 보관 상태가 업데이트됩니다.',
+          sectionTitle: '보관 인증',
+          initialScanMessage: '선택한 냉장고 앞에서 보관 QR을 스캔해주세요.',
+        }
+      : {
+          headerTitle: '수령 QR 인증',
+          headerSubtitle: '냉장고 앞에서 실제 수령을 확인합니다',
+          noticeTitle: '수령할 냉장고 앞에서 확인',
+          noticeText:
+            '선택한 냉장고의 QR 또는 FoodLink 코드를 확인하면 수령 완료로 처리됩니다.',
+          sectionTitle: '수령 인증',
+          initialScanMessage: '선택한 냉장고 앞에서 수령 QR을 스캔해주세요.',
+        };
   const [currentTime, setCurrentTime] = useState(() => Date.now());
-  const [lastScannedValue, setLastScannedValue] = useState<string | null>(null);
   const [storeConfirmed, setStoreConfirmed] = useState(false);
   const [pickupConfirmed, setPickupConfirmed] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
@@ -156,7 +173,7 @@ const InventoryQrContent = ({ navigation, params }: InventoryQrContentProps) => 
     state => state.requestNearbyPostsRefresh,
   );
   const [scanMessage, setScanMessage] = useState(
-    '선택한 냉장고 앞에서 QR을 스캔해주세요.',
+    actionCopy.initialScanMessage,
   );
 
   useEffect(() => {
@@ -193,7 +210,7 @@ const InventoryQrContent = ({ navigation, params }: InventoryQrContentProps) => 
       return 'picked_up';
     }
 
-    if (scanMode === 'pickup' && storeConfirmed) {
+    if (scanMode === 'pickup') {
       return 'pickup_hold';
     }
 
@@ -321,10 +338,8 @@ const InventoryQrContent = ({ navigation, params }: InventoryQrContentProps) => 
           <Text style={styles.backButtonText}>‹</Text>
         </TouchableOpacity>
         <View style={styles.headerText}>
-          <Text style={styles.title}>냉장고 QR 인증</Text>
-          <Text style={styles.subtitle}>
-            보관과 수령을 냉장고 QR로 확인합니다
-          </Text>
+          <Text style={styles.title}>{actionCopy.headerTitle}</Text>
+          <Text style={styles.subtitle}>{actionCopy.headerSubtitle}</Text>
         </View>
       </View>
 
@@ -335,11 +350,8 @@ const InventoryQrContent = ({ navigation, params }: InventoryQrContentProps) => 
           { paddingBottom: contentBottomPadding },
         ]}>
         <View style={styles.notice}>
-          <Text style={styles.noticeTitle}>냉장고 앞에서 확인</Text>
-          <Text style={styles.noticeText}>
-            선택한 냉장고의 QR 또는 FoodLink 코드를 확인하면 보관/수령
-            상태가 업데이트됩니다.
-          </Text>
+          <Text style={styles.noticeTitle}>{actionCopy.noticeTitle}</Text>
+          <Text style={styles.noticeText}>{actionCopy.noticeText}</Text>
         </View>
 
         <View style={styles.section}>
@@ -361,24 +373,11 @@ const InventoryQrContent = ({ navigation, params }: InventoryQrContentProps) => 
         />
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>QR 인증 모드</Text>
-          <View style={styles.segmentRow}>
-            <ModeButton
-              active={scanMode === 'store'}
-              label="보관 인증"
-              onPress={() => setScanMode('store')}
-            />
-            <ModeButton
-              active={scanMode === 'pickup'}
-              label="수령 인증"
-              onPress={() => setScanMode('pickup')}
-            />
-          </View>
+          <Text style={styles.sectionTitle}>{actionCopy.sectionTitle}</Text>
 
           <QrScannerShell
             enableNativeScanner
             key={`${scanMode}-${scannerSession}`}
-            lastScannedValue={lastScannedValue}
             onValidScan={handleValidScan}
             testID="inventory-qr-scanner"
           />
@@ -402,34 +401,49 @@ const InventoryQrContent = ({ navigation, params }: InventoryQrContentProps) => 
 
         </View>
 
-        {storeConfirmed ? (
-          <>
-            <InventoryLabelInstructionCard
-              deadlineLabel={deadlineLabel}
-              itemName={LABEL_SAMPLE.itemName}
-              labelCode={labelCode}
-              storageZone={storageZoneLabel}
-              testID="inventory-qr-label"
-            />
-            <View style={styles.policyPanel}>
-              <Text style={styles.policyTitle}>보관 정책 안내</Text>
-              <Text style={styles.policyText}>
-                {SAMPLE_STORAGE_POLICY.guidance}
-              </Text>
-              {SAMPLE_STORAGE_POLICY.needsReview ? (
-                <Text style={styles.policyReviewText}>
-                  운영자 확인 대상입니다. 이 기준은 서비스 노출과 회수
-                  판단용입니다.
+        {scanMode === 'store' ? (
+          storeConfirmed ? (
+            <>
+              <InventoryLabelInstructionCard
+                deadlineLabel={deadlineLabel}
+                itemName={LABEL_SAMPLE.itemName}
+                labelCode={labelCode}
+                storageZone={storageZoneLabel}
+                testID="inventory-qr-label"
+              />
+              <View style={styles.policyPanel}>
+                <Text style={styles.policyTitle}>보관 정책 안내</Text>
+                <Text style={styles.policyText}>
+                  {SAMPLE_STORAGE_POLICY.guidance}
                 </Text>
-              ) : null}
+                {SAMPLE_STORAGE_POLICY.needsReview ? (
+                  <Text style={styles.policyReviewText}>
+                    운영자 확인 대상입니다. 이 기준은 서비스 노출과 회수
+                    판단용입니다.
+                  </Text>
+                ) : null}
+              </View>
+            </>
+          ) : (
+            <View style={styles.emptyLabelPanel}>
+              <Text style={styles.emptyLabelTitle}>
+                라벨은 보관 인증 후 표시
+              </Text>
+              <Text style={styles.emptyLabelText}>
+                공급자가 냉장고 QR을 스캔하면 라벨 코드와 보관 구역 안내가
+                표시됩니다.
+              </Text>
             </View>
-          </>
+          )
         ) : (
           <View style={styles.emptyLabelPanel}>
-            <Text style={styles.emptyLabelTitle}>라벨은 보관 인증 후 표시</Text>
+            <Text style={styles.emptyLabelTitle}>
+              {pickupConfirmed ? '수령 인증 완료' : '수령 인증 후 완료'}
+            </Text>
             <Text style={styles.emptyLabelText}>
-              공급자가 냉장고 QR을 스캔하면 라벨 코드와 보관 구역 안내가
-              표시됩니다.
+              {pickupConfirmed
+                ? '나눔 수령이 완료되었습니다. 경험 평가와 신고는 수령 완료 후 열립니다.'
+                : '냉장고 앞에서 QR을 확인하면 나눔이 수령 완료로 처리됩니다.'}
             </Text>
           </View>
         )}
@@ -437,23 +451,6 @@ const InventoryQrContent = ({ navigation, params }: InventoryQrContentProps) => 
     </View>
   );
 };
-
-type ModeButtonProps = {
-  active: boolean;
-  label: string;
-  onPress: () => void;
-};
-
-const ModeButton = ({ active, label, onPress }: ModeButtonProps) => (
-  <TouchableOpacity
-    onPress={onPress}
-    style={[styles.modeButton, active && styles.modeButtonActive]}>
-    <Text
-      style={[styles.modeButtonText, active && styles.modeButtonTextActive]}>
-      {label}
-    </Text>
-  </TouchableOpacity>
-);
 
 const styles = StyleSheet.create({
   container: {
@@ -581,34 +578,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     fontSize: 12,
     color: colors.textSecondary,
-  },
-  segmentRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 12,
-    marginBottom: 12,
-  },
-  modeButton: {
-    flex: 1,
-    minHeight: 44,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.background,
-  },
-  modeButtonActive: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primaryLight,
-  },
-  modeButtonText: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: colors.textSecondary,
-  },
-  modeButtonTextActive: {
-    color: colors.primary,
   },
   scanMessage: {
     marginTop: 12,
