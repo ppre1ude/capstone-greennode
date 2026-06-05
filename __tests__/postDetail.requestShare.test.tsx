@@ -241,6 +241,36 @@ describe('PostDetailScreen share request', () => {
     });
   });
 
+  it('clamps implausibly long food deadlines with the storage policy', async () => {
+    dateNowSpy = jest
+      .spyOn(Date, 'now')
+      .mockReturnValue(new Date('2026-06-06T00:00:00Z').getTime());
+    mockedGetPostDetail.mockResolvedValue({
+      success: true,
+      message: 'ok',
+      data: {
+        ...basePost,
+        detectedFruit: 'banana',
+        detectedFruitKo: '바나나',
+        freshnessLabel: 'Fresh',
+        expirationDate: '2026-06-30',
+      },
+    });
+
+    const renderer = await createScreen();
+
+    expect(
+      renderer.root.findAllByProps({ children: '약 25일' }),
+    ).toHaveLength(0);
+    expect(
+      renderer.root.findAllByProps({ children: '약 3일' }),
+    ).not.toHaveLength(0);
+
+    await ReactTestRenderer.act(async () => {
+      renderer.unmount();
+    });
+  });
+
   it('treats 409 conflict as a normal race result and disables the CTA', async () => {
     mockedRequestShare.mockRejectedValue({
       response: {

@@ -50,6 +50,10 @@ import {
   parseServerLifecycleTimestampMs,
 } from '@/features/inventory/holdPolicy';
 import {
+  resolveStoragePolicy,
+  type StoragePolicyQuality,
+} from '@/features/inventory/storagePolicy';
+import {
   getPostDisplayName,
   getPostStatusLabel,
   getQualityMeta,
@@ -71,6 +75,48 @@ const getErrorStatus = (error: unknown): number | null => {
 
 const isValidDateInput = (value?: string | null): value is string =>
   Boolean(value && Number.isFinite(parseServerLifecycleTimestampMs(value)));
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+const STORAGE_POLICY_QUALITIES = [
+  'Fresh',
+  'Mid',
+  'fresh',
+  'mid',
+  'best',
+  'normal',
+  'unknown',
+] as const satisfies readonly StoragePolicyQuality[];
+
+const isStoragePolicyQuality = (
+  quality: unknown,
+): quality is StoragePolicyQuality =>
+  typeof quality === 'string' &&
+  (STORAGE_POLICY_QUALITIES as readonly string[]).includes(quality);
+
+const toStoragePolicyQuality = (
+  quality: Post['freshnessLabel'],
+): StoragePolicyQuality =>
+  isStoragePolicyQuality(quality) ? quality : 'unknown';
+
+const getDisplayDaysLeft = (post: Post, itemName: string, nowMs: number) => {
+  const expirationTimeMs = new Date(post.expirationDate).getTime();
+  if (!Number.isFinite(expirationTimeMs)) {
+    return null;
+  }
+
+  const rawDaysLeft = Math.ceil((expirationTimeMs - nowMs) / DAY_MS);
+  if (rawDaysLeft <= 0) {
+    return 0;
+  }
+
+  const policy = resolveStoragePolicy({
+    itemName,
+    quality: toStoragePolicyQuality(post.freshnessLabel),
+    storedAt: nowMs,
+  });
+
+  return Math.min(rawDaysLeft, policy.serviceExposureDays ?? rawDaysLeft);
+};
 
 const PostDetailScreen = ({ route, navigation }: Props) => {
   const { postId } = route.params;
@@ -274,9 +320,10 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
     positiveReviewCount: providerTrustSummary?.positiveReviewCount ?? 0,
     badges: providerTrustSummary?.badges ?? [],
   });
-  const daysLeft = Math.ceil(
-    (new Date(post.expirationDate).getTime() - new Date().getTime()) /
-      (1000 * 3600 * 24),
+  const daysLeft = getDisplayDaysLeft(
+    post,
+    post.detectedFruitKo ?? post.detectedFruit ?? displayName,
+    currentTimeMs,
   );
 
   return (
@@ -342,7 +389,11 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
               <View>
                 <Text style={styles.infoLabel}>남은 기한</Text>
                 <Text style={styles.infoValue}>
-                  {daysLeft > 0 ? `약 ${daysLeft}일` : '권장일 지남'}
+                  {daysLeft === null
+                    ? '일정 확인 필요'
+                    : daysLeft > 0
+                    ? `약 ${daysLeft}일`
+                    : '권장일 지남'}
                 </Text>
               </View>
             </View>
