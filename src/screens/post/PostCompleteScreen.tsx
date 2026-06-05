@@ -72,7 +72,7 @@ const PostCompleteScreen = ({ route, navigation }: Props) => {
             styles.iconCircle,
             { transform: [{ scale: scaleAnim }], opacity: opacityAnim },
           ]}>
-          <DSIcon name="circle-check" size={56} color="primary" />
+          <DSIcon name="gifts" size={56} color="primary" />
         </Animated.View>
 
         <Animated.View style={[styles.resultContent, { opacity: opacityAnim }]}>
@@ -122,7 +122,10 @@ const PostCompleteScreen = ({ route, navigation }: Props) => {
         </Animated.View>
       </View>
 
-      <DSScreenFooter style={styles.footer}>
+      <DSScreenFooter
+        bottomInsetGap={88}
+        minBottomPadding={88}
+        style={styles.footer}>
         <DSButton
           label="홈으로 돌아가기"
           color="assistive"
