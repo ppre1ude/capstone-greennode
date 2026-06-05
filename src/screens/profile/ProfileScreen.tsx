@@ -650,7 +650,8 @@ const styles = StyleSheet.create({
   },
   menuIcon: {
     fontSize: 20,
-    marginRight: 8,
+    textAlign: 'center',
+    width: 24,
   },
   logoutButton: {
     marginHorizontal: 24,

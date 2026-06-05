@@ -490,6 +490,30 @@ describe('ProfileScreen operator console entry', () => {
     });
   });
 
+  it('keeps profile menu leading icons on a fixed alignment grid', async () => {
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(<ProfileScreen />);
+    });
+
+    const iconWidths = ['clipboard-list', 'gift', 'bell'].map(iconName => {
+      const icon = renderer!.root.findByProps({ name: iconName });
+      const style = Array.isArray(icon.props.style)
+        ? Object.assign({}, ...icon.props.style)
+        : icon.props.style;
+
+      expect(style.textAlign).toBe('center');
+      return style.width;
+    });
+
+    expect(iconWidths).toEqual([24, 24, 24]);
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
   it('updates nickname and profile image URL through the backend contract', async () => {
     const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
     let renderer: ReactTestRenderer.ReactTestRenderer | undefined;

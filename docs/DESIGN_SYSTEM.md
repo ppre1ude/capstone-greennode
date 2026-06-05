@@ -286,6 +286,7 @@ Montage Android/iOS는 GreenNode의 색상 팔레트 대체재가 아니라 **�
 
 - DS 컴포넌트는 `leading`/`trailing` slot의 간격, 정렬, disabled opacity 같은 배치 규칙을 담당한다.
 - 아이콘의 의미와 실제 glyph 선택은 호출 화면이 소유하되, 실제 렌더링은 `DSIcon`과 FontAwesome6 기반 vector icon을 우선한다.
+- 리스트 메뉴의 leading 아이콘은 glyph 폭에 따라 텍스트 시작점이 흔들리지 않도록 고정 폭을 지정하고 중앙 정렬한다.
 - Android/iOS 이식성을 위해 액션, 내비게이션, 입력, 버튼 slot에는 시스템 emoji를 쓰지 않는다. 화면 고유 일러스트레이션도 새로 추가할 때는 vector icon 또는 asset을 우선한다.
 - `DSIcon`이 시스템 fallback glyph로 보이지 않도록 Android는 `android/app/build.gradle`의 `react-native-vector-icons/fonts.gradle`, iOS는 `ios/greennode/Info.plist`의 `UIAppFonts`에 FontAwesome6 폰트를 등록한다.
 - slot에 들어가는 아이콘 색은 가능한 DS 컴포넌트의 텍스트/상태 색을 따르게 만든다. 독립 색상이 꼭 필요하면 해당 화면의 도메인 의미를 주석이나 문서에 남긴다.
