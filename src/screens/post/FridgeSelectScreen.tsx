@@ -144,7 +144,11 @@ const FridgeSelectScreen = ({ route, navigation }: Props) => {
         flow: 'fridge_qr',
       });
 
-      const createdPosts = response.data ?? [];
+      const createdPosts = Array.isArray(response.data)
+        ? response.data
+        : response.data
+          ? [response.data]
+          : [];
       const firstCreatedPost = createdPosts[0];
       const batchItems = createdPosts.map(post => ({
         postId: post.id,
@@ -195,20 +199,29 @@ const FridgeSelectScreen = ({ route, navigation }: Props) => {
           <DSText
             variant="bodyBold"
             color={isSelected ? 'textOnPrimary' : 'textPrimary'}
-            style={styles.fridgeName}>
+            style={[
+              styles.fridgeName,
+              isSelected && styles.fridgeTextSelected,
+            ]}>
             {item.name}
           </DSText>
           <DSText
             variant="caption"
             color={isSelected ? 'textOnPrimary' : 'textSecondary'}
-            style={styles.fridgeAddress}>
+            style={[
+              styles.fridgeAddress,
+              isSelected && styles.fridgeTextSelected,
+            ]}>
             {item.address}
           </DSText>
           {item.distance !== undefined && (
             <DSText
               variant="small"
               color={isSelected ? 'textOnPrimary' : 'primary'}
-              style={styles.fridgeDistance}>
+              style={[
+                styles.fridgeDistance,
+                isSelected && styles.fridgeTextSelected,
+              ]}>
               {item.distance.toFixed(2)}km
             </DSText>
           )}

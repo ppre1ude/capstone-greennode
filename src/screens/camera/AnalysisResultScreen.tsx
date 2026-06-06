@@ -73,8 +73,7 @@ const AnalysisResultScreen = ({ route, navigation }: Props) => {
   const shareableDetections = getShareableDetections(detections);
   const excludedDetections = getExcludedDetections(detections);
   const showDetectionNotice = detections.length > 0;
-  const registeredItemCount =
-    shareableDetections.length > 0 ? shareableDetections.length : 1;
+  const registeredItemCount = detections.length > 0 ? shareableDetections.length : 1;
 
   return (
     <View style={styles.container}>
@@ -151,6 +150,10 @@ const AnalysisResultScreen = ({ route, navigation }: Props) => {
               style={[
                 styles.qualityPill,
                 needsReview && styles.qualityPillWarning,
+              ]}
+              textStyle={[
+                styles.qualityPillText,
+                needsReview && styles.qualityPillWarningText,
               ]}
             />
           </View>
@@ -388,19 +391,23 @@ const styles = StyleSheet.create({
   },
   qualityPill: {
     minWidth: 64,
-    height: 36,
-    borderRadius: 18,
+    minHeight: 48,
+    borderRadius: 24,
     backgroundColor: colors.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
     borderColor: colors.primary,
     paddingHorizontal: 12,
+    paddingVertical: 9,
   },
   qualityPillText: {
     fontSize: 14,
+    lineHeight: 24,
     fontWeight: '800',
     color: colors.primary,
+    includeFontPadding: true,
+    textAlignVertical: 'center',
   },
   qualityPillWarning: {
     backgroundColor: '#FEF3C7',
