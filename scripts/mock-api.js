@@ -188,12 +188,18 @@ const server = http.createServer(async (req, res) => {
       const token = `mock-image-token-${Date.now()}`;
       imageTokens.add(token);
       return ok(res, {
-        suggestedTitle: '신선한 식재료 나눔합니다',
-        suggestedDescription: 'AI 분석 결과 나눔 가능한 신선한 식재료입니다.',
-        suggestedCategory: '기타',
+        suggestedTitle: '신선한 바나나 나눔합니다',
+        suggestedDescription: 'AI 분석 결과 나눔 가능한 신선한 바나나입니다.',
+        suggestedCategory: '과일',
+        detectedFruit: 'banana',
+        detectedFruitKo: '바나나',
+        freshnessLabel: 'Fresh',
+        confidenceScore: 92,
         aiAnalysis: {
           isFresh: true,
           confidenceScore: 92,
+          detectedFruit: 'banana',
+          detectedFruitKo: '바나나',
           category: 'Fresh',
           analysisMessage: '식재료가 신선합니다.',
         },
