@@ -64,6 +64,12 @@ export type RootStackParamList = {
     fridgeName?: string;
     fridgeLocation?: string;
     pendingExpiresAt?: string;
+    batchItems?: Array<{
+      postId: number;
+      label?: string | null;
+      pendingExpiresAt?: string;
+    }>;
+    batchIndex?: number;
   };
   FridgeSelect: {
     postData?: Omit<PostCreateData, 'fridgeId'>;

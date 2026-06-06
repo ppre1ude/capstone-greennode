@@ -9,6 +9,18 @@ export const getResultDetections = (result: GenerateResult): AiDetection[] => {
 export const hasMultipleDetections = (result: GenerateResult): boolean =>
   getResultDetections(result).length > 1;
 
+export const isShareableDetection = (detection: AiDetection): boolean =>
+  detection.shareable !== false &&
+  getQualityMeta(detection.freshnessLabel).canShare;
+
+export const getShareableDetections = (
+  detections: AiDetection[],
+): AiDetection[] => detections.filter(isShareableDetection);
+
+export const getExcludedDetections = (
+  detections: AiDetection[],
+): AiDetection[] => detections.filter(detection => !isShareableDetection(detection));
+
 export const getDetectionName = (detection: AiDetection): string =>
   detection.labelKo ||
   detection.detectedFruitKo ||

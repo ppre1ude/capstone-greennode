@@ -40,7 +40,7 @@ export const generatePost = async (
  */
 export const createPost = async (
   data: PostCreateData,
-): Promise<ApiResponse<Post>> => {
+): Promise<ApiResponse<Post[]>> => {
   const token = await getToken();
   const response = await fetch(`${BASE_URL}${POSTS_PREFIX}`, {
     method: 'POST',
