@@ -1,7 +1,9 @@
 import {
+  getExcludedDetections,
   getDetectionName,
   getDetectionSummary,
   getResultDetections,
+  getShareableDetections,
   hasMultipleDetections,
 } from '@/utils/aiDetections';
 import type {GenerateResult} from '@/types';
@@ -48,5 +50,35 @@ describe('ai detection helpers', () => {
     expect(getDetectionSummary({freshnessLabel: 'unknown'})).toBe(
       '사진으로 상태를 확인하기 어려워요',
     );
+  });
+
+  it('splits shareable detections from items excluded by backend share policy', () => {
+    const detections = [
+      {
+        id: 'banana-detection',
+        labelKo: '바나나',
+        freshnessLabel: 'Fresh',
+        shareable: true,
+      },
+      {
+        id: 'tomato-detection',
+        labelKo: '토마토',
+        freshnessLabel: 'Stale',
+        shareable: false,
+      },
+      {
+        id: 'apple-detection',
+        labelKo: '사과',
+        freshnessLabel: 'Mid',
+      },
+    ];
+
+    expect(getShareableDetections(detections).map(getDetectionName)).toEqual([
+      '바나나',
+      '사과',
+    ]);
+    expect(getExcludedDetections(detections).map(getDetectionName)).toEqual([
+      '토마토',
+    ]);
   });
 });

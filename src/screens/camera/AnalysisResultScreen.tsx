@@ -31,9 +31,11 @@ import {
 } from '@/design-system';
 import { colors } from '@/theme';
 import {
+  getExcludedDetections,
   getDetectionName,
   getDetectionSummary,
   getResultDetections,
+  getShareableDetections,
 } from '@/utils/aiDetections';
 import {
   getGenerateResultQualityMeta,
@@ -68,7 +70,11 @@ const AnalysisResultScreen = ({ route, navigation }: Props) => {
   const analysisMessage =
     result.aiAnalysis?.analysisMessage || '분석 결과를 불러올 수 없습니다.';
   const detections = getResultDetections(result);
-  const showMultiObjectNotice = detections.length > 1;
+  const shareableDetections = getShareableDetections(detections);
+  const excludedDetections = getExcludedDetections(detections);
+  const showDetectionNotice = detections.length > 0;
+  const registeredItemCount =
+    shareableDetections.length > 0 ? shareableDetections.length : 1;
 
   return (
     <View style={styles.container}>
@@ -181,19 +187,36 @@ const AnalysisResultScreen = ({ route, navigation }: Props) => {
             </DSText>
           </View>
 
-          {showMultiObjectNotice ? (
+          {showDetectionNotice ? (
             <View style={styles.detectionBox}>
-              <Text style={styles.detectionTitle}>감지된 식재료 후보</Text>
+              <Text style={styles.detectionTitle}>감지된 식재료</Text>
               <Text style={styles.detectionHint}>
-                이번 등록은 대표 식재료 1개 기준으로 진행합니다.
+                {`${registeredItemCount}개 품목이 나눔 등록 대상입니다.`}
               </Text>
-              {detections.map((detection, index) => (
+              {shareableDetections.map((detection, index) => (
                 <View
                   key={`${getDetectionName(detection)}-${index}`}
                   style={styles.detectionRow}>
                   <Text style={styles.detectionName} numberOfLines={1}>
                     {getDetectionName(detection)}
                   </Text>
+                  <Text style={styles.detectionMeta}>
+                    {getDetectionSummary(detection)}
+                  </Text>
+                </View>
+              ))}
+              {excludedDetections.map((detection, index) => (
+                <View
+                  key={`excluded-${getDetectionName(detection)}-${index}`}
+                  style={[styles.detectionRow, styles.detectionRowExcluded]}>
+                  <View style={styles.detectionExcludedCopy}>
+                    <Text style={styles.detectionName} numberOfLines={1}>
+                      {getDetectionName(detection)}
+                    </Text>
+                    <Text style={styles.detectionExcludedText}>
+                      보관 기준에 맞지 않아 나눔 목록에서 제외됩니다.
+                    </Text>
+                  </View>
                   <Text style={styles.detectionMeta}>
                     {getDetectionSummary(detection)}
                   </Text>
@@ -434,6 +457,23 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     gap: 12,
+  },
+  detectionRowExcluded: {
+    borderWidth: 1,
+    borderColor: colors.error,
+    borderRadius: 10,
+    backgroundColor: '#FEF2F2',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  detectionExcludedCopy: {
+    flex: 1,
+    gap: 3,
+  },
+  detectionExcludedText: {
+    fontSize: 12,
+    lineHeight: 17,
+    color: colors.error,
   },
   detectionName: {
     flex: 1,

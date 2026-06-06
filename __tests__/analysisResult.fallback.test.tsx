@@ -144,7 +144,7 @@ describe('AnalysisResultScreen fallback QA', () => {
     });
   });
 
-  it('shows detected food candidates when the backend sends multi-object detections', async () => {
+  it('shows shareable and excluded detections when the backend sends multi-object detections', async () => {
     const multiObjectResult: GenerateResult = {
       ...baseResult,
       detections: [
@@ -153,12 +153,14 @@ describe('AnalysisResultScreen fallback QA', () => {
           labelKo: '바나나',
           freshnessLabel: 'Fresh',
           confidenceScore: 0.96,
+          shareable: true,
         },
         {
           label: 'tomato',
           labelKo: '토마토',
-          freshnessLabel: 'Mid',
+          freshnessLabel: 'Stale',
           confidenceScore: 0.82,
+          shareable: false,
         },
       ],
     };
@@ -166,7 +168,7 @@ describe('AnalysisResultScreen fallback QA', () => {
     const {renderer} = await createScreen(multiObjectResult);
 
     expect(
-      renderer.root.findAllByProps({children: '감지된 식재료 후보'}),
+      renderer.root.findAllByProps({children: '감지된 식재료'}),
     ).not.toHaveLength(0);
     expect(renderer.root.findAllByProps({children: '바나나'})).not.toHaveLength(
       0,
@@ -176,7 +178,12 @@ describe('AnalysisResultScreen fallback QA', () => {
     );
     expect(
       renderer.root.findAllByProps({
-        children: '이번 등록은 대표 식재료 1개 기준으로 진행합니다.',
+        children: '1개 품목이 나눔 등록 대상입니다.',
+      }),
+    ).not.toHaveLength(0);
+    expect(
+      renderer.root.findAllByProps({
+        children: '보관 기준에 맞지 않아 나눔 목록에서 제외됩니다.',
       }),
     ).not.toHaveLength(0);
 

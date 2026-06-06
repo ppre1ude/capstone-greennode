@@ -9,7 +9,6 @@ const fs = jest.requireActual('fs') as {
 const resolveProjectPath = (relativePath: string) => path.resolve(__dirname, '..', relativePath);
 
 const activeFlowContractFiles = [
-  'src/types/post.ts',
   'src/screens/post/FridgeSelectScreen.tsx',
   'docs/INVENTORY_QR_PRD_V0.md',
 ].map(resolveProjectPath);

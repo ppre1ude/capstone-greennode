@@ -144,22 +144,34 @@ const FridgeSelectScreen = ({ route, navigation }: Props) => {
         flow: 'fridge_qr',
       });
 
-      if (response.success && response.data) {
+      const createdPosts = response.data ?? [];
+      const firstCreatedPost = createdPosts[0];
+      const batchItems = createdPosts.map(post => ({
+        postId: post.id,
+        label: post.detectedFruitKo ?? post.detectedFruit ?? null,
+        pendingExpiresAt: resolvePendingStoreExpiresAt(
+          post.storeExpiresAt,
+          post.createdAt,
+        ),
+      }));
+
+      if (response.success && firstCreatedPost) {
         navigation.replace('InventoryQr', {
           mode: 'store',
-          postId: response.data.id,
+          postId: firstCreatedPost.id,
           fridgePublicCode: selectedFridge?.publicCode,
           fridgeName: selectedFridge?.name,
           fridgeLocation: selectedFridge?.address,
-          pendingExpiresAt: resolvePendingStoreExpiresAt(
-            response.data.storeExpiresAt,
-            response.data.createdAt,
-          ),
+          pendingExpiresAt: batchItems[0]?.pendingExpiresAt,
+          batchItems: batchItems.length > 1 ? batchItems : undefined,
+          batchIndex: batchItems.length > 1 ? 0 : undefined,
         });
       } else {
         Alert.alert(
           '등록 실패',
-          response.message || '나눔 등록에 실패했습니다.',
+          createdPosts.length === 0
+            ? '등록된 나눔 식재료가 없습니다. 다시 시도해주세요.'
+            : response.message || '나눔 등록에 실패했습니다.',
         );
       }
     } catch (error) {

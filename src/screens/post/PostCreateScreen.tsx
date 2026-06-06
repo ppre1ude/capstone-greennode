@@ -7,7 +7,7 @@
  *
  * @wireframe wireframe-foodlink/scanapply.html
  */
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -29,9 +29,11 @@ import {
   DSScreenFooter,
 } from '@/design-system';
 import {
+  getExcludedDetections,
   getDetectionName,
   getDetectionSummary,
   getResultDetections,
+  getShareableDetections,
 } from '@/utils/aiDetections';
 import {
   getGenerateResultQualityMeta,
@@ -41,51 +43,8 @@ import { styles } from './PostCreateScreen.styles';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PostCreate'>;
 
-const PICKUP_OFFSET_OPTIONS = [
-  { label: '오늘', offsetDays: 0 },
-  { label: '내일', offsetDays: 1 },
-  { label: '3일 뒤', offsetDays: 3 },
-] as const;
-
-const formatDateOnly = (date: Date) => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-
-  return `${year}-${month}-${day}`;
-};
-
-const getDateByOffset = (offsetDays: number) => {
-  const date = new Date();
-  date.setDate(date.getDate() + offsetDays);
-  return formatDateOnly(date);
-};
-
-const getDetectionId = (detection?: { id?: string | number | null }) => {
-  if (detection?.id == null) {
-    return undefined;
-  }
-
-  return String(detection.id);
-};
-
-const getDefaultDetectionIndex = (
-  detections: ReturnType<typeof getResultDetections>,
-) => {
-  const firstDetectionWithIdIndex = detections.findIndex(
-    detection => detection.id != null,
-  );
-
-  return firstDetectionWithIdIndex >= 0 ? firstDetectionWithIdIndex : 0;
-};
-
 const PostCreateScreen = ({ route, navigation }: Props) => {
   const { result, imageUri } = route.params;
-  const [selectedPickupOffsetDays, setSelectedPickupOffsetDays] = useState(3);
-  const expirationDate = useMemo(
-    () => getDateByOffset(selectedPickupOffsetDays),
-    [selectedPickupOffsetDays],
-  );
   const detectedCrop =
     result.detectedFruitKo ||
     result.aiAnalysis?.detectedFruitKo ||
@@ -101,24 +60,25 @@ const PostCreateScreen = ({ route, navigation }: Props) => {
       ));
   const hasImageToken = Boolean(result.imageToken);
   const detections = useMemo(() => getResultDetections(result), [result]);
-  const showMultiObjectNotice = detections.length > 1;
-  const defaultDetectionIndex = useMemo(
-    () => getDefaultDetectionIndex(detections),
+  const shareableDetections = useMemo(
+    () => getShareableDetections(detections),
     [detections],
   );
-  const [selectedDetectionIndex, setSelectedDetectionIndex] = useState(
-    defaultDetectionIndex,
+  const excludedDetections = useMemo(
+    () => getExcludedDetections(detections),
+    [detections],
   );
-  useEffect(() => {
-    setSelectedDetectionIndex(defaultDetectionIndex);
-  }, [defaultDetectionIndex, detections]);
-  const selectedDetection = showMultiObjectNotice
-    ? detections[selectedDetectionIndex] ?? detections[defaultDetectionIndex]
-    : undefined;
-  const selectedDetectionId = getDetectionId(selectedDetection);
-  const representativeName = selectedDetection
-    ? getDetectionName(selectedDetection)
-    : detectedCrop;
+  const showDetectionNotice = detections.length > 0;
+  const registeredItemCount =
+    shareableDetections.length > 0 ? shareableDetections.length : 1;
+  const representativeName =
+    shareableDetections.length > 1
+      ? `${getDetectionName(shareableDetections[0])} 외 ${
+          shareableDetections.length - 1
+        }개`
+      : shareableDetections[0]
+      ? getDetectionName(shareableDetections[0])
+      : detectedCrop;
 
   const handleNext = () => {
     if (!quality.canShare || !hasImageToken) {
@@ -132,8 +92,7 @@ const PostCreateScreen = ({ route, navigation }: Props) => {
     navigation.navigate('FridgeSelect', {
       postData: {
         imageToken: result.imageToken as string,
-        expirationDate,
-        ...(selectedDetectionId ? { selectedDetectionId } : {}),
+        expirationDate: null,
       },
       qualityCategory:
         result.aiAnalysis?.category ?? result.freshnessLabel ?? undefined,
@@ -195,35 +154,43 @@ const PostCreateScreen = ({ route, navigation }: Props) => {
             </Text>
           )}
 
-          {showMultiObjectNotice ? (
+          {showDetectionNotice ? (
             <DSCard
               variant="outlined"
               padded={false}
               style={styles.detectionCard}>
-              <Text style={styles.detectionTitle}>감지된 식재료 후보</Text>
+              <Text style={styles.detectionTitle}>등록될 식재료</Text>
               <Text style={styles.detectionHint}>
-                대표 식재료 1개를 선택해 등록합니다.
+                {`${registeredItemCount}개 품목이 각각 나눔으로 등록됩니다.`}
               </Text>
-              {detections.map((detection, index) => (
-                <TouchableOpacity
+              {shareableDetections.map((detection, index) => (
+                <View
                   key={`${getDetectionName(detection)}-${index}`}
-                  accessibilityRole="button"
-                  accessibilityState={{
-                    selected: selectedDetectionIndex === index,
-                  }}
-                  onPress={() => setSelectedDetectionIndex(index)}
-                  style={[
-                    styles.detectionRow,
-                    selectedDetectionIndex === index &&
-                      styles.detectionRowSelected,
-                  ]}>
+                  style={styles.detectionRow}>
                   <Text style={styles.detectionName} numberOfLines={1}>
                     {getDetectionName(detection)}
                   </Text>
                   <Text style={styles.detectionMeta}>
                     {getDetectionSummary(detection)}
                   </Text>
-                </TouchableOpacity>
+                </View>
+              ))}
+              {excludedDetections.map((detection, index) => (
+                <View
+                  key={`excluded-${getDetectionName(detection)}-${index}`}
+                  style={[styles.detectionRow, styles.detectionRowExcluded]}>
+                  <View style={styles.detectionExcludedCopy}>
+                    <Text style={styles.detectionName} numberOfLines={1}>
+                      {getDetectionName(detection)}
+                    </Text>
+                    <Text style={styles.detectionExcludedText}>
+                      보관 기준에 맞지 않아 나눔 목록에서 제외됩니다.
+                    </Text>
+                  </View>
+                  <Text style={styles.detectionMeta}>
+                    {getDetectionSummary(detection)}
+                  </Text>
+                </View>
               ))}
             </DSCard>
           ) : null}
@@ -232,47 +199,10 @@ const PostCreateScreen = ({ route, navigation }: Props) => {
             <Text style={styles.summaryTitle}>나눔 식재료</Text>
             <Text style={styles.summaryName}>{representativeName}</Text>
             <Text style={styles.summaryDescription}>
-              공유 냉장고를 선택하면 QR 보관 인증 대기 상태로 생성됩니다.
+              공유 냉장고를 선택하면 서버가 품목별 보관 기한을 계산하고 QR
+              보관 인증 대기 상태로 생성됩니다.
             </Text>
           </DSCard>
-
-          <View style={styles.field}>
-            <View style={styles.dateLabelRow}>
-              <Text style={styles.dateLabel}>권장 수령일</Text>
-              <Text style={styles.dateLimit}>최대 3일</Text>
-            </View>
-            <DSCard variant="outlined" padded={false} style={styles.dateCard}>
-              <View style={styles.dateIcon}>
-                <DSIcon name="clock" size="small" color="primary" />
-              </View>
-              <View style={styles.dateCopy}>
-                <Text style={styles.dateValue}>{expirationDate}</Text>
-                <Text style={styles.dateCaption}>
-                  앱이 제안한 수령 권장일입니다.
-                </Text>
-              </View>
-            </DSCard>
-            <View style={styles.dateOptions}>
-              {PICKUP_OFFSET_OPTIONS.map(option => (
-                <DSChip
-                  key={option.offsetDays}
-                  label={option.label}
-                  size="large"
-                  tone="primary"
-                  selected={selectedPickupOffsetDays === option.offsetDays}
-                  onPress={() =>
-                    setSelectedPickupOffsetDays(option.offsetDays)
-                  }
-                  accessibilityLabel={`${option.label}로 권장 수령일 설정`}
-                />
-              ))}
-            </View>
-            <Text style={styles.dateHelper}>
-              소비기한을 자동으로 읽지 않기 때문에 오늘부터 3일 안에서만
-              조정할 수 있어요. 실제 상태가 애매하면 더 빠른 수령일을
-              선택해주세요.
-            </Text>
-          </View>
         </View>
       </ScrollView>
 

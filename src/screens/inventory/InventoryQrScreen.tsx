@@ -13,6 +13,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  type DimensionValue,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -137,6 +138,46 @@ const InventoryQrContent = ({ navigation, params }: InventoryQrContentProps) => 
   const fridgeLocation =
     params.fridgeLocation ?? '냉장고 앞에서 QR을 스캔하면 서버가 확인합니다.';
   const scanMode = params.mode;
+  const batchItems = useMemo(
+    () =>
+      (params.batchItems ?? []).filter(
+        item => item && typeof item.postId === 'number',
+      ),
+    [params.batchItems],
+  );
+  const batchIndex = useMemo(() => {
+    if (batchItems.length === 0) {
+      return 0;
+    }
+
+    if (
+      Number.isInteger(params.batchIndex) &&
+      params.batchIndex !== undefined &&
+      params.batchIndex >= 0 &&
+      params.batchIndex < batchItems.length
+    ) {
+      return params.batchIndex;
+    }
+
+    const routeIndex = batchItems.findIndex(item => item.postId === postId);
+    return routeIndex >= 0 ? routeIndex : 0;
+  }, [batchItems, params.batchIndex, postId]);
+  const batchTotal = batchItems.length;
+  const hasBatchProgress = scanMode === 'store' && batchTotal > 1;
+  const currentBatchNumber = hasBatchProgress ? batchIndex + 1 : 1;
+  const currentBatchItem = hasBatchProgress
+    ? batchItems[batchIndex]
+    : undefined;
+  const currentBatchLabel =
+    typeof currentBatchItem?.label === 'string'
+      ? currentBatchItem.label.trim()
+      : '';
+  const nextBatchItem = hasBatchProgress
+    ? batchItems[batchIndex + 1]
+    : undefined;
+  const batchProgressPercent = hasBatchProgress
+    ? (`${Math.round((currentBatchNumber / batchTotal) * 100)}%` as DimensionValue)
+    : ('0%' as DimensionValue);
   const actionCopy =
     scanMode === 'store'
       ? {
@@ -194,12 +235,19 @@ const InventoryQrContent = ({ navigation, params }: InventoryQrContentProps) => 
   );
 
   const countdownExpiresAt = useMemo(() => {
-    if (isValidDateInput(params.pendingExpiresAt)) {
-      return params.pendingExpiresAt;
+    const pendingExpiresAt =
+      params.pendingExpiresAt ?? currentBatchItem?.pendingExpiresAt;
+
+    if (isValidDateInput(pendingExpiresAt)) {
+      return pendingExpiresAt;
     }
 
     return apiFallbackExpiresAt;
-  }, [apiFallbackExpiresAt, params.pendingExpiresAt]);
+  }, [
+    apiFallbackExpiresAt,
+    currentBatchItem?.pendingExpiresAt,
+    params.pendingExpiresAt,
+  ]);
 
   const countdownNow = currentTime;
 
@@ -289,6 +337,21 @@ const InventoryQrContent = ({ navigation, params }: InventoryQrContentProps) => 
     setScanMessage('냉장고 QR을 다시 스캔해주세요.');
   }, []);
 
+  const handleOpenNextBatchItem = useCallback(() => {
+    if (!nextBatchItem) {
+      return;
+    }
+
+    navigation.replace('InventoryQr', {
+      ...params,
+      mode: 'store',
+      postId: nextBatchItem.postId,
+      pendingExpiresAt: nextBatchItem.pendingExpiresAt,
+      batchItems,
+      batchIndex: batchIndex + 1,
+    });
+  }, [batchIndex, batchItems, navigation, nextBatchItem, params]);
+
   const labelCode =
     confirmedStoreResult?.labelCode ??
     confirmedPickupResult?.labelCode ??
@@ -335,6 +398,39 @@ const InventoryQrContent = ({ navigation, params }: InventoryQrContentProps) => 
           <Text style={styles.noticeTitle}>{actionCopy.noticeTitle}</Text>
           <Text style={styles.noticeText}>{actionCopy.noticeText}</Text>
         </View>
+
+        {hasBatchProgress ? (
+          <View
+            style={styles.batchProgressPanel}
+            testID="inventory-qr-batch-progress">
+            <View style={styles.batchProgressHeader}>
+              <Text style={styles.batchProgressTitle}>
+                {currentBatchNumber}/{batchTotal}번째 식재료 보관 인증
+              </Text>
+              {currentBatchLabel ? (
+                <Text
+                  style={styles.batchProgressLabel}
+                  numberOfLines={1}>
+                  {currentBatchLabel}
+                </Text>
+              ) : null}
+            </View>
+            <View
+              style={styles.batchProgressTrack}
+              testID="inventory-qr-batch-progress-track">
+              <View
+                style={[
+                  styles.batchProgressFill,
+                  { width: batchProgressPercent },
+                ]}
+                testID="inventory-qr-batch-progress-fill"
+              />
+            </View>
+            <Text style={styles.batchProgressText}>
+              각 식재료마다 QR 인증과 라벨 부착을 완료해주세요.
+            </Text>
+          </View>
+        ) : null}
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -407,6 +503,16 @@ const InventoryQrContent = ({ navigation, params }: InventoryQrContentProps) => 
                   </Text>
                 ) : null}
               </View>
+              {nextBatchItem ? (
+                <TouchableOpacity
+                  testID="inventory-qr-next-batch-action"
+                  onPress={handleOpenNextBatchItem}
+                  style={styles.nextBatchButton}>
+                  <Text style={styles.nextBatchButtonText}>
+                    다음 식재료 인증하기
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
             </>
           ) : (
             <View style={styles.emptyLabelPanel}>
@@ -533,6 +639,49 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     color: colors.textSecondary,
   },
+  batchProgressPanel: {
+    backgroundColor: colors.background,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    padding: 14,
+  },
+  batchProgressHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  batchProgressTitle: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '800',
+    color: colors.textPrimary,
+  },
+  batchProgressLabel: {
+    maxWidth: '42%',
+    fontSize: 12,
+    fontWeight: '800',
+    color: colors.primary,
+  },
+  batchProgressTrack: {
+    height: 8,
+    marginTop: 10,
+    borderRadius: 999,
+    backgroundColor: '#E5EFE7',
+    overflow: 'hidden',
+  },
+  batchProgressFill: {
+    height: '100%',
+    borderRadius: 999,
+    backgroundColor: colors.secondary,
+  },
+  batchProgressText: {
+    marginTop: 8,
+    fontSize: 12,
+    lineHeight: 18,
+    color: colors.textSecondary,
+  },
   section: {
     backgroundColor: colors.background,
     borderRadius: 8,
@@ -621,6 +770,21 @@ const styles = StyleSheet.create({
   retryScanButtonText: {
     color: colors.primary,
     fontSize: 13,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+  nextBatchButton: {
+    minHeight: 48,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  nextBatchButtonText: {
+    color: colors.textOnPrimary,
+    fontSize: 14,
     fontWeight: '800',
     textAlign: 'center',
   },
