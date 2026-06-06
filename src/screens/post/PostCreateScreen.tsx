@@ -69,8 +69,7 @@ const PostCreateScreen = ({ route, navigation }: Props) => {
     [detections],
   );
   const showDetectionNotice = detections.length > 0;
-  const registeredItemCount =
-    shareableDetections.length > 0 ? shareableDetections.length : 1;
+  const registeredItemCount = detections.length > 0 ? shareableDetections.length : 1;
   const representativeName =
     shareableDetections.length > 1
       ? `${getDetectionName(shareableDetections[0])} 외 ${
