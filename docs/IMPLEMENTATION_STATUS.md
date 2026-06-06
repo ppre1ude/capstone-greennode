@@ -42,8 +42,8 @@
 ## 2026-05-29 Post-MVP 백엔드 회신 반영
 
 - 백엔드가 Post-MVP blocker 8개 항목에 답변했고, 프론트 검토 결과는 [BACKEND_RESPONSE_TO_POST_MVP_BLOCKERS_2026-05-29.md](./BACKEND_RESPONSE_TO_POST_MVP_BLOCKERS_2026-05-29.md)에 정리했다.
-- AI는 현재 ResNet-50 단일 분류 모델 한계로 비식재료, 스크린샷/UI, 저품질, 다중 객체를 실제로 판별하지 못한다. 프론트는 `rejectionReason`/`reviewReason` shape 대응을 유지하되, fixture full strict 통과는 Phase 4 모델 고도화 이후 gate로 분리한다.
-- Multi-object 대표 후보 선택 UI와 `selectedDetectionId` 전송 경로는 방어 준비 상태다. 실제 `detections.length >= 2`와 normalized `bbox`는 object detection 모델 도입 후 검증한다.
+- AI는 현재 ResNet-50 단일 분류 모델 한계로 비식재료, 스크린샷/UI, 저품질을 실제로 판별하지 못한다. 프론트는 `rejectionReason`/`reviewReason` shape 대응을 유지하되, fixture full strict 통과는 Phase 4 모델 고도화 이후 gate로 분리한다.
+- 2026-06-01 다중 일괄 등록 가이드를 반영해 프론트는 `detections[].shareable`, 절대 픽셀 `bbox`, `PostRead[]` 생성 응답을 수용한다. 대표 후보 선택 UI와 `selectedDetectionId` 전송은 제거했고, `shareable=false` 품목은 제외 대상으로 표시한다. 일괄 생성된 여러 `pending_store` 품목은 QR 화면에서 `1/N` 진행률과 다음 품목 CTA로 순차 보관 인증한다.
 - Notifications와 server search는 백엔드가 구현 완료로 회신했다. Impact는 회신 내부에서 구현 상태가 상충한다. 세 항목 모두 live VM/OpenAPI 재검증 전까지 앱 연결 완료로 보지 않는다.
 - Email verification과 social login은 이번 immediate scope에서 제외하고 Phase 4 auth expansion으로 묶는다. WebSocket 채팅 제외 결정은 유지한다.
 - 프론트 후속 반영: root-level `reviewReason`을 앱 정책에 반영하고 `qa:ai-fixtures -- --shape-only` 모드를 추가했다. `getNearbyPosts`/`getNearbyFridges`는 optional `q`를 보낼 수 있으며, `getImpactSummary`와 `emailVerifiedAt` 타입은 live VM 확인 전 연결 준비 상태로 추가했다.
@@ -169,7 +169,7 @@
 
 - 홈은 현재 불러온 nearby 나눔 중 `status=available`이고 권장 수령일이 오늘 이후인 항목을 `오늘 가져가기 좋은 재료` 섹션에 최대 3개까지 노출한다. 정렬은 권장 수령일 오름차순, 같은 날짜에서는 최신 등록순, 그다음 낮은 id 순이다. 서버 추천/랭킹 API 없이 로컬 규칙으로만 동작한다.
 - 운영자 콘솔은 backend inventory items가 빈 목록을 반환할 때 명시적인 empty 상태를 보여주고, 운영자 전용 상태값을 `신청 가능`, `폐기 후보`, `폐기 완료`처럼 사용자-facing label로 표시한다.
-- `detections[]` multi-object 응답이 도입될 경우를 대비해 프론트 타입과 분석/등록 화면 표시를 방어적으로 열어뒀다. 현재 정식 분리 등록은 구현하지 않고, 여러 후보가 내려와도 “대표 식재료 1개 기준 등록” 안내만 보여준다.
+- `detections[]` multi-object 응답은 프론트 타입과 분석/등록 화면에 반영됐다. 앱은 나눔 등록 대상 개수와 `shareable=false` 제외 품목을 표시하고, 최종 등록 payload에는 `selectedDetectionId`를 보내지 않는다.
 - 검증: `homeRecommendations`, `home.nearbyRefresh`, `aiDetections`, `analysisResult.fallback`, `postCreate.reviewNotice`, `fridgeOperatorInventory`, `fridgeOperatorConsole.screen` 테스트를 통과했다.
 
 ### 2026-05-23 백엔드 회신 반영 업데이트
@@ -177,7 +177,7 @@
 - FCM: 백엔드는 Android `priority: high`, iOS `apns-priority: 10`, per-token failure log, `[FCM:share_created]`/`[FCM:share_requested]` 로그 prefix를 구현할 예정이었다. 2026-05-25 VM 재배포 후 프론트 QA에서 `share_created`/`share_requested` foreground/background/terminated 및 notification tap routing을 실기기+emulator 2계정으로 재검증했다.
 - Operator / Inventory: `GET /api/v1/operator/fridges/{fridgeId}/inventory/summary`, `GET /api/v1/operator/fridges/{fridgeId}/inventory/items`, `PATCH /api/v1/operator/items/{postId}/dispose` 경로가 확정됐다. summary는 `total/available/requested/expired/disposedToday`, items/dispose는 `PostRead` camelCase 기반이다. 프론트는 내부 화면용 필드명과 백엔드 필드명 차이를 adapter에서 흡수해야 한다.
 - Dispose 정책: 가능 상태는 `expired`, `available`이고, `requested`, `completed`, `pending_store`, `cancelled`, `disposed`는 409로 거절된다. 성공 후 summary는 `total` 감소 및 `disposedToday` 증가, items/home/map에서는 disposed 항목 미포함이 기준이다.
-- Multi-object: `POST /posts/generate`는 root-level 필드와 함께 `detections[]`를 내려주는 것으로 계약이 확정됐다. MVP에서는 단일 객체 배열 래핑(`detections[0]` = 대표 객체), `bbox: null`, `rejectionReason: null`이다. 실제 다중 객체 분리 등록과 non-null rejection reason/bbox는 Post-MVP다.
+- Multi-object: `POST /posts/generate`는 root-level 필드와 함께 `detections[]`, `shareable`, 절대 픽셀 `bbox`를 내려준다. `POST /posts`는 `imageToken`, `fridgeId`, `flow`, 선택 `expirationDate`만 받아 `shareable=true` 품목별 `PostRead[]`를 반환한다. 앱 QR 화면은 생성된 품목 queue를 받아 `1/N` 진행률로 각 `postId`를 순차 보관 인증한다.
 - 서버 검색: MVP에서는 서버 검색 API를 포함하지 않고 홈/지도 로컬 필터를 유지한다. 향후 필요 시 기존 nearby API에 optional `q`, `skip`, `limit`를 추가하는 방식으로 확장한다.
 
 ### 2026-05-25 Operator inventory VM QA 업데이트
@@ -199,7 +199,7 @@
 | 위치 재설정                | 구현됨                                   | 홈 위치 헤더와 프로필 `동네 위치 재설정` 메뉴에서 `LocationSetup`으로 재진입한다. |
 | 디자인 시스템              | 컴포넌트 레이어 도입됨                   | `src/theme`는 GreenNode 색상/타이포그래피/spacing/radius/layout 토큰의 source of truth로 유지한다. `src/design-system`은 Montage식 prop 계약을 React Native 프리미티브로 제공하며, 홈 주변 나눔 카드부터 로그인/회원가입/위치 설정/나눔 등록/나눔 상세의 반복 CTA와 입력 패턴으로 적용 범위를 넓힌다. |
 | AI 분석                    | 부분 구현, 실제 기기 촬영/갤러리 QA 통과 | mock 파이프라인은 제거됐고 실제 `/posts/generate` 호출이 동작한다. 백엔드 기준 label은 `Fresh/Mid/Stale/unknown`이며 `Mid`는 기존 `Normal` 그룹이다. 2026-05-23 계약으로 MVP `detections[]`는 단일 객체 배열, `bbox/rejectionReason`은 `null`이다. 앱은 0.9 미만을 `확인 필요`로 표시하며, 낮은 confidence 안내는 실제 상태 직접 확인을 명시한다. |
-| 나눔 식재료 등록           | 부분 구현, 실제 기기 등록 QA 통과        | 실제 `generate -> imageToken -> createPost` 흐름으로 서버 등록이 확인됐다. 작성 화면은 AI 판별 식재료명, 신선도, confidence를 확인하고 `fridgeId`, `expirationDate`, `imageToken`만 최종 등록 payload로 보낸다. `canShare=false` 또는 `imageToken` 누락은 분석 결과, 작성, 최종 등록 단계에서 차단한다. |
+| 나눔 식재료 등록           | 부분 구현, 새 다중 등록 계약 코드 반영   | 실제 `generate -> imageToken -> createPost` 흐름은 기존 서버 등록 QA로 확인됐다. 현재 코드는 `fridgeId`, `imageToken`, `flow`, `expirationDate:null`을 보내고 `PostRead[]` 응답을 수용한다. 분석/등록 화면은 `shareable=false` 감지 품목을 제외 대상으로 표시하고, QR 화면은 여러 생성 품목을 `1/N` 진행률과 다음 품목 CTA로 순차 보관 인증한다. `canShare=false` 또는 `imageToken` 누락은 분석 결과, 작성, 최종 등록 단계에서 차단한다. 최신 VM에서 다중 객체/서버 crop/배열 응답 재검증 필요. |
 | 나눔 식재료 상세/삭제/신청 | 부분 구현, 실제 기기 신청 QA 통과        | 실제 상세 응답의 `authorId` 기준으로 작성자 여부를 판단한다. 상세 화면은 `detectedFruitKo`, `freshnessLabel`, `confidenceScore`, `status`를 표시한다. `available` 나눔 식재료는 `requestShare(postId)`로 신청하고, 201/409 이후 `신청 접수` 상태로 CTA를 비활성화한다. 403은 작성자 본인 fallback 문구로 처리한다. |
 | 홈 주변 나눔 식재료        | 부분 구현, 실제 기기 홈 재조회 통과      | `/posts/nearby` 데이터를 카드로 표시한다. 홈 포커스와 등록 완료 refresh token 변경 시 재조회한다. 2026-05-21부터 현재 로딩된 nearby 목록에서 권장 수령일이 가까운 available 항목을 `오늘 가져가기 좋은 재료`로 로컬 추천한다. |
 | 지도/냉장고                | 부분 구현, 실제 기기 UI QA 통과          | `/fridges/nearby`, `/fridges/available` 조회와 지도 마커/냉장고 선택은 동작한다. 지도에서 냉장고를 선택하면 `GET /fridges/{id}/posts?status=available`로 내부 available 나눔 식재료를 조회하고, loading/error/empty/list 상태를 분리한다. |
@@ -322,7 +322,7 @@
 1. 완료: 검색 MVP 범위는 지도 공유 냉장고 이름/주소 로컬 필터로 결정
 2. 완료, 실제 기기 QA 통과: FCM 수신 handler와 알림함. `share_created`/`share_requested` foreground/background/opened/initial 수신 기록, 문자열 + camelCase payload 검증, 상세 fallback 라우팅, 로컬 읽음 표시를 구현했다. 2026-05-25 실기기+emulator 2계정 및 release/process-killed/lockscreen tap QA를 통과했다. 서버 읽음 상태 API는 후속이다.
 3. 완료: 홈/프로필 목업 통계 숫자 제거
-4. multi-object detection 계약 연구
+4. multi-object 일괄 등록 최신 VM/API 재검증
 
 ### 보류
 

@@ -354,7 +354,8 @@ Content-Type: multipart/form-data
         "labelKo": "바나나",
         "freshnessLabel": "Fresh",
         "confidenceScore": 0.96,
-        "bbox": null
+        "shareable": true,
+        "bbox": {"x": 120, "y": 180, "width": 310, "height": 420}
       }
     ]
   }
@@ -372,7 +373,8 @@ Content-Type: multipart/form-data
 | `labelKo` | `string` | AI 감지 한국어명 |
 | `freshnessLabel` | `Fresh` / `Mid` / `Stale` | 대표 객체 신선도 |
 | `confidenceScore` | `number` | 0.0~1.0 |
-| `bbox` | `object \| null` | MVP classification 모델에서는 `null` |
+| `shareable` | `boolean` | 최종 등록 대상 여부. `false`는 앱에서 제외 표시 |
+| `bbox` | `object \| null` | 원본 이미지 기준 절대 픽셀 rectangle. 구형 classification 응답은 `null` |
 
 **에러 시 → 400 및 프론트 표시 정책**:
 
@@ -420,8 +422,9 @@ Content-Type: application/x-www-form-urlencoded
 ```javascript
 const data = {
   fridgeId: 1,
-  expirationDate: '2026-04-30',
+  expirationDate: null,
   imageToken: generateResult.imageToken, // ← generate에서 받은 토큰
+  flow: 'fridge_qr',
 };
 
 // ⚠️ 이미지 파일은 보내지 않음! (이미 generate에서 서버에 저장됨)
@@ -442,12 +445,12 @@ const response = await fetch(`${BASE_URL}/api/v1/posts`, {
 2. 공유 냉장고 검증 (존재 + 활성)
 3. 검증된 이미지 → 최종 경로로 이동
 4. `{imageToken}.json` sidecar에서 AI 메타데이터 복원
-5. DB 저장 (`status = available`, `detectedFruit`, `detectedFruitKo`, `freshnessLabel`, `confidenceScore`)
-6. 2km 내 사용자에게 FCM 알림 (비동기)
+5. `shareable=true` 감지 품목별 개별 Post 저장 (`status = pending_store`, `detectedFruit`, `detectedFruitKo`, `freshnessLabel`, `confidenceScore`, 개별 `imageUrl`)
+6. 보관 QR 인증 후 available 전환과 FCM 알림 발송
 
 `Stale` 판정 이미지는 generate 단계에서 임시 저장까지 도달하지 않으므로 `imageToken`이 없다. generate를 우회해 `POST /posts`를 직접 호출해도 유효한 토큰이 없으면 등록되지 않는다.
 
-> MVP 필수 payload는 `fridgeId`, `expirationDate`, `imageToken`이다. AI 메타데이터를 create payload에 다시 보낼 필요가 없다. 백엔드 우선순위는 서버 sidecar 값 > 프론트 전송 값이며, 프론트가 AI 필드를 보내더라도 서버 보관 값이 우선이다. Post-MVP multi-object 계약이 활성화되면 프론트는 사용자가 선택한 대표 후보의 `selectedDetectionId`만 optional로 추가 전송한다. `bbox`와 객체별 분리 등록 데이터는 create payload에 보내지 않는다.
+> 2026-06-01 다중 일괄 등록 계약 기준 payload는 `fridgeId`, `imageToken`, 선택 `expirationDate`, `flow`다. 앱 정식 흐름은 `flow: "fridge_qr"`를 보낸다. `expirationDate`가 `null` 또는 누락되면 서버가 품목별 보관 규칙으로 자동 산정한다. AI 메타데이터, `selectedDetectionId`, `bbox`, 객체별 crop 데이터는 create payload에 보내지 않는다. 응답 `data`는 단일 Post가 아니라 `PostRead[]` 배열이다.
 >
 > 2026-05-06 live VM conflict: 공개 fresh fixture로 `generate -> create -> detail`을 실행했을 때 생성된 Post id `2`의 AI 필드가 모두 `null`이었다. 2026-05-08 백엔드 답변 기준 이 현상은 백엔드 버그로 확정됐고, `save_temp_image()`/`move_temp_to_final()` sidecar 저장/복원 방식으로 VM 재배포 완료됐다. 프론트는 기존 null 데이터 fallback을 MVP에서 유지한다.
 
@@ -995,14 +998,13 @@ Soft review 응답은 기존 generate 200 payload에 `reviewReason`을 추가한
 
 현재 AI 모델은 비식재료, 스크린샷/UI, 저품질 이미지를 실제로 판별하지 못한다. 모델 고도화 전에는 full fixture strict 통과가 아니라 reason 필드 shape와 generic 400 제거만 검증한다.
 
-### Multi-object representative selection
+### Multi-object batch registration
 
-다음 Post-MVP increment에서도 `POST /posts`는 나눔 식재료 1개만 만든다. 여러 객체가 감지되면 앱은 대표 후보 1개를 선택하도록 안내한다. 자동 객체별 분리 등록은 별도 후속 기능이다.
+2026-06-01 백엔드 다중 일괄 등록 계약 기준으로 `POST /posts/generate`는 이미지 안의 감지 결과를 `detections[]`로 내려주고, `POST /posts`는 같은 `imageToken`에 연결된 `shareable=true` 품목을 개별 나눔 식재료로 생성해 `PostRead[]` 배열을 반환한다. 앱은 대표 후보를 선택하거나 `selectedDetectionId`를 보내지 않는다. `shareable=false` 품목은 분석/등록 확인 화면에서 제외 대상으로 표시하고, 최종 등록 응답에는 포함되지 않는 것으로 본다.
 
 ```json
 {
-  "reviewReason": "multi_object_review",
-  "selectedDetectionId": "detection-1",
+  "imageToken": "image-token",
   "detections": [
     {
       "id": "detection-1",
@@ -1010,15 +1012,16 @@ Soft review 응답은 기존 generate 200 payload에 `reviewReason`을 추가한
       "labelKo": "바나나",
       "freshnessLabel": "Fresh",
       "confidenceScore": 0.91,
-      "bbox": {"x": 0.12, "y": 0.18, "width": 0.31, "height": 0.42}
+      "shareable": true,
+      "bbox": {"x": 120, "y": 180, "width": 310, "height": 420}
     }
   ]
 }
 ```
 
-`bbox`는 이미지 기준 0~1 normalized rectangle이며, 기존 `bbox: null`은 호환 값으로 계속 허용한다.
+`bbox`는 원본 이미지 기준 절대 픽셀 rectangle이다. 기존 `bbox: null`은 호환 값으로 계속 허용한다. 최종 등록 후 앱은 반환된 각 `PostRead.imageUrl`을 그대로 사용하며, 프론트에서 원본 이미지를 수동 crop하지 않는다.
 
-현재 백엔드 AI는 object detection 모델이 아니므로 실제 `detections.length >= 2`와 normalized `bbox`는 Phase 4 모델 도입 후 보장된다.
+현재 앱의 QR 화면은 실제 인증 API 호출은 한 번에 하나의 `postId`로 수행하되, 일괄 등록 성공 시 생성된 품목 queue를 route param으로 함께 넘겨 `1/N` 진행률과 다음 품목 CTA를 표시한다. 각 품목은 같은 냉장고 QR을 순차 인증하고, 마지막 품목까지 완료하면 배치 보관 인증이 끝난다.
 
 ### Server-backed notifications
 
@@ -1150,7 +1153,7 @@ GET /posts/nearby → 근처 available 나눔 식재료
 - [ ] JWT 토큰 만료 60분 → 401 수신 시 재로그인
 - [ ] 앱 실행 시 위치는 갱신하고, FCM 토큰은 명시적 알림 권한 허용 또는 기존 저장 토큰이 있을 때만 서버에 등록
 - [ ] 나눔 식재료 상세 작성자 판단은 실제 응답의 `authorId` 기준으로 처리
-- [ ] `POST /posts`에는 `imageToken + fridgeId + expirationDate`만 보내고 AI 메타데이터는 재전송하지 않는다
+- [ ] `POST /posts`에는 `imageToken + fridgeId + flow`와 선택 `expirationDate`만 보내고 AI 메타데이터/`selectedDetectionId`/`bbox`는 재전송하지 않는다
 - [x] `/fridges/{id}/posts`와 `/posts/nearby`는 `PostNearbyRead`라 `confidenceScore`가 없다
 - [x] 백엔드 Phase 1.5 Post 구조 반영: `title/description/category` 의존 제거, 카드 요약은 `PostNearbyRead` 필드 중심, 상세/등록은 `detectedFruitKo/freshnessLabel/confidenceScore/status` 사용
 - [x] 나눔 신청 API 연동: `POST /posts/{id}/requests`, 201/403/409 처리, 신청 후 상세/홈 상태 갱신
