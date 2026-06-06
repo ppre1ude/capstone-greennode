@@ -1079,15 +1079,15 @@ GET /api/v1/fridges/nearby?latitude=...&longitude=...&radius_km=2&q=광주역&sk
 
 ### Email verification and social login
 
-Email verification과 social login은 이번 immediate scope에서 제외하고 Phase 4 auth expansion으로 묶는다.
+Email verification과 social login은 이번 immediate scope에서 제외하고 Phase 4 auth expansion으로 묶는다. 상세 정책, 에러, 계정 병합, 프론트 gate 기준은 [AUTH_EXPANSION_PHASE4_CONTRACT.md](./AUTH_EXPANSION_PHASE4_CONTRACT.md)를 따른다.
 
 | Method | Path | Purpose |
 | --- | --- | --- |
 | `POST` | `/api/v1/auth/email-verifications` | 인증 메일 발송 |
 | `POST` | `/api/v1/auth/email-verifications/confirm` | 토큰 확인 |
-| `GET` | `/api/v1/auth/me` | `emailVerifiedAt` 반환 |
+| `GET` | `/api/v1/auth/me` | `emailVerifiedAt`, 선택 `linkedProviders` 반환 |
 
-Verification 전에도 browsing과 위치 등록은 허용할 수 있다. 나눔 식재료 등록, 나눔 신청, 운영자 action을 verification 이후로 제한할지는 Phase 4에서 결정한다. 프론트는 `/auth/me.emailVerifiedAt: null`을 방어적으로 처리할 수 있지만, 실제 email verification flow와 Google/Apple social login 버튼은 backend provider token 교환 endpoint가 준비될 때까지 숨기거나 비활성화한다.
+Verification 전에도 browsing과 위치 등록은 허용한다. 나눔 식재료 등록, 나눔 신청, 신뢰 피드백, 운영자 action은 verification 이후로 제한한다. 프론트는 `/auth/me.emailVerifiedAt: null`을 방어적으로 처리할 수 있지만, 실제 email verification flow와 Google/Apple social login 버튼은 backend provider token 교환 endpoint와 native provider SDK 연동이 준비될 때까지 숨기거나 비활성화한다.
 
 ### Operator role management and WebSocket chat
 

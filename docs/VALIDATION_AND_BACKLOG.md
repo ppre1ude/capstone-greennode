@@ -227,7 +227,7 @@ To-do:
 - [x] Post-MVP 구현 시 server search, email verification, social login, WebSocket chat을 각각 독립 후속 항목으로 분리한다. 2026-05-29 backend blocker 문서에 API 필요 범위와 제외 범위를 분리했다.
 - [ ] 백엔드가 구현 완료로 회신한 server search `q` parameter가 OpenAPI/live VM에 추가됐는지 확인하고, 서버 검색이 안정화되면 로컬 fallback 유지 범위를 재결정한다.
 - [x] `/auth/me.emailVerifiedAt`은 nullable 필드로 방어 처리한다.
-- [ ] 실제 email verification/social login flow는 Phase 4에서 별도 계약을 작성한다.
+- [x] 실제 email verification/social login flow는 Phase 4에서 별도 계약을 작성한다. 2026-06-07 [AUTH_EXPANSION_PHASE4_CONTRACT.md](./AUTH_EXPANSION_PHASE4_CONTRACT.md)에 email verification, Google/Apple social login, 계정 병합, mutation gate, 수용 기준을 분리했다.
 
 ## 보존된 To-do 완료 기록
 

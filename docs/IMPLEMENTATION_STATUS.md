@@ -45,7 +45,7 @@
 - AI는 현재 ResNet-50 단일 분류 모델 한계로 비식재료, 스크린샷/UI, 저품질을 실제로 판별하지 못한다. 프론트는 `rejectionReason`/`reviewReason` shape 대응을 유지하되, fixture full strict 통과는 Phase 4 모델 고도화 이후 gate로 분리한다.
 - 2026-06-01 다중 일괄 등록 가이드를 반영해 프론트는 `detections[].shareable`, 절대 픽셀 `bbox`, `PostRead[]` 생성 응답을 수용한다. 대표 후보 선택 UI와 `selectedDetectionId` 전송은 제거했고, `shareable=false` 품목은 제외 대상으로 표시한다. 일괄 생성된 여러 `pending_store` 품목은 QR 화면에서 `1/N` 진행률과 다음 품목 CTA로 순차 보관 인증한다.
 - Notifications와 server search는 백엔드가 구현 완료로 회신했다. Impact는 회신 내부에서 구현 상태가 상충한다. 세 항목 모두 live VM/OpenAPI 재검증 전까지 앱 연결 완료로 보지 않는다.
-- Email verification과 social login은 이번 immediate scope에서 제외하고 Phase 4 auth expansion으로 묶는다. WebSocket 채팅 제외 결정은 유지한다.
+- Email verification과 social login은 이번 immediate scope에서 제외하고 Phase 4 auth expansion으로 묶는다. 실제 flow 계약은 [AUTH_EXPANSION_PHASE4_CONTRACT.md](./AUTH_EXPANSION_PHASE4_CONTRACT.md)에 분리했고, WebSocket 채팅 제외 결정은 유지한다.
 - 프론트 후속 반영: root-level `reviewReason`을 앱 정책에 반영하고 `qa:ai-fixtures -- --shape-only` 모드를 추가했다. `getNearbyPosts`/`getNearbyFridges`는 optional `q`를 보낼 수 있으며, `getImpactSummary`와 `emailVerifiedAt` 타입은 live VM 확인 전 연결 준비 상태로 추가했다.
 
 ## 2026-05-28 QA 후속 코드 수정
