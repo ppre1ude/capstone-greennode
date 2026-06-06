@@ -81,6 +81,7 @@ class MockXMLHttpRequest {
             labelKo: '사과',
             freshnessLabel: 'Fresh',
             confidenceScore: 1,
+            shareable: true,
             bbox: null,
           },
         ],
@@ -171,11 +172,12 @@ describe('posts API contract', () => {
     expect(response.data?.detections?.[0]?.bbox).toBeNull();
   });
 
-  it('creates post with encoded JSON data and imageToken only', async () => {
+  it('creates posts with encoded JSON data, nullable expirationDate, and QR flow', async () => {
     const postData = {
       fridgeId: 1,
-      expirationDate: '2026-05-08',
+      expirationDate: null,
       imageToken: 'image-token-1',
+      flow: 'fridge_qr' as const,
     };
 
     testGlobal.fetch.mockResolvedValue({
@@ -184,20 +186,22 @@ describe('posts API contract', () => {
       json: async () => ({
         success: true,
         message: 'created',
-        data: {
-          id: 10,
-          fridgeId: 1,
-          authorId: 1,
-          detectedFruit: 'apple',
-          detectedFruitKo: '사과',
-          freshnessLabel: 'Fresh',
-          confidenceScore: 1,
-          imageUrl: '/static/posts/10.jpg',
-          expirationDate: '2026-05-08',
-          status: 'available',
-          createdAt: '2026-05-06T00:00:00Z',
-          updatedAt: '2026-05-06T00:00:00Z',
-        },
+        data: [
+          {
+            id: 10,
+            fridgeId: 1,
+            authorId: 1,
+            detectedFruit: 'apple',
+            detectedFruitKo: '사과',
+            freshnessLabel: 'Fresh',
+            confidenceScore: 1,
+            imageUrl: '/static/posts/10.jpg',
+            expirationDate: '2026-06-05',
+            status: 'pending_store',
+            createdAt: '2026-05-06T00:00:00Z',
+            updatedAt: '2026-05-06T00:00:00Z',
+          },
+        ],
       }),
     } satisfies MockFetchResponse);
 
@@ -217,15 +221,15 @@ describe('posts API contract', () => {
     );
     expect(body).toContain(encodeURIComponent('image-token-1'));
     expect(body).not.toContain('file:///photo.jpg');
-    expect(response.data?.id).toBe(10);
+    expect(response.data?.[0]?.id).toBe(10);
   });
 
-  it('passes selected detection id without sending detection bbox data', async () => {
+  it('does not send detection selector or bbox data in final batch creation payload', async () => {
     const postData = {
       fridgeId: 1,
-      expirationDate: '2026-05-08',
+      expirationDate: null,
       imageToken: 'image-token-1',
-      selectedDetectionId: 'apple-detection',
+      flow: 'fridge_qr' as const,
     };
 
     testGlobal.fetch.mockResolvedValue({
@@ -234,16 +238,18 @@ describe('posts API contract', () => {
       json: async () => ({
         success: true,
         message: 'created',
-        data: {
-          id: 10,
-          fridgeId: 1,
-          authorId: 1,
-          imageUrl: '/static/posts/10.jpg',
-          expirationDate: '2026-05-08',
-          status: 'available',
-          createdAt: '2026-05-06T00:00:00Z',
-          updatedAt: '2026-05-06T00:00:00Z',
-        },
+        data: [
+          {
+            id: 10,
+            fridgeId: 1,
+            authorId: 1,
+            imageUrl: '/static/posts/10.jpg',
+            expirationDate: '2026-06-05',
+            status: 'pending_store',
+            createdAt: '2026-05-06T00:00:00Z',
+            updatedAt: '2026-05-06T00:00:00Z',
+          },
+        ],
       }),
     } satisfies MockFetchResponse);
 
@@ -253,7 +259,7 @@ describe('posts API contract', () => {
     const payload = JSON.parse(decodeURIComponent(body.slice('data='.length)));
 
     expect(payload).toEqual(postData);
-    expect(payload).toHaveProperty('selectedDetectionId', 'apple-detection');
+    expect(payload).not.toHaveProperty('selectedDetectionId');
     expect(payload).not.toHaveProperty('bbox');
     expect(body).not.toContain('width');
     expect(body).not.toContain('height');
@@ -273,16 +279,18 @@ describe('posts API contract', () => {
       json: async () => ({
         success: true,
         message: 'pending store created',
-        data: {
-          id: 11,
-          fridgeId: 1,
-          authorId: 1,
-          imageUrl: '/static/posts/11.jpg',
-          expirationDate: '2026-05-08',
-          status: 'pending_store',
-          createdAt: '2026-05-06T00:00:00Z',
-          updatedAt: '2026-05-06T00:00:00Z',
-        },
+        data: [
+          {
+            id: 11,
+            fridgeId: 1,
+            authorId: 1,
+            imageUrl: '/static/posts/11.jpg',
+            expirationDate: '2026-05-08',
+            status: 'pending_store',
+            createdAt: '2026-05-06T00:00:00Z',
+            updatedAt: '2026-05-06T00:00:00Z',
+          },
+        ],
       }),
     } satisfies MockFetchResponse);
 
@@ -293,7 +301,7 @@ describe('posts API contract', () => {
     expect(JSON.parse(decodeURIComponent(body.slice('data='.length)))).toEqual(
       postData,
     );
-    expect(response.data?.status).toBe('pending_store');
+    expect(response.data?.[0]?.status).toBe('pending_store');
   });
 
   it('preserves server error status and message when post creation fails', async () => {
