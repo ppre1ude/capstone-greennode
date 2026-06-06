@@ -564,7 +564,7 @@ describe('InventoryQrScreen', () => {
     });
   });
 
-  it('keeps the QR action heading compact and spaced from the scanner surface', async () => {
+  it('keeps QR scan and fallback code surfaces visually aligned', async () => {
     setPlatformOS('android');
 
     let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
@@ -602,8 +602,8 @@ describe('InventoryQrScreen', () => {
     expect(actionTitleStyle.fontSize).toBe(14);
     expect(actionTitleStyle.fontWeight).toBe('700');
     expect(actionFrameStyle.marginTop).toBe(12);
-    expect(fallbackTitleStyle.fontSize).toBe(15);
-    expect(fallbackTitleStyle.textAlign).toBe('left');
+    expect(fallbackTitleStyle.fontSize).toBe(18);
+    expect(fallbackTitleStyle.textAlign).toBe('center');
 
     await ReactTestRenderer.act(async () => {
       renderer?.unmount();
