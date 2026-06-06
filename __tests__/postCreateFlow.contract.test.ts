@@ -51,5 +51,8 @@ describe('post creation flow contract', () => {
     expect(harness).toContain('/api/v1/share-requests/');
     expect(harness).toContain('/review');
     expect(harness).toContain('/report');
+    expect(harness).toContain('/api/v1/admin/share-reports?status=');
+    expect(harness).toContain('review requested share request');
+    expect(harness).toContain('unsupported review tag');
   });
 });

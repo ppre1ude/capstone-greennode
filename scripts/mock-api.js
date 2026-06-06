@@ -130,6 +130,26 @@ const shareReviews = [];
 const shareReports = [];
 const notifications = [];
 
+const positiveReviewTagIds = new Set([
+  'good_condition',
+  'matched_photo',
+  'easy_to_find',
+  'want_again',
+]);
+const issueReviewTagIds = new Set([
+  'different_from_photo',
+  'label_hard_to_find',
+  'pickup_location_unclear',
+  'condition_needs_check',
+]);
+const shareReportReasonIds = new Set([
+  'different_from_photo',
+  'condition_needs_check',
+  'label_or_zone_mismatch',
+  'missing_or_not_found',
+  'inappropriate_listing',
+]);
+
 const addMinutes = minutes => new Date(Date.now() + minutes * 60 * 1000).toISOString();
 const addDays = days => new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
 const getFridge = fridgeId => fridges.find(fridge => fridge.id === Number(fridgeId));
@@ -160,6 +180,28 @@ const toUserShareRequestItem = request => {
           : null,
       }
     : null;
+};
+const getShareRequestContext = requestId => {
+  const request = shareRequests.find(item => item.id === Number(requestId));
+  const post = request ? posts.find(item => item.id === request.postId) : null;
+  return {request, post};
+};
+const findUnsupportedValue = (values, allowedValues) =>
+  (Array.isArray(values) ? values : []).find(value => !allowedValues.has(value));
+const validateFeedbackContext = (res, request, post) => {
+  if (!request || !post) {
+    fail(res, 'Share request not found.', 404);
+    return false;
+  }
+  if (request.requesterId !== currentUser.id) {
+    fail(res, 'Only the requester can leave feedback.', 403);
+    return false;
+  }
+  if (request.status !== 'completed' || post.status !== 'completed') {
+    fail(res, 'Feedback is allowed only after confirmed pickup.', 409);
+    return false;
+  }
+  return true;
 };
 const addNotification = notification => {
   notifications.unshift({
@@ -466,9 +508,34 @@ const server = http.createServer(async (req, res) => {
     );
     if (shareReviewMatch && req.method === 'POST') {
       const requestId = Number(shareReviewMatch[1]);
-      const request = shareRequests.find(item => item.id === requestId);
-      const post = request ? posts.find(item => item.id === request.postId) : null;
+      const {request, post} = getShareRequestContext(requestId);
       const body = await readJson(req);
+      if (!validateFeedbackContext(res, request, post)) {
+        return;
+      }
+      if (
+        shareReviews.some(
+          item =>
+            item.requestId === requestId && item.requesterId === currentUser.id,
+        )
+      ) {
+        return fail(res, 'Review already exists for this share request.', 409);
+      }
+      const unsupportedPositiveTag = findUnsupportedValue(
+        body.positiveTagIds,
+        positiveReviewTagIds,
+      );
+      const unsupportedIssueTag = findUnsupportedValue(
+        body.issueTagIds,
+        issueReviewTagIds,
+      );
+      if (unsupportedPositiveTag || unsupportedIssueTag) {
+        return fail(
+          res,
+          `Unsupported review tag: ${unsupportedPositiveTag || unsupportedIssueTag}`,
+          422,
+        );
+      }
       const review = {
         id: nextReviewId++,
         requestId,
@@ -489,9 +556,14 @@ const server = http.createServer(async (req, res) => {
     );
     if (shareReportMatch && req.method === 'POST') {
       const requestId = Number(shareReportMatch[1]);
-      const request = shareRequests.find(item => item.id === requestId);
-      const post = request ? posts.find(item => item.id === request.postId) : null;
+      const {request, post} = getShareRequestContext(requestId);
       const body = await readJson(req);
+      if (!validateFeedbackContext(res, request, post)) {
+        return;
+      }
+      if (!shareReportReasonIds.has(body.reasonId)) {
+        return fail(res, `Unsupported report reason: ${body.reasonId}`, 422);
+      }
       const report = {
         id: nextReportId++,
         requestId,
@@ -499,7 +571,7 @@ const server = http.createServer(async (req, res) => {
         providerId: post?.authorId ?? post?.userId ?? 0,
         requesterId: currentUser.id,
         reasonId: body.reasonId ?? 'quality_issue',
-        status: 'submitted',
+        status: 'open',
         resolution: 'pending',
         action: 'none',
         createdAt: now(),
@@ -507,6 +579,21 @@ const server = http.createServer(async (req, res) => {
       };
       shareReports.push(report);
       return ok(res, report, '신고가 접수되었습니다.', 201);
+    }
+
+    if (req.method === 'GET' && path === '/api/v1/admin/share-reports') {
+      if (
+        currentUser.isOperator !== true &&
+        !currentUser.roles?.includes('admin')
+      ) {
+        return fail(res, 'Operator permission is required.', 403);
+      }
+      const status = url.searchParams.get('status');
+      return ok(
+        res,
+        shareReports.filter(report => !status || report.status === status),
+        'Share reports fetched.',
+      );
     }
 
     if (req.method === 'POST' && path === '/api/v1/inventory/confirm-store') {

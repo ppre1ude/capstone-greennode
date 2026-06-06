@@ -77,3 +77,18 @@ Run: `node --check scripts/mock-api.js`
 - [x] **Step 2: Run QR lifecycle smoke**
 
 Run the mock server on an isolated port and verify `generate -> create pending_store -> confirm-store -> notifications`.
+
+### Task 5: Trust Feedback Acceptance Harness
+
+**Files:**
+- Modify: `scripts/validate-backend-feature-contracts.js`
+- Modify: `scripts/mock-api.js`
+- Verify: `__tests__/postCreateFlow.contract.test.ts`
+
+- [x] **Step 1: Add backend acceptance probes**
+
+Cover requested-state feedback rejection, completed pickup feedback success, duplicate review 409, non-requester 403, unsupported review/report enum 422, and admin share report list exposure.
+
+- [x] **Step 2: Align local mock API behavior**
+
+Keep mock review/report endpoints on the same state, actor, enum, and admin report list contract so local smoke runs do not mask backend contract drift.
