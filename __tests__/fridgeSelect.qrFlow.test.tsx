@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, TouchableOpacity } from 'react-native';
+import { Alert, Text, TouchableOpacity } from 'react-native';
 import ReactTestRenderer from 'react-test-renderer';
 import { getAvailableFridges } from '@/api/fridges';
 import { createPost } from '@/api/posts';
@@ -20,6 +20,7 @@ const mockedGetAvailableFridges = getAvailableFridges as jest.MockedFunction<
   typeof getAvailableFridges
 >;
 const mockedCreatePost = createPost as jest.MockedFunction<typeof createPost>;
+const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
 
 const findButtonByText = (
   renderer: ReactTestRenderer.ReactTestRenderer,
@@ -90,7 +91,7 @@ const renderScreen = async () => {
               params: {
                 postData: {
                   imageToken: 'image-token',
-                  expirationDate: '2026-05-24',
+                  expirationDate: null,
                 },
                 qualityCategory: 'Fresh',
                 qualityCanShare: true,
@@ -153,8 +154,21 @@ describe('FridgeSelectScreen QR flow', () => {
     mockedCreatePost.mockResolvedValue({
       success: true,
       message: 'ok',
-      data: createdPost,
+      data: [
+        createdPost,
+        {
+          ...createdPost,
+          id: 56,
+          detectedFruit: 'apple',
+          detectedFruitKo: '사과',
+          imageUrl: '/static/posts/56.jpg',
+        },
+      ],
     });
+  });
+
+  afterAll(() => {
+    alertSpy.mockRestore();
   });
 
   it('creates a pending-store post and opens store QR confirmation with backend expiry', async () => {
@@ -167,7 +181,7 @@ describe('FridgeSelectScreen QR flow', () => {
 
     expect(mockedCreatePost).toHaveBeenCalledWith({
       imageToken: 'image-token',
-      expirationDate: '2026-05-24',
+      expirationDate: null,
       fridgeId: 1,
       flow: 'fridge_qr',
     });
@@ -178,12 +192,47 @@ describe('FridgeSelectScreen QR flow', () => {
       fridgeName: '광주역 앞 공유냉장고',
       fridgeLocation: '광주 북구 중흥동',
       pendingExpiresAt: '2026-05-20T00:08:30Z',
+      batchItems: [
+        {
+          postId: 55,
+          label: '바나나',
+          pendingExpiresAt: '2026-05-20T00:08:30Z',
+        },
+        {
+          postId: 56,
+          label: '사과',
+          pendingExpiresAt: '2026-05-20T00:08:30Z',
+        },
+      ],
+      batchIndex: 0,
     });
 
     await ReactTestRenderer.act(async () => {
       renderer.unmount();
     });
   });
+
+  it('does not open store QR when batch registration returns no created posts', async () => {
+    mockedCreatePost.mockResolvedValue({
+      success: true,
+      message: 'created',
+      data: [],
+    });
+    const { navigation, renderer } = await renderScreen();
+
+    await selectFridgeAndSubmitQr(renderer);
+
+    expect(navigation.replace).not.toHaveBeenCalled();
+    expect(alertSpy).toHaveBeenCalledWith(
+      '등록 실패',
+      '등록된 나눔 식재료가 없습니다. 다시 시도해주세요.',
+    );
+
+    await ReactTestRenderer.act(async () => {
+      renderer.unmount();
+    });
+  });
+
 
   it('renders an empty fridge picker separately from load failures', async () => {
     mockedGetAvailableFridges.mockResolvedValue({
@@ -283,10 +332,12 @@ describe('FridgeSelectScreen QR flow', () => {
     mockedCreatePost.mockResolvedValue({
       success: true,
       message: 'ok',
-      data: {
-        ...createdPost,
-        storeExpiresAt: null,
-      },
+      data: [
+        {
+          ...createdPost,
+          storeExpiresAt: null,
+        },
+      ],
     });
     const { navigation, renderer } = await renderScreen();
 
@@ -308,10 +359,12 @@ describe('FridgeSelectScreen QR flow', () => {
     mockedCreatePost.mockResolvedValue({
       success: true,
       message: 'ok',
-      data: {
-        ...createdPost,
-        storeExpiresAt: 'not-a-date',
-      },
+      data: [
+        {
+          ...createdPost,
+          storeExpiresAt: 'not-a-date',
+        },
+      ],
     });
     const { navigation, renderer } = await renderScreen();
 
@@ -333,11 +386,13 @@ describe('FridgeSelectScreen QR flow', () => {
     mockedCreatePost.mockResolvedValue({
       success: true,
       message: 'ok',
-      data: {
-        ...createdPost,
-        storeExpiresAt: 'not-a-date',
-        createdAt: 'also-not-a-date',
-      },
+      data: [
+        {
+          ...createdPost,
+          storeExpiresAt: 'not-a-date',
+          createdAt: 'also-not-a-date',
+        },
+      ],
     });
     const { navigation, renderer } = await renderScreen();
 

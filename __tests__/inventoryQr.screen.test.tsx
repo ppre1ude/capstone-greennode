@@ -525,6 +525,127 @@ describe('InventoryQrScreen', () => {
     });
   });
 
+  it('shows batch progress when multiple created posts need store QR confirmation', async () => {
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(
+        <InventoryQrScreen
+          navigation={{ goBack: jest.fn() } as any}
+          route={
+            {
+              params: {
+                ...storeQrRoute.params,
+                batchItems: [
+                  {
+                    postId: 10,
+                    label: '바나나',
+                    pendingExpiresAt: '2026-05-20T00:08:30Z',
+                  },
+                  {
+                    postId: 11,
+                    label: '사과',
+                    pendingExpiresAt: '2026-05-20T00:09:30Z',
+                  },
+                ],
+                batchIndex: 0,
+                pendingExpiresAt: '2026-05-20T00:08:30Z',
+              },
+            } as any
+          }
+        />,
+      );
+    });
+
+    const textContent = getTextContent(renderer!);
+    const progressFillStyle = StyleSheet.flatten(
+      renderer!.root.findByProps({
+        testID: 'inventory-qr-batch-progress-fill',
+      }).props.style,
+    );
+
+    expect(textContent).toContain('1/2번째 식재료 보관 인증');
+    expect(textContent).toContain('바나나');
+    expect(textContent).toContain(
+      '각 식재료마다 QR 인증과 라벨 부착을 완료해주세요.',
+    );
+    expect(progressFillStyle.width).toBe('50%');
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
+  it('opens the next batch item after the current store QR is confirmed', async () => {
+    mockedConfirmStore.mockResolvedValue({
+      success: true,
+      message: '입고 인증이 완료되었습니다.',
+      data: {
+        postId: 10,
+        status: 'available',
+        labelCode: '#10',
+        storageZone: 'GENERAL',
+        storageDeadlineAt: '2026-06-18T05:30:00Z',
+        storedAt: '2026-05-19T05:30:00Z',
+      },
+    });
+    const navigation = {
+      goBack: jest.fn(),
+      replace: jest.fn(),
+    };
+    const batchItems = [
+      {
+        postId: 10,
+        label: '바나나',
+        pendingExpiresAt: '2026-05-20T00:08:30Z',
+      },
+      {
+        postId: 11,
+        label: '사과',
+        pendingExpiresAt: '2026-05-20T00:09:30Z',
+      },
+    ];
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(
+        <InventoryQrScreen
+          navigation={navigation as any}
+          route={
+            {
+              params: {
+                ...storeQrRoute.params,
+                batchItems,
+                batchIndex: 0,
+                pendingExpiresAt: '2026-05-20T00:08:30Z',
+              },
+            } as any
+          }
+        />,
+      );
+    });
+
+    await scanNativeQrValue(renderer!, 'foodlink://fridges/GJ-STATION-001/verify');
+
+    expect(getTextContent(renderer!)).toContain('다음 식재료 인증하기');
+
+    await ReactTestRenderer.act(async () => {
+      findTouchableByText(renderer!, '다음 식재료 인증하기').props.onPress();
+    });
+
+    expect(navigation.replace).toHaveBeenCalledWith('InventoryQr', {
+      ...storeQrRoute.params,
+      postId: 11,
+      pendingExpiresAt: '2026-05-20T00:09:30Z',
+      batchItems,
+      batchIndex: 1,
+    });
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
   it('renders a pickup-only QR surface without provider-only copy', async () => {
     let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
 
