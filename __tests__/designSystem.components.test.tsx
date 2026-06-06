@@ -1,5 +1,11 @@
 import React from 'react';
-import { Text, TextInput, TouchableOpacity, View } from 'react-native';
+import {
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import ReactTestRenderer from 'react-test-renderer';
 import {
   DSButton,
@@ -102,6 +108,25 @@ describe('design system components', () => {
     expect(
       renderer!.root.findAllByProps({ children: '표시용' }).length,
     ).toBeGreaterThan(0);
+  });
+
+  it('passes custom text styles to chip labels', async () => {
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(
+        <DSChip
+          label="선택됨"
+          tone="primary"
+          textStyle={{ color: colors.textOnPrimary }}
+        />,
+      );
+    });
+
+    const label = renderer!.root.findByProps({ children: '선택됨' });
+    const labelStyle = StyleSheet.flatten(label.props.style);
+
+    expect(labelStyle.color).toBe(colors.textOnPrimary);
   });
 
   it('renders text field label, status caption, and native input props', async () => {

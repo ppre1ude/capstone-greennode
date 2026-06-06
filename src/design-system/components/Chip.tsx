@@ -3,6 +3,7 @@ import {
   GestureResponderEvent,
   StyleProp,
   StyleSheet,
+  TextStyle,
   TouchableOpacity,
   TouchableOpacityProps,
   View,
@@ -26,6 +27,7 @@ export interface DSChipProps
   leading?: React.ReactNode;
   trailing?: React.ReactNode;
   style?: StyleProp<ViewStyle>;
+  textStyle?: StyleProp<TextStyle>;
 }
 
 const sizeConfig = {
@@ -70,6 +72,7 @@ export const DSChip = ({
   trailing,
   onPress,
   style,
+  textStyle,
   accessibilityLabel,
   ...props
 }: DSChipProps) => {
@@ -133,7 +136,7 @@ export const DSChip = ({
   const content = (
     <>
       {leading && <View style={styles.side}>{leading}</View>}
-      <DSText variant={config.textVariant} color={contentColor}>
+      <DSText variant={config.textVariant} color={contentColor} style={textStyle}>
         {label}
       </DSText>
       {trailing && <View style={styles.side}>{trailing}</View>}

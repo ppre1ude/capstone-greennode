@@ -2,7 +2,13 @@ import type { PostNearbyRead } from '@/types';
 
 const RECOMMENDATION_LIMIT = 3;
 
-const toDateKey = (value: string | Date): string | null => {
+const toDateKey = (
+  value: string | Date | null | undefined,
+): string | null => {
+  if (value == null) {
+    return null;
+  }
+
   if (value instanceof Date) {
     if (Number.isNaN(value.getTime())) {
       return null;
@@ -14,7 +20,11 @@ const toDateKey = (value: string | Date): string | null => {
     return `${year}-${month}-${day}`;
   }
 
-  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const match = value.trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
   if (!match) {
     return null;
   }

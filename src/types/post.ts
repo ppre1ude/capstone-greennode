@@ -26,6 +26,8 @@ export interface Post {
   status: PostStatus;
   fridgeId: number;
   fridgeName?: string | null;
+  fridgePublicCode?: string | null;
+  fridgeAddress?: string | null;
   authorId: number;
   userId?: number;
   requestExpiresAt?: string | null;

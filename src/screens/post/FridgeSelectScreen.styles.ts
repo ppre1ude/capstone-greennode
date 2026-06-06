@@ -100,6 +100,9 @@ export const styles = StyleSheet.create({
     color: colors.textPrimary,
     marginBottom: 4,
   },
+  fridgeTextSelected: {
+    color: colors.textOnPrimary,
+  },
   fridgeAddress: {
     fontSize: 13,
     color: colors.textSecondary,

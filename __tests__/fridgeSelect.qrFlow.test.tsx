@@ -1,11 +1,12 @@
 import React from 'react';
-import { Alert, Text, TouchableOpacity } from 'react-native';
+import { Alert, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import ReactTestRenderer from 'react-test-renderer';
 import { getAvailableFridges } from '@/api/fridges';
 import { createPost } from '@/api/posts';
 import FridgeSelectScreen from '@/screens/post/FridgeSelectScreen';
 import { useAuthStore } from '@/store/authStore';
 import type { Fridge, Post } from '@/types';
+import { colors } from '@/theme';
 import { renderWithSafeArea } from '../test-utils/renderWithSafeArea';
 
 jest.mock('@/api/fridges', () => ({
@@ -233,6 +234,25 @@ describe('FridgeSelectScreen QR flow', () => {
     });
   });
 
+  it('keeps selected fridge text readable on the primary selected surface', async () => {
+    const { renderer } = await renderScreen();
+
+    await ReactTestRenderer.act(async () => {
+      const fridgeButton = findButtonByText(renderer, '광주역 앞 공유냉장고');
+      fridgeButton?.props.onPress();
+    });
+
+    const fridgeName = renderer.root
+      .findAllByType(Text)
+      .find(textNode => textNode.props.children === '광주역 앞 공유냉장고');
+    const fridgeNameStyle = StyleSheet.flatten(fridgeName?.props.style);
+
+    expect(fridgeNameStyle.color).toBe(colors.textOnPrimary);
+
+    await ReactTestRenderer.act(async () => {
+      renderer.unmount();
+    });
+  });
 
   it('renders an empty fridge picker separately from load failures', async () => {
     mockedGetAvailableFridges.mockResolvedValue({
