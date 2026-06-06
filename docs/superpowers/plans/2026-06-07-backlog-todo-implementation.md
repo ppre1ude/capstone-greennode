@@ -29,7 +29,7 @@ Remove the force-static fallback so `!hasPermission` renders recovery actions, `
 - [x] **Step 3: Re-run the focused test**
 
 Run: `npm test -- --runInBand __tests__/cameraScan.fallback.test.tsx`
-Expected: PASS, 5 tests.
+Expected: PASS, 6 tests.
 
 ### Task 2: Backlog Classification
 
@@ -61,6 +61,19 @@ Run: `npm test -- --runInBand __tests__/cameraScan.fallback.test.tsx __tests__/f
 
 Run: `npx tsc --noEmit`
 
-- [ ] **Step 3: Commit only coherent implementation units**
+- [x] **Step 3: Commit only coherent implementation units**
 
 Commit the camera fallback fix and any verified backlog-adjacent changes as separate conventional commits.
+
+### Task 4: Mock API Contract Smoke
+
+**Files:**
+- Modify: `scripts/mock-api.js`
+
+- [x] **Step 1: Check script syntax**
+
+Run: `node --check scripts/mock-api.js`
+
+- [x] **Step 2: Run QR lifecycle smoke**
+
+Run the mock server on an isolated port and verify `generate -> create pending_store -> confirm-store -> notifications`.
