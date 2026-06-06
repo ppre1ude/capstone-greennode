@@ -87,6 +87,7 @@ export interface AiDetection {
   detectedFruitKo?: string | null;
   freshnessLabel?: FreshnessLabel | string | null;
   confidenceScore?: number | null;
+  shareable?: boolean | null;
   bbox?: {
     x: number;
     y: number;
@@ -111,10 +112,9 @@ export interface GenerateResult {
 
 export interface PostCreateData {
   fridgeId: number;
-  expirationDate: string;
+  expirationDate?: string | null;
   imageToken: string;
-  selectedDetectionId?: string;
-  flow?: 'fridge_qr';
+  flow?: 'direct' | 'fridge_qr';
 }
 
 export type ShareRequestStatus =

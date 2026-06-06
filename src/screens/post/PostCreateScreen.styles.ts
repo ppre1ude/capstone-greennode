@@ -132,6 +132,19 @@ export const styles = StyleSheet.create({
     borderColor: colors.primary,
     backgroundColor: colors.primaryLight,
   },
+  detectionRowExcluded: {
+    borderColor: colors.error,
+    backgroundColor: '#FEF2F2',
+  },
+  detectionExcludedCopy: {
+    flex: 1,
+    gap: 3,
+  },
+  detectionExcludedText: {
+    fontSize: 12,
+    lineHeight: 17,
+    color: colors.error,
+  },
   detectionName: {
     flex: 1,
     fontSize: 14,
