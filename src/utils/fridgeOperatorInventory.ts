@@ -107,16 +107,6 @@ export const deriveBasketStatus = (items: StatusSource[]) => {
   };
 };
 
-const formatConfidence = (confidenceScore?: number | null): string | null => {
-  if (typeof confidenceScore !== 'number') {
-    return null;
-  }
-
-  return confidenceScore <= 1
-    ? confidenceScore.toFixed(2)
-    : (confidenceScore / 100).toFixed(2);
-};
-
 const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 export const formatOperatorDateTime = (value?: string | null): string => {
@@ -197,7 +187,6 @@ export const canDisposeOperatorItem = (status: OperatorItemStatus): boolean =>
 export const mapOperatorInventoryItem = (
   item: OperatorInventoryItem,
 ): OperatorInspectionItem => {
-  const confidence = formatConfidence(item.confidenceScore);
   const freshness = item.freshnessLabel ?? 'unknown';
 
   return {
@@ -209,7 +198,7 @@ export const mapOperatorInventoryItem = (
     postId: String(item.postId),
     labelCode: item.labelCode ?? undefined,
     storageZone: getStorageZoneLabel(item.storageZone),
-    ai: confidence ? `${freshness}, ${confidence}` : String(freshness),
+    ai: String(freshness),
     recommendedUntil: formatOperatorDateTime(
       item.storageDeadlineAt ?? item.expirationDate ?? item.updatedAt,
     ),

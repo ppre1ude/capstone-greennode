@@ -16,6 +16,8 @@
 
 - 과거 MVP 검증 범위는 **농산물 등록 흐름**과 `available -> requested` 신청 접수까지였다. 이 기준은 Android/API 검증으로 이미 닫혔다.
 - 현재 정식 도메인 기준은 `농산물 등록 흐름 -> 보관 QR 인증 -> available -> 신청 접수/임시 선점 -> 수령 QR 인증 -> 완료`다. `냉장고 QR 인증`, `진행 중인 나눔`, `내 나눔/받은 나눔`, `운영자 콘솔 진입`, `알림/나눔 생명주기 확장`을 API/화면 연결 기준으로 검증했다.
+- 2026-06-03 `direct` 등록 흐름 제거에 맞춘 백엔드 API 구조 변경 요청은 [BACKEND_QR_LIFECYCLE_DIRECT_FLOW_HANDOFF_2026-06-03.md](./BACKEND_QR_LIFECYCLE_DIRECT_FLOW_HANDOFF_2026-06-03.md)에 정리했다. 백엔드 회신 요약은 [BACKEND_QR_LIFECYCLE_RESPONSE_2026-06-03.md](./BACKEND_QR_LIFECYCLE_RESPONSE_2026-06-03.md)를 따른다. 핵심은 `POST /posts`의 정식 제품 흐름을 `flow="fridge_qr"` 기반 `pending_store` 생성으로 고정하고, 보관 QR 인증 후에만 `available`로 노출하는 것이다.
+- 2026-06-04 trust feedback 백엔드 회신은 [BACKEND_TRUST_FEEDBACK_RESPONSE_2026-06-04.md](./BACKEND_TRUST_FEEDBACK_RESPONSE_2026-06-04.md)를 따른다. 프론트는 평가/신고를 실제 `/share-requests/{requestId}/review|report` API로 보내고, 공급자 신뢰 뱃지는 `/users/{userId}/trust-summary`를 source of truth로 사용한다.
 - 2026-05-28 SM-S928N Android 15 실기기 QA에서 신청 만료 시각 해석, 홈 진행 중 나눔, 받은 나눔 수령 QR, QR 화면과 하단 탭바 safe-area 재검증까지 닫았다.
 - 2026-05-27 백엔드 기능 계약은 프론트 API client와 화면에 연결됐다.
 - 알림 탭은 MVP에서 FCM 수신 기록과 로컬 AsyncStorage 읽음 상태만 사용한다. 서버 저장형 알림 API는 Post-MVP다.
@@ -36,24 +38,26 @@
 
 - 분류: QA blocker
 - 배경: 프론트 연결은 끝났지만 최신 백엔드 live VM에서 실제 mutation matrix를 다시 닫아야 한다.
-- 현재 상태: 2026-05-28 `localhost:8080 -> NHN Cloud VM:80` SSH tunnel 연결 후 mutate 하네스가 통과했다. 스크립트는 프로필 PATCH, 내 나눔/받은 나눔 응답 형태, 나눔 생명주기 정상 경로, 403 권한 거부, 409 중복 신청, 400 available 완료 거부를 검증한다. 비운영자/상태 변경 검증표는 닫혔고, 이 항목의 잔여 범위는 운영자 계정 환경변수 확보 후 프로필의 운영자 콘솔 진입 제어 재검증뿐이다.
-- 기대 동작: 실제 VM에서 profile PATCH, my posts/share requests, lifecycle mutation, 200/403/409와 상태 규칙 위반 400 matrix를 통과한다.
-- 검증 방법: tunnel(`localhost:8080 -> NHN Cloud VM:80`)을 연 뒤 `$env:FOODLINK_API_BASE_URL='http://localhost:8080'; npm run qa:backend-contracts -- --mutate`.
-- 산출물: `temp/backend-feature-contract-e2e-20260528T143053Z.json`.
+- 현재 상태: 2026-05-28 `localhost:8080 -> NHN Cloud VM:80` SSH tunnel 연결 후 당시 mutate 하네스가 통과했다. 2026-06-03/04 백엔드 회신 반영으로 하네스는 direct/manual complete 경로를 제거하고 `pending_store -> confirm-store -> available -> request -> confirm-pickup -> completed`, trust review/report, operator inventory fixture 검증을 사용하도록 갱신했다. 2026-06-04 read-only preflight는 `localhost:8080`의 `/openapi.json`과 `/docs`에 모두 닿지 않아 실패했다. 최신 VM 터널 연결 후 재실행이 남아 있다.
+- 기대 동작: 실제 VM에서 profile PATCH, my posts/share requests, QR lifecycle mutation, trust review/report, operator summary/items/dispose, 403/409 상태 규칙 matrix를 통과한다.
+- 검증 방법: tunnel(`localhost:8080 -> NHN Cloud VM:80`)을 연 뒤 `$env:FOODLINK_API_BASE_URL='http://localhost:8080'; $env:FOODLINK_QA_FRIDGE_ID='1'; $env:FOODLINK_QA_FRIDGE_PUBLIC_CODE='GJ-STATION-001'; npm run qa:backend-contracts -- --mutate`.
+- 산출물: `temp/backend-feature-contract-e2e-20260528T143053Z.json`, `temp/backend-feature-contract-e2e-20260604T093822Z.json`(터널 미연결 preflight 실패).
 
 To-do:
 
 - [x] `GET /users/me/posts`, `GET /users/me/share-requests`, `PATCH /auth/me` API client 연결
-- [x] `/posts/{id}/cancel|complete`, `/users/me/share-requests/{id}/cancel` API client 연결
+- [x] `/posts/{id}/cancel`, `/users/me/share-requests/{id}/cancel`, `/inventory/confirm-store`, `/inventory/confirm-pickup` API client 연결
 - [x] 내 나눔/받은 나눔 화면 진입점 연결
 - [x] profile PATCH 폼 연결
 - [x] read-only preflight 하네스 준비
 - [x] SSH tunnel 연결 후 live VM mutate E2E 실행
 - [x] my posts/share requests 최신 VM 응답 확인
 - [x] profile PATCH 최신 VM 응답 확인
-- [x] lifecycle happy path mutation 확인: available cancel, request 후 author complete, request 후 requester cancel
-- [x] lifecycle 403/409 matrix를 하네스 또는 수동 QA로 보강. `temp/backend-feature-contract-e2e-20260528T143053Z.json`에서 author/requester/observer 계정으로 403 권한 거부, requested 중복 신청 409, available 완료 시도 400을 확인했다.
-- [ ] 운영자 계정 환경변수 확보 시 운영자 계정에서만 프로필의 운영자 콘솔 진입점이 보이는지 확인
+- [x] lifecycle happy path mutation 확인: available cancel, request 후 QR pickup, request 후 requester cancel
+- [x] lifecycle 403/409 matrix를 하네스 또는 수동 QA로 보강. 2026-06-04 하네스는 pending_store request 409, 작성자 본인 신청 403, 비작성자 취소 403, 비신청자 pickup 403, 중복 신청 409를 확인하도록 갱신했다.
+- [x] trust feedback review/report와 공개 trust summary shape를 하네스에 추가
+- [x] 운영자 계정 fixture와 담당 냉장고 fixture 기본값을 하네스에 반영
+- [ ] 최신 VM에서 QR lifecycle/trust/operator 갱신 하네스 재실행
 
 ### 신청 만료 시각 timezone 해석 수정
 
@@ -98,6 +102,9 @@ To-do:
 
 - [x] Android emulator/실기기 screenshot에서 주요 fixed footer CTA가 system navigation bar와 겹치지 않는다. 2026-05-28 SM-S928N Android 15 release QA에서 QR `ScrollView` bounds `[0,304][1440,2952]`, `navigationBarBackground` bounds `[0,2952][1440,3120]`을 확인했고 scroll-bottom 상태의 QR action grid 전체가 y=2015~2351에 위치했다. 홈 탭 label도 y=2805~2852로 navigation bar 위에 있다. 증거는 `temp/android-device-qa-20260528T234844/21-inventory-qr-fixed.png`, `22-inventory-qr-fixed-bottom.png`, `23-home-tabbar-fixed.png`다.
 - [x] 지도에서 냉장고 선택 시 하단 primary surface가 하나로 정리되어 지도와 냉장고 내부 목록의 위계가 명확하다.
+- [x] 위치 설정 화면의 mock 지도는 도로망, 격자, GPS 상태, 좌표, 공유 냉장고 표식을 함께 보여 빈 지도 placeholder로 보이지 않는다. 2026-06-05 `Medium_Phone_API_36.1` release APK에서 `동네 위치 확인`, `정확도 우선`, `반경 2km`, `공유 냉장고`, 하단 알림 카드와 CTA가 한 화면에 겹침 없이 표시되는 것을 확인했다. 증거는 `docs/qa-evidence/ui-polish-20260605/location-setup-gis-map-after.png`다.
+- [x] 위치 설정 하단 알림 패널은 `DESIGN_SYSTEM.md` 팔레트 규칙에 맞춰 연한 surface tint, accent 상단 라인, primaryLight 아이콘 배지를 사용한다. 2026-06-05 `Medium_Phone_API_36.1` release APK에서 지도, 위치 카드, 알림 패널, CTA가 겹치지 않는 것을 확인했다. 증거는 `docs/qa-evidence/ui-polish-20260605/location-notification-panel-polish.png`다.
+- [x] 프로필 나눔 신뢰 지표는 trust-summary 조회 대기/실패 시 `확인 중` placeholder 없이 `0회`/`0건` fallback을 일관되게 표시한다. 2026-06-05 `Medium_Phone_API_36.1` release APK에서 공개 신고/제재 정보 없이 수령 완료와 긍정 평가 0건만 표시되는 것을 확인했다. 증거는 `docs/qa-evidence/ui-polish-20260605/profile-trust-zero-counters.png`다.
 - [x] `InventoryQrScreen` 하단 `보관 QR 스캔`/`수령 QR 스캔`/`다른 냉장고 스캔`/`다시 시작` action을 safe-area 위로 올리거나 `DSScreenFooter` 패턴으로 옮긴다. QR `ScrollView` viewport와 메인 탭바에 Android navigation fallback inset 회귀 테스트를 추가했다.
 
 ## 활성 P1
@@ -191,13 +198,13 @@ To-do:
 ### 실제 지표와 탄소 절감 표시
 
 - 분류: 정책/데이터 계약
-- 배경: MVP에서는 mock 통계와 탄소 절감 표시를 운영성 UI에서 제거했다. 2026-05-29 결정으로 환경 성취 지표는 backend-computed estimate로만 노출한다. 백엔드 회신은 impact를 구현 완료로 요약했지만 본문에는 완전 미구현/개발 계획으로 적어 상태가 상충한다.
+- 배경: MVP에서는 mock 통계와 탄소 절감 표시를 운영성 UI에서 제거했다. 홈은 주변 나눔/진행 중인 나눔, 프로필은 수령 완료/긍정 평가 신뢰 요약처럼 이미 연결된 운영 지표만 보여준다. 2026-05-29 결정으로 환경 성취 지표는 backend-computed estimate로만 노출한다. 백엔드 회신은 impact를 구현 완료로 요약했지만 본문에는 완전 미구현/개발 계획으로 적어 상태가 상충한다.
 - 기대 동작: 실제 지표로 유지하려면 완료/수령 확인된 나눔 식재료만 집계하고 `추정 절감`으로 표시한다.
 
 To-do:
 
 - [x] 홈 탄소 절감 mock 값은 운영성 UI에서 제거된다.
-- [x] 프로필 mock 통계를 제거하거나 준비 중 상태로 바꾼다.
+- [x] 프로필 mock 통계를 제거하고 수령 완료/긍정 평가 신뢰 요약으로 교체한다.
 - [x] 실제 지표로 유지하려면 계산식과 API 계약이 문서화된다. `GET /users/me/impact/summary`와 `estimatedWeightGrams * categoryCarbonFactor` 기준이다.
 - [x] `getImpactSummary()` API client와 `ImpactSummary` 타입을 추가했다. live VM 확인 전이라 홈/프로필 숫자 UI는 아직 연결하지 않는다.
 - [x] `getImpactSummary()`가 camelCase/snake_case 응답을 정규화하고, read-only 하네스가 `period` query와 impact response shape를 확인한다.

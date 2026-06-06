@@ -119,7 +119,7 @@ describe('AnalysisResultScreen fallback QA', () => {
     ).not.toHaveLength(0);
     expect(
       renderer.root.findAllByProps({children: 'AI 참고 신호'}),
-    ).not.toHaveLength(0);
+    ).toHaveLength(0);
     expect(
       renderer.root.findAllByProps({
         children:

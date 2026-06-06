@@ -3,6 +3,7 @@ import { Alert, Text, TouchableOpacity } from 'react-native';
 import ReactTestRenderer from 'react-test-renderer';
 import PostDetailScreen from '@/screens/post/PostDetailScreen';
 import { getPostDetail, requestShare } from '@/api/posts';
+import { getUserTrustSummary } from '@/api/trust';
 import { useAuthStore } from '@/store/authStore';
 import { useFeedRefreshStore } from '@/store/feedRefreshStore';
 import type { Post } from '@/types';
@@ -17,11 +18,18 @@ jest.mock('@/api/posts', () => ({
   requestShare: jest.fn(),
 }));
 
+jest.mock('@/api/trust', () => ({
+  getUserTrustSummary: jest.fn(),
+}));
+
 const mockedGetPostDetail = getPostDetail as jest.MockedFunction<
   typeof getPostDetail
 >;
 const mockedRequestShare = requestShare as jest.MockedFunction<
   typeof requestShare
+>;
+const mockedGetUserTrustSummary = getUserTrustSummary as jest.MockedFunction<
+  typeof getUserTrustSummary
 >;
 
 const basePost: Post = {
@@ -100,6 +108,23 @@ describe('PostDetailScreen share request', () => {
       message: 'ok',
       data: basePost,
     });
+    mockedGetUserTrustSummary.mockResolvedValue({
+      success: true,
+      message: '공급자 신뢰 요약 조회 성공',
+      data: {
+        userId: 1,
+        completedShares: 12,
+        positiveReviewCount: 9,
+        matchedPhotoCount: 8,
+        easyToFindCount: 7,
+        badges: [
+          'store_qr_verified',
+          'completed_pickup',
+          'positive_reviews',
+        ],
+        computedAt: '2026-06-04T12:10:00.000Z',
+      },
+    });
     useAuthStore.setState({
       user: {
         id: 2,
@@ -156,7 +181,7 @@ describe('PostDetailScreen share request', () => {
     expect(requestButton).toBeTruthy();
     expect(
       renderer.root.findAllByProps({
-        children: 'AI 참고 신호는 95%이며, 실제 상태는 수령 전 확인이 필요해요.',
+        children: 'AI 분석은 참고용이며, 실제 상태는 수령 전 확인이 필요해요.',
       }),
     ).not.toHaveLength(0);
     expect(
@@ -181,6 +206,64 @@ describe('PostDetailScreen share request', () => {
       renderer.root.findAllByProps({
         children: '신청이 접수된 상태이며 예약 확정은 아니에요.',
       }),
+    ).not.toHaveLength(0);
+
+    await ReactTestRenderer.act(async () => {
+      renderer.unmount();
+    });
+  });
+
+  it('shows provider trust badges on the share detail', async () => {
+    const renderer = await createScreen();
+
+    expect(mockedGetUserTrustSummary).toHaveBeenCalledWith(1);
+    expect(
+      renderer.root.findAllByProps({ children: '나눔 신뢰 지표' }),
+    ).not.toHaveLength(0);
+    expect(
+      renderer.root.findAllByProps({ children: 'QR 보관 인증' }),
+    ).not.toHaveLength(0);
+    expect(
+      renderer.root.findAllByProps({ children: '수령 완료 12회' }),
+    ).not.toHaveLength(0);
+    expect(
+      renderer.root.findAllByProps({ children: '긍정 평가 9회' }),
+    ).not.toHaveLength(0);
+    expect(
+      renderer.root.findAllByProps({ children: '최근 신고 검토 없음' }),
+    ).toHaveLength(0);
+    expect(
+      renderer.root.findAllByProps({ children: '신고 검토 1건' }),
+    ).toHaveLength(0);
+
+    await ReactTestRenderer.act(async () => {
+      renderer.unmount();
+    });
+  });
+
+  it('clamps implausibly long food deadlines with the storage policy', async () => {
+    dateNowSpy = jest
+      .spyOn(Date, 'now')
+      .mockReturnValue(new Date('2026-06-06T00:00:00Z').getTime());
+    mockedGetPostDetail.mockResolvedValue({
+      success: true,
+      message: 'ok',
+      data: {
+        ...basePost,
+        detectedFruit: 'banana',
+        detectedFruitKo: '바나나',
+        freshnessLabel: 'Fresh',
+        expirationDate: '2026-06-30',
+      },
+    });
+
+    const renderer = await createScreen();
+
+    expect(
+      renderer.root.findAllByProps({ children: '약 25일' }),
+    ).toHaveLength(0);
+    expect(
+      renderer.root.findAllByProps({ children: '약 3일' }),
     ).not.toHaveLength(0);
 
     await ReactTestRenderer.act(async () => {

@@ -34,9 +34,14 @@ import {
   getImageUrl,
   requestShare,
 } from '@/api/posts';
+import {
+  getUserTrustSummary,
+  type ProviderTrustSummaryResponse,
+} from '@/api/trust';
 import { useAuthStore } from '@/store/authStore';
 import { useFeedRefreshStore } from '@/store/feedRefreshStore';
 import type { Post } from '@/types';
+import { getProviderTrustBadges } from '@/features/trust/feedback';
 import { getApiErrorMessage } from '@/utils/apiError';
 import {
   formatInventoryHoldRemaining,
@@ -45,7 +50,10 @@ import {
   parseServerLifecycleTimestampMs,
 } from '@/features/inventory/holdPolicy';
 import {
-  getConfidencePercent,
+  resolveStoragePolicy,
+  type StoragePolicyQuality,
+} from '@/features/inventory/storagePolicy';
+import {
   getPostDisplayName,
   getPostStatusLabel,
   getQualityMeta,
@@ -68,6 +76,48 @@ const getErrorStatus = (error: unknown): number | null => {
 const isValidDateInput = (value?: string | null): value is string =>
   Boolean(value && Number.isFinite(parseServerLifecycleTimestampMs(value)));
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+const STORAGE_POLICY_QUALITIES = [
+  'Fresh',
+  'Mid',
+  'fresh',
+  'mid',
+  'best',
+  'normal',
+  'unknown',
+] as const satisfies readonly StoragePolicyQuality[];
+
+const isStoragePolicyQuality = (
+  quality: unknown,
+): quality is StoragePolicyQuality =>
+  typeof quality === 'string' &&
+  (STORAGE_POLICY_QUALITIES as readonly string[]).includes(quality);
+
+const toStoragePolicyQuality = (
+  quality: Post['freshnessLabel'],
+): StoragePolicyQuality =>
+  isStoragePolicyQuality(quality) ? quality : 'unknown';
+
+const getDisplayDaysLeft = (post: Post, itemName: string, nowMs: number) => {
+  const expirationTimeMs = new Date(post.expirationDate).getTime();
+  if (!Number.isFinite(expirationTimeMs)) {
+    return null;
+  }
+
+  const rawDaysLeft = Math.ceil((expirationTimeMs - nowMs) / DAY_MS);
+  if (rawDaysLeft <= 0) {
+    return 0;
+  }
+
+  const policy = resolveStoragePolicy({
+    itemName,
+    quality: toStoragePolicyQuality(post.freshnessLabel),
+    storedAt: nowMs,
+  });
+
+  return Math.min(rawDaysLeft, policy.serviceExposureDays ?? rawDaysLeft);
+};
+
 const PostDetailScreen = ({ route, navigation }: Props) => {
   const { postId } = route.params;
   const user = useAuthStore(state => state.user);
@@ -76,6 +126,8 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
   );
 
   const [post, setPost] = useState<Post | null>(null);
+  const [providerTrustSummary, setProviderTrustSummary] =
+    useState<ProviderTrustSummaryResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isRequesting, setIsRequesting] = useState(false);
@@ -87,6 +139,13 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
       const response = await getPostDetail(postId);
       if (response.success && response.data) {
         setPost(response.data);
+        try {
+          const trustResponse = await getUserTrustSummary(response.data.authorId);
+          setProviderTrustSummary(trustResponse.data);
+        } catch (error) {
+          console.warn('Failed to fetch provider trust summary', error);
+          setProviderTrustSummary(null);
+        }
       } else {
         Alert.alert(
           '오류',
@@ -227,7 +286,6 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
   const isMyPost = isPostAuthoredByUser(post, user?.id);
   const displayName = getPostDisplayName(post);
   const quality = getQualityMeta(post.freshnessLabel);
-  const confidencePercent = getConfidencePercent(post.confidenceScore);
   const statusLabel = getPostStatusLabel(post.status);
   const canRequestShare = !isMyPost && post.status === 'available';
   const requestButtonLabel = isRequesting
@@ -257,9 +315,15 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
     : null;
   const canConfirmPickup =
     !isMyPost && post.status === 'requested' && !isRequestHoldExpired;
-  const daysLeft = Math.ceil(
-    (new Date(post.expirationDate).getTime() - new Date().getTime()) /
-      (1000 * 3600 * 24),
+  const trustBadges = getProviderTrustBadges({
+    completedShares: providerTrustSummary?.completedShares ?? 0,
+    positiveReviewCount: providerTrustSummary?.positiveReviewCount ?? 0,
+    badges: providerTrustSummary?.badges ?? [],
+  });
+  const daysLeft = getDisplayDaysLeft(
+    post,
+    post.detectedFruitKo ?? post.detectedFruit ?? displayName,
+    currentTimeMs,
   );
 
   return (
@@ -325,7 +389,11 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
               <View>
                 <Text style={styles.infoLabel}>남은 기한</Text>
                 <Text style={styles.infoValue}>
-                  {daysLeft > 0 ? `약 ${daysLeft}일` : '권장일 지남'}
+                  {daysLeft === null
+                    ? '일정 확인 필요'
+                    : daysLeft > 0
+                    ? `약 ${daysLeft}일`
+                    : '권장일 지남'}
                 </Text>
               </View>
             </View>
@@ -346,10 +414,28 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
 
           <Text style={styles.sectionTitle}>AI 분석 정보</Text>
           <Text style={styles.description}>
-            {confidencePercent != null
-              ? `AI 참고 신호는 ${confidencePercent}%이며, 실제 상태는 수령 전 확인이 필요해요.`
-              : 'AI 분석은 참고용이며, 실제 상태는 수령 전 확인이 필요해요.'}
+            AI 분석은 참고용이며, 실제 상태는 수령 전 확인이 필요해요.
           </Text>
+
+          <View style={styles.trustSection}>
+            <Text style={styles.sectionTitle}>나눔 신뢰 지표</Text>
+            <View style={styles.trustBadgeWrap}>
+              {trustBadges.map(badge => (
+                <DSChip
+                  key={badge.id}
+                  label={badge.label}
+                  tone={badge.tone}
+                  size="small"
+                  variant="outlined"
+                  style={styles.trustBadge}
+                />
+              ))}
+            </View>
+            <Text style={styles.trustDescription}>
+              나눔 약속과 받은 긍정 평가가 건강한 나눔 커뮤니티를
+              만듭니다.
+            </Text>
+          </View>
         </View>
       </ScrollView>
 

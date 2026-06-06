@@ -1,7 +1,8 @@
 import React from 'react';
-import { TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity } from 'react-native';
 import ReactTestRenderer from 'react-test-renderer';
 import LoginScreen from '@/screens/auth/LoginScreen';
+import { fontFamily } from '@/theme';
 
 const findTouchableByText = (
   renderer: ReactTestRenderer.ReactTestRenderer,
@@ -18,6 +19,16 @@ const findTouchableByText = (
   }
 
   return touchable;
+};
+
+const flattenText = (value: unknown): string => {
+  if (Array.isArray(value)) {
+    return value.map(flattenText).join('');
+  }
+
+  return typeof value === 'string' || typeof value === 'number'
+    ? String(value)
+    : '';
 };
 
 describe('LoginScreen email-only MVP entry', () => {
@@ -51,6 +62,17 @@ describe('LoginScreen email-only MVP entry', () => {
       renderer!.root.findByProps({ accessibilityRole: 'checkbox' }).props
         .accessibilityState,
     ).toEqual({ checked: false });
+
+    const termsText = renderer!.root
+      .findAllByType(Text)
+      .find(node =>
+        flattenText(node.props.children).includes(
+          '이용약관, 개인정보 처리방침, 위치기반 서비스 이용약관',
+        ),
+      );
+    expect(StyleSheet.flatten(termsText?.props.style)).toMatchObject({
+      fontFamily: fontFamily.regular,
+    });
 
     await ReactTestRenderer.act(async () => {
       renderer!.root

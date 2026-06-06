@@ -9,7 +9,7 @@ import {View, StyleSheet, Image} from 'react-native';
 import type { PostNearbyRead } from '@/types';
 import { getImageUrl } from '@/api/posts';
 import { colors } from '@/theme';
-import {DSCard, DSChip, DSText} from '@/design-system';
+import {DSCard, DSChip, DSIcon, DSText} from '@/design-system';
 import {
   getPostDisplayName,
   getPostRelativeTimeLabel,
@@ -23,8 +23,13 @@ interface Props {
 }
 
 const NearbyPostCard = ({ post, onPress }: Props) => {
+  const [imageFailed, setImageFailed] = React.useState(false);
   const displayName = getPostDisplayName(post);
   const quality = getQualityMeta(post.freshnessLabel);
+
+  React.useEffect(() => {
+    setImageFailed(false);
+  }, [post.imageUrl]);
 
   return (
     <DSCard
@@ -33,12 +38,22 @@ const NearbyPostCard = ({ post, onPress }: Props) => {
       onPress={onPress}
       style={styles.card}>
       {/* 이미지 */}
-      <View style={styles.imageContainer}>
-        <Image
-          source={{ uri: getImageUrl(post.imageUrl) }}
-          style={styles.image}
-          resizeMode="cover"
-        />
+      <View
+        style={[styles.imageContainer, imageFailed && styles.imageFallback]}>
+        {imageFailed ? (
+          <View
+            testID="nearby-post-thumbnail-fallback"
+            style={styles.imageFallbackContent}>
+            <DSIcon name="image" size="large" color="primary" />
+          </View>
+        ) : (
+          <Image
+            source={{ uri: getImageUrl(post.imageUrl) }}
+            style={styles.image}
+            resizeMode="cover"
+            onError={() => setImageFailed(true)}
+          />
+        )}
         {/* 상태 뱃지 */}
         <DSChip
           label={getPostStatusLabel(post.status)}
@@ -90,6 +105,15 @@ const styles = StyleSheet.create({
   image: {
     width: '100%',
     height: '100%',
+  },
+  imageFallback: {
+    backgroundColor: colors.primaryLight,
+  },
+  imageFallbackContent: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    opacity: 0.72,
   },
   freshBadge: {
     position: 'absolute',

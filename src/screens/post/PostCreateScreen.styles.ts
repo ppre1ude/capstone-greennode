@@ -167,12 +167,64 @@ export const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   field: {
-    gap: 0,
+    gap: 10,
   },
-  input: {
-    minHeight: 52,
+  dateLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  dateLabel: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: colors.textPrimary,
+  },
+  dateLimit: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+  dateCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
     borderRadius: 12,
     backgroundColor: colors.surface,
+    padding: 16,
+    gap: 12,
+  },
+  dateIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primaryLight,
+  },
+  dateCopy: {
+    flex: 1,
+    gap: 3,
+  },
+  dateValue: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: colors.textPrimary,
+  },
+  dateCaption: {
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.textSecondary,
+  },
+  dateOptions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  dateHelper: {
+    fontSize: 13,
+    lineHeight: 19,
+    color: colors.textSecondary,
   },
   textArea: {
     height: 120,

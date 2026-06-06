@@ -75,7 +75,7 @@ FoodLink는 사용자를 오래 붙잡는 콘텐츠 앱이 아니다. 핵심 지
 - 백엔드 AI label은 `Fresh/Mid/Stale`이다. `Mid`는 기존 프론트 문서의 `Normal` 그룹으로 번역한다.
 - `Fresh/Mid` 계열은 사용자에게 `상태가 좋아 보여요`와 `나눔 가능`으로 통합 표시한다.
 - `Stale`은 사용자에게 `나눔 기준에 맞지 않아요`로 안내하고 등록하지 않는다. `not_food`, `low_quality`, `screenshot` 계열 rejection reason은 Post-MVP 백엔드 항목이다. 2026-05-23 기준 MVP 정상 응답의 root-level `rejectionReason`은 `null`이고, `detections[]`는 단일 대표 객체 래핑이다. 특히 screenshot/UI 캡처는 MVP 서버가 차단할 수 없어 `Fresh + imageToken`으로 통과할 수 있으며, 이 경우 앱은 `확인 필요` 표시만 하고 등록은 허용한다.
-- `confidenceScore`는 Stage 2 신선도 분류 모델의 softmax max 확률이며, 차단 기준이 아니라 보조 표시/검토 신호로만 사용한다. 제품 기준은 백엔드 활용 가이드를 따라 0.9 미만을 `확인 필요` 구간으로 본다.
+- `confidenceScore`는 Stage 2 신선도 분류 모델의 softmax max 확률이며, 차단 기준이 아니라 내부 검토 신호로만 사용한다. 제품 기준은 백엔드 활용 가이드를 따라 0.9 미만을 `확인 필요` 구간으로 보되, 사용자/운영자 UI에는 원값, 소수, 퍼센트, `AI 참고 신호 92%` 같은 정량 신호를 노출하지 않는다.
 - 공급자는 공유 냉장고를 선택해 나눔 식재료 생명주기를 시작한다.
 - 보관 QR 인증 전까지 나눔 식재료는 `pending_store`이며, 근처 사용자 목록이나 푸시 알림에 노출하지 않는다.
 - 보관 QR 인증이 끝나 `available`이 된 뒤 근처 사용자에게 푸시 알림을 보낸다.
@@ -187,15 +187,16 @@ MVP에서 공급자는 `requested` 이후 별도 승인 행동을 하지 않는�
 - 사진 한 장으로 대표 식재료와 내부 신선도 등급을 분석한다.
 - 기획/백엔드 목표: YOLOv8 기반 객체 탐지, ResNet-50 기반 신선도 분류.
 - 현재 백엔드 계약: `POST /api/v1/posts/generate`가 대표 식재료, `Fresh/Mid/Stale` 신선도 등급, `isFresh`, `confidenceScore`, `imageToken`을 반환한다. LLM은 비활성화되어 있다. generate는 Post row를 만들지 않지만, 2026-05-08 백엔드 수정 후 서버 임시 저장소에 이미지와 AI 메타데이터 sidecar를 저장하고 `POST /posts` 시점에 복원한다.
-- 현재 앱 정책: `Fresh/Mid`는 나눔 가능으로 통합 표시, `Stale`은 등록 차단, 낮은 confidence는 차단이 아니라 보조 표시.
+- 현재 앱 정책: `Fresh/Mid`는 나눔 가능으로 통합 표시, `Stale`은 등록 차단, 낮은 confidence는 차단이 아니라 `확인 필요` 정성 안내로만 표시한다. confidence 숫자/퍼센트는 화면에 표시하지 않는다.
 
 ### 2. 나눔 식재료 등록
 
 - AI 분석 결과를 기반으로 제목/설명/카테고리 초안을 채운다.
 - 백엔드 Phase 1.5 이후 Post 저장 구조는 제목/설명/카테고리보다 `detectedFruitKo`, `freshnessLabel`, `confidenceScore` 중심이다. 프론트 작성 화면은 사용자가 확인해야 할 최소 정보와 수정 가능 범위를 이 구조에 맞게 재정렬해야 한다.
 - 공급자는 정보를 확인/수정하고 공유 냉장고를 선택한다.
+- 권장 수령일은 AI가 산출한 소비기한이 아니라 앱의 단기 수령 제안이다. OCR/라벨 소비기한 인식이 없는 MVP에서는 기본 3일 뒤를 제안하고, 공급자는 오늘·내일·3일 뒤 중에서만 조정한다.
 - 등록이 완료되면 근처 사용자에게 푸시 알림을 보낸다.
-- MVP는 실제 보관 검증을 QR/토큰/냉장고 운영자 확인으로 강제하지 않는다.
+- QR 생명주기 반영 후 등록은 `pending_store`로 시작하고, 보관 QR 인증이 성공해야 수요자-facing 목록에 노출된다.
 - 서버는 `Stale` 분석 결과에 대해 `imageToken`을 발급하지 않고, 무효/만료 토큰으로는 최종 등록을 막는다. 프론트의 나눔 가능 가드는 사용자 경험용이며 서버가 최종 방어선이다. MVP 필수 등록 payload는 `imageToken`, `fridgeId`, `expirationDate`이고 AI 메타데이터를 재전송하지 않는다. Post-MVP multi-object 계약에서는 대표 후보 선택값인 `selectedDetectionId`만 optional로 추가한다.
 
 ### 3. 근처 나눔 식재료 발견

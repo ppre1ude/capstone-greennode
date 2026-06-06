@@ -3,8 +3,10 @@ import {
   Linking,
   PermissionsAndroid,
   Platform,
+  StyleSheet,
   Text,
   TouchableOpacity,
+  ViewStyle,
 } from 'react-native';
 import Geolocation from 'react-native-geolocation-service';
 import ReactTestRenderer from 'react-test-renderer';
@@ -42,6 +44,14 @@ const findButtonByText = (
         ? children.join('') === label
         : children === label;
     }),
+  );
+
+const findHostByTestId = (
+  renderer: ReactTestRenderer.ReactTestRenderer,
+  testID: string,
+) =>
+  renderer.root.find(
+    node => node.props.testID === testID && typeof node.type === 'string',
   );
 
 describe('LocationSetupScreen notification permission flow', () => {
@@ -140,6 +150,93 @@ describe('LocationSetupScreen notification permission flow', () => {
       longitude: 126.9132,
       fcmToken: 'fcm-token',
     });
+  });
+
+  it('stacks the notification prompt so long copy does not compete with the CTA', async () => {
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(renderLocationSetup());
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    const notificationPanel = findHostByTestId(
+      renderer!,
+      'location-notification-panel',
+    );
+    const panelStyle = StyleSheet.flatten(
+      notificationPanel.props.style,
+    ) as ViewStyle;
+
+    expect(panelStyle.flexDirection).toBe('column');
+    expect(panelStyle.alignItems).toBe('stretch');
+
+    const copyGroup = findHostByTestId(
+      renderer!,
+      'location-notification-copy',
+    );
+    const copyStyle = StyleSheet.flatten(copyGroup.props.style) as ViewStyle;
+    expect(copyStyle.flex).toBeUndefined();
+    expect(copyStyle.flexShrink).toBe(1);
+  });
+
+  it('uses the design palette to make the notification prompt feel intentional', async () => {
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(renderLocationSetup());
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    const notificationPanel = findHostByTestId(
+      renderer!,
+      'location-notification-panel',
+    );
+    const panelStyle = StyleSheet.flatten(
+      notificationPanel.props.style,
+    ) as ViewStyle;
+    expect(panelStyle.backgroundColor).toBe('#F8FCF4');
+    expect(panelStyle.borderColor).toBe('rgba(98, 142, 78, 0.24)');
+
+    const iconSurface = findHostByTestId(
+      renderer!,
+      'location-notification-icon',
+    );
+    const iconStyle = StyleSheet.flatten(iconSurface.props.style) as ViewStyle;
+    expect(iconStyle.backgroundColor).toBe('#E8F5E9');
+
+    const accent = findHostByTestId(
+      renderer!,
+      'location-notification-accent',
+    );
+    const accentStyle = StyleSheet.flatten(accent.props.style) as ViewStyle;
+    expect(accentStyle.backgroundColor).toBe('#ABB863');
+  });
+
+  it('renders GIS and GPS visual signals in the location map area', async () => {
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(renderLocationSetup());
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(findHostByTestId(renderer!, 'location-map-visual')).toBeTruthy();
+    expect(
+      renderer!.root.findAllByProps({ children: '동네 위치 확인' }),
+    ).not.toHaveLength(0);
+    expect(
+      renderer!.root.findAllByProps({ children: '정확도 우선' }),
+    ).not.toHaveLength(0);
+    expect(
+      renderer!.root.findAllByProps({ children: '35.1595, 126.9132' }),
+    ).not.toHaveLength(0);
+    expect(
+      renderer!.root.findAllByProps({ children: '공유 냉장고' }),
+    ).not.toHaveLength(0);
   });
 
   it('keeps a recoverable in-screen path when Android location permission is denied', async () => {

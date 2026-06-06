@@ -28,6 +28,7 @@ export type DSIconName =
   | 'flask'
   | 'gear'
   | 'gift'
+  | 'gifts'
   | 'google'
   | 'headset'
   | 'heart'

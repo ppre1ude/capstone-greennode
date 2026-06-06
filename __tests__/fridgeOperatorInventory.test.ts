@@ -93,7 +93,7 @@ describe('fridge operator inventory helpers', () => {
       postId: '11',
       labelCode: undefined,
       storageZone: '에틸렌 분리 구역',
-      ai: 'Mid, 0.72',
+      ai: 'Mid',
       recommendedUntil: 'not-a-date',
       status: 'discardCandidate',
     });

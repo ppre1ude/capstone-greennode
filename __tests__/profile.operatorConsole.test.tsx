@@ -4,6 +4,7 @@ import ReactTestRenderer from 'react-test-renderer';
 import ProfileScreen from '@/screens/profile/ProfileScreen';
 import { useAuthStore } from '@/store/authStore';
 import { updateProfile } from '@/api/auth';
+import { getUserTrustSummary } from '@/api/trust';
 
 const mockParentNavigate = jest.fn();
 const mockNavigate = jest.fn();
@@ -19,8 +20,15 @@ jest.mock('@/api/auth', () => ({
   updateProfile: jest.fn(),
 }));
 
+jest.mock('@/api/trust', () => ({
+  getUserTrustSummary: jest.fn(),
+}));
+
 const mockedUpdateProfile = updateProfile as jest.MockedFunction<
   typeof updateProfile
+>;
+const mockedGetUserTrustSummary = getUserTrustSummary as jest.MockedFunction<
+  typeof getUserTrustSummary
 >;
 
 const findTouchableByText = (
@@ -84,8 +92,25 @@ describe('ProfileScreen operator console entry', () => {
       data: {
         ...useAuthStore.getState().user!,
         nickname: '테스터 수정',
-        profileImageUrl: '/static/uploads/profile/avatar.jpg',
+        profileImageUrl: 'https://example.com/profile.jpg',
         updatedAt: '2026-05-27T00:00:00Z',
+      },
+    });
+    mockedGetUserTrustSummary.mockResolvedValue({
+      success: true,
+      message: '공급자 신뢰 요약 조회 성공',
+      data: {
+        userId: 1,
+        completedShares: 12,
+        positiveReviewCount: 9,
+        matchedPhotoCount: 8,
+        easyToFindCount: 7,
+        badges: [
+          'store_qr_verified',
+          'completed_pickup',
+          'positive_reviews',
+        ],
+        computedAt: '2026-06-04T12:10:00.000Z',
       },
     });
   });
@@ -193,7 +218,7 @@ describe('ProfileScreen operator console entry', () => {
     expectTextVisible(renderer!, '내 나눔 관리', true);
     expectTextVisible(renderer!, '받은 나눔 관리', true);
     expectTextVisible(renderer!, '알림함', true);
-    expectTextVisible(renderer!, '냉장고 QR 인증', true);
+    expectTextVisible(renderer!, '냉장고 QR 인증', false);
 
     await ReactTestRenderer.act(async () => {
       findTouchableByText(renderer!, '내 나눔 관리').props.onPress();
@@ -218,10 +243,231 @@ describe('ProfileScreen operator console entry', () => {
     expect(mockNavigate).toHaveBeenCalledWith('Chat');
 
     await ReactTestRenderer.act(async () => {
-      findTouchableByText(renderer!, '냉장고 QR 인증').props.onPress();
+      renderer?.unmount();
+    });
+  });
+
+  it('shows the provider trust surface instead of the old freshness temperature placeholder', async () => {
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(<ProfileScreen />);
+      await Promise.resolve();
     });
 
-    expect(mockParentNavigate).toHaveBeenCalledWith('InventoryQr');
+    expectTextVisible(renderer!, '나눔 신뢰 지표', true);
+    expect(mockedGetUserTrustSummary).toHaveBeenCalledWith(1);
+    expectTextVisible(renderer!, 'QR 인증', true);
+    expectTextVisible(renderer!, 'QR 기반', false);
+    expectTextVisible(renderer!, 'QR 보관 인증', true);
+    expectTextVisible(renderer!, '수령 완료 12회', true);
+    expectTextVisible(renderer!, '긍정 평가 9회', true);
+    expectTextVisible(renderer!, '수령 완료', true);
+    expectTextVisible(renderer!, '12건', true);
+    expectTextVisible(renderer!, '긍정 평가', true);
+    expectTextVisible(renderer!, '9건', true);
+    expectTextVisible(renderer!, '최근 신고 검토 없음', false);
+    expectTextVisible(renderer!, '신선도 온도', false);
+    expectTextVisible(renderer!, '보유 포인트', false);
+    expectTextVisible(renderer!, '탄소 절감량', false);
+    expectTextVisible(renderer!, '준비 중', false);
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
+  it('uses zero-value trust counters instead of loading placeholders when trust summary is unavailable', async () => {
+    mockedGetUserTrustSummary.mockRejectedValueOnce(
+      new Error('trust summary unavailable'),
+    );
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(<ProfileScreen />);
+      await Promise.resolve();
+    });
+
+    expectTextVisible(renderer!, '나눔 신뢰 지표', true);
+    expectTextVisible(renderer!, '수령 완료 0회', true);
+    expectTextVisible(renderer!, '긍정 평가 0회', true);
+    expect(
+      renderer!.root.findAllByProps({ children: '0건' }).length,
+    ).toBeGreaterThanOrEqual(2);
+    expectTextVisible(renderer!, '확인 중', false);
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
+  it('uses zero-value trust counters while trust summary is still loading', async () => {
+    mockedGetUserTrustSummary.mockImplementationOnce(
+      () => new Promise(() => undefined),
+    );
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(<ProfileScreen />);
+    });
+
+    expectTextVisible(renderer!, '나눔 신뢰 지표', true);
+    expectTextVisible(renderer!, '수령 완료 0회', true);
+    expectTextVisible(renderer!, '긍정 평가 0회', true);
+    expect(
+      renderer!.root.findAllByProps({ children: '0건' }).length,
+    ).toBeGreaterThanOrEqual(2);
+    expectTextVisible(renderer!, '확인 중', false);
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
+  it('clears the previous user trust counters while the next user summary is loading', async () => {
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(<ProfileScreen />);
+      await Promise.resolve();
+    });
+
+    expectTextVisible(renderer!, '12건', true);
+
+    mockedGetUserTrustSummary.mockImplementationOnce(
+      () => new Promise(() => undefined),
+    );
+
+    await ReactTestRenderer.act(async () => {
+      useAuthStore.setState({
+        user: {
+          ...useAuthStore.getState().user!,
+          id: 2,
+          email: 'next-user@example.com',
+          nickname: '다음유저',
+        },
+      });
+      await Promise.resolve();
+    });
+
+    expect(mockedGetUserTrustSummary).toHaveBeenLastCalledWith(2);
+    expectTextVisible(renderer!, '12건', false);
+    expectTextVisible(renderer!, '9건', false);
+    expectTextVisible(renderer!, '수령 완료 0회', true);
+    expectTextVisible(renderer!, '긍정 평가 0회', true);
+    expect(
+      renderer!.root.findAllByProps({ children: '0건' }).length,
+    ).toBeGreaterThanOrEqual(2);
+    expectTextVisible(renderer!, '확인 중', false);
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
+  it('ignores trust summary payloads that do not match the current user', async () => {
+    useAuthStore.setState({
+      user: {
+        ...useAuthStore.getState().user!,
+        id: 2,
+        email: 'next-user@example.com',
+        nickname: '다음유저',
+      },
+    });
+    mockedGetUserTrustSummary.mockResolvedValueOnce({
+      success: true,
+      message: '공급자 신뢰 요약 조회 성공',
+      data: {
+        userId: 1,
+        completedShares: 12,
+        positiveReviewCount: 9,
+        matchedPhotoCount: 8,
+        easyToFindCount: 7,
+        badges: [
+          'store_qr_verified',
+          'completed_pickup',
+          'positive_reviews',
+        ],
+        computedAt: '2026-06-04T12:10:00.000Z',
+      },
+    });
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(<ProfileScreen />);
+      await Promise.resolve();
+    });
+
+    expect(mockedGetUserTrustSummary).toHaveBeenCalledWith(2);
+    expectTextVisible(renderer!, '12건', false);
+    expectTextVisible(renderer!, '9건', false);
+    expectTextVisible(renderer!, '수령 완료 0회', true);
+    expectTextVisible(renderer!, '긍정 평가 0회', true);
+    expect(
+      renderer!.root.findAllByProps({ children: '0건' }).length,
+    ).toBeGreaterThanOrEqual(2);
+    expectTextVisible(renderer!, '확인 중', false);
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
+  it('does not revive an ignored trust summary during a later user switch', async () => {
+    useAuthStore.setState({
+      user: {
+        ...useAuthStore.getState().user!,
+        id: 2,
+        email: 'next-user@example.com',
+        nickname: '다음유저',
+      },
+    });
+    mockedGetUserTrustSummary.mockResolvedValueOnce({
+      success: true,
+      message: '공급자 신뢰 요약 조회 성공',
+      data: {
+        userId: 1,
+        completedShares: 12,
+        positiveReviewCount: 9,
+        matchedPhotoCount: 8,
+        easyToFindCount: 7,
+        badges: [
+          'store_qr_verified',
+          'completed_pickup',
+          'positive_reviews',
+        ],
+        computedAt: '2026-06-04T12:10:00.000Z',
+      },
+    });
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(<ProfileScreen />);
+      await Promise.resolve();
+    });
+
+    mockedGetUserTrustSummary.mockImplementationOnce(
+      () => new Promise(() => undefined),
+    );
+
+    ReactTestRenderer.act(() => {
+      useAuthStore.setState({
+        user: {
+          ...useAuthStore.getState().user!,
+          id: 1,
+          email: 'operator-test@example.com',
+          nickname: '테스트',
+        },
+      });
+
+      expectTextVisible(renderer!, '12건', false);
+      expectTextVisible(renderer!, '9건', false);
+      expectTextVisible(renderer!, '수령 완료 0회', true);
+      expectTextVisible(renderer!, '긍정 평가 0회', true);
+    });
+
+    expect(mockedGetUserTrustSummary).toHaveBeenLastCalledWith(1);
+    expectTextVisible(renderer!, '확인 중', false);
 
     await ReactTestRenderer.act(async () => {
       renderer?.unmount();
@@ -244,6 +490,30 @@ describe('ProfileScreen operator console entry', () => {
     });
   });
 
+  it('keeps profile menu leading icons on a fixed alignment grid', async () => {
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(<ProfileScreen />);
+    });
+
+    const iconWidths = ['clipboard-list', 'gift', 'bell'].map(iconName => {
+      const icon = renderer!.root.findByProps({ name: iconName });
+      const style = Array.isArray(icon.props.style)
+        ? Object.assign({}, ...icon.props.style)
+        : icon.props.style;
+
+      expect(style.textAlign).toBe('center');
+      return style.width;
+    });
+
+    expect(iconWidths).toEqual([24, 24, 24]);
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
   it('updates nickname and profile image URL through the backend contract', async () => {
     const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(jest.fn());
     let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
@@ -259,9 +529,13 @@ describe('ProfileScreen operator console entry', () => {
     const [nicknameInput, profileImageInput] =
       renderer!.root.findAllByType(TextInput);
 
+    expect(profileImageInput.props.placeholder).toBe(
+      'https://example.com/profile.jpg',
+    );
+
     await ReactTestRenderer.act(async () => {
       nicknameInput.props.onChangeText('테스터 수정');
-      profileImageInput.props.onChangeText('/static/uploads/profile/avatar.jpg');
+      profileImageInput.props.onChangeText('https://example.com/profile.jpg');
     });
 
     await ReactTestRenderer.act(async () => {
@@ -271,11 +545,11 @@ describe('ProfileScreen operator console entry', () => {
 
     expect(mockedUpdateProfile).toHaveBeenCalledWith({
       nickname: '테스터 수정',
-      profileImageUrl: '/static/uploads/profile/avatar.jpg',
+      profileImageUrl: 'https://example.com/profile.jpg',
     });
     expect(useAuthStore.getState().user).toMatchObject({
       nickname: '테스터 수정',
-      profileImageUrl: '/static/uploads/profile/avatar.jpg',
+      profileImageUrl: 'https://example.com/profile.jpg',
     });
     expect(alertSpy).toHaveBeenCalledWith(
       '프로필 수정 완료',

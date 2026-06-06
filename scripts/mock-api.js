@@ -1,9 +1,26 @@
 /* eslint-env node */
 const http = require('http');
+const fs = require('fs');
+const path = require('path');
 const {URL} = require('url');
 
 const PORT = Number(process.env.MOCK_API_PORT || 8080);
 const HOST = process.env.MOCK_API_HOST || '0.0.0.0';
+const QA_FIXTURES_DIR = path.join(__dirname, '..', 'docs', 'qa-fixtures');
+const staticAssets = new Map([
+  [
+    '/static/mock/apple.jpg',
+    path.join(QA_FIXTURES_DIR, 'fresh-single-fresh-20260505.jpg'),
+  ],
+  [
+    '/static/mock/banana.jpg',
+    path.join(QA_FIXTURES_DIR, 'fresh-single-fresh-20260505.jpg'),
+  ],
+  [
+    '/static/mock/food.jpg',
+    path.join(QA_FIXTURES_DIR, 'fresh-single-fresh-20260505.jpg'),
+  ],
+]);
 
 const now = () => new Date().toISOString();
 const json = (res, status, body) => {
@@ -21,6 +38,19 @@ const ok = (res, data, message = 'OK', status = 200) =>
 
 const fail = (res, message, status = 400) =>
   json(res, status, {success: false, message, data: null});
+
+const image = (res, filePath) => {
+  if (!fs.existsSync(filePath)) {
+    return fail(res, 'Mock image not found.', 404);
+  }
+
+  res.writeHead(200, {
+    'Content-Type': 'image/jpeg',
+    'Access-Control-Allow-Origin': '*',
+    'Cache-Control': 'public, max-age=3600',
+  });
+  fs.createReadStream(filePath).pipe(res);
+};
 
 let currentUser = {
   id: 1,
@@ -59,12 +89,18 @@ const fridges = [
 let posts = [
   {
     id: 1,
-    title: '신선한 사과 나눔합니다',
-    description: '어제 산 사과가 조금 남아서 공유 냉장고에 넣어둘게요.',
+    title: '신선한 바나나 나눔합니다',
+    description: '어제 산 바나나가 조금 남아서 공유 냉장고에 넣어둘게요.',
     category: '과일',
-    imageUrl: '/static/mock/apple.jpg',
-    expirationDate: '2026-04-30',
+    detectedFruit: 'banana',
+    detectedFruitKo: '바나나',
+    freshnessLabel: 'Fresh',
+    confidenceScore: 0.92,
+    imageUrl: '/static/mock/banana.jpg',
+    expirationDate: '2026-06-30',
+    status: 'available',
     fridgeId: 1,
+    fridgeName: '용봉동 공유 냉장고',
     userId: 2,
     createdAt: now(),
     updatedAt: now(),
@@ -89,12 +125,14 @@ const readJson = async req => {
   return JSON.parse(body);
 };
 
-const parseMultipartDataField = body => {
-  const match = body.match(/name="data"\r?\n\r?\n([\s\S]*?)\r?\n--/);
-  if (!match) {
-    return null;
+const parsePostDataField = body => {
+  const multipartMatch = body.match(/name="data"\r?\n\r?\n([\s\S]*?)\r?\n--/);
+  if (multipartMatch) {
+    return JSON.parse(multipartMatch[1]);
   }
-  return JSON.parse(match[1]);
+
+  const encodedData = new URLSearchParams(body).get('data');
+  return encodedData ? JSON.parse(encodedData) : null;
 };
 
 const server = http.createServer(async (req, res) => {
@@ -106,6 +144,10 @@ const server = http.createServer(async (req, res) => {
   const path = url.pathname;
 
   try {
+    if (req.method === 'GET' && staticAssets.has(path)) {
+      return image(res, staticAssets.get(path));
+    }
+
     if (req.method === 'GET' && path === '/docs') {
       res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
       res.end('<h1>FoodLink Mock API</h1><p>Mock server is running.</p>');
@@ -148,12 +190,18 @@ const server = http.createServer(async (req, res) => {
       const token = `mock-image-token-${Date.now()}`;
       imageTokens.add(token);
       return ok(res, {
-        suggestedTitle: '신선한 식재료 나눔합니다',
-        suggestedDescription: 'AI 분석 결과 나눔 가능한 신선한 식재료입니다.',
-        suggestedCategory: '기타',
+        suggestedTitle: '신선한 바나나 나눔합니다',
+        suggestedDescription: 'AI 분석 결과 나눔 가능한 신선한 바나나입니다.',
+        suggestedCategory: '과일',
+        detectedFruit: 'banana',
+        detectedFruitKo: '바나나',
+        freshnessLabel: 'Fresh',
+        confidenceScore: 92,
         aiAnalysis: {
           isFresh: true,
           confidenceScore: 92,
+          detectedFruit: 'banana',
+          detectedFruitKo: '바나나',
           category: 'Fresh',
           analysisMessage: '식재료가 신선합니다.',
         },
@@ -164,7 +212,7 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === 'POST' && path === '/api/v1/posts') {
       const raw = await readBody(req);
-      const data = parseMultipartDataField(raw);
+      const data = parsePostDataField(raw);
       if (!data || !imageTokens.has(data.imageToken)) {
         return fail(res, '이미지가 만료되었거나 유효하지 않습니다. 다시 촬영해주세요.');
       }
@@ -172,7 +220,12 @@ const server = http.createServer(async (req, res) => {
       const post = {
         ...data,
         id: nextPostId++,
+        status: 'pending_store',
         imageUrl: '/static/mock/food.jpg',
+        freshnessLabel: 'Fresh',
+        fridgeName:
+          fridges.find(fridge => fridge.id === data.fridgeId)?.name ||
+          '근처 공유 냉장고',
         userId: currentUser.id,
         createdAt: now(),
         updatedAt: now(),

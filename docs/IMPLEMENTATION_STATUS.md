@@ -33,6 +33,12 @@
 - 발견했던 UI 회귀: `InventoryQrScreen` 하단 action grid와 메인 하단 탭 label이 Android system navigation bar와 겹쳤다. 후속 수정 후 QR `ScrollView` viewport는 navigation bar 시작 y=2952 위에서 끝나고, scroll-bottom 상태의 QR action grid와 홈 탭 label도 navigation bar 위에 위치한다.
 - Post-MVP AI 품질 evidence: 실기기 카메라가 키보드/노트북 사진을 `바나나`, `confidenceScore=0.7`, `확인 필요`로 통과시켰다. 현재 앱은 낮은 confidence 안내를 표시하지만, 비식재료/스크린샷 rejection enum은 여전히 Post-MVP 서버 계약이다.
 
+## 2026-06-04 공급자 신뢰 피드백 데모 업데이트
+
+- 수령 QR 인증으로 `completed`가 된 받은 나눔에만 `평가하기`/`신고하기`를 노출하는 프론트 데모를 추가했다.
+- 평가는 별점 없이 태그 기반으로 처리한다. 긍정 태그와 불만족 태그를 분리하고, 신고는 라디오형 단일 사유와 `open`, `pending`, `none` 상태를 가진 별도 운영자 검토 요청으로 저장한다.
+- 나눔 상세와 프로필에 `나눔 신뢰 지표` 뱃지를 노출한다. 공개 뱃지는 `QR 보관 인증`, `수령 완료`, `긍정 평가`처럼 긍정/검증 신호만 포함하고 신고 건수/제재 이력은 노출하지 않는다. 현재 데모는 로컬 Zustand 상태로 즉시 반영하고, 신뢰 피드백 운영 모델은 [TRUST_FEEDBACK_OPERATING_MODEL.md](./TRUST_FEEDBACK_OPERATING_MODEL.md), 백엔드 요청 계약은 [BACKEND_TRUST_FEEDBACK_CONTRACT_REQUEST_2026-06-04.md](./BACKEND_TRUST_FEEDBACK_CONTRACT_REQUEST_2026-06-04.md)에 분리했다.
+
 ## 2026-05-29 Post-MVP 백엔드 회신 반영
 
 - 백엔드가 Post-MVP blocker 8개 항목에 답변했고, 프론트 검토 결과는 [BACKEND_RESPONSE_TO_POST_MVP_BLOCKERS_2026-05-29.md](./BACKEND_RESPONSE_TO_POST_MVP_BLOCKERS_2026-05-29.md)에 정리했다.
@@ -197,11 +203,11 @@
 | 나눔 식재료 상세/삭제/신청 | 부분 구현, 실제 기기 신청 QA 통과        | 실제 상세 응답의 `authorId` 기준으로 작성자 여부를 판단한다. 상세 화면은 `detectedFruitKo`, `freshnessLabel`, `confidenceScore`, `status`를 표시한다. `available` 나눔 식재료는 `requestShare(postId)`로 신청하고, 201/409 이후 `신청 접수` 상태로 CTA를 비활성화한다. 403은 작성자 본인 fallback 문구로 처리한다. |
 | 홈 주변 나눔 식재료        | 부분 구현, 실제 기기 홈 재조회 통과      | `/posts/nearby` 데이터를 카드로 표시한다. 홈 포커스와 등록 완료 refresh token 변경 시 재조회한다. 2026-05-21부터 현재 로딩된 nearby 목록에서 권장 수령일이 가까운 available 항목을 `오늘 가져가기 좋은 재료`로 로컬 추천한다. |
 | 지도/냉장고                | 부분 구현, 실제 기기 UI QA 통과          | `/fridges/nearby`, `/fridges/available` 조회와 지도 마커/냉장고 선택은 동작한다. 지도에서 냉장고를 선택하면 `GET /fridges/{id}/posts?status=available`로 내부 available 나눔 식재료를 조회하고, loading/error/empty/list 상태를 분리한다. |
-| 냉장고 운영자/QR           | Operator VM QA 통과, QR lifecycle 연결   | `flow: "fridge_qr"` 등록, 보관 QR 인증, 수령 QR 인증, 운영자 폐기 요청을 실제 API 호출 경로로 연결했다. 2026-05-25 VM에서 operator summary/items/dispose 권한, 빈 목록, available/expired dispose, requested 409, 목록 제외를 확인했다. 2026-05-27 백엔드 회신으로 `/auth/me` 운영자 role metadata가 확정되어 프로필 운영자 콘솔 진입 정책에 연결했다. |
+| 냉장고 운영자/QR           | Operator VM QA 통과, QR lifecycle 연결   | `flow: "fridge_qr"` 등록, 보관 QR 인증, 수령 QR 인증, 운영자 폐기 요청을 실제 API 호출 경로로 연결했다. `InventoryQr` 제품 route는 `mode/postId`를 필수로 요구하며, params 없는 직접 진입은 안내 화면으로 차단한다. 2026-05-25 VM에서 operator summary/items/dispose 권한, 빈 목록, available/expired dispose, requested 409, 목록 제외를 확인했다. 2026-05-27 백엔드 회신으로 `/auth/me` 운영자 role metadata가 확정되어 프로필 운영자 콘솔 진입 정책에 연결했다. |
 | 나눔 신청                  | 프론트 코드 연동 완료, 실제 기기 QA 통과 | 프론트는 `requestShare(postId)`, 상세 CTA, 201/403/409 UX, 홈/지도 refresh store를 구현했다. 2026-05-08 실제 Android 기기에서 신청 완료 alert, 상세 `신청 접수` 전환, 지도 냉장고 내부 목록 즉시 제거를 확인했다. |
 | FCM                        | debug/release/physical/emulator QA 통과 | 2026-05-21 emulator QA에서 `share_created`, `share_requested` 실제 send success 1 / failure 0, foreground 수신/로컬 알림 탭 기록, background system notification 표시와 tap의 `PostDetail` 라우팅을 확인했다. 2026-05-25 실기기+emulator 2계정 QA에서 debug foreground/background/terminated, 기존 task onNewIntent, fresh install, 로그아웃 후 로그인 defer, release background/process-killed/lockscreen tap routing, Android 14 API 34 Pixel AVD release background/stop-app tap routing을 확인했다. Android 13 또는 추가 OEM은 참고 매트릭스다. |
 | 채팅                       | 보류                                     | 정적 채팅 mock 데이터는 제거했다. WebSocket/API 계약은 없다. |
-| 통계/탄소 절감             | 정리됨                                   | 실제 지표 API가 없는 홈/프로필 mock 숫자는 제거하고 준비 중 상태로 표시한다. |
+| 통계/탄소 절감             | 정리됨                                   | 실제 지표 API가 없는 홈/프로필 mock 숫자는 제거했다. 홈은 주변 나눔/진행 중인 나눔, 프로필은 수령 완료/긍정 평가 신뢰 요약을 표시한다. impact 숫자는 live VM 확인 전까지 연결하지 않는다. |
 | 검색                       | 부분 구현, 서버 검색 Post-MVP            | MVP 검색은 홈 나눔 식재료명/냉장고명 로컬 필터와 지도 공유 냉장고 이름/주소 로컬 필터로 제한했다. 2026-05-23 백엔드 회신 기준 서버 검색은 MVP 미포함이며, 필요 시 nearby API의 optional `q` 파라미터로 확장한다. |
 
 ---

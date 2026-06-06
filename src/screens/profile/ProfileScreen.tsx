@@ -1,18 +1,22 @@
 /**
  * ProfileScreen — 내 정보 탭 (Phase 6)
  *
- * 유저 정보, 준비 중인 활동 지표, 설정 메뉴 표시.
+ * 유저 정보, 신뢰 활동 지표, 설정 메뉴 표시.
  * 로그아웃 기능을 포함.
  *
  * @wireframe wireframe-foodlink/profile.html
  */
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, StyleSheet, ScrollView, Alert, StatusBar } from 'react-native';
 import { useNavigation, type CompositeNavigationProp } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuthStore } from '@/store/authStore';
 import { updateProfile } from '@/api/auth';
+import {
+  getUserTrustSummary,
+  type ProviderTrustSummaryResponse,
+} from '@/api/trust';
 import {
   DSButton,
   DSCard,
@@ -25,13 +29,13 @@ import {
 } from '@/design-system';
 import { colors } from '@/theme';
 import type { User } from '@/types';
+import { getProviderTrustBadges } from '@/features/trust/feedback';
 import { getHeaderTopPadding } from '@/utils/safeArea';
 import type { MainTabParamList, RootStackParamList } from '@/navigation/types';
 
 type ProfileMenuItemId =
   | 'location'
   | 'operator-console'
-  | 'inventory-qr'
   | 'my-posts'
   | 'history'
   | 'notifications';
@@ -62,11 +66,6 @@ const LIFECYCLE_MENU_ITEMS: ProfileMenuItem[] = [
     id: 'notifications',
     title: '알림함',
     icon: 'bell',
-  },
-  {
-    id: 'inventory-qr',
-    title: '냉장고 QR 인증',
-    icon: 'qrcode',
   },
 ];
 
@@ -122,12 +121,27 @@ const ProfileScreen = () => {
   const navigation = useNavigation<ProfileNavigation>();
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [trustSummary, setTrustSummary] =
+    useState<ProviderTrustSummaryResponse | null>(null);
   const [draftNickname, setDraftNickname] = useState(user?.nickname ?? '');
   const [draftProfileImageUrl, setDraftProfileImageUrl] = useState(
     user?.profileImageUrl ?? '',
   );
   const visibleAccountMenuItems = ACCOUNT_MENU_ITEMS.filter(
     item => item.id !== 'operator-console' || canAccessOperatorConsole(user),
+  );
+  const currentTrustSummary =
+    trustSummary?.userId === user?.id ? trustSummary : null;
+  const completedSharesCount = currentTrustSummary?.completedShares ?? 0;
+  const positiveReviewCount = currentTrustSummary?.positiveReviewCount ?? 0;
+  const trustBadges = useMemo(
+    () =>
+      getProviderTrustBadges({
+        completedShares: completedSharesCount,
+        positiveReviewCount,
+        badges: currentTrustSummary?.badges ?? [],
+      }),
+    [completedSharesCount, positiveReviewCount, currentTrustSummary?.badges],
   );
 
   useEffect(() => {
@@ -138,6 +152,39 @@ const ProfileScreen = () => {
     setDraftNickname(user?.nickname ?? '');
     setDraftProfileImageUrl(user?.profileImageUrl ?? '');
   }, [isEditingProfile, user?.nickname, user?.profileImageUrl]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    if (!user?.id) {
+      setTrustSummary(null);
+      return () => {
+        isMounted = false;
+      };
+    }
+
+    const requestedUserId = user.id;
+    setTrustSummary(null);
+    getUserTrustSummary(requestedUserId)
+      .then(response => {
+        if (isMounted) {
+          const summary = response.data;
+          setTrustSummary(
+            summary?.userId === requestedUserId ? summary : null,
+          );
+        }
+      })
+      .catch(error => {
+        console.warn('Failed to fetch profile trust summary:', error);
+        if (isMounted) {
+          setTrustSummary(null);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.id]);
 
   const handleLogout = () => {
     Alert.alert('로그아웃', '정말 로그아웃 하시겠습니까?', [
@@ -217,10 +264,6 @@ const ProfileScreen = () => {
         }
 
         rootNavigation?.navigate('FridgeOperatorConsole');
-        return;
-
-      case 'inventory-qr':
-        rootNavigation?.navigate('InventoryQr');
         return;
 
       case 'my-posts':
@@ -307,7 +350,7 @@ const ProfileScreen = () => {
                 onChangeText={setDraftProfileImageUrl}
                 autoCapitalize="none"
                 autoCorrect={false}
-                placeholder="/static/uploads/profile/avatar.jpg"
+                placeholder="https://example.com/profile.jpg"
                 caption="이미지 주소를 비우면 기본 아바타를 사용합니다."
               />
               <View style={styles.profileEditActions}>
@@ -329,40 +372,52 @@ const ProfileScreen = () => {
             </View>
           ) : null}
 
-          {/* 신뢰도 온도 (프로그레스) */}
           <DSCard variant="plain" style={styles.trustBox}>
             <View style={styles.trustHeader}>
               <DSText variant="bodyBold" style={styles.trustTitle}>
-                신선도 온도
+                나눔 신뢰 지표
               </DSText>
               <DSChip
-                label="준비 중"
+                label="QR 인증"
                 tone="primary"
                 size="small"
                 style={styles.trustScore}
               />
             </View>
-            <View style={styles.progressBarBg}>
-              <View style={[styles.progressBarFill, styles.progressBarEmpty]} />
+            <View style={styles.trustBadgeWrap}>
+              {trustBadges.map(badge => (
+                <DSChip
+                  key={badge.id}
+                  label={badge.label}
+                  tone={badge.tone}
+                  size="small"
+                  variant="outlined"
+                  style={styles.profileTrustBadge}
+                />
+              ))}
             </View>
             <DSText
               variant="small"
               color="textTertiary"
               style={styles.trustDesc}>
-              나눔 기록이 쌓이면 활동 지표가 표시됩니다.
+              나눔 약속과 받은 긍정 평가가 건강한 나눔 커뮤니티를 만듭니다.
             </DSText>
           </DSCard>
 
-          {/* 포인트 & 탄소절감량 */}
+          {/* 신뢰 활동 지표 */}
           <View style={styles.statsRow}>
             <View style={styles.statBox}>
               <DSText
                 variant="caption"
                 color="textSecondary"
                 style={styles.statTitle}>
-                보유 포인트
+                수령 완료
               </DSText>
-              <DSChip label="준비 중" size="large" style={styles.statValue} />
+              <DSChip
+                label={`${completedSharesCount}건`}
+                size="large"
+                style={styles.statValue}
+              />
             </View>
             <View style={styles.divider} />
             <View style={styles.statBox}>
@@ -370,9 +425,13 @@ const ProfileScreen = () => {
                 variant="caption"
                 color="textSecondary"
                 style={styles.statTitle}>
-                탄소 절감량
+                긍정 평가
               </DSText>
-              <DSChip label="준비 중" size="large" style={styles.statValue} />
+              <DSChip
+                label={`${positiveReviewCount}건`}
+                size="large"
+                style={styles.statValue}
+              />
             </View>
           </View>
         </DSCard>
@@ -527,6 +586,15 @@ const styles = StyleSheet.create({
   trustScore: {
     alignSelf: 'center',
   },
+  trustBadgeWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 10,
+  },
+  profileTrustBadge: {
+    backgroundColor: '#FFFFFF',
+  },
   progressBarBg: {
     height: 8,
     backgroundColor: '#E2E8F0',
@@ -582,7 +650,8 @@ const styles = StyleSheet.create({
   },
   menuIcon: {
     fontSize: 20,
-    marginRight: 8,
+    textAlign: 'center',
+    width: 24,
   },
   logoutButton: {
     marginHorizontal: 24,

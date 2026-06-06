@@ -1,6 +1,7 @@
 import React from 'react';
 import {TouchableOpacity} from 'react-native';
 import ReactTestRenderer from 'react-test-renderer';
+import {DSIcon, DSScreenFooter} from '@/design-system';
 import PostCompleteScreen from '@/screens/post/PostCompleteScreen';
 import {renderWithSafeArea} from '../test-utils/renderWithSafeArea';
 
@@ -47,5 +48,56 @@ describe('PostCompleteScreen navigation', () => {
       renderer?.unmount();
     });
     dateNow.mockRestore();
+  });
+
+  it('keeps the home CTA lifted from the native navigation area', async () => {
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(
+        renderWithSafeArea(
+          <PostCompleteScreen
+            navigation={{reset: jest.fn()} as any}
+            route={{params: {postId: 42}} as any}
+          />,
+        ),
+      );
+    });
+
+    const footer = renderer!.root.findByType(DSScreenFooter);
+
+    expect(footer.props.bottomInsetGap).toBe(88);
+    expect(footer.props.minBottomPadding).toBe(88);
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
+  it('uses a celebration mark instead of a generic completion icon', async () => {
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(
+        renderWithSafeArea(
+          <PostCompleteScreen
+            navigation={{reset: jest.fn()} as any}
+            route={{params: {postId: 42}} as any}
+          />,
+        ),
+      );
+    });
+
+    const iconNames = renderer!.root
+      .findAllByType(DSIcon)
+      .map(node => node.props.name);
+
+    expect(iconNames).toContain('gifts');
+    expect(iconNames).not.toContain('seedling');
+    expect(iconNames).not.toContain('circle-check');
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
   });
 });

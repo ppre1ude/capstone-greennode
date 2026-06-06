@@ -194,6 +194,42 @@ describe('MapScreen fridge posts', () => {
     ).toHaveLength(0);
   });
 
+  it('renders a branded map fallback layer so failed native tiles are not blank', async () => {
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(<MapScreen />);
+    });
+
+    expect(
+      findHostByTestId(renderer!, 'map-visual-fallback'),
+    ).toHaveLength(1);
+    expect(
+      findHostByTestId(renderer!, 'map-visual-fallback-marker'),
+    ).toHaveLength(1);
+    expect(
+      findHostByTestId(renderer!, 'map-visual-fallback-road'),
+    ).not.toHaveLength(0);
+  });
+
+  it('hides the fallback layer after the native map finishes loading', async () => {
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(<MapScreen />);
+    });
+
+    expect(
+      findHostByTestId(renderer!, 'map-visual-fallback'),
+    ).toHaveLength(1);
+
+    const nativeMap = findHostByTestId(renderer!, 'map-native-view')[0];
+
+    await ReactTestRenderer.act(async () => {
+      nativeMap.props.onMapLoaded();
+    });
+
+    expect(
+      findHostByTestId(renderer!, 'map-visual-fallback'),
+    ).toHaveLength(0);
+  });
+
   it('replaces the fridge carousel with the selected fridge sheet', async () => {
     await ReactTestRenderer.act(async () => {
       renderer = ReactTestRenderer.create(<MapScreen />);

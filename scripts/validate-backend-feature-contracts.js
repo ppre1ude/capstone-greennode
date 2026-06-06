@@ -11,6 +11,11 @@ const baseUrl = (process.env.FOODLINK_API_BASE_URL || 'http://localhost:8080').r
 const shouldMutate = process.argv.includes('--mutate');
 const qaPassword = process.env.FOODLINK_QA_PASSWORD || 'Password123';
 const qaFridgeId = Number(process.env.FOODLINK_QA_FRIDGE_ID || 1);
+const qaFridgePublicCode =
+  process.env.FOODLINK_QA_FRIDGE_PUBLIC_CODE || 'GJ-STATION-001';
+const operatorEmail = process.env.FOODLINK_OPERATOR_EMAIL || 'optest@foodlink.com';
+const operatorPassword =
+  process.env.FOODLINK_OPERATOR_PASSWORD || 'testpassword123';
 const fixturePath = path.join(
   repoRoot,
   'docs',
@@ -153,6 +158,13 @@ const expectObject = (value, label) => {
 const expectArray = (value, label) => {
   if (!Array.isArray(value)) {
     throw new Error(`${label} must be an array`);
+  }
+  return value;
+};
+
+const expectIsoUtcTimestamp = (value, label) => {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}T.+Z$/.test(value)) {
+    throw new Error(`${label} must be an ISO-8601 UTC timestamp ending in Z`);
   }
   return value;
 };
@@ -354,7 +366,7 @@ const createPost = async token => {
     fridgeId: qaFridgeId,
     expirationDate: getExpirationDate(),
     imageToken,
-    flow: 'direct',
+    flow: 'fridge_qr',
   };
   const body = await expectOk('create post', 'POST', '/api/v1/posts', {
     token,
@@ -365,6 +377,13 @@ const createPost = async token => {
   if (!post.id) {
     throw new Error('create post response missing id');
   }
+  if (post.status !== 'pending_store') {
+    throw new Error(`expected pending_store status, got ${post.status}`);
+  }
+  expectIsoUtcTimestamp(
+    post.storeExpiresAt ?? post.storageDeadlineAt,
+    'create post storeExpiresAt',
+  );
   return post;
 };
 
@@ -380,7 +399,57 @@ const requestShare = async (token, postId) => {
   if (!requestData.id) {
     throw new Error('request share response missing request.id');
   }
+  expectIsoUtcTimestamp(
+    data.post?.requestExpiresAt,
+    'request share post.requestExpiresAt',
+  );
   return data;
+};
+
+const confirmStore = async (token, postId) => {
+  const body = await expectOk(
+    'confirm store',
+    'POST',
+    '/api/v1/inventory/confirm-store',
+    {
+      token,
+      json: {
+        postId,
+        fridgePublicCode: qaFridgePublicCode,
+      },
+    },
+  );
+  const data = expectObject(getData(body), 'confirm-store data');
+  if (data.status !== 'available') {
+    throw new Error(`expected available status after confirm-store, got ${data.status}`);
+  }
+  return data;
+};
+
+const confirmPickup = async (token, postId) => {
+  const body = await expectOk(
+    'confirm pickup',
+    'POST',
+    '/api/v1/inventory/confirm-pickup',
+    {
+      token,
+      json: {
+        postId,
+        fridgePublicCode: qaFridgePublicCode,
+      },
+    },
+  );
+  const data = expectObject(getData(body), 'confirm-pickup data');
+  if (data.status !== 'completed') {
+    throw new Error(`expected completed status after confirm-pickup, got ${data.status}`);
+  }
+  return data;
+};
+
+const createStoredPost = async token => {
+  const post = await createPost(token);
+  await confirmStore(token, post.id);
+  return getPostDetail(token, post.id);
 };
 
 const postMutation = async (token, pathname) => {
@@ -395,6 +464,111 @@ const getPostDetail = async (token, postId) => {
   return expectObject(getData(body), `post ${postId} detail`);
 };
 
+const createShareReview = async (token, requestId) => {
+  const body = await expectOk(
+    'share review',
+    'POST',
+    `/api/v1/share-requests/${requestId}/review`,
+    {
+      token,
+      json: {
+        positiveTagIds: ['good_condition', 'matched_photo'],
+        issueTagIds: ['label_hard_to_find'],
+      },
+    },
+  );
+  const data = expectObject(getData(body), 'share review data');
+  if (data.requestId !== requestId) {
+    throw new Error(`review requestId mismatch: ${data.requestId}`);
+  }
+  if (!Array.isArray(data.positiveTagIds) || !Array.isArray(data.issueTagIds)) {
+    throw new Error('review response missing tag arrays');
+  }
+  return data;
+};
+
+const createShareReport = async (token, requestId) => {
+  const body = await expectOk(
+    'share report',
+    'POST',
+    `/api/v1/share-requests/${requestId}/report`,
+    {
+      token,
+      json: {
+        reasonId: 'missing_or_not_found',
+      },
+    },
+  );
+  const data = expectObject(getData(body), 'share report data');
+  if (data.requestId !== requestId || data.reasonId !== 'missing_or_not_found') {
+    throw new Error('report response requestId/reasonId mismatch');
+  }
+  if (
+    data.status !== 'open' ||
+    data.resolution !== 'pending' ||
+    data.action !== 'none'
+  ) {
+    throw new Error(
+      `unexpected report state: ${data.status}/${data.resolution}/${data.action}`,
+    );
+  }
+  return data;
+};
+
+const getTrustSummary = async (token, userId) => {
+  const body = await expectOk(
+    'trust summary',
+    'GET',
+    `/api/v1/users/${userId}/trust-summary`,
+    {token},
+  );
+  const data = expectObject(getData(body), 'trust summary data');
+  for (const field of ['userId', 'completedShares', 'positiveReviewCount', 'badges']) {
+    if (!(field in data)) {
+      throw new Error(`trust summary missing ${field}`);
+    }
+  }
+  expectArray(data.badges, 'trust summary badges');
+  if (hasAnyOwnKey(data, ['reports', 'reportCount', 'sanctions', 'actions'])) {
+    throw new Error('trust summary must not expose report or sanction history');
+  }
+  return data;
+};
+
+const getOperatorInventorySummary = async (token, fridgeId) => {
+  const body = await expectOk(
+    'operator inventory summary',
+    'GET',
+    `/api/v1/operator/fridges/${fridgeId}/inventory/summary`,
+    {token},
+  );
+  return expectObject(getData(body), 'operator inventory summary data');
+};
+
+const getOperatorInventoryItems = async (token, fridgeId) => {
+  const body = await expectOk(
+    'operator inventory items',
+    'GET',
+    `/api/v1/operator/fridges/${fridgeId}/inventory/items`,
+    {token},
+  );
+  return expectArray(getData(body), 'operator inventory items data');
+};
+
+const disposeOperatorItem = async (token, postId) => {
+  const body = await expectOk(
+    'operator dispose item',
+    'PATCH',
+    `/api/v1/operator/items/${postId}/dispose`,
+    {token},
+  );
+  const data = expectObject(getData(body), 'operator dispose data');
+  if (data.status !== 'disposed') {
+    throw new Error(`expected disposed status, got ${data.status}`);
+  }
+  return data;
+};
+
 const cleanupActivePost = async (authorToken, postId) => {
   if (!postId) {
     return;
@@ -402,7 +576,7 @@ const cleanupActivePost = async (authorToken, postId) => {
 
   try {
     const detail = await getPostDetail(authorToken, postId);
-    if (!['available', 'requested'].includes(detail.status)) {
+    if (!['pending_store', 'available', 'requested'].includes(detail.status)) {
       return;
     }
   } catch (error) {
@@ -437,32 +611,57 @@ const runLifecycleScenario = async (id, fn) => {
   }
 };
 
-const runOperatorProfileCheck = async () => {
-  const email = process.env.FOODLINK_OPERATOR_EMAIL;
-  const password = process.env.FOODLINK_OPERATOR_PASSWORD;
-  if (!email || !password) {
-    addResult(
-      'skipped',
-      'operator profile',
-      'FOODLINK_OPERATOR_EMAIL/FOODLINK_OPERATOR_PASSWORD not set',
-    );
-    return;
+const loadOperatorContext = async () => {
+  const token = await login(operatorEmail, operatorPassword);
+  const {rawUser, user} = await getMe(token);
+  validateOperatorFields(rawUser, user);
+  if (user.isOperator !== true) {
+    throw new Error(`expected isOperator true, got ${user.isOperator}`);
   }
+  if (!user.operatorRole) {
+    throw new Error('operatorRole is empty');
+  }
+  if (!Array.isArray(user.operatorFridgeIds) || user.operatorFridgeIds.length === 0) {
+    throw new Error('operatorFridgeIds must contain at least one fridge id');
+  }
+  return {token, user};
+};
 
+const runOperatorProfileCheck = async () => {
   await runStep('operator profile', async () => {
-    const token = await login(email, password);
-    const {rawUser, user} = await getMe(token);
-    validateOperatorFields(rawUser, user);
-    if (user.isOperator !== true) {
-      throw new Error(`expected isOperator true, got ${user.isOperator}`);
-    }
-    if (!user.operatorRole) {
-      throw new Error('operatorRole is empty');
-    }
-    if (!Array.isArray(user.operatorFridgeIds) || user.operatorFridgeIds.length === 0) {
-      throw new Error('operatorFridgeIds must contain at least one fridge id');
-    }
+    const {user} = await loadOperatorContext();
     return `role=${user.operatorRole}, fridgeIds=${user.operatorFridgeIds.join(',')}`;
+  });
+};
+
+const runOperatorInventoryCheck = async authorToken => {
+  let operatorContext;
+
+  await runStep('operator inventory summary/items', async () => {
+    operatorContext = await loadOperatorContext();
+    const summary = await getOperatorInventorySummary(
+      operatorContext.token,
+      qaFridgeId,
+    );
+    const items = await getOperatorInventoryItems(operatorContext.token, qaFridgeId);
+    if (!('total' in summary) && !('totalItems' in summary)) {
+      throw new Error('operator summary missing total count');
+    }
+    return `fridge=${qaFridgeId}, items=${items.length}`;
+  });
+
+  await runLifecycleScenario('operator dispose available item', async () => {
+    operatorContext = operatorContext || (await loadOperatorContext());
+    let postId;
+    try {
+      const post = await createPost(authorToken);
+      postId = post.id;
+      await confirmStore(authorToken, post.id);
+      const disposed = await disposeOperatorItem(operatorContext.token, post.id);
+      return `post=${post.id}, status=${disposed.status}`;
+    } finally {
+      await cleanupActivePost(authorToken, postId);
+    }
   });
 };
 
@@ -533,7 +732,7 @@ const runMutationMatrix = async () => {
     async () => {
       let postId;
       try {
-        const post = await createPost(state.authorToken);
+        const post = await createStoredPost(state.authorToken);
         postId = post.id;
         const cancelled = await postMutation(
           state.authorToken,
@@ -550,21 +749,69 @@ const runMutationMatrix = async () => {
   );
 
   await runLifecycleScenario(
-    'lifecycle happy request then author complete',
+    'lifecycle happy request then QR pickup',
     async () => {
       let postId;
       try {
-        const post = await createPost(state.authorToken);
+        const post = await createStoredPost(state.authorToken);
         postId = post.id;
-        await requestShare(state.requesterToken, post.id);
-        const completed = await postMutation(
-          state.authorToken,
-          `/api/v1/posts/${post.id}/complete`,
-        );
-        if (completed.status !== 'completed') {
-          throw new Error(`expected completed status, got ${completed.status}`);
+        const requested = await requestShare(state.requesterToken, post.id);
+        const pickedUp = await confirmPickup(state.requesterToken, post.id);
+        const detail = await getPostDetail(state.authorToken, post.id);
+        if (detail.status !== 'completed') {
+          throw new Error(`expected completed detail, got ${detail.status}`);
         }
-        return `post=${post.id}, status=${completed.status}`;
+        return [
+          `post=${post.id}`,
+          `request=${requested.request.id}`,
+          `pickupStatus=${pickedUp.status}`,
+        ].join(', ');
+      } finally {
+        await cleanupActivePost(state.authorToken, postId);
+      }
+    },
+  );
+
+  await runLifecycleScenario(
+    'trust feedback after confirmed pickup',
+    async () => {
+      let postId;
+      try {
+        const post = await createStoredPost(state.authorToken);
+        postId = post.id;
+        const requested = await requestShare(state.requesterToken, post.id);
+        await confirmPickup(state.requesterToken, post.id);
+        const review = await createShareReview(
+          state.requesterToken,
+          requested.request.id,
+        );
+        const duplicateReview = await expectHttpStatus(
+          'duplicate share review',
+          409,
+          'POST',
+          `/api/v1/share-requests/${requested.request.id}/review`,
+          {
+            token: state.requesterToken,
+            json: {
+              positiveTagIds: ['good_condition'],
+              issueTagIds: [],
+            },
+          },
+        );
+        const shareReport = await createShareReport(
+          state.requesterToken,
+          requested.request.id,
+        );
+        const summary = await getTrustSummary(
+          state.requesterToken,
+          post.authorId ?? state.authorUser.id,
+        );
+        return [
+          `review=${review.id}`,
+          `duplicate=${duplicateReview.status}`,
+          `report=${shareReport.id}`,
+          `completedShares=${summary.completedShares}`,
+        ].join(', ');
       } finally {
         await cleanupActivePost(state.authorToken, postId);
       }
@@ -576,7 +823,7 @@ const runMutationMatrix = async () => {
     async () => {
       let postId;
       try {
-        const post = await createPost(state.authorToken);
+        const post = await createStoredPost(state.authorToken);
         postId = post.id;
         const requested = await requestShare(state.requesterToken, post.id);
         await postMutation(
@@ -595,11 +842,32 @@ const runMutationMatrix = async () => {
   );
 
   await runLifecycleScenario(
-    'lifecycle 403 author cannot request own post',
+    'lifecycle 409 requester cannot request pending store post',
     async () => {
       let postId;
       try {
         const post = await createPost(state.authorToken);
+        postId = post.id;
+        const result = await expectHttpStatus(
+          'request pending-store post',
+          409,
+          'POST',
+          `/api/v1/posts/${post.id}/requests`,
+          {token: state.requesterToken},
+        );
+        return `post=${post.id}, status=${result.status}, message=${result.message}`;
+      } finally {
+        await cleanupActivePost(state.authorToken, postId);
+      }
+    },
+  );
+
+  await runLifecycleScenario(
+    'lifecycle 403 author cannot request own post',
+    async () => {
+      let postId;
+      try {
+        const post = await createStoredPost(state.authorToken);
         postId = post.id;
         const result = await expectHttpStatus(
           'author request own post',
@@ -620,7 +888,7 @@ const runMutationMatrix = async () => {
     async () => {
       let postId;
       try {
-        const post = await createPost(state.authorToken);
+        const post = await createStoredPost(state.authorToken);
         postId = post.id;
         const result = await expectHttpStatus(
           'non-author cancel available post',
@@ -637,19 +905,25 @@ const runMutationMatrix = async () => {
   );
 
   await runLifecycleScenario(
-    'lifecycle 403 non-author/requester cannot complete requested post',
+    'lifecycle 403 non-requester cannot confirm pickup',
     async () => {
       let postId;
       try {
-        const post = await createPost(state.authorToken);
+        const post = await createStoredPost(state.authorToken);
         postId = post.id;
         await requestShare(state.requesterToken, post.id);
         const result = await expectHttpStatus(
-          'observer complete requested post',
+          'observer confirm pickup',
           403,
           'POST',
-          `/api/v1/posts/${post.id}/complete`,
-          {token: state.observerToken},
+          '/api/v1/inventory/confirm-pickup',
+          {
+            token: state.observerToken,
+            json: {
+              postId: post.id,
+              fridgePublicCode: qaFridgePublicCode,
+            },
+          },
         );
         return `post=${post.id}, status=${result.status}, message=${result.message}`;
       } finally {
@@ -663,7 +937,7 @@ const runMutationMatrix = async () => {
     async () => {
       let postId;
       try {
-        const post = await createPost(state.authorToken);
+        const post = await createStoredPost(state.authorToken);
         postId = post.id;
         const requested = await requestShare(state.requesterToken, post.id);
         const result = await expectHttpStatus(
@@ -690,7 +964,7 @@ const runMutationMatrix = async () => {
     async () => {
       let postId;
       try {
-        const post = await createPost(state.authorToken);
+        const post = await createStoredPost(state.authorToken);
         postId = post.id;
         await requestShare(state.requesterToken, post.id);
         const result = await expectHttpStatus(
@@ -707,28 +981,8 @@ const runMutationMatrix = async () => {
     },
   );
 
-  await runLifecycleScenario(
-    'lifecycle 400 complete available post without request',
-    async () => {
-      let postId;
-      try {
-        const post = await createPost(state.authorToken);
-        postId = post.id;
-        const result = await expectHttpStatus(
-          'complete available post without request',
-          400,
-          'POST',
-          `/api/v1/posts/${post.id}/complete`,
-          {token: state.authorToken},
-        );
-        return `post=${post.id}, status=${result.status}, message=${result.message}`;
-      } finally {
-        await cleanupActivePost(state.authorToken, postId);
-      }
-    },
-  );
-
   await runOperatorProfileCheck();
+  await runOperatorInventoryCheck(state.authorToken);
 };
 
 const main = async () => {

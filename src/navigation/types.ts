@@ -38,6 +38,14 @@ export type RootStackParamList = {
   PostCreate: {result: GenerateResult; imageUri: string};
   PostComplete: {postId: number};
   PostDetail: {postId: number};
+  ShareFeedback: {
+    requestId: number;
+    postId: number;
+    providerId: number;
+    fruitName: string;
+    fridgeName: string;
+    initialMode?: 'review' | 'report';
+  };
   MyShares:
     | {
         initialTab?: 'posted' | 'received';
@@ -49,16 +57,14 @@ export type RootStackParamList = {
         fridgeName?: string;
       }
     | undefined;
-  InventoryQr:
-    | {
-        mode?: 'store' | 'pickup';
-        postId?: number;
-        fridgePublicCode?: string;
-        fridgeName?: string;
-        fridgeLocation?: string;
-        pendingExpiresAt?: string;
-      }
-    | undefined;
+  InventoryQr: {
+    mode: 'store' | 'pickup';
+    postId: number;
+    fridgePublicCode?: string;
+    fridgeName?: string;
+    fridgeLocation?: string;
+    pendingExpiresAt?: string;
+  };
   FridgeSelect: {
     postData?: Omit<PostCreateData, 'fridgeId'>;
     qualityCategory?: string;

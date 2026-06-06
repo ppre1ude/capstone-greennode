@@ -7,6 +7,7 @@ import {
   cancelShareRequest,
 } from '@/api/posts';
 import { getMyPosts, getMyShareRequests } from '@/api/users';
+import { useTrustFeedbackStore } from '@/store/trustFeedbackStore';
 import type { Post, UserShareRequestItem } from '@/types';
 
 jest.mock('@react-navigation/native', () => ({
@@ -152,6 +153,7 @@ describe('MySharesScreen', () => {
       message: 'ok',
       data: null,
     });
+    useTrustFeedbackStore.getState().resetTrustFeedback();
   });
 
   afterEach(() => {
@@ -289,6 +291,105 @@ describe('MySharesScreen', () => {
       postId: 41,
       pendingExpiresAt: '2026-05-26T00:40:00Z',
     });
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
+  it('opens feedback for completed received shares', async () => {
+    mockedGetMyShareRequests.mockResolvedValue({
+      success: true,
+      message: 'ok',
+      data: [
+        {
+          ...receivedItem,
+          request: {
+            ...receivedItem.request,
+            status: 'completed',
+          },
+          post: {
+            ...receivedItem.post,
+            status: 'completed',
+            pickedUpAt: '2026-05-26T00:35:00Z',
+          },
+        },
+      ],
+    });
+
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(
+        <MySharesScreen
+          navigation={navigation as never}
+          route={{ params: { initialTab: 'received' } } as never}
+        />,
+      );
+      await Promise.resolve();
+    });
+
+    await ReactTestRenderer.act(async () => {
+      findTouchableByText(renderer!, '평가하기').props.onPress();
+    });
+
+    expect(navigation.navigate).toHaveBeenCalledWith('ShareFeedback', {
+      requestId: 55,
+      postId: 41,
+      providerId: 4,
+      fruitName: '사과',
+      fridgeName: '중앙 공유 냉장고',
+      initialMode: 'review',
+    });
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
+  it('marks completed received shares as reviewed after local feedback submission', async () => {
+    mockedGetMyShareRequests.mockResolvedValue({
+      success: true,
+      message: 'ok',
+      data: [
+        {
+          ...receivedItem,
+          request: {
+            ...receivedItem.request,
+            status: 'completed',
+          },
+          post: {
+            ...receivedItem.post,
+            status: 'completed',
+            pickedUpAt: '2026-05-26T00:35:00Z',
+          },
+        },
+      ],
+    });
+    useTrustFeedbackStore.getState().submitReview({
+      requestId: 55,
+      postId: 41,
+      providerId: 4,
+      positiveTagIds: ['good_condition'],
+      issueTagIds: [],
+    });
+
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(
+        <MySharesScreen
+          navigation={navigation as never}
+          route={{ params: { initialTab: 'received' } } as never}
+        />,
+      );
+      await Promise.resolve();
+    });
+
+    expect(renderer!.root.findAllByProps({ children: '평가 완료' })).not.toHaveLength(0);
+    expect(() => findTouchableByText(renderer!, '평가하기')).toThrow(
+      'Touchable with text "평가하기" not found',
+    );
 
     await ReactTestRenderer.act(async () => {
       renderer?.unmount();

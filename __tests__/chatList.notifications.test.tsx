@@ -156,6 +156,26 @@ describe('ChatListScreen notifications', () => {
     expect(useNotificationStore.getState().notifications).toEqual([]);
   });
 
+  it('renders empty notification guidance with expected event types', async () => {
+    renderer = await renderScreen();
+
+    expect(
+      renderer.root.findAllByProps({children: '아직 알림이 없습니다'}),
+    ).not.toHaveLength(0);
+    expect(
+      renderer.root.findAllByProps({
+        children:
+          '근처 나눔 등록과 신청 접수처럼 확인할 일이 생기면 이곳에 모입니다.',
+      }),
+    ).not.toHaveLength(0);
+    expect(
+      renderer.root.findAllByProps({children: '근처 나눔 등록'}),
+    ).not.toHaveLength(0);
+    expect(
+      renderer.root.findAllByProps({children: '나눔 신청 접수'}),
+    ).not.toHaveLength(0);
+  });
+
   it('syncs and displays server notification records from focus fetch', async () => {
     mockedGetNotifications.mockResolvedValueOnce({
       success: true,

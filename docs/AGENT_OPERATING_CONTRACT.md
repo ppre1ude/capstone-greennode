@@ -17,6 +17,9 @@
 - MUST keep work scoped to the smallest coherent task that can be verified.
 - MUST use domain terms from [DOMAIN_MODEL.md](./DOMAIN_MODEL.md). Do not invent
   alternate names for established FoodLink concepts.
+- MUST keep `confidenceScore` as an internal review signal. Do not expose AI
+  confidence as numbers, decimals, percentages, or copy such as `AI 참고 신호
+  92%` in user-facing or operator-facing UI.
 - SHOULD use installed skills by workflow need, not by habit. Small mechanical
   edits do not need a full planning pipeline.
 
@@ -34,6 +37,7 @@
 | Implementation status | [IMPLEMENTATION_STATUS.md](./IMPLEMENTATION_STATUS.md) | Summarizing current shipped/partial/mock/blocked state |
 | AI/camera QA detail | [AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md](./AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md) | Running fixture, false-positive, or real-device camera checks |
 | UI system | [DESIGN_SYSTEM.md](./DESIGN_SYSTEM.md) | Changing visual tokens, shared DS primitives, product components, spacing, typography, icons |
+| Trust feedback operating model | [TRUST_FEEDBACK_OPERATING_MODEL.md](./TRUST_FEEDBACK_OPERATING_MODEL.md) | Changing 수령 경험 평가, 나눔 신고, 공급자 신뢰 뱃지, or related backend/admin contracts |
 
 If a source-of-truth document disagrees with code, actual verified runtime
 behavior wins for the immediate fix, and the stale document must be updated or
@@ -53,6 +57,18 @@ called out as stale.
 - MUST settle product scope, domain language, and API assumptions before coding.
 - MUST ask or document a decision when the work depends on unresolved policy.
 - SHOULD prefer the narrowest MVP behavior that can be verified with real data.
+
+Policy decision gate:
+
+- MUST stop before implementation when a change affects trust, safety,
+  moderation, report handling, user reputation, ranking, public visibility,
+  permissions, admin workflow, or backend data ownership.
+- MUST present the product decision in three concrete parts before coding:
+  user action, stored data model, and operator/backend action.
+- MUST not reuse an existing UI pattern for a different domain concept until the
+  domain model confirms it. Example: evaluation tags do not imply report tags.
+- MUST record the accepted decision in the domain, operating-model, backend
+  contract, or backlog document before or in the same commit as implementation.
 
 ### 3. Implement
 
@@ -112,6 +128,7 @@ called out as stale.
 | `IMPLEMENTATION_STATUS.md` | Current implementation state | Reporting done/partial/mock/blocked status | A feature state changes | Verification command or runtime evidence |
 | `AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md` | AI/camera evidence detail | Running AI fixture or real-device camera checks | Fixture set, false-positive policy, or camera evidence changes | Fixture id, device/API environment, screenshots/logs summary |
 | `DESIGN_SYSTEM.md` | UI tokens, DS primitives, and component guidance | Changing shared UI style or reusable UI primitives | Token/DS primitive/icon behavior changes | Affected token or component, expected usage, and migration rule |
+| `TRUST_FEEDBACK_OPERATING_MODEL.md` | 수령 경험 평가, 나눔 신고, 공급자 신뢰 운영 모델 | Touching trust feedback UI, data shape, badges, reports, or admin handling | Review/report/badge behavior or contract changes | Decision, model boundary, UI rule, backend/admin impact, verification |
 
 ## Installed Skills
 

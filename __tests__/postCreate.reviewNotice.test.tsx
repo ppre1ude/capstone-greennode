@@ -66,7 +66,7 @@ const hasText = (renderer: ReactTestRenderer.ReactTestRenderer, text: string) =>
 
     return Array.isArray(children)
       ? children.join('').includes(text)
-      : children === text;
+      : typeof children === 'string' && children.includes(text);
   });
 
 describe('PostCreateScreen review notice', () => {
@@ -113,7 +113,8 @@ describe('PostCreateScreen review notice', () => {
       );
     });
 
-    expect(hasText(renderer!, '79%')).toBe(true);
+    expect(hasText(renderer!, '79%')).toBe(false);
+    expect(hasText(renderer!, 'AI 참고 신호')).toBe(false);
     expect(hasText(renderer!, '바나나')).toBe(true);
 
     await ReactTestRenderer.act(async () => {
@@ -121,7 +122,7 @@ describe('PostCreateScreen review notice', () => {
     });
   });
 
-  it('lets the user confirm and edit the recommended pickup date before fridge selection', async () => {
+  it('lets the user adjust the recommended pickup date within the short MVP window', async () => {
     const navigation = {
       goBack: jest.fn(),
       navigate: jest.fn(),
@@ -147,22 +148,17 @@ describe('PostCreateScreen review notice', () => {
       );
     });
 
-    const dateInput = renderer!.root.findByProps({
-      placeholder: 'YYYY-MM-DD',
-    }) as ReactTestRenderer.ReactTestInstance;
+    expect(hasText(renderer!, '2026-05-21')).toBe(true);
+    expect(hasText(renderer!, '최대 3일')).toBe(true);
 
-    expect(dateInput.props.value).toBe('2026-05-21');
-
-    await ReactTestRenderer.act(async () => {
-      dateInput.props.onChangeText('2026-05-24');
-    });
+    await pressCandidate(renderer!, '내일');
 
     await pressFooterSubmit(renderer!);
 
     expect(navigation.navigate).toHaveBeenCalledWith('FridgeSelect', {
       postData: {
         imageToken: 'image-token',
-        expirationDate: '2026-05-24',
+        expirationDate: '2026-05-19',
       },
       qualityCategory: 'Fresh',
       qualityCanShare: true,
@@ -173,7 +169,7 @@ describe('PostCreateScreen review notice', () => {
     });
   });
 
-  it('blocks fridge selection when the recommended pickup date is before today', async () => {
+  it('does not expose free-form pickup date input or arbitrary long deadlines', async () => {
     const navigation = {
       goBack: jest.fn(),
       navigate: jest.fn(),
@@ -199,19 +195,13 @@ describe('PostCreateScreen review notice', () => {
       );
     });
 
-    const dateInput = renderer!.root.findByType(TextInput);
-
-    await ReactTestRenderer.act(async () => {
-      dateInput.props.onChangeText('2026-05-17');
-    });
-
-    await pressFooterSubmit(renderer!);
-
-    expect(alertSpy).toHaveBeenCalledWith(
-      '날짜 확인 필요',
-      '오늘 이후 날짜를 YYYY-MM-DD 형식으로 입력해주세요.',
-    );
-    expect(navigation.navigate).not.toHaveBeenCalled();
+    expect(renderer!.root.findAllByType(TextInput)).toHaveLength(0);
+    expect(hasText(renderer!, 'YYYY-MM-DD')).toBe(false);
+    expect(hasText(renderer!, '오늘')).toBe(true);
+    expect(hasText(renderer!, '내일')).toBe(true);
+    expect(hasText(renderer!, '3일 뒤')).toBe(true);
+    expect(hasText(renderer!, '오늘부터 3일 안에서만')).toBe(true);
+    expect(hasText(renderer!, '30일')).toBe(false);
 
     await ReactTestRenderer.act(async () => {
       renderer!.unmount();
@@ -282,6 +272,67 @@ describe('PostCreateScreen review notice', () => {
       qualityCategory: 'Fresh',
       qualityCanShare: true,
     });
+
+    await ReactTestRenderer.act(async () => {
+      renderer!.unmount();
+    });
+  });
+
+  it('explains representative selection and QR store verification without backend contract wording', async () => {
+    const navigation = {
+      goBack: jest.fn(),
+      navigate: jest.fn(),
+    };
+    const multiObjectResult: GenerateResult = {
+      ...lowConfidenceResult,
+      detections: [
+        {
+          id: 'banana-detection',
+          label: 'banana',
+          labelKo: '바나나',
+          freshnessLabel: 'Fresh',
+          confidenceScore: 0.92,
+        },
+        {
+          id: 'apple-detection',
+          label: 'apple',
+          labelKo: '사과',
+          freshnessLabel: 'Fresh',
+          confidenceScore: 0.89,
+        },
+      ],
+    };
+
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(
+        renderWithSafeArea(
+          <PostCreateScreen
+            navigation={navigation as never}
+            route={
+              {
+                params: {
+                  result: multiObjectResult,
+                  imageUri: 'file:///banana.jpg',
+                },
+              } as never
+            }
+          />,
+        ),
+      );
+    });
+
+    expect(hasText(renderer!, '백엔드 분리 등록 계약')).toBe(false);
+    expect(hasText(renderer!, '대표 식재료 1개를 선택해 등록합니다.')).toBe(
+      true,
+    );
+    expect(hasText(renderer!, '나눔 가능 상태로 등록')).toBe(false);
+    expect(hasText(renderer!, '등록될 나눔 식재료')).toBe(false);
+    expect(hasText(renderer!, '나눔 식재료')).toBe(true);
+    expect(hasText(renderer!, 'QR 보관 인증 대기 상태로 생성됩니다.')).toBe(
+      true,
+    );
 
     await ReactTestRenderer.act(async () => {
       renderer!.unmount();

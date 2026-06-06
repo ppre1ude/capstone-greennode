@@ -111,6 +111,23 @@ export const styles = StyleSheet.create({
     color: colors.textSecondary,
     lineHeight: 24,
   },
+  trustSection: {
+    marginTop: 28,
+  },
+  trustBadgeWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 10,
+  },
+  trustBadge: {
+    backgroundColor: '#FFFFFF',
+  },
+  trustDescription: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    lineHeight: 20,
+  },
   footer: {},
   requestNotice: {
     marginBottom: 10,

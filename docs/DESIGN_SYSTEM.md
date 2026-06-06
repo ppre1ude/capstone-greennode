@@ -1,6 +1,6 @@
 # FoodLink 디자인 시스템
 
-> **최종 수정일**: 2026-05-26
+> **최종 수정일**: 2026-06-06
 > **코드 토큰 파일**: [`src/theme/`](../src/theme/) 디렉토리 참고
 > **컴포넌트 레이어**: [`src/design-system/`](../src/design-system/) 디렉토리 참고
 
@@ -90,7 +90,7 @@ white/90    → 글래스모피즘 뱃지
 | `bodyBold` | 15px | SemiBold (600)  | 강조 본문                              |
 | `caption`  | 13px | Bold (700)      | 뱃지 텍스트, 보조 정보                 |
 | `small`    | 11px | Medium (500)    | 카메라 인디케이터, 힌트                |
-| `tiny`     | 10px | Bold (700)      | 탭바 레이블, 신선도 퍼센트             |
+| `tiny`     | 10px | Bold (700)      | 탭바 레이블, 보조 배지                 |
 | `micro`    | 9px  | Bold (700)      | 마커 거리 표시                         |
 
 ### Line Height
@@ -100,6 +100,22 @@ white/90    → 글래스모피즘 뱃지
 | Heading         | `tight` (1.2)   |
 | Body            | `relaxed` (1.6) |
 | Caption / Small | `normal` (1.4)  |
+
+---
+
+### AI Confidence Display
+
+- `confidenceScore`는 내부 검토/분기 신호이며 사용자와 운영자 화면에 숫자, 소수, 퍼센트로 표시하지 않는다.
+- `AI 참고 신호 92%`, `신뢰도 0.94`, `상태가 좋아 보여요 · 94%` 같은 정량 문구는 금지한다.
+- 화면에는 `나눔 가능`, `확인 필요`, `상태가 좋아 보여요`, `사진으로 상태를 확인하기 어려워요`처럼 정성 라벨과 실제 확인 안내만 사용한다.
+
+### Product Copy / Trust Labels
+
+- `trust-summary`, `ProviderTrustSummary`, `공급자 신뢰` 같은 계약/내부 도메인 용어를 사용자-facing 제목이나 설명에 그대로 쓰지 않는다.
+- 프로필과 나눔 상세의 공개 지표 제목은 `나눔 신뢰 지표`를 사용한다.
+- QR 기반 지표를 설명하는 보조 칩은 `QR 기반`처럼 추상적으로 쓰지 말고 `QR 인증`처럼 사용자가 수행한 행동을 드러낸다.
+- `positiveReviewCount`의 화면 라벨은 번역투인 `좋은 평가` 대신 `긍정 평가`를 사용한다.
+- `QR 생명주기`처럼 구현 흐름을 설명하는 표현은 화면에서 피하고, `나눔 약속과 받은 긍정 평가가 건강한 나눔 커뮤니티를 만듭니다.`처럼 사용자 행동과 커뮤니티 의미를 설명한다.
 
 ---
 
@@ -125,6 +141,26 @@ white/90    → 글래스모피즘 뱃지
 | 페이지 좌우 패딩           | 20px (`xl`)   |
 | 페이지 하단 여백 (탭바 위) | 32px (`3xl`)  |
 | SafeArea 상단              | 시스템 기본값 |
+
+### Safe-Area Fixed Surfaces
+
+- 하단 고정 CTA는 `DSScreenFooter`를 사용하고, 화면별 `paddingBottom`을 직접 고정하지 않는다.
+- 하단 안내 카드 안에서 긴 설명과 CTA가 함께 있을 때는 한 줄 `row`로 경쟁시키지 않는다. 설명 그룹을 먼저 배치하고 CTA는 아래 줄에 두어 좁은 화면에서도 글자와 버튼이 겹치지 않게 한다.
+- 지도 검색창처럼 상단에 떠 있는 컨트롤은 고정 `top` 값 대신 `getHeaderTopPadding()`을 사용해 Android status bar와 iOS safe area를 피한다.
+- 한 화면의 인접한 허브/통계 카드가 같은 상태 라벨과 같은 카운트를 반복하지 않게 한다. 예를 들어 홈의 `진행 중인 나눔`은 action hub가 담당하고, 통계 카드는 `주변 나눔`, `오늘 추천`처럼 다른 의사결정 신호를 요약한다.
+
+### Notice / Notification Panels
+
+- 모달, 팝업, 알림, 하단 안내 카드처럼 사용자의 다음 행동을 돕는 패널은 흰 카드만 반복하지 않는다.
+- 기본 조합은 `#F8FCF4` 계열의 아주 연한 surface tint, `secondary` 투명 테두리, `primaryLight` 아이콘 배지, `accent` 상단 라인이다.
+- 긴 설명과 CTA는 같은 줄에서 경쟁시키지 않고, 아이콘+텍스트 묶음 다음 줄에 CTA를 둔다.
+- 장식은 상태를 구분하는 보조 신호로만 사용한다. 새 문구를 늘리거나 정량 점수, 퍼센트, 내부 신호를 패널에 추가하지 않는다.
+- 알림함 빈 상태처럼 화면 중앙에 놓이는 안내도 bare icon + text로 두지 않는다. 현재 알림 유형을 짧게 보여주는 signal row를 함께 배치해 다음에 무엇이 모이는지 알 수 있게 한다.
+- QR 인증처럼 상태 전이가 필요한 안내 패널은 `준비 중`, `지원 예정` 같은 막힌 상태만 노출하지 않는다. 카메라 자동 인식이 불가능한 환경에서는 냉장고 공개 코드 입력처럼 동일 인증 계약으로 이어지는 사용자 행동을 함께 제공한다.
+- QR 보관/수령 인증 화면은 route의 `mode`에 맞는 단일 행동만 노출한다. 공급자 보관 화면에 `수령 인증` 전환을, 수요자 수령 화면에 `보관 인증` 전환을 두지 않는다.
+- QR 인증 화면의 단일 책임은 냉장고 앞 인증 행동이다. `재고 진행 상태` stepper처럼 생명주기 전체를 설명하는 상태 카드는 이 화면에 두지 않고, 홈의 진행 중인 나눔이나 내 나눔/받은 나눔처럼 상태 추적이 목적인 화면에서만 사용한다.
+- QR 카메라 스캔이 지원되는 환경에서는 화면 진입 즉시 카메라를 암묵적으로 켜지 않고 `카메라로 QR 스캔` 같은 명시적 시작 액션을 먼저 둔다.
+- QR 인증 action 영역의 `보관 인증`, `수령 인증` 같은 역할 라벨은 큰 섹션 헤딩처럼 쓰지 않는다. 14px 내외의 compact heading으로 두고, 스캐너/코드 입력 surface와는 `md` 이상 간격을 둔다.
 
 ### 카드 & 컨테이너
 
@@ -257,6 +293,7 @@ Montage Android/iOS는 GreenNode의 색상 팔레트 대체재가 아니라 **�
 
 - DS 컴포넌트는 `leading`/`trailing` slot의 간격, 정렬, disabled opacity 같은 배치 규칙을 담당한다.
 - 아이콘의 의미와 실제 glyph 선택은 호출 화면이 소유하되, 실제 렌더링은 `DSIcon`과 FontAwesome6 기반 vector icon을 우선한다.
+- 리스트 메뉴의 leading 아이콘은 glyph 폭에 따라 텍스트 시작점이 흔들리지 않도록 고정 폭을 지정하고 중앙 정렬한다.
 - Android/iOS 이식성을 위해 액션, 내비게이션, 입력, 버튼 slot에는 시스템 emoji를 쓰지 않는다. 화면 고유 일러스트레이션도 새로 추가할 때는 vector icon 또는 asset을 우선한다.
 - `DSIcon`이 시스템 fallback glyph로 보이지 않도록 Android는 `android/app/build.gradle`의 `react-native-vector-icons/fonts.gradle`, iOS는 `ios/greennode/Info.plist`의 `UIAppFonts`에 FontAwesome6 폰트를 등록한다.
 - slot에 들어가는 아이콘 색은 가능한 DS 컴포넌트의 텍스트/상태 색을 따르게 만든다. 독립 색상이 꼭 필요하면 해당 화면의 도메인 의미를 주석이나 문서에 남긴다.
@@ -275,6 +312,9 @@ Montage Android/iOS는 GreenNode의 색상 팔레트 대체재가 아니라 **�
 - 지도 화면의 검색 입력, 냉장고 카드/시트, retry/refresh/detail/sheet 액션은 `DSTextField`, `DSCard`, `DSChip`, `DSButton`, `DSListCell` 조합으로 치환했다.
 - 액션 아이콘은 `DSIcon`을 `leading`/`trailing` slot에 넣고, 지도 마커와 현재 위치 버튼처럼 MapView 상호작용에 직접 연결된 화면 고유 glyph도 후속 마이그레이션에서 vector icon 또는 asset으로 치환한다.
 - `DSChip.selected`는 실제 선택 UI에만 사용하고, 지도 냉장고의 `운영중` 표시는 static status라 `tone="primary"`를 사용한다.
+- 네이티브 지도 타일이 검게 실패하거나 늦게 로드되는 환경에서도 화면이 빈 캔버스처럼 보이지 않도록, 지도 화면에는 브랜드 톤의 비상호작용 fallback 지도 레이어를 둔다.
+- 네이티브 지도가 정상 로드되면 fallback 레이어를 숨기고, 반환된 공유 냉장고 좌표가 화면 안에 들어오도록 지도 viewport를 냉장고 좌표 기준으로 보정한다.
+- AI 스캔은 실제 카메라 preview가 없는 에뮬레이터/권한 거부 상태에서도 검정 빈 화면만 보여주지 않는다. 브랜드 톤 배경, 촬영 프레임 힌트, 갤러리 fallback CTA를 함께 제공한다.
 
 ### 2026-05-26 디자인 리뷰 후속 기준
 
@@ -289,6 +329,7 @@ plan-design-review 기준 현재 앱의 UX/UI 완성도는 약 6/10이다. 원�
 2. QR productization
    - 실제 사용자 route에서는 `테스트`, `프로토타입`, `초기화`, `보관 QR 테스트`, `수령 QR 테스트` 같은 내부 QA 문구를 노출하지 않는다.
    - API-backed QR 보관/수령은 `냉장고 QR 인증`, `보관 인증`, `수령 인증` 같은 제품 언어로 표시한다.
+   - QR 화면 진입은 `mode`와 `postId`가 있는 보관/수령 생명주기 경로에서만 노출하고, 프로필 같은 일반 메뉴에서 무파라미터 QR 샘플 화면으로 직접 보내지 않는다.
    - prototype-only 조작은 개발/QA 전용 route 또는 fixture 화면으로 분리한다.
 3. Emoji removal
    - action, navigation, input, button slot에서 emoji를 제거하고 `DSIcon` 또는 image asset으로 치환한다.

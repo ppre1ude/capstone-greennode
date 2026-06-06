@@ -199,16 +199,31 @@ const ChatListScreen = () => {
         </ScrollView>
       ) : (
         <View style={styles.emptyContainer}>
-          <DSIcon
-            name="bell"
-            size={48}
-            color="accent"
-            style={styles.emptyIcon}
-          />
-          <Text style={styles.emptyTitle}>아직 알림이 없습니다</Text>
-          <Text style={styles.emptyText}>
-            근처 나눔 등록과 나눔 신청 알림이 이곳에 기록됩니다.
-          </Text>
+          <View style={styles.emptyPanel}>
+            <View style={styles.emptyAccentLine} />
+            <View style={styles.emptyIconBadge}>
+              <DSIcon
+                name="bell"
+                size={40}
+                color="primary"
+                style={styles.emptyIcon}
+              />
+            </View>
+            <Text style={styles.emptyTitle}>아직 알림이 없습니다</Text>
+            <Text style={styles.emptyText}>
+              근처 나눔 등록과 신청 접수처럼 확인할 일이 생기면 이곳에 모입니다.
+            </Text>
+            <View style={styles.emptySignalList}>
+              <View style={styles.emptySignalItem}>
+                <View style={styles.emptySignalDot} />
+                <Text style={styles.emptySignalText}>근처 나눔 등록</Text>
+              </View>
+              <View style={styles.emptySignalItem}>
+                <View style={styles.emptySignalDot} />
+                <Text style={styles.emptySignalText}>나눔 신청 접수</Text>
+              </View>
+            </View>
+          </View>
         </View>
       )}
     </View>
@@ -332,12 +347,39 @@ const styles = StyleSheet.create({
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 32,
+    paddingHorizontal: 24,
     paddingBottom: 80,
   },
-  emptyIcon: {
+  emptyPanel: {
+    alignItems: 'center',
+    backgroundColor: '#F8FCF4',
+    borderColor: 'rgba(98, 142, 78, 0.22)',
+    borderRadius: 20,
+    borderWidth: 1,
+    overflow: 'hidden',
+    paddingHorizontal: 24,
+    paddingTop: 28,
+    paddingBottom: 24,
+  },
+  emptyAccentLine: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 4,
+    backgroundColor: colors.accent,
+  },
+  emptyIconBadge: {
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primaryLight,
     marginBottom: 16,
+  },
+  emptyIcon: {
+    opacity: 0.94,
   },
   emptyTitle: {
     fontSize: 17,
@@ -350,6 +392,33 @@ const styles = StyleSheet.create({
     color: colors.textTertiary,
     lineHeight: 22,
     textAlign: 'center',
+  },
+  emptySignalList: {
+    width: '100%',
+    marginTop: 18,
+    gap: 8,
+  },
+  emptySignalItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderColor: colors.borderLight,
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  emptySignalDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.primary,
+    marginRight: 8,
+  },
+  emptySignalText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.textSecondary,
   },
 });
 

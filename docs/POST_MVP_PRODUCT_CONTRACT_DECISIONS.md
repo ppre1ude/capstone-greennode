@@ -40,7 +40,7 @@
 
 - `rejectionReason`: 등록을 막는 hard block이다. 서버는 `imageToken`을 발급하지 않는다.
 - `reviewReason`: 등록은 허용하지만 사용자가 상태를 다시 확인해야 하는 soft review다.
-- 앱은 기존처럼 `rejectionReason`이 있으면 등록을 막고, `reviewReason` 또는 낮은 `confidenceScore`는 `확인 필요`로 표시한다.
+- 앱은 기존처럼 `rejectionReason`이 있으면 등록을 막고, `reviewReason` 또는 낮은 `confidenceScore`는 내부 분기 신호로만 사용해 `확인 필요` 정성 라벨로 표시한다. `confidenceScore` 원값, 소수, 퍼센트는 사용자/운영자 UI에 노출하지 않는다.
 
 Hard block enum:
 

@@ -1,5 +1,5 @@
 import type {AiDetection, GenerateResult} from '@/types';
-import {getConfidencePercent, getQualityMeta} from '@/utils/postPolicy';
+import {getQualityMeta} from '@/utils/postPolicy';
 
 export const getResultDetections = (result: GenerateResult): AiDetection[] => {
   const detections = result.detections ?? result.aiAnalysis?.detections ?? [];
@@ -17,12 +17,5 @@ export const getDetectionName = (detection: AiDetection): string =>
   '감지 항목';
 
 export const getDetectionSummary = (detection: AiDetection): string => {
-  const qualityLabel = getQualityMeta(detection.freshnessLabel).label;
-  const confidence = getConfidencePercent(detection.confidenceScore);
-
-  if (confidence == null) {
-    return qualityLabel;
-  }
-
-  return `${qualityLabel} · ${confidence}%`;
+  return getQualityMeta(detection.freshnessLabel).label;
 };

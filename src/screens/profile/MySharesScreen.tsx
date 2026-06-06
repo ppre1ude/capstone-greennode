@@ -19,7 +19,9 @@ import {
 } from '@/api/posts';
 import { getMyPosts, getMyShareRequests } from '@/api/users';
 import { useFeedRefreshStore } from '@/store/feedRefreshStore';
+import { useTrustFeedbackStore } from '@/store/trustFeedbackStore';
 import type { Post, UserShareRequestItem } from '@/types';
+import { canLeaveShareFeedback } from '@/features/trust/feedback';
 import {
   canCancelPost,
   getPostDisplayName,
@@ -53,6 +55,7 @@ const MySharesScreen = ({ route, navigation }: Props) => {
   const requestNearbyPostsRefresh = useFeedRefreshStore(
     state => state.requestNearbyPostsRefresh,
   );
+  const trustReviews = useTrustFeedbackStore(state => state.reviews);
 
   useEffect(() => {
     setActiveTab(initialTab);
@@ -225,8 +228,17 @@ const MySharesScreen = ({ route, navigation }: Props) => {
     const { post, request } = item;
     const actionKeyPrefix = `request-${request.id}`;
     const canPickup = isShareRequestAwaitingPickup(item);
+    const canFeedback = canLeaveShareFeedback(item);
+    const hasReview = Boolean(trustReviews[request.id]);
     const fridgeLabel =
       post.fridgeName || item.fridge?.name || `냉장고 #${post.fridgeId}`;
+    const feedbackParams = {
+      requestId: request.id,
+      postId: post.id,
+      providerId: post.authorId,
+      fruitName: getPostDisplayName(post),
+      fridgeName: fridgeLabel,
+    };
 
     return (
       <DSCard
@@ -291,6 +303,36 @@ const MySharesScreen = ({ route, navigation }: Props) => {
                         () => cancelShareRequest(request.id),
                       ),
                   )
+                }
+              />
+            </>
+          ) : null}
+          {canFeedback ? (
+            <>
+              {hasReview ? (
+                <DSChip label="평가 완료" tone="success" size="small" />
+              ) : (
+                <DSButton
+                  label="평가하기"
+                  size="small"
+                  onPress={() =>
+                    navigation.navigate('ShareFeedback', {
+                      ...feedbackParams,
+                      initialMode: 'review',
+                    })
+                  }
+                />
+              )}
+              <DSButton
+                label="신고하기"
+                variant="outlined"
+                color="danger"
+                size="small"
+                onPress={() =>
+                  navigation.navigate('ShareFeedback', {
+                    ...feedbackParams,
+                    initialMode: 'report',
+                  })
                 }
               />
             </>

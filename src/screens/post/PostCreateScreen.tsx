@@ -27,7 +27,6 @@ import {
   DSChip,
   DSIcon,
   DSScreenFooter,
-  DSTextField,
 } from '@/design-system';
 import {
   getDetectionName,
@@ -35,13 +34,18 @@ import {
   getResultDetections,
 } from '@/utils/aiDetections';
 import {
-  getConfidencePercent,
   getGenerateResultQualityMeta,
   needsAnalysisReview,
 } from '@/utils/postPolicy';
 import { styles } from './PostCreateScreen.styles';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PostCreate'>;
+
+const PICKUP_OFFSET_OPTIONS = [
+  { label: '오늘', offsetDays: 0 },
+  { label: '내일', offsetDays: 1 },
+  { label: '3일 뒤', offsetDays: 3 },
+] as const;
 
 const formatDateOnly = (date: Date) => {
   const year = date.getFullYear();
@@ -51,45 +55,10 @@ const formatDateOnly = (date: Date) => {
   return `${year}-${month}-${day}`;
 };
 
-const getDefaultExpirationDate = () => {
+const getDateByOffset = (offsetDays: number) => {
   const date = new Date();
-  date.setDate(date.getDate() + 3);
+  date.setDate(date.getDate() + offsetDays);
   return formatDateOnly(date);
-};
-
-const parseDateOnly = (value: string): Date | null => {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-  if (!match) {
-    return null;
-  }
-
-  const year = Number(match[1]);
-  const month = Number(match[2]);
-  const day = Number(match[3]);
-  const parsedDate = new Date(year, month - 1, day);
-
-  if (
-    parsedDate.getFullYear() !== year ||
-    parsedDate.getMonth() !== month - 1 ||
-    parsedDate.getDate() !== day
-  ) {
-    return null;
-  }
-
-  parsedDate.setHours(0, 0, 0, 0);
-  return parsedDate;
-};
-
-const isValidExpirationDate = (value: string) => {
-  const selectedDate = parseDateOnly(value);
-  if (!selectedDate) {
-    return false;
-  }
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  return selectedDate >= today;
 };
 
 const getDetectionId = (detection?: { id?: string | number | null }) => {
@@ -112,8 +81,11 @@ const getDefaultDetectionIndex = (
 
 const PostCreateScreen = ({ route, navigation }: Props) => {
   const { result, imageUri } = route.params;
-  const defaultExpirationDate = useMemo(() => getDefaultExpirationDate(), []);
-  const [expirationDate, setExpirationDate] = useState(defaultExpirationDate);
+  const [selectedPickupOffsetDays, setSelectedPickupOffsetDays] = useState(3);
+  const expirationDate = useMemo(
+    () => getDateByOffset(selectedPickupOffsetDays),
+    [selectedPickupOffsetDays],
+  );
   const detectedCrop =
     result.detectedFruitKo ||
     result.aiAnalysis?.detectedFruitKo ||
@@ -121,9 +93,6 @@ const PostCreateScreen = ({ route, navigation }: Props) => {
     result.aiAnalysis?.detectedFruit ||
     '알 수 없음';
   const quality = getGenerateResultQualityMeta(result);
-  const confidencePercent = getConfidencePercent(
-    result.confidenceScore ?? result.aiAnalysis?.confidenceScore,
-  );
   const needsReview =
     quality.canShare &&
     (quality.label === '확인 필요' ||
@@ -156,14 +125,6 @@ const PostCreateScreen = ({ route, navigation }: Props) => {
       Alert.alert(
         '나눔 기준에 맞지 않아요',
         '이 식재료는 나눔 기준에 맞는 상태로 확인되지 않았어요. 다시 촬영해주세요.',
-      );
-      return;
-    }
-
-    if (!isValidExpirationDate(expirationDate)) {
-      Alert.alert(
-        '날짜 확인 필요',
-        '오늘 이후 날짜를 YYYY-MM-DD 형식으로 입력해주세요.',
       );
       return;
     }
@@ -226,17 +187,6 @@ const PostCreateScreen = ({ route, navigation }: Props) => {
               <Text style={styles.analysisLabel}>상태 안내</Text>
               <Text style={styles.analysisValue}>{quality.label}</Text>
             </View>
-            <View style={styles.analysisDivider} />
-            <View style={styles.analysisItem}>
-              <Text style={styles.analysisLabel}>AI 참고 신호</Text>
-              <Text
-                style={[
-                  styles.analysisValue,
-                  needsReview && styles.analysisValueWarning,
-                ]}>
-                {confidencePercent != null ? `${confidencePercent}%` : '미제공'}
-              </Text>
-            </View>
           </DSCard>
           {needsReview && (
             <Text style={styles.reviewNotice}>
@@ -252,8 +202,7 @@ const PostCreateScreen = ({ route, navigation }: Props) => {
               style={styles.detectionCard}>
               <Text style={styles.detectionTitle}>감지된 식재료 후보</Text>
               <Text style={styles.detectionHint}>
-                백엔드 분리 등록 계약 전까지는 대표 식재료 1개 기준으로
-                등록합니다.
+                대표 식재료 1개를 선택해 등록합니다.
               </Text>
               {detections.map((detection, index) => (
                 <TouchableOpacity
@@ -280,24 +229,49 @@ const PostCreateScreen = ({ route, navigation }: Props) => {
           ) : null}
 
           <DSCard variant="outlined" padded={false} style={styles.summaryCard}>
-            <Text style={styles.summaryTitle}>등록될 나눔 식재료</Text>
+            <Text style={styles.summaryTitle}>나눔 식재료</Text>
             <Text style={styles.summaryName}>{representativeName}</Text>
             <Text style={styles.summaryDescription}>
-              공유 냉장고를 선택하면 이 식재료가 나눔 가능 상태로 등록됩니다.
+              공유 냉장고를 선택하면 QR 보관 인증 대기 상태로 생성됩니다.
             </Text>
           </DSCard>
 
           <View style={styles.field}>
-            <DSTextField
-              label="권장 수령일"
-              value={expirationDate}
-              onChangeText={setExpirationDate}
-              placeholder="YYYY-MM-DD"
-              keyboardType="numbers-and-punctuation"
-              autoCapitalize="none"
-              caption="기본값은 3일 뒤이며, 실제 상태를 보고 오늘 이후 날짜로 조정해주세요."
-              inputContainerStyle={styles.input}
-            />
+            <View style={styles.dateLabelRow}>
+              <Text style={styles.dateLabel}>권장 수령일</Text>
+              <Text style={styles.dateLimit}>최대 3일</Text>
+            </View>
+            <DSCard variant="outlined" padded={false} style={styles.dateCard}>
+              <View style={styles.dateIcon}>
+                <DSIcon name="clock" size="small" color="primary" />
+              </View>
+              <View style={styles.dateCopy}>
+                <Text style={styles.dateValue}>{expirationDate}</Text>
+                <Text style={styles.dateCaption}>
+                  앱이 제안한 수령 권장일입니다.
+                </Text>
+              </View>
+            </DSCard>
+            <View style={styles.dateOptions}>
+              {PICKUP_OFFSET_OPTIONS.map(option => (
+                <DSChip
+                  key={option.offsetDays}
+                  label={option.label}
+                  size="large"
+                  tone="primary"
+                  selected={selectedPickupOffsetDays === option.offsetDays}
+                  onPress={() =>
+                    setSelectedPickupOffsetDays(option.offsetDays)
+                  }
+                  accessibilityLabel={`${option.label}로 권장 수령일 설정`}
+                />
+              ))}
+            </View>
+            <Text style={styles.dateHelper}>
+              소비기한을 자동으로 읽지 않기 때문에 오늘부터 3일 안에서만
+              조정할 수 있어요. 실제 상태가 애매하면 더 빠른 수령일을
+              선택해주세요.
+            </Text>
           </View>
         </View>
       </ScrollView>

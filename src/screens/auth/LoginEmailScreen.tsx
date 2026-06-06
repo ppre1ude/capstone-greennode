@@ -79,7 +79,7 @@ const LoginEmailScreen = ({ navigation }: Props) => {
     } catch (error: any) {
       const message =
         error?.response?.data?.message ||
-        '서버에 연결할 수 없습니다. SSH 터널이 열려있는지 확인해주세요.';
+        '서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.';
       Alert.alert('오류', message);
     } finally {
       setIsLoading(false);
