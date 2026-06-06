@@ -24,8 +24,8 @@
 - `requested` 이후 취소/완료 전이는 사용자-facing 정책과 API 계약이 확정됐다. 만료는 서버 배치로 처리한다.
 - 홈의 진행 중인 나눔 허브, 지도 하단 primary surface, 주요 fixed CTA의 `DSScreenFooter` 코드 통합, 앱 UI/fixture icon migration은 2026-05-28 코드/테스트 기준으로 닫혔다.
 - 최신 live VM 기능 계약 정상 경로 E2E는 2026-05-28에 통과했다. `requestExpiresAt` 시간대 해석과 Android 하단 surface safe-area 회귀는 2026-05-28 후속 실기기 증거로 닫았고, 잔여 blocker는 운영자 계정 환경변수 확보 후 운영자 권한 기반 프로필/운영자 콘솔 진입 재검증이다.
-- Post-MVP 제품/계약 결정은 2026-05-29 [POST_MVP_PRODUCT_CONTRACT_DECISIONS.md](./POST_MVP_PRODUCT_CONTRACT_DECISIONS.md)에 정리했다. 결정 기준은 `HOLD_SCOPE`이며 AI 차단/검토 사유, 여러 객체 대표 후보, 서버 저장형 알림, 환경 성취 지표, 서버 검색, 이메일 인증, 운영자 권한 관리, 소셜 로그인, WebSocket 채팅 범위를 분리했다.
-- 2026-05-29 Post-MVP 프론트 선반영과 live VM blocker 분리는 [BACKEND_POST_MVP_CONTRACT_BLOCKERS_2026-05-29.md](./BACKEND_POST_MVP_CONTRACT_BLOCKERS_2026-05-29.md)를 따른다. 프론트는 여러 객체 대표 후보 선택/`selectedDetectionId` 전송과 알림함 서버 동기화 fallback을 준비했다. 이후 백엔드 회신으로 notifications/server search는 구현 완료 보고, impact는 상태 확인 필요, AI 정확도와 auth 확장은 후속 범위로 재분류했다.
+- Post-MVP 제품/계약 결정은 2026-05-29 [POST_MVP_PRODUCT_CONTRACT_DECISIONS.md](./POST_MVP_PRODUCT_CONTRACT_DECISIONS.md)에 정리했으나, 2026-06-01 다중 일괄 등록 가이드가 `detections[]` 기반 객체별 등록 계약을 새 기준으로 제시했다. 프론트는 대표 후보 선택/`selectedDetectionId` 대신 `shareable` 표시, 서버 자동 기한, `PostRead[]` 응답 수용, QR 화면의 순차 보관 인증 진행 표시로 전환했다.
+- 2026-05-29 Post-MVP 프론트 선반영과 live VM blocker 분리는 [BACKEND_POST_MVP_CONTRACT_BLOCKERS_2026-05-29.md](./BACKEND_POST_MVP_CONTRACT_BLOCKERS_2026-05-29.md)를 따른다. 다만 multi-object 등록 계약은 위 새 기준으로 대체하고, notifications/server search는 구현 완료 보고, impact는 상태 확인 필요, AI 정확도와 auth 확장은 후속 범위로 유지한다.
 - 2026-05-29 백엔드 상세 회신 검토는 [BACKEND_RESPONSE_TO_POST_MVP_BLOCKERS_2026-05-29.md](./BACKEND_RESPONSE_TO_POST_MVP_BLOCKERS_2026-05-29.md)를 따른다. 백엔드는 notifications/server search를 구현 완료로 회신했지만 live VM 재검증이 필요하고, AI 실제 분류 정확도와 multi-object detection은 현재 모델 한계로 Phase 4 항목이다.
 - 2026-05-29 후속 반영으로 홈/지도 검색은 서버 `q`를 우선 호출하고, endpoint 미배포나 실패 시 마지막 unfiltered 목록의 로컬 필터로 fallback한다. `npm run qa:post-mvp-contracts`는 notifications, impact, search `q`를 read-only로 확인하는 재검증 하네스다.
 - 2026-05-29 추가 후속 반영으로 서버 저장형 알림 client와 `qa:post-mvp-contracts`는 numeric/string `id`, camelCase/snake_case 필드, array 또는 `items`/`notifications`/`results` list wrapper를 모두 방어적으로 수용한다. 알림 목록 query는 `unreadOnly`와 `unread_only`를 전환 호환으로 함께 보낸다.
@@ -151,22 +151,22 @@ To-do:
 - [ ] 백엔드가 가능한 범위의 AI response shape를 구현한 뒤 reason 없는 generic 400 제거와 `error.rejectionReason`/`data.reviewReason` 노출을 live VM에서 검증한다.
 - [ ] AI 모델 고도화 또는 별도 판별 모델 도입 후 비식재료/스크린샷/저품질 fixture full strict gate를 다시 연다. 최신 report-only 로그는 `temp/ai-fixtures-report-only-20260528T163234Z.txt`다.
 
-### Multi-object UX 결정
+### Multi-object batch registration 적용
 
 - 분류: 제품 정책
-- 배경: 프론트 타입은 `detections[]` 후보를 방어적으로 받을 수 있지만, 사용자 UX는 대표 객체 1개 등록을 유지한다. 2026-05-29 결정으로 자동 객체별 분리 등록은 보류하고 대표 객체 1개 등록을 유지한다. 백엔드 회신 기준 현재 ResNet-50 단일 분류 모델은 실제 object detection을 할 수 없다.
-- 기대 동작: 여러 후보가 감지되면 후보 목록을 보여주고 사용자가 대표 식재료 1개를 확인/선택한다.
+- 배경: 2026-06-01 백엔드 가이드가 YOLO v8 `detections[]`, `shareable`, 절대 픽셀 `bbox`, `PostRead[]` 일괄 등록 응답을 새 계약으로 제시했다. 기존 대표 후보 선택과 `selectedDetectionId` 전송은 더 이상 정식 프론트 흐름이 아니다.
+- 기대 동작: 여러 후보가 감지되면 앱은 나눔 등록 대상과 제외 대상을 보여준다. 최종 등록은 `imageToken`, `fridgeId`, `flow`, 선택 `expirationDate`만 보내고, 서버가 `shareable=true` 품목별 Post를 생성한다.
 
 To-do:
 
 - [x] 프론트 타입이 `detections[]` 후보 필드를 방어적으로 받을 수 있다.
-- [x] 분석/등록 화면이 여러 후보를 표시하되 대표 식재료 1개 등록 안내를 유지한다.
+- [x] 분석/등록 화면이 여러 후보를 표시하고 `shareable=false` 품목을 제외 대상으로 안내한다.
 - [x] 백엔드 `detections[]` 최소 필드 초안이 확정된다.
 - [x] multi-object fixture 이미지를 준비하고 VM/API report-only 결과를 기록한다.
-- [x] 대표 객체 1개 처리와 객체별 분리 등록 중 UX 방향을 결정한다. 다음 Post-MVP increment도 대표 객체 1개 등록이고, 자동 분리 등록은 보류한다.
-- [x] 프론트 등록 확인 화면에서 대표 후보를 선택하고 후보 `id`가 있으면 `selectedDetectionId`를 `POST /posts` payload로 넘긴다.
-- [x] 백엔드가 현재 모델로는 실제 multi-object detection과 normalized `bbox`를 만들 수 없음을 회신했다.
-- [ ] Object detection 모델 도입 후 `reviewReason=multi_object_review`, 실제 `detections.length >= 2`, normalized `bbox`, `selectedDetectionId` 수용 계약을 VM에서 다시 검증한다.
+- [x] `POST /posts` 응답을 단일 Post가 아니라 `PostRead[]` 배열로 수용한다.
+- [x] 등록 확인 화면에서 수동 권장일 선택과 `selectedDetectionId` 전송을 제거하고 `expirationDate: null`로 서버 자동 기한 계산을 사용한다.
+- [ ] 최신 VM에서 실제 `detections.length >= 2`, `shareable=false`, 절대 픽셀 `bbox`, `PostRead[]` 응답, 서버 crop `imageUrl`을 재검증한다.
+- [x] 일괄 생성된 여러 `pending_store` 품목은 QR 화면에서 `1/N` 진행률과 다음 품목 CTA로 순차 보관 인증한다.
 
 ### 운영자 role 관리 UI
 
