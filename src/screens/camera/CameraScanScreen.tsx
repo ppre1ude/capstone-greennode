@@ -16,6 +16,7 @@ import {
   Animated,
   Alert,
   Linking,
+  useWindowDimensions,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@/navigation/types';
@@ -42,6 +43,14 @@ const CameraScanScreen = ({ navigation }: Props) => {
   const device = useCameraDevice('back');
   const photoOutput = usePhotoOutput({ containerFormat: 'jpeg' });
   const camera = useRef<CameraRef>(null);
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const scanFrameSize = Math.min(windowWidth * 0.78, 280);
+  const frameTopPadding = Math.max((windowHeight - scanFrameSize) / 2 - 70, 20);
+  const frameSidePadding = Math.max((windowWidth - scanFrameSize) / 2, 0);
+  const frameBottomPadding = Math.max(
+    windowHeight - (frameTopPadding + scanFrameSize),
+    0,
+  );
 
   // 스캔 라인 애니메이션
   const scanLineAnim = useRef(new Animated.Value(0)).current;
@@ -192,29 +201,22 @@ const CameraScanScreen = ({ navigation }: Props) => {
     actions: React.ReactNode,
   ) => (
     <View style={styles.fallbackContainer} testID="camera-fallback-surface">
-      <StatusBar barStyle="dark-content" backgroundColor={colors.primaryLight} />
+      <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
       <TouchableOpacity
         accessibilityLabel="닫기"
         onPress={() => navigation.goBack()}
         style={styles.fallbackCloseButton}>
-        <DSIcon name="xmark" size="large" color="primary" />
+        <DSIcon name="xmark" size="large" color="textOnPrimary" />
       </TouchableOpacity>
 
       <View style={styles.fallbackContent}>
         <View style={styles.fallbackPreview} testID="camera-fallback-preview">
-          <View style={styles.fallbackPreviewGlow} />
-          <View style={styles.fallbackFrame}>
-            <View style={[styles.corner, styles.topLeft]} />
-            <View style={[styles.corner, styles.topRight]} />
-            <View style={[styles.corner, styles.bottomLeft]} />
-            <View style={[styles.corner, styles.bottomRight]} />
-            <View style={styles.fallbackCameraIcon}>
-              <DSIcon name="camera" size="large" color="primary" />
-            </View>
+          <View style={styles.fallbackPreviewIcon}>
+            <DSIcon name="camera" size="large" color="textOnPrimary" />
           </View>
           <DSText
             variant="caption"
-            color="primary"
+            color="textOnPrimary"
             align="center"
             style={styles.fallbackPreviewCaption}>
             사진 한 장으로 신선도 확인
@@ -223,14 +225,14 @@ const CameraScanScreen = ({ navigation }: Props) => {
 
         <DSText
           variant="heading2"
-          color="textPrimary"
+          color="textOnPrimary"
           align="center"
           style={styles.fallbackTitle}>
           {title}
         </DSText>
         <DSText
           variant="body"
-          color="textSecondary"
+          color="textOnPrimary"
           align="center"
           style={styles.fallbackDescription}>
           {description}
@@ -339,12 +341,52 @@ const CameraScanScreen = ({ navigation }: Props) => {
 
         {/* 스캔 프레임 UI */}
         <View style={styles.overlay}>
-          <View style={styles.scanFrame}>
-            <View style={[styles.corner, styles.topLeft]} />
-            <View style={[styles.corner, styles.topRight]} />
-            <View style={[styles.corner, styles.bottomLeft]} />
-            <View style={[styles.corner, styles.bottomRight]} />
+          <View style={[styles.scanMask, { height: frameTopPadding }]} />
+          <View
+            style={[
+              styles.scanMask,
+              styles.scanMaskLeft,
+              {
+                top: frameTopPadding,
+                width: frameSidePadding,
+                height: scanFrameSize,
+              },
+            ]}
+          />
+          <View
+            style={[
+              styles.scanMask,
+              styles.scanMaskRight,
+              {
+                top: frameTopPadding,
+                width: frameSidePadding,
+                height: scanFrameSize,
+              },
+            ]}
+          />
+          <View
+            testID="camera-scan-bottom-mask"
+            style={[
+              styles.scanMask,
+              {
+                top: frameTopPadding + scanFrameSize,
+                height: frameBottomPadding,
+              },
+            ]}
+          />
 
+          <View
+            testID="camera-scan-frame"
+            style={[
+              styles.scanFrame,
+              {
+                position: 'absolute',
+                top: frameTopPadding,
+                left: frameSidePadding,
+                width: scanFrameSize,
+                height: scanFrameSize,
+              },
+            ]}>
             <Animated.View
               style={[
                 styles.scanLine,
@@ -353,7 +395,7 @@ const CameraScanScreen = ({ navigation }: Props) => {
                     {
                       translateY: scanLineAnim.interpolate({
                         inputRange: [0, 1],
-                        outputRange: [0, 240], // 프레임 높이 기준
+                        outputRange: [0, scanFrameSize],
                       }),
                     },
                   ],
