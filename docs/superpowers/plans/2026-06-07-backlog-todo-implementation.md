@@ -92,3 +92,12 @@ Cover requested-state feedback rejection, completed pickup feedback success, dup
 - [x] **Step 2: Align local mock API behavior**
 
 Keep mock review/report endpoints on the same state, actor, enum, and admin report list contract so local smoke runs do not mask backend contract drift.
+
+### Task 6: AI Fixture Checklist Reconciliation
+
+**Files:**
+- Modify: `docs/VALIDATION_AND_BACKLOG.md`
+
+- [x] **Step 1: Map committed fixtures to open image candidates**
+
+Close only checklist items backed by committed fixture files and a fresh report-only/shape-only run. Keep candidates without a dedicated fixture open.

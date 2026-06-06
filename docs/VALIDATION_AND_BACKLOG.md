@@ -288,8 +288,8 @@ To-do:
 테스트 이미지 후보:
 
 - [x] 음식 하나가 선명하게 찍힌 사진
-- [ ] 음식 여러 개가 함께 찍힌 사진
-- [ ] 어두운 사진
+- [x] 음식 여러 개가 함께 찍힌 사진. `docs/qa-fixtures/multi-object-review-20260505.jpg`가 `multi-object` fixture로 커밋되어 있으며, 2026-06-07 `npm run qa:ai-fixtures -- --report-only --shape-only`에서 model accuracy deferred 통과로 기록됐다.
+- [x] 어두운 사진. `docs/qa-fixtures/low-quality-review-20260505.jpg`는 `fresh-single`을 downsample/darken한 low-quality fixture이며, 2026-06-07 `npm run qa:ai-fixtures -- --report-only --shape-only`에서 model accuracy deferred 통과로 기록됐다.
 - [ ] 흔들린 사진
 - [ ] 너무 가까운 사진
 - [ ] 너무 먼 사진
