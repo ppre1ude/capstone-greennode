@@ -125,12 +125,14 @@ const readJson = async req => {
   return JSON.parse(body);
 };
 
-const parseMultipartDataField = body => {
-  const match = body.match(/name="data"\r?\n\r?\n([\s\S]*?)\r?\n--/);
-  if (!match) {
-    return null;
+const parsePostDataField = body => {
+  const multipartMatch = body.match(/name="data"\r?\n\r?\n([\s\S]*?)\r?\n--/);
+  if (multipartMatch) {
+    return JSON.parse(multipartMatch[1]);
   }
-  return JSON.parse(match[1]);
+
+  const encodedData = new URLSearchParams(body).get('data');
+  return encodedData ? JSON.parse(encodedData) : null;
 };
 
 const server = http.createServer(async (req, res) => {
@@ -210,7 +212,7 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === 'POST' && path === '/api/v1/posts') {
       const raw = await readBody(req);
-      const data = parseMultipartDataField(raw);
+      const data = parsePostDataField(raw);
       if (!data || !imageTokens.has(data.imageToken)) {
         return fail(res, '이미지가 만료되었거나 유효하지 않습니다. 다시 촬영해주세요.');
       }
