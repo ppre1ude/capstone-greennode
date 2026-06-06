@@ -361,10 +361,12 @@ describe('InventoryQrScreen', () => {
     expect(textContent).toContain('보관 QR 인증');
     expect(textContent).toContain('광주역 앞 공유냉장고');
     expect(hasCountdownBadge(textContent)).toBe(true);
-    expect(textContent).toContain('등록 대기');
     expect(textContent).toContain('보관 인증');
     expect(textContent).toContain('카메라로 QR 스캔');
+    expect(textContent).toContain('냉장고 코드로 인증');
     expect(textContent).toContain('라벨은 보관 인증 후 표시');
+    expect(textContent).not.toContain('재고 진행 상태');
+    expect(textContent).not.toContain('등록 대기');
     expect(textContent).not.toContain('수령 인증');
     expect(textContent).not.toContain('보관 QR 스캔');
     expect(textContent).not.toContain('수령 QR 스캔');
@@ -548,10 +550,12 @@ describe('InventoryQrScreen', () => {
     const textContent = getTextContent(renderer!);
 
     expect(textContent).toContain('수령 QR 인증');
-    expect(textContent).toContain('수령 대기');
     expect(textContent).toContain('수령 인증');
     expect(textContent).toContain('수령 인증 후 완료');
     expect(textContent).toContain('카메라로 QR 스캔');
+    expect(textContent).toContain('냉장고 코드로 인증');
+    expect(textContent).not.toContain('재고 진행 상태');
+    expect(textContent).not.toContain('수령 대기');
     expect(textContent).not.toContain('보관 QR 인증');
     expect(textContent).not.toContain('라벨은 보관 인증 후 표시');
 
@@ -1049,7 +1053,8 @@ describe('InventoryQrScreen', () => {
       );
     });
 
-    expect(getTextContent(pickupRenderer!)).toContain('수령 대기');
+    expect(getTextContent(pickupRenderer!)).toContain('수령 인증 후 완료');
+    expect(getTextContent(pickupRenderer!)).not.toContain('수령 대기');
 
     await scanNativeQrValue(
       pickupRenderer!,

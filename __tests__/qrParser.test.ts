@@ -335,7 +335,7 @@ describe('QrScannerShell', () => {
     });
   });
 
-  it('allows Android users to submit a fridge code when native object output is unavailable', async () => {
+  it('keeps Android camera entry visible and lets users submit a fallback fridge code', async () => {
     setPlatformOS('android');
     mockUseObjectOutput.mockImplementation(() => {
       throw new Error('CameraObjectOutput is not available on Android');
@@ -359,8 +359,18 @@ describe('QrScannerShell', () => {
       .map(node => node.props.children)
       .join('');
 
+    expect(visibleText).toContain('카메라로 QR 스캔');
     expect(visibleText).toContain('냉장고 코드로 인증');
     expect(mockUseObjectOutput).not.toHaveBeenCalled();
+
+    await pressButtonWithText(renderer!, '카메라로 QR 스캔');
+
+    expect(mockUseObjectOutput).not.toHaveBeenCalled();
+    expect(
+      renderer!.root.findAllByProps({
+        nativeID: 'qr-shell-native-camera',
+      }),
+    ).not.toHaveLength(0);
 
     await ReactTestRenderer.act(async () => {
       renderer!.root

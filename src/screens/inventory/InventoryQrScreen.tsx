@@ -20,10 +20,8 @@ import type { RootStackParamList } from '@/navigation/types';
 import {
   InventoryCountdownBadge,
   InventoryLabelInstructionCard,
-  InventoryProgressStepper,
   parseServerLifecycleTimestampMs,
   resolveStoragePolicy,
-  type InventoryDisplayStatus,
 } from '@/features/inventory';
 import {
   QrScannerShell,
@@ -205,22 +203,6 @@ const InventoryQrContent = ({ navigation, params }: InventoryQrContentProps) => 
 
   const countdownNow = currentTime;
 
-  const inventoryStatus: InventoryDisplayStatus = useMemo(() => {
-    if (pickupConfirmed) {
-      return 'picked_up';
-    }
-
-    if (scanMode === 'pickup') {
-      return 'pickup_hold';
-    }
-
-    if (storeConfirmed) {
-      return 'available';
-    }
-
-    return 'pending_store';
-  }, [pickupConfirmed, scanMode, storeConfirmed]);
-
   const handleValidScan = useCallback(
     async (target: FridgeQrVerificationTarget) => {
       setScanRetryAvailable(false);
@@ -366,11 +348,6 @@ const InventoryQrContent = ({ navigation, params }: InventoryQrContentProps) => 
             testID="inventory-qr-countdown"
           />
         </View>
-
-        <InventoryProgressStepper
-          status={inventoryStatus}
-          testID="inventory-qr-progress"
-        />
 
         <View style={styles.qrActionSection}>
           <View style={styles.qrActionHeader}>
