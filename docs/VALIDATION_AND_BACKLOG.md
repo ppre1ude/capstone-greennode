@@ -38,10 +38,10 @@
 
 - 분류: QA blocker
 - 배경: 프론트 연결은 끝났지만 최신 백엔드 live VM에서 실제 mutation matrix를 다시 닫아야 한다.
-- 현재 상태: 2026-05-28 `localhost:8080 -> NHN Cloud VM:80` SSH tunnel 연결 후 당시 mutate 하네스가 통과했다. 2026-06-03/04 백엔드 회신 반영으로 하네스는 direct/manual complete 경로를 제거하고 `pending_store -> confirm-store -> available -> request -> confirm-pickup -> completed`, trust review/report, operator inventory fixture 검증을 사용하도록 갱신했다. 2026-06-07 read-only preflight는 `localhost:8080`의 `/docs`에 닿아 통과했지만, 같은 터널에서 Post-MVP 하네스의 `/openapi.json` 조회는 404였고 인증 토큰이 없어 notifications/impact/search probe는 skip됐다. 같은 날 수정된 local mock API 임시 포트에서는 backend feature-contract mutate matrix와 Post-MVP OpenAPI/probe 하네스가 모두 통과했다. 이는 하네스와 프론트 mock 계약 증거이며, 최신 live VM 재실행 증거는 아니다.
+- 현재 상태: 2026-05-28 `localhost:8080 -> NHN Cloud VM:80` SSH tunnel 연결 후 당시 mutate 하네스가 통과했다. 2026-06-03/04 백엔드 회신 반영으로 하네스는 direct/manual complete 경로를 제거하고 `pending_store -> confirm-store -> available -> request -> confirm-pickup -> completed`, trust review/report, operator inventory fixture 검증을 사용하도록 갱신했다. 2026-06-07 read-only preflight는 `localhost:8080`의 `/docs`에 닿아 통과했지만, 같은 터널에서 Post-MVP 하네스의 `/openapi.json` 조회는 404였고 인증 토큰이 없어 notifications/impact/search probe는 skip됐다. 이후 하네스에 target identity 기록을 추가해 재실행한 결과 현재 `localhost:8080/docs`는 `FoodLink Mock API` 본문을 반환하는 `target=local-mock`으로 식별됐다. 같은 날 수정된 local mock API 임시 포트에서는 backend feature-contract mutate matrix와 Post-MVP OpenAPI/probe 하네스가 모두 통과했다. 이는 하네스와 프론트 mock 계약 증거이며, 최신 live VM 재실행 증거는 아니다.
 - 기대 동작: 실제 VM에서 profile PATCH, my posts/share requests, QR lifecycle mutation, trust review/report, operator summary/items/dispose, 403/409 상태 규칙 matrix를 통과한다.
-- 검증 방법: tunnel(`localhost:8080 -> NHN Cloud VM:80`)을 연 뒤 `$env:FOODLINK_API_BASE_URL='http://localhost:8080'; $env:FOODLINK_QA_FRIDGE_ID='1'; $env:FOODLINK_QA_FRIDGE_PUBLIC_CODE='GJ-STATION-001'; npm run qa:backend-contracts -- --mutate`.
-- 산출물: `temp/backend-feature-contract-e2e-20260528T143053Z.json`, `temp/backend-feature-contract-e2e-20260604T093822Z.json`(터널 미연결 preflight 실패), `temp/backend-feature-contract-e2e-20260607T052740Z.json`(`/docs` read-only preflight 통과), `temp/post-mvp-backend-contracts-20260607T052740Z.json`(`/openapi.json` 404와 토큰 부재 skip), `temp/backend-feature-contract-e2e-20260607T054139Z.json`(local mock mutate 통과), `temp/post-mvp-backend-contracts-20260607T054142Z.json`(local mock Post-MVP OpenAPI/probe 통과).
+- 검증 방법: tunnel(`localhost:8080 -> NHN Cloud VM:80`)을 연 뒤 `$env:FOODLINK_API_BASE_URL='http://localhost:8080'; $env:FOODLINK_QA_FRIDGE_ID='1'; $env:FOODLINK_QA_FRIDGE_PUBLIC_CODE='GJ-STATION-001'; npm run qa:backend-contracts -- --mutate`. 최신 하네스 report의 `targetIdentity.kind`가 `local-mock`이면 live VM 증거로 보지 않는다.
+- 산출물: `temp/backend-feature-contract-e2e-20260528T143053Z.json`, `temp/backend-feature-contract-e2e-20260604T093822Z.json`(터널 미연결 preflight 실패), `temp/backend-feature-contract-e2e-20260607T052740Z.json`(`/docs` read-only preflight 통과), `temp/post-mvp-backend-contracts-20260607T052740Z.json`(`/openapi.json` 404와 토큰 부재 skip), `temp/backend-feature-contract-e2e-20260607T054139Z.json`(local mock mutate 통과), `temp/post-mvp-backend-contracts-20260607T054142Z.json`(local mock Post-MVP OpenAPI/probe 통과), `temp/backend-feature-contract-e2e-20260607T060124Z.json`(`target=local-mock` read-only preflight), `temp/post-mvp-backend-contracts-20260607T060124Z.json`(`target=local-mock`, `/openapi.json` 404, 토큰 부재 skip), `temp/post-mvp-backend-contracts-20260607T060303Z.json`(최신 local mock `target=local-mock` OpenAPI 통과), `temp/backend-feature-contract-e2e-20260607T060305Z.json`(최신 local mock `target=local-mock` preflight 통과).
 
 To-do:
 
@@ -195,7 +195,7 @@ To-do:
 - [x] 서버 저장형 알림 API 계약을 설계한다. `GET /notifications`, `PATCH /notifications/{id}/read`, `PATCH /notifications/read-all`, `DELETE /notifications/{id}` 기준이다.
 - [x] 앱 알림함은 focus 시 서버 알림을 fetch/merge하고 read/read-all/delete를 best-effort 호출한다. endpoint 실패 시 로컬 FCM 기록 fallback을 유지한다.
 - [x] 서버 알림 응답의 numeric/string `id`, snake_case 필드, list wrapper 변형을 앱 정규화와 read-only 계약 하네스에서 수용한다. 목록 query는 `unreadOnly`/`unread_only`, `skip`, `limit` 노출을 하네스에서 확인한다.
-- [ ] 백엔드 재배포 후 `/api/v1/notifications` 계열 4 endpoint가 OpenAPI/live VM에 노출되는지 확인하고 앱 알림함 server sync를 검증한다. 2026-05-29 프론트 확인 시점의 기존 VM은 404/미노출이었고, 2026-06-07 `localhost:8080` Post-MVP read-only 하네스도 `/openapi.json` 404와 토큰 부재로 실제 endpoint probe를 skip했다. 수정된 local mock에서는 OpenAPI 노출과 notifications probe가 통과했다.
+- [ ] 백엔드 재배포 후 `/api/v1/notifications` 계열 4 endpoint가 OpenAPI/live VM에 노출되는지 확인하고 앱 알림함 server sync를 검증한다. 2026-05-29 프론트 확인 시점의 기존 VM은 404/미노출이었고, 2026-06-07 `localhost:8080` Post-MVP read-only 하네스도 `/openapi.json` 404와 토큰 부재로 실제 endpoint probe를 skip했다. 같은 날 target identity 보강 후 현재 `localhost:8080`은 `target=local-mock`으로 식별됐다. 수정된 local mock에서는 OpenAPI 노출과 notifications probe가 통과했다.
 
 ### 실제 지표와 탄소 절감 표시
 
@@ -210,7 +210,7 @@ To-do:
 - [x] 실제 지표로 유지하려면 계산식과 API 계약이 문서화된다. `GET /users/me/impact/summary`와 `estimatedWeightGrams * categoryCarbonFactor` 기준이다.
 - [x] `getImpactSummary()` API client와 `ImpactSummary` 타입을 추가했다. live VM 확인 전이라 홈/프로필 숫자 UI는 아직 연결하지 않는다.
 - [x] `getImpactSummary()`가 camelCase/snake_case 응답을 정규화하고, read-only 하네스가 `period` query와 impact response shape를 확인한다.
-- [ ] 백엔드 재배포 후 `/api/v1/users/me/impact/summary`의 OpenAPI/live VM 존재 여부, 빈 사용자 zero summary, `calculationVersion`, `computedAt`, `totalShared`/`totalReceived` 최종 shape를 확인한다. 2026-06-07 `localhost:8080` Post-MVP read-only 하네스는 `/openapi.json` 404와 토큰 부재로 impact probe를 skip했다. 수정된 local mock에서는 OpenAPI 노출과 impact summary probe가 통과했다. 확인 전에는 앱에 숫자 UI를 연결하지 않는다.
+- [ ] 백엔드 재배포 후 `/api/v1/users/me/impact/summary`의 OpenAPI/live VM 존재 여부, 빈 사용자 zero summary, `calculationVersion`, `computedAt`, `totalShared`/`totalReceived` 최종 shape를 확인한다. 2026-06-07 `localhost:8080` Post-MVP read-only 하네스는 `/openapi.json` 404와 토큰 부재로 impact probe를 skip했고, target identity 보강 후 현재 대상은 `target=local-mock`으로 식별됐다. 수정된 local mock에서는 OpenAPI 노출과 impact summary probe가 통과했다. 확인 전에는 앱에 숫자 UI를 연결하지 않는다.
 
 ### 서버 검색, 인증, 채팅 Post-MVP 결정
 
@@ -227,7 +227,7 @@ To-do:
 - [x] 백엔드 회신을 반영해 email verification과 social login을 이번 immediate scope에서 제외하고 Phase 4 auth expansion으로 분리한다.
 - [x] WebSocket 채팅 범위를 결정한다. 다음 구현 후보에서 제외하고 알림/신청 lifecycle을 우선한다.
 - [x] Post-MVP 구현 시 server search, email verification, social login, WebSocket chat을 각각 독립 후속 항목으로 분리한다. 2026-05-29 backend blocker 문서에 API 필요 범위와 제외 범위를 분리했다.
-- [ ] 백엔드가 구현 완료로 회신한 server search `q` parameter가 OpenAPI/live VM에 추가됐는지 확인하고, 서버 검색이 안정화되면 로컬 fallback 유지 범위를 재결정한다. 2026-06-07 `localhost:8080` Post-MVP read-only 하네스는 `/openapi.json` 404와 토큰 부재로 posts/fridges search probe를 skip했다. 수정된 local mock에서는 OpenAPI `q` 노출과 posts/fridges search probe가 통과했다.
+- [ ] 백엔드가 구현 완료로 회신한 server search `q` parameter가 OpenAPI/live VM에 추가됐는지 확인하고, 서버 검색이 안정화되면 로컬 fallback 유지 범위를 재결정한다. 2026-06-07 `localhost:8080` Post-MVP read-only 하네스는 `/openapi.json` 404와 토큰 부재로 posts/fridges search probe를 skip했고, target identity 보강 후 현재 대상은 `target=local-mock`으로 식별됐다. 수정된 local mock에서는 OpenAPI `q` 노출과 posts/fridges search probe가 통과했다.
 - [x] `/auth/me.emailVerifiedAt`은 nullable 필드로 방어 처리한다.
 - [x] 실제 email verification/social login flow는 Phase 4에서 별도 계약을 작성한다. 2026-06-07 [AUTH_EXPANSION_PHASE4_CONTRACT.md](./AUTH_EXPANSION_PHASE4_CONTRACT.md)에 email verification, Google/Apple social login, 계정 병합, mutation gate, 수용 기준을 분리했다.
 

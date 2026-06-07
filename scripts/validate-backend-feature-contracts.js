@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const {fetchBackendTargetIdentity} = require('./backend-target');
 
 const repoRoot = path.resolve(__dirname, '..');
 const baseUrl = (process.env.FOODLINK_API_BASE_URL || 'http://localhost:8080').replace(
@@ -33,6 +34,7 @@ const report = {
   baseUrl,
   timestamp,
   mutate: shouldMutate,
+  targetIdentity: null,
   results: [],
 };
 
@@ -224,23 +226,24 @@ const runStep = async (id, fn) => {
 };
 
 const checkPreflight = async () => {
-  const targets = ['/openapi.json', '/docs'];
-  const failures = [];
+  const targetIdentity = await fetchBackendTargetIdentity(baseUrl);
+  report.targetIdentity = targetIdentity;
+  const reachable = targetIdentity.probes.find(probe => probe.ok);
 
-  for (const target of targets) {
-    try {
-      const response = await fetch(`${baseUrl}${target}`, {method: 'GET'});
-      if (response.ok) {
-        addResult('passed', 'preflight', `${target} reachable (${response.status})`);
-        return;
-      }
-      failures.push(`${target} -> ${response.status}`);
-    } catch (error) {
-      failures.push(
-        `${target} -> ${error instanceof Error ? error.message : String(error)}`,
-      );
-    }
+  if (reachable) {
+    addResult(
+      'passed',
+      'preflight',
+      `${reachable.path} reachable (${reachable.status}), target=${targetIdentity.kind}, evidence=${targetIdentity.evidence}`,
+    );
+    return;
   }
+
+  const failures = targetIdentity.probes.map(probe =>
+    probe.status
+      ? `${probe.path} -> ${probe.status}`
+      : `${probe.path} -> ${probe.error || 'unreachable'}`,
+  );
 
   throw new Error(`${tunnelHelp} Checked: ${failures.join('; ')}`);
 };
