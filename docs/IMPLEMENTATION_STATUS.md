@@ -235,7 +235,7 @@
   - 위치 미설정 강제 진입 시 `/posts/nearby` 호출 차단과 위치 설정 CTA 표시
   - 위치 권한 거부/영구 거부/위치 탐색 실패 시 `LocationSetup` 내 재시도/설정 열기 CTA
 - 남은 작업:
-  - 실제 통계/탄소 절감 계산식과 API 계약 정의
+  - 실제 통계/탄소 절감 계산식과 API 계약은 `GET /users/me/impact/summary` 기준으로 문서화했고 client/하네스도 추가했다. 숫자 UI 연결은 최신 live VM/OpenAPI shape 확인 전까지 보류한다.
 
 ### Phase 3: 카메라 촬영 및 AI 분석
 
@@ -247,9 +247,9 @@
   - 실제 Android 기기 카메라 셔터 촬영 후 generate 400 실패 Alert와 재촬영/갤러리 대안 표시
   - 실제 Android 기기 갤러리 fresh fixture 선택 후 분석 결과 표시
 - 남은 작업:
-  - Post-MVP AI/rejection contract: `stale-or-rotten`, `screenshot-or-ui`, `low-quality` false-positive를 rejection/review reason으로 처리할지 결정
-  - 실제 FCM 수신 QA와 분리된 순수 알림 표시 UX polish
-  - 분석 실패 후 수동 입력 CTA 추가 여부 결정
+  - Post-MVP AI/rejection contract는 hard block `rejectionReason`과 soft review `reviewReason` 분리로 결정했다. 실제 정확도 gate는 AI 모델 고도화 이후로 유지한다.
+  - 실제 FCM 수신 QA는 2026-05-25 실기기+emulator 2계정으로 닫았다. 서버 저장형 알림 읽음 동기화는 live VM/OpenAPI 재검증만 남았다.
+  - 분석 실패 대안은 `다시 촬영`/`갤러리 선택`으로 고정하고, 낮은 confidence는 등록 차단이 아니라 수동 확인을 유도하는 `확인 필요`로 표시한다.
 
 ### Phase 4: 나눔 식재료 등록 흐름
 
@@ -263,7 +263,7 @@
   - 위치 미설정 상태의 냉장고 선택 강제 진입 시 `/fridges/available` 호출 차단과 위치 설정 CTA 표시
   - 등록 완료 후 홈 복귀 시 `/posts/nearby` 재조회 신호 전달과 홈 포커스 재조회
 - 남은 작업:
-  - 유통기한 기본 3일 자동값 정책 정리
+  - 프론트 기본 유통기한 3일 자동값은 제거하고 `expirationDate: null`로 서버 자동 기한 계산을 사용한다. 최신 live VM에서 다중 등록/서버 자동 기한 응답 재검증만 남았다.
 
 ### Phase 5: 지도 및 냉장고 탐색
 
@@ -275,7 +275,7 @@
   - 위치 미설정 상태에서는 전남대 기본 좌표 fallback 없이 위치 설정 CTA 표시
   - Android emulator에서 냉장고 empty/list 상태와 내부 목록 항목 상세 이동 QA
 - 남은 작업:
-  - 주변 냉장고 없음 fixture/API 검증
+  - 앱의 냉장고 empty/search-empty 상태는 테스트로 고정됐다. 실제 주변 냉장고 없음 서버 fixture/API 검증은 live VM 데이터 조건이 필요하다.
 
 ### Phase 6: 알림 및 내 정보
 
