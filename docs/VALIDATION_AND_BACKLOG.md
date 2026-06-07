@@ -300,7 +300,7 @@ To-do:
 - [x] 라벨이나 유통기한이 보이는 사진. `docs/qa-fixtures/label-expiration-review-20260607.jpg` synthetic label fixture를 추가했다. 실제 라벨/개인정보 노출 없는 프로젝트 소유 이미지다.
 - [x] 내부 상태가 보이지 않는 사진. `docs/qa-fixtures/hidden-interior-review-20260607.jpg` synthetic covered-container fixture를 추가했다. 모델 품질 판별은 Phase 4/report-only 항목으로 유지한다.
 
-2026-06-07 local mock에서 `npm run qa:ai-fixtures -- --report-only --shape-only`로 전체 fixture set을 재검증했다. 새 synthetic review fixture 6개는 모두 `model accuracy deferred`로 통과했고, `large-image`는 의도대로 local-only skipped였다.
+2026-06-07 local mock에서 `npm run qa:ai-fixtures -- --report-only --shape-only`로 전체 fixture set을 재검증했다. 2026-06-07 15:25 KST 독립 포트 repo mock 재실행에서도 새 synthetic review fixture 6개와 기존 false-positive/multi-object fixture는 모두 `model accuracy deferred`로 통과했고, `large-image`는 의도대로 local-only skipped였다.
 
 ### 4. 한 장 촬영 UX와 multi-object 정책 정리
 
