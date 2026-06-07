@@ -52,6 +52,71 @@ const image = (res, filePath) => {
   fs.createReadStream(filePath).pipe(res);
 };
 
+const queryParameter = name => ({
+  name,
+  in: 'query',
+  required: false,
+  schema: {type: 'string'},
+});
+
+const mockOpenApi = {
+  openapi: '3.0.0',
+  info: {
+    title: 'FoodLink Mock API',
+    version: 'mock',
+  },
+  paths: {
+    '/api/v1/notifications': {
+      get: {
+        parameters: [
+          queryParameter('unreadOnly'),
+          queryParameter('unread_only'),
+          queryParameter('skip'),
+          queryParameter('limit'),
+        ],
+      },
+    },
+    '/api/v1/notifications/{notificationId}/read': {
+      patch: {},
+    },
+    '/api/v1/notifications/read-all': {
+      patch: {},
+    },
+    '/api/v1/notifications/{notificationId}': {
+      delete: {},
+    },
+    '/api/v1/users/me/impact/summary': {
+      get: {
+        parameters: [queryParameter('period')],
+      },
+    },
+    '/api/v1/posts/nearby': {
+      get: {
+        parameters: [
+          queryParameter('latitude'),
+          queryParameter('longitude'),
+          queryParameter('radius_km'),
+          queryParameter('q'),
+          queryParameter('skip'),
+          queryParameter('limit'),
+        ],
+      },
+    },
+    '/api/v1/fridges/nearby': {
+      get: {
+        parameters: [
+          queryParameter('latitude'),
+          queryParameter('longitude'),
+          queryParameter('radius_km'),
+          queryParameter('q'),
+          queryParameter('skip'),
+          queryParameter('limit'),
+        ],
+      },
+    },
+  },
+};
+
 let currentUser = {
   id: 1,
   email: 'cjh5110@naver.com',
@@ -69,12 +134,60 @@ let currentUser = {
   updatedAt: now(),
 };
 
+const operatorUser = {
+  ...currentUser,
+  id: 99,
+  email: 'optest@foodlink.com',
+  nickname: 'Mock Operator',
+  isOperator: true,
+  operatorRole: 'fridge_operator',
+  operatorFridgeIds: [1],
+  roles: ['fridge_operator'],
+  createdAt: now(),
+  updatedAt: now(),
+};
+
+let nextUserId = 100;
+const users = new Map([
+  [currentUser.id, currentUser],
+  [operatorUser.id, operatorUser],
+]);
+const userPasswords = new Map([
+  [currentUser.email, 'Password123'],
+  [operatorUser.email, 'testpassword123'],
+]);
+const accessTokens = new Map();
+
+const saveUser = user => {
+  users.set(user.id, user);
+  currentUser = user;
+  return user;
+};
+
+const getBearerToken = req => {
+  const header = req.headers.authorization || '';
+  const match = header.match(/^Bearer\s+(.+)$/i);
+  return match?.[1] || null;
+};
+
+const authenticateRequest = req => {
+  const token = getBearerToken(req);
+  const userId = token ? accessTokens.get(token) : null;
+  const user = userId ? users.get(userId) : null;
+  if (user) {
+    currentUser = user;
+  }
+  return currentUser;
+};
+
+const publicUser = user => ({...user});
+
 const fridges = [
   {
     id: 1,
     name: '용봉동 공유 냉장고',
     address: '광주광역시 북구 용봉동',
-    publicCode: 'FL-YONGBONG-01',
+    publicCode: 'GJ-STATION-001',
     latitude: 35.1595,
     longitude: 126.9136,
     isActive: true,
@@ -107,7 +220,7 @@ let posts = [
     status: 'available',
     fridgeId: 1,
     fridgeName: '용봉동 공유 냉장고',
-    fridgePublicCode: 'FL-YONGBONG-01',
+    fridgePublicCode: 'GJ-STATION-001',
     fridgeAddress: '광주광역시 북구 용봉동',
     authorId: 2,
     userId: 2,
@@ -245,6 +358,7 @@ const server = http.createServer(async (req, res) => {
 
   const url = new URL(req.url, `http://${req.headers.host}`);
   const path = url.pathname;
+  authenticateRequest(req);
 
   try {
     if (req.method === 'GET' && staticAssets.has(path)) {
@@ -257,36 +371,76 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (req.method === 'GET' && path === '/openapi.json') {
+      return json(res, 200, mockOpenApi);
+    }
+
     if (req.method === 'POST' && path === '/api/v1/auth/signup') {
       const body = await readJson(req);
-      currentUser = {
-        ...currentUser,
-        id: 1,
+      const user = saveUser({
+        id: nextUserId++,
         email: body.email,
         nickname: body.nickname,
+        profileImageUrl: null,
+        latitude: null,
+        longitude: null,
+        fcmToken: null,
+        isOperator: false,
+        operatorRole: null,
+        operatorFridgeIds: [],
+        roles: [],
+        isActive: true,
+        createdAt: now(),
         updatedAt: now(),
-      };
-      return ok(res, currentUser, '회원가입이 완료되었습니다.', 201);
+      });
+      userPasswords.set(user.email, body.password || 'Password123');
+      return ok(res, publicUser(user), 'Signup complete.', 201);
     }
 
     if (req.method === 'POST' && path === '/api/v1/auth/login') {
-      return ok(res, {accessToken: 'mock-access-token', tokenType: 'bearer'}, '로그인 성공');
+      const raw = await readBody(req);
+      const form = new URLSearchParams(raw);
+      const email = form.get('username') || form.get('email');
+      const password = form.get('password') || '';
+      const user = Array.from(users.values()).find(item => item.email === email);
+      if (!user || userPasswords.get(user.email) !== password) {
+        return fail(res, 'Invalid email or password.', 401);
+      }
+
+      const token = `mock-access-token-${user.id}-${Date.now()}-${Math.random()
+        .toString(36)
+        .slice(2)}`;
+      accessTokens.set(token, user.id);
+      currentUser = user;
+      return ok(res, {accessToken: token, tokenType: 'bearer'}, 'Login complete.');
     }
 
     if (req.method === 'GET' && path === '/api/v1/auth/me') {
-      return ok(res, currentUser, '내 정보 조회 성공');
+      return ok(res, publicUser(currentUser), 'User fetched.');
+    }
+
+    if (req.method === 'PATCH' && path === '/api/v1/auth/me') {
+      const body = await readJson(req);
+      const user = saveUser({
+        ...currentUser,
+        nickname: body.nickname ?? currentUser.nickname,
+        profileImageUrl:
+          body.profileImageUrl ?? body.profile_image_url ?? currentUser.profileImageUrl,
+        updatedAt: now(),
+      });
+      return ok(res, publicUser(user), 'Profile updated.');
     }
 
     if (req.method === 'PUT' && path === '/api/v1/auth/me/location') {
       const body = await readJson(req);
-      currentUser = {
+      const user = saveUser({
         ...currentUser,
         latitude: body.latitude,
         longitude: body.longitude,
         fcmToken: body.fcmToken || currentUser.fcmToken,
         updatedAt: now(),
-      };
-      return ok(res, currentUser, '위치 정보가 갱신되었습니다.');
+      });
+      return ok(res, publicUser(user), 'Location updated.');
     }
 
     if (req.method === 'POST' && path === '/api/v1/posts/generate') {
@@ -387,6 +541,9 @@ const server = http.createServer(async (req, res) => {
       if (!post) {
         return fail(res, '게시글을 찾을 수 없습니다.', 404);
       }
+      if ((post.authorId ?? post.userId) !== currentUser.id) {
+        return fail(res, 'Only the author can cancel this post.', 403);
+      }
       post.status = 'cancelled';
       post.updatedAt = now();
       return ok(res, post, '나눔이 취소되었습니다.');
@@ -439,6 +596,9 @@ const server = http.createServer(async (req, res) => {
       );
       if (!request) {
         return fail(res, '신청을 찾을 수 없습니다.', 404);
+      }
+      if (request.requesterId !== currentUser.id) {
+        return fail(res, 'Only the requester can cancel this share request.', 403);
       }
       const post = posts.find(item => item.id === request.postId);
       request.status = 'cancelled';
@@ -645,6 +805,9 @@ const server = http.createServer(async (req, res) => {
       const request = shareRequests.find(
         item => item.postId === post.id && item.requesterId === currentUser.id,
       );
+      if (!request) {
+        return fail(res, 'Only the requester can confirm pickup.', 403);
+      }
       if (request) {
         request.status = 'completed';
         request.updatedAt = now();

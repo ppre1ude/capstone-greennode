@@ -418,7 +418,11 @@ const createPost = async token => {
     headers: {'Content-Type': 'application/x-www-form-urlencoded'},
     body: `data=${encodeURIComponent(JSON.stringify(data))}`,
   });
-  const post = expectObject(getData(body), 'create post data');
+  const createPostData = getData(body);
+  const post = expectObject(
+    Array.isArray(createPostData) ? createPostData[0] : createPostData,
+    'create post data',
+  );
   if (!post.id) {
     throw new Error('create post response missing id');
   }
