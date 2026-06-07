@@ -31,6 +31,7 @@
 - 2026-05-29 추가 후속 반영으로 서버 저장형 알림 client와 `qa:post-mvp-contracts`는 numeric/string `id`, camelCase/snake_case 필드, array 또는 `items`/`notifications`/`results` list wrapper를 모두 방어적으로 수용한다. 알림 목록 query는 `unreadOnly`와 `unread_only`를 전환 호환으로 함께 보낸다.
 - 2026-05-29 추가 후속 반영으로 impact summary client와 `qa:post-mvp-contracts`는 camelCase/snake_case 응답과 숫자 문자열을 앱 내부 camelCase 숫자 타입으로 정규화 가능한 shape로 수용한다. 하네스는 impact `period` query도 검증한다.
 - 2026-05-29 추가 후속 반영으로 AI generate 400 응답이 generic `message`와 구조화된 `error.rejectionReason`을 함께 내려도 앱은 enum 기반 사용자-facing 문구를 우선 표시한다.
+- 2026-06-07 로컬 전체 게이트는 통과했다. 검증: `npm test -- --runInBand` 61 suites/413 tests passed, `npx tsc --noEmit`, `npm run lint -- --quiet`.
 
 ## 활성 P0
 
