@@ -408,6 +408,9 @@ describe('PostDetailScreen share request', () => {
       data: {
         ...basePost,
         status: 'requested',
+        fridgeName: '광주역 앞 공유냉장고',
+        fridgePublicCode: 'GJ-STATION-001',
+        fridgeAddress: '광주 북구 중흥동',
         requestExpiresAt: '2026-05-06T00:30:00Z',
       },
     });
@@ -424,6 +427,9 @@ describe('PostDetailScreen share request', () => {
     expect(navigation.navigate).toHaveBeenCalledWith('InventoryQr', {
       mode: 'pickup',
       postId: 10,
+      fridgePublicCode: 'GJ-STATION-001',
+      fridgeName: '광주역 앞 공유냉장고',
+      fridgeLocation: '광주 북구 중흥동',
       pendingExpiresAt: '2026-05-06T00:30:00Z',
     });
 

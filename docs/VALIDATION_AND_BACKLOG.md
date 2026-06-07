@@ -31,6 +31,7 @@
 - 2026-05-29 추가 후속 반영으로 서버 저장형 알림 client와 `qa:post-mvp-contracts`는 numeric/string `id`, camelCase/snake_case 필드, array 또는 `items`/`notifications`/`results` list wrapper를 모두 방어적으로 수용한다. 알림 목록 query는 `unreadOnly`와 `unread_only`를 전환 호환으로 함께 보낸다.
 - 2026-05-29 추가 후속 반영으로 impact summary client와 `qa:post-mvp-contracts`는 camelCase/snake_case 응답과 숫자 문자열을 앱 내부 camelCase 숫자 타입으로 정규화 가능한 shape로 수용한다. 하네스는 impact `period` query도 검증한다.
 - 2026-05-29 추가 후속 반영으로 AI generate 400 응답이 generic `message`와 구조화된 `error.rejectionReason`을 함께 내려도 앱은 enum 기반 사용자-facing 문구를 우선 표시한다.
+- 2026-06-07 로컬 전체 게이트는 통과했다. 검증: `npm test -- --runInBand` 61 suites/413 tests passed, `npx tsc --noEmit`, `npm run lint -- --quiet`.
 
 ## 활성 P0
 
@@ -38,10 +39,10 @@
 
 - 분류: QA blocker
 - 배경: 프론트 연결은 끝났지만 최신 백엔드 live VM에서 실제 mutation matrix를 다시 닫아야 한다.
-- 현재 상태: 2026-05-28 `localhost:8080 -> NHN Cloud VM:80` SSH tunnel 연결 후 당시 mutate 하네스가 통과했다. 2026-06-03/04 백엔드 회신 반영으로 하네스는 direct/manual complete 경로를 제거하고 `pending_store -> confirm-store -> available -> request -> confirm-pickup -> completed`, trust review/report, operator inventory fixture 검증을 사용하도록 갱신했다. 2026-06-04 read-only preflight는 `localhost:8080`의 `/openapi.json`과 `/docs`에 모두 닿지 않아 실패했다. 최신 VM 터널 연결 후 재실행이 남아 있다.
+- 현재 상태: 2026-05-28 `localhost:8080 -> NHN Cloud VM:80` SSH tunnel 연결 후 당시 mutate 하네스가 통과했다. 2026-06-03/04 백엔드 회신 반영으로 하네스는 direct/manual complete 경로를 제거하고 `pending_store -> confirm-store -> available -> request -> confirm-pickup -> completed`, trust review/report, operator inventory fixture 검증을 사용하도록 갱신했다. 2026-06-07 read-only preflight는 `localhost:8080`의 `/docs`에 닿아 통과했지만, 같은 터널에서 Post-MVP 하네스의 `/openapi.json` 조회는 404였고 인증 토큰이 없어 notifications/impact/search probe는 skip됐다. 이후 하네스에 target identity 기록을 추가해 재실행한 결과 현재 `localhost:8080/docs`는 `FoodLink Mock API` 본문을 반환하는 `target=local-mock`으로 식별됐다. 같은 날 수정된 local mock API 임시 포트에서는 backend feature-contract mutate matrix와 Post-MVP OpenAPI/probe 하네스가 모두 통과했다. 2026-06-07 15:23 KST 재실행에서도 기본 `localhost:8080`은 `target=local-mock`, `/openapi.json` 404로 식별됐고, 15:24 KST 독립 포트 repo mock은 OpenAPI read-only 계약을 통과했다. 15:30 KST 재감사에서도 `FOODLINK_API_BASE_URL`, `FOODLINK_ACCESS_TOKEN`, 운영자/QA fixture env가 모두 비어 있고 기본 `localhost:8080`은 local mock으로 식별됐다. 이는 하네스와 프론트 mock 계약 증거이며, 최신 live VM 재실행 증거는 아니다.
 - 기대 동작: 실제 VM에서 profile PATCH, my posts/share requests, QR lifecycle mutation, trust review/report, operator summary/items/dispose, 403/409 상태 규칙 matrix를 통과한다.
-- 검증 방법: tunnel(`localhost:8080 -> NHN Cloud VM:80`)을 연 뒤 `$env:FOODLINK_API_BASE_URL='http://localhost:8080'; $env:FOODLINK_QA_FRIDGE_ID='1'; $env:FOODLINK_QA_FRIDGE_PUBLIC_CODE='GJ-STATION-001'; npm run qa:backend-contracts -- --mutate`.
-- 산출물: `temp/backend-feature-contract-e2e-20260528T143053Z.json`, `temp/backend-feature-contract-e2e-20260604T093822Z.json`(터널 미연결 preflight 실패).
+- 검증 방법: tunnel(`localhost:8080 -> NHN Cloud VM:80`)을 연 뒤 `$env:FOODLINK_API_BASE_URL='http://localhost:8080'; $env:FOODLINK_QA_FRIDGE_ID='1'; $env:FOODLINK_QA_FRIDGE_PUBLIC_CODE='GJ-STATION-001'; npm run qa:backend-contracts -- --mutate`. 최신 하네스 report의 `targetIdentity.kind`가 `local-mock`이면 live VM 증거로 보지 않는다.
+- 산출물: `temp/backend-feature-contract-e2e-20260528T143053Z.json`, `temp/backend-feature-contract-e2e-20260604T093822Z.json`(터널 미연결 preflight 실패), `temp/backend-feature-contract-e2e-20260607T052740Z.json`(`/docs` read-only preflight 통과), `temp/post-mvp-backend-contracts-20260607T052740Z.json`(`/openapi.json` 404와 토큰 부재 skip), `temp/backend-feature-contract-e2e-20260607T054139Z.json`(local mock mutate 통과), `temp/post-mvp-backend-contracts-20260607T054142Z.json`(local mock Post-MVP OpenAPI/probe 통과), `temp/backend-feature-contract-e2e-20260607T060124Z.json`(`target=local-mock` read-only preflight), `temp/post-mvp-backend-contracts-20260607T060124Z.json`(`target=local-mock`, `/openapi.json` 404, 토큰 부재 skip), `temp/post-mvp-backend-contracts-20260607T060303Z.json`(최신 local mock `target=local-mock` OpenAPI 통과), `temp/backend-feature-contract-e2e-20260607T060305Z.json`(최신 local mock `target=local-mock` preflight 통과), `temp/backend-feature-contract-e2e-20260607T062353Z.json`(기본 `localhost:8080` read-only preflight, `target=local-mock`), `temp/post-mvp-backend-contracts-20260607T062353Z.json`(기본 `localhost:8080`, `/openapi.json` 404), `temp/post-mvp-backend-contracts-20260607T062425Z.json`(독립 포트 repo mock OpenAPI 통과), `temp/backend-feature-contract-e2e-20260607T062426Z.json`(독립 포트 repo mock preflight 통과), `temp/backend-feature-contract-e2e-20260607T063053Z.json`(기본 `localhost:8080` read-only preflight, `target=local-mock`), `temp/post-mvp-backend-contracts-20260607T063053Z.json`(기본 `localhost:8080`, `/openapi.json` 404, 토큰 부재 skip).
 
 To-do:
 
@@ -76,7 +77,7 @@ To-do:
 
 - 분류: UX/QA
 - 배경: 사용자가 지금 처리해야 할 나눔 action을 앱에서 바로 봐야 한다.
-- 현재 상태: 홈의 `진행 중인 나눔` 허브와 내 나눔/받은 나눔 화면은 연결됐다. 2026-05-28 회귀 테스트 기준으로 계정 lifecycle action과 최근 신청/등록 fallback action이 노출된다.
+- 현재 상태: 홈의 `진행 중인 나눔` 허브와 내 나눔/받은 나눔 화면은 연결됐다. 2026-05-28 회귀 테스트 기준으로 계정 lifecycle action과 최근 신청/등록 fallback action이 노출된다. 2026-06-07 로컬 Jest 기준으로 홈 QR action은 냉장고 메타데이터와 제한 시각을 `InventoryQr`에 전달하고, `foodlink://` deep link는 로그인 및 root navigation 준비 이후 auth-gated route로 소비한다. 같은 날 crowded lifecycle hub는 품목명/냉장고명/등록 시각을 표시하고 3건 초과 시 `내 나눔 관리` overflow action으로 이동하는 것을 `__tests__/home.nearbyRefresh.test.tsx`로 검증했다.
 - 기대 동작: QR 필요, 신청 접수, 제한 시간, 완료/만료/취소 상태가 사용자 언어로 표시된다.
 - 검증 방법: Android emulator 또는 실기기에서 등록자/신청자 2계정으로 홈, 상세, 내역 화면 기본 동작 점검.
 
@@ -89,6 +90,7 @@ To-do:
 - [x] 홈 또는 전용 허브에서 사용자가 지금 처리해야 할 나눔 action을 볼 수 있다.
 - [x] 진행 중인 action은 `입고 QR 필요`, `수령 QR 필요`, `신청 접수`, `수령 제한 시간`, `완료/만료/취소` 같은 사용자-facing 상태로 표시된다. 홈은 active QR/request label을, MyShares는 완료/만료/취소 lifecycle 표면을 맡는다.
 - [x] 2026-05-28 실기기 QA에서 발견한 `requestExpiresAt` timezone 해석 문제를 수정한 뒤 진행 중인 나눔 허브와 받은 나눔 수령 QR 상태를 재검증한다. 증거는 `temp/android-device-qa-20260528T234844/19-home-after-request.png`, `20-received-shares-after-request.png`다.
+- [x] 2026-06-07 홈 QR action과 `foodlink://inventory`, `foodlink://posts`, `foodlink://my-shares`, `foodlink://operator/fridges` deep link parser 회귀 테스트를 추가했다. 검증: `npm test -- --runInBand __tests__/home.nearbyRefresh.test.tsx __tests__/appNavigator.notificationFlush.test.tsx`.
 
 ### Android 시각 회귀 QA
 
@@ -114,6 +116,7 @@ To-do:
 - 분류: QA
 - 배경: Android 중심 검증은 닫혔지만 iOS 시뮬레이터 evidence가 없다.
 - 기대 동작: iOS에서 로그인, 위치 권한, 카메라/갤러리, 지도, 알림 권한, 홈/상세/신청 기본 흐름이 깨지지 않는다.
+- 현재 상태: 2026-06-07 15:30 KST 현재 Windows 작업 환경에서 `xcrun`, `simctl`, `pod` 명령이 모두 없어 iOS simulator evidence를 생성할 수 없다.
 
 To-do:
 
@@ -123,7 +126,7 @@ To-do:
 
 - 분류: 디자인 시스템 debt
 - 배경: DS primitive와 `DSIcon` 기준은 세웠지만 일부 테스트 fixture와 후속 화면의 glyph/emoji debt가 남아 있다.
-- 현재 상태: 앱 UI와 DS component fixture의 직접 glyph/emoji는 정책 테스트 범위에 들어갔다. `src`/`__tests__` grep상 남은 emoji는 앱 UI가 아닌 API 주석 경고 기호뿐이다.
+- 현재 상태: 앱 UI와 DS component fixture의 직접 glyph/emoji는 정책 테스트 범위에 들어갔다. `src`/`__tests__` grep상 남은 emoji는 앱 UI가 아닌 API 주석 경고 기호뿐이다. 2026-06-07 `MySharesScreen`의 완료 받은 나눔 신고 action은 텍스트 버튼 대신 접근성 label이 있는 compact icon action으로 정리했고 `__tests__/myShares.screen.test.tsx`로 회귀 확인했다.
 - 기대 동작: 사용자-facing UI는 emoji/Text glyph 대신 design-system icon을 우선 사용한다.
 
 To-do:
@@ -167,12 +170,14 @@ To-do:
 - [x] 등록 확인 화면에서 수동 권장일 선택과 `selectedDetectionId` 전송을 제거하고 `expirationDate: null`로 서버 자동 기한 계산을 사용한다.
 - [ ] 최신 VM에서 실제 `detections.length >= 2`, `shareable=false`, 절대 픽셀 `bbox`, `PostRead[]` 응답, 서버 crop `imageUrl`을 재검증한다.
 - [x] 일괄 생성된 여러 `pending_store` 품목은 QR 화면에서 `1/N` 진행률과 다음 품목 CTA로 순차 보관 인증한다.
+- [x] 2026-06-07 등록 성공 첫 품목의 `itemName`을 `InventoryQr` route로 전달하고 QR 보관 안내의 품목별 보관 정책 계산에 사용한다. 검증: `npm test -- --runInBand __tests__/fridgeSelect.qrFlow.test.tsx __tests__/inventoryQr.screen.test.tsx`.
 
 ### 운영자 role 관리 UI
 
 - 분류: Post-MVP/운영 기능
 - 배경: `/auth/me` role metadata는 연결됐지만 role 관리 자체는 아직 제품 UI가 아니다. 2026-05-29 결정으로 소비자 앱 안의 role 부여/변경 UI는 제외한다.
 - 기대 동작: 실제 운영자 계정만 운영자 콘솔에 진입하고, role 부여/변경은 backend seed, admin CLI, 또는 별도 web backoffice에서 처리한다.
+- 현재 상태: 2026-06-07 로컬 Jest 기준으로 운영자 콘솔은 재고/폐기 API 연결 상태를 사용자-facing 동기화 문구로 표시하고, `백엔드`/`API` 배포 상태 같은 내부 표현을 빈 상태에서 노출하지 않는다.
 
 To-do:
 
@@ -193,7 +198,7 @@ To-do:
 - [x] 서버 저장형 알림 API 계약을 설계한다. `GET /notifications`, `PATCH /notifications/{id}/read`, `PATCH /notifications/read-all`, `DELETE /notifications/{id}` 기준이다.
 - [x] 앱 알림함은 focus 시 서버 알림을 fetch/merge하고 read/read-all/delete를 best-effort 호출한다. endpoint 실패 시 로컬 FCM 기록 fallback을 유지한다.
 - [x] 서버 알림 응답의 numeric/string `id`, snake_case 필드, list wrapper 변형을 앱 정규화와 read-only 계약 하네스에서 수용한다. 목록 query는 `unreadOnly`/`unread_only`, `skip`, `limit` 노출을 하네스에서 확인한다.
-- [ ] 백엔드 재배포 후 `/api/v1/notifications` 계열 4 endpoint가 OpenAPI/live VM에 노출되는지 확인하고 앱 알림함 server sync를 검증한다. 2026-05-29 프론트 확인 시점의 기존 VM은 404/미노출이었다.
+- [ ] 백엔드 재배포 후 `/api/v1/notifications` 계열 4 endpoint가 OpenAPI/live VM에 노출되는지 확인하고 앱 알림함 server sync를 검증한다. 2026-05-29 프론트 확인 시점의 기존 VM은 404/미노출이었고, 2026-06-07 `localhost:8080` Post-MVP read-only 하네스도 `/openapi.json` 404와 토큰 부재로 실제 endpoint probe를 skip했다. 같은 날 target identity 보강 후 현재 `localhost:8080`은 `target=local-mock`으로 식별됐다. 2026-06-07 15:24 KST 독립 포트 repo mock에서는 OpenAPI 노출이 통과했지만, 기본 `localhost:8080`은 여전히 local mock/404라 live VM 증거가 아니다.
 
 ### 실제 지표와 탄소 절감 표시
 
@@ -208,7 +213,7 @@ To-do:
 - [x] 실제 지표로 유지하려면 계산식과 API 계약이 문서화된다. `GET /users/me/impact/summary`와 `estimatedWeightGrams * categoryCarbonFactor` 기준이다.
 - [x] `getImpactSummary()` API client와 `ImpactSummary` 타입을 추가했다. live VM 확인 전이라 홈/프로필 숫자 UI는 아직 연결하지 않는다.
 - [x] `getImpactSummary()`가 camelCase/snake_case 응답을 정규화하고, read-only 하네스가 `period` query와 impact response shape를 확인한다.
-- [ ] 백엔드 재배포 후 `/api/v1/users/me/impact/summary`의 OpenAPI/live VM 존재 여부, 빈 사용자 zero summary, `calculationVersion`, `computedAt`, `totalShared`/`totalReceived` 최종 shape를 확인한다. 확인 전에는 앱에 숫자 UI를 연결하지 않는다.
+- [ ] 백엔드 재배포 후 `/api/v1/users/me/impact/summary`의 OpenAPI/live VM 존재 여부, 빈 사용자 zero summary, `calculationVersion`, `computedAt`, `totalShared`/`totalReceived` 최종 shape를 확인한다. 2026-06-07 `localhost:8080` Post-MVP read-only 하네스는 `/openapi.json` 404와 토큰 부재로 impact probe를 skip했고, target identity 보강 후 현재 대상은 `target=local-mock`으로 식별됐다. 2026-06-07 15:24 KST 독립 포트 repo mock에서는 OpenAPI 노출이 통과했지만, 기본 `localhost:8080`은 여전히 local mock/404라 live VM 증거가 아니다. 확인 전에는 앱에 숫자 UI를 연결하지 않는다.
 
 ### 서버 검색, 인증, 채팅 Post-MVP 결정
 
@@ -225,9 +230,9 @@ To-do:
 - [x] 백엔드 회신을 반영해 email verification과 social login을 이번 immediate scope에서 제외하고 Phase 4 auth expansion으로 분리한다.
 - [x] WebSocket 채팅 범위를 결정한다. 다음 구현 후보에서 제외하고 알림/신청 lifecycle을 우선한다.
 - [x] Post-MVP 구현 시 server search, email verification, social login, WebSocket chat을 각각 독립 후속 항목으로 분리한다. 2026-05-29 backend blocker 문서에 API 필요 범위와 제외 범위를 분리했다.
-- [ ] 백엔드가 구현 완료로 회신한 server search `q` parameter가 OpenAPI/live VM에 추가됐는지 확인하고, 서버 검색이 안정화되면 로컬 fallback 유지 범위를 재결정한다.
+- [ ] 백엔드가 구현 완료로 회신한 server search `q` parameter가 OpenAPI/live VM에 추가됐는지 확인하고, 서버 검색이 안정화되면 로컬 fallback 유지 범위를 재결정한다. 2026-06-07 `localhost:8080` Post-MVP read-only 하네스는 `/openapi.json` 404와 토큰 부재로 posts/fridges search probe를 skip했고, target identity 보강 후 현재 대상은 `target=local-mock`으로 식별됐다. 2026-06-07 15:24 KST 독립 포트 repo mock에서는 OpenAPI `q` 노출이 통과했지만, 기본 `localhost:8080`은 여전히 local mock/404라 live VM 증거가 아니다.
 - [x] `/auth/me.emailVerifiedAt`은 nullable 필드로 방어 처리한다.
-- [ ] 실제 email verification/social login flow는 Phase 4에서 별도 계약을 작성한다.
+- [x] 실제 email verification/social login flow는 Phase 4에서 별도 계약을 작성한다. 2026-06-07 [AUTH_EXPANSION_PHASE4_CONTRACT.md](./AUTH_EXPANSION_PHASE4_CONTRACT.md)에 email verification, Google/Apple social login, 계정 병합, mutation gate, 수용 기준을 분리했다.
 
 ## 보존된 To-do 완료 기록
 
@@ -262,7 +267,7 @@ To-do:
 - [x] 네트워크 끊김 상태에서 주요 화면이 어떻게 동작하는지 확인
 - [x] 나눔 식재료 등록 버튼을 여러 번 눌렀을 때 중복 등록되지 않는지 확인
 - [x] 큰 이미지 업로드 시 압축 또는 실패 처리가 있는지 확인
-- [ ] 카메라 권한 거부 시 안내와 대체 흐름이 있는지 확인
+- [x] 카메라 권한 거부 시 안내와 대체 흐름이 있는지 확인. 2026-06-07 `CameraScanScreen` 권한 없음 fallback에서 `권한 다시 요청`, `설정 열기`, `갤러리에서 선택하기`를 노출하고 `npm test -- --runInBand __tests__/cameraScan.fallback.test.tsx`로 회귀 확인했다.
 - [x] 위치 권한 거부 시 안내와 대체 흐름이 있는지 확인
 - [x] 주변 냉장고 없음 상태가 자연스럽게 표시되는지 확인
 - [x] 나눔 식재료 없음 상태가 자연스럽게 표시되는지 확인
@@ -288,14 +293,16 @@ To-do:
 테스트 이미지 후보:
 
 - [x] 음식 하나가 선명하게 찍힌 사진
-- [ ] 음식 여러 개가 함께 찍힌 사진
-- [ ] 어두운 사진
-- [ ] 흔들린 사진
-- [ ] 너무 가까운 사진
-- [ ] 너무 먼 사진
-- [ ] 포장재가 있는 사진
-- [ ] 라벨이나 유통기한이 보이는 사진
-- [ ] 내부 상태가 보이지 않는 사진
+- [x] 음식 여러 개가 함께 찍힌 사진. `docs/qa-fixtures/multi-object-review-20260505.jpg`가 `multi-object` fixture로 커밋되어 있으며, 2026-06-07 `npm run qa:ai-fixtures -- --report-only --shape-only`에서 model accuracy deferred 통과로 기록됐다.
+- [x] 어두운 사진. `docs/qa-fixtures/low-quality-review-20260505.jpg`는 `fresh-single`을 downsample/darken한 low-quality fixture이며, 2026-06-07 `npm run qa:ai-fixtures -- --report-only --shape-only`에서 model accuracy deferred 통과로 기록됐다.
+- [x] 흔들린 사진. `docs/qa-fixtures/shaky-blur-review-20260607.jpg` synthetic review fixture를 추가했다. 모델 품질 판별은 Phase 4/report-only 항목으로 유지한다.
+- [x] 너무 가까운 사진. `docs/qa-fixtures/too-close-review-20260607.jpg` synthetic framing fixture를 추가했다. 모델 품질 판별은 Phase 4/report-only 항목으로 유지한다.
+- [x] 너무 먼 사진. `docs/qa-fixtures/too-far-review-20260607.jpg` synthetic framing fixture를 추가했다. 모델 품질 판별은 Phase 4/report-only 항목으로 유지한다.
+- [x] 포장재가 있는 사진. `docs/qa-fixtures/packaged-food-review-20260607.jpg` synthetic review fixture를 추가했다. 포장 내부 상태 판별은 Phase 4/report-only 항목으로 유지한다.
+- [x] 라벨이나 유통기한이 보이는 사진. `docs/qa-fixtures/label-expiration-review-20260607.jpg` synthetic label fixture를 추가했다. 실제 라벨/개인정보 노출 없는 프로젝트 소유 이미지다.
+- [x] 내부 상태가 보이지 않는 사진. `docs/qa-fixtures/hidden-interior-review-20260607.jpg` synthetic covered-container fixture를 추가했다. 모델 품질 판별은 Phase 4/report-only 항목으로 유지한다.
+
+2026-06-07 local mock에서 `npm run qa:ai-fixtures -- --report-only --shape-only`로 전체 fixture set을 재검증했다. 2026-06-07 15:25 KST 독립 포트 repo mock 재실행에서도 새 synthetic review fixture 6개와 기존 false-positive/multi-object fixture는 모두 `model accuracy deferred`로 통과했고, `large-image`는 의도대로 local-only skipped였다.
 
 ### 4. 한 장 촬영 UX와 multi-object 정책 정리
 

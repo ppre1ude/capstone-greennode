@@ -17,6 +17,12 @@ Source and license details are tracked in [SOURCES.md](./SOURCES.md).
 | `not-food` | `not-food-rejected-20260505.jpg` | ready |
 | `screenshot-or-ui` | `screenshot-or-ui-rejected-20260505.jpg` | ready |
 | `low-quality` | `low-quality-review-20260505.jpg` | ready |
+| `shaky-blur` | `shaky-blur-review-20260607.jpg` | ready |
+| `too-close` | `too-close-review-20260607.jpg` | ready |
+| `too-far` | `too-far-review-20260607.jpg` | ready |
+| `packaged-food` | `packaged-food-review-20260607.jpg` | ready |
+| `label-expiration` | `label-expiration-review-20260607.jpg` | ready |
+| `hidden-interior` | `hidden-interior-review-20260607.jpg` | ready |
 | `large-image` | `large-image-local-only-20260505.jpg` | local only |
 | `multi-object` | `multi-object-review-20260505.jpg` | ready |
 
@@ -28,9 +34,9 @@ FOODLINK_API_BASE_URL=http://localhost:8080 FOODLINK_ACCESS_TOKEN=<token> npm ru
 
 Run report-only validation when known backend/AI false-positives are still open
 and you only need an observable QA report. As of the 2026-05-29 backend
-response, `not-food`, `screenshot-or-ui`, `low-quality`, and `multi-object`
-accuracy are model-upgrade items, so keep the full fixture set report-only
-until that work lands:
+response, `not-food`, `screenshot-or-ui`, `low-quality`, supplemental review
+fixtures, and `multi-object` accuracy are model-upgrade items, so keep the full
+fixture set report-only until that work lands:
 
 ```bash
 FOODLINK_API_BASE_URL=http://localhost:8080 FOODLINK_ACCESS_TOKEN=<token> npm run qa:ai-fixtures -- --report-only

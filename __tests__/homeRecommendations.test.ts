@@ -82,4 +82,17 @@ describe('selectHomeRecommendations', () => {
 
     expect(recommendations).toEqual([]);
   });
+
+  it('ignores null or blank expiration dates without throwing', () => {
+    const recommendations = selectHomeRecommendations(
+      [
+        makePost({ id: 1, expirationDate: null as unknown as string }),
+        makePost({ id: 2, expirationDate: undefined as unknown as string }),
+        makePost({ id: 3, expirationDate: ' 2026-05-22 ' }),
+      ],
+      '2026-05-21',
+    );
+
+    expect(recommendations.map(post => post.id)).toEqual([3]);
+  });
 });

@@ -308,7 +308,7 @@ const MySharesScreen = ({ route, navigation }: Props) => {
             </>
           ) : null}
           {canFeedback ? (
-            <>
+            <View style={styles.feedbackActionGroup}>
               {hasReview ? (
                 <DSChip label="평가 완료" tone="success" size="small" />
               ) : (
@@ -323,19 +323,20 @@ const MySharesScreen = ({ route, navigation }: Props) => {
                   }
                 />
               )}
-              <DSButton
-                label="신고하기"
-                variant="outlined"
-                color="danger"
-                size="small"
+              <TouchableOpacity
+                accessibilityLabel="신고하기"
+                accessibilityRole="button"
+                activeOpacity={0.82}
+                style={styles.reportIconButton}
                 onPress={() =>
                   navigation.navigate('ShareFeedback', {
                     ...feedbackParams,
                     initialMode: 'report',
                   })
-                }
-              />
-            </>
+                }>
+                <DSIcon name="circle-exclamation" size="small" color="error" />
+              </TouchableOpacity>
+            </View>
           ) : null}
         </View>
       </DSCard>
@@ -551,7 +552,24 @@ const styles = StyleSheet.create({
   actionRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    alignItems: 'center',
     gap: 8,
+  },
+  feedbackActionGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginLeft: 'auto',
+  },
+  reportIconButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.error,
+    backgroundColor: '#FFF5F5',
   },
   emptyBox: {
     minHeight: 260,

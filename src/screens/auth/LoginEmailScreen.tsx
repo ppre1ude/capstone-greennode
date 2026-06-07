@@ -68,8 +68,6 @@ const LoginEmailScreen = ({ navigation }: Props) => {
             }
           }
         }
-
-        // TODO: Phase 2에서 LocationSetup / Main 분기
       } else {
         Alert.alert(
           '로그인 실패',

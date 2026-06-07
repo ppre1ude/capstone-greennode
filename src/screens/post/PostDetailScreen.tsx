@@ -477,6 +477,9 @@ const PostDetailScreen = ({ route, navigation }: Props) => {
                 navigation.navigate('InventoryQr', {
                   mode: 'pickup',
                   postId: post.id,
+                  fridgePublicCode: post.fridgePublicCode ?? undefined,
+                  fridgeName: post.fridgeName ?? undefined,
+                  fridgeLocation: post.fridgeAddress ?? undefined,
                   pendingExpiresAt: requestExpiresAt ?? undefined,
                 })
               }

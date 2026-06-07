@@ -1,5 +1,12 @@
 import React from 'react';
-import {Alert, Linking, Text, TouchableOpacity} from 'react-native';
+import {
+  Alert,
+  Animated,
+  Linking,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+} from 'react-native';
 import {launchImageLibrary} from 'react-native-image-picker';
 import ReactTestRenderer from 'react-test-renderer';
 import CameraScanScreen from '@/screens/camera/CameraScanScreen';
@@ -10,6 +17,7 @@ jest.mock('@/api/posts', () => ({
 }));
 
 let mockHasCameraPermission = true;
+let mockCameraDevice: unknown = null;
 const mockRequestCameraPermission = jest.fn();
 
 jest.mock('react-native-vision-camera', () => {
@@ -20,7 +28,7 @@ jest.mock('react-native-vision-camera', () => {
     Camera: ReactForMock.forwardRef((props: unknown, ref: React.Ref<unknown>) =>
       ReactForMock.createElement(MockView, {...(props as object), ref}),
     ),
-    useCameraDevice: jest.fn(() => null),
+    useCameraDevice: jest.fn(() => mockCameraDevice),
     useCameraPermission: jest.fn(() => ({
       hasPermission: mockHasCameraPermission,
       requestPermission: mockRequestCameraPermission,
@@ -82,6 +90,7 @@ describe('CameraScanScreen fallback QA', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockHasCameraPermission = true;
+    mockCameraDevice = null;
     mockRequestCameraPermission.mockResolvedValue(false);
     alertSpy.mockClear();
   });
@@ -186,6 +195,37 @@ describe('CameraScanScreen fallback QA', () => {
     await ReactTestRenderer.act(async () => {
       renderer.unmount();
     });
+  });
+
+  it('aligns the scan mask cutout with the responsive scan frame', async () => {
+    mockCameraDevice = {id: 'back'};
+    const loopSpy = jest.spyOn(Animated, 'loop').mockReturnValue({
+      start: jest.fn(),
+      stop: jest.fn(),
+      reset: jest.fn(),
+    } as unknown as Animated.CompositeAnimation);
+
+    const {renderer} = await createScreen();
+
+    try {
+      const frameStyle = StyleSheet.flatten(
+        renderer.root.findByProps({testID: 'camera-scan-frame'}).props.style,
+      );
+      const bottomMaskStyle = StyleSheet.flatten(
+        renderer.root.findByProps({testID: 'camera-scan-bottom-mask'}).props
+          .style,
+      );
+
+      expect(frameStyle.position).toBe('absolute');
+      expect(typeof frameStyle.top).toBe('number');
+      expect(typeof frameStyle.left).toBe('number');
+      expect(bottomMaskStyle.top).toBe(frameStyle.top + frameStyle.height);
+    } finally {
+      await ReactTestRenderer.act(async () => {
+        renderer.unmount();
+      });
+      loopSpy.mockRestore();
+    }
   });
 
   it('keeps the user on scan when generate rejects and offers retake or gallery fallback', async () => {

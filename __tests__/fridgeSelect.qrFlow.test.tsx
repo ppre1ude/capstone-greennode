@@ -1,11 +1,12 @@
 import React from 'react';
-import { Alert, Text, TouchableOpacity } from 'react-native';
+import { Alert, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import ReactTestRenderer from 'react-test-renderer';
 import { getAvailableFridges } from '@/api/fridges';
 import { createPost } from '@/api/posts';
 import FridgeSelectScreen from '@/screens/post/FridgeSelectScreen';
 import { useAuthStore } from '@/store/authStore';
 import type { Fridge, Post } from '@/types';
+import { colors } from '@/theme';
 import { renderWithSafeArea } from '../test-utils/renderWithSafeArea';
 
 jest.mock('@/api/fridges', () => ({
@@ -188,6 +189,7 @@ describe('FridgeSelectScreen QR flow', () => {
     expect(navigation.replace).toHaveBeenCalledWith('InventoryQr', {
       mode: 'store',
       postId: 55,
+      itemName: createdPost.detectedFruitKo,
       fridgePublicCode: 'GJ-STATION-001',
       fridgeName: '광주역 앞 공유냉장고',
       fridgeLocation: '광주 북구 중흥동',
@@ -233,6 +235,51 @@ describe('FridgeSelectScreen QR flow', () => {
     });
   });
 
+  it('shows the server retake message when imageToken is expired', async () => {
+    mockedCreatePost.mockRejectedValue({
+      response: {
+        status: 400,
+        data: {
+          success: false,
+          message: '이미지가 만료되었거나 유효하지 않습니다. 다시 촬영해주세요.',
+          data: null,
+        },
+      },
+    });
+    const { navigation, renderer } = await renderScreen();
+
+    await selectFridgeAndSubmitQr(renderer);
+
+    expect(navigation.replace).not.toHaveBeenCalled();
+    expect(alertSpy).toHaveBeenCalledWith(
+      '오류',
+      '이미지가 만료되었거나 유효하지 않습니다. 다시 촬영해주세요.',
+    );
+
+    await ReactTestRenderer.act(async () => {
+      renderer.unmount();
+    });
+  });
+
+  it('keeps selected fridge text readable on the primary selected surface', async () => {
+    const { renderer } = await renderScreen();
+
+    await ReactTestRenderer.act(async () => {
+      const fridgeButton = findButtonByText(renderer, '광주역 앞 공유냉장고');
+      fridgeButton?.props.onPress();
+    });
+
+    const fridgeName = renderer.root
+      .findAllByType(Text)
+      .find(textNode => textNode.props.children === '광주역 앞 공유냉장고');
+    const fridgeNameStyle = StyleSheet.flatten(fridgeName?.props.style);
+
+    expect(fridgeNameStyle.color).toBe(colors.textOnPrimary);
+
+    await ReactTestRenderer.act(async () => {
+      renderer.unmount();
+    });
+  });
 
   it('renders an empty fridge picker separately from load failures', async () => {
     mockedGetAvailableFridges.mockResolvedValue({

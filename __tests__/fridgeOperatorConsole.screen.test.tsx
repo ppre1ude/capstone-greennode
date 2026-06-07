@@ -137,12 +137,12 @@ describe('FridgeOperatorConsoleScreen', () => {
       renderer!.root.findAllByProps({children: '냉장고 운영자 콘솔'}),
     ).not.toHaveLength(0);
     expect(
-      renderer!.root.findAllByProps({children: '실제 운영자 API 연결'}),
+      renderer!.root.findAllByProps({children: '운영자 재고 동기화'}),
     ).not.toHaveLength(0);
     expect(
       renderer!.root.findAllByProps({
         children:
-          '폐기 후보 항목은 운영자 API로 바로 처분 요청을 보냅니다. 백엔드가 아직 배포되지 않았다면 실패 메시지가 표시됩니다.',
+          '폐기 후보 항목은 현장 재고와 바로 연결됩니다. 처리에 실패하면 상태를 유지하고 다시 시도할 수 있습니다.',
       }),
     ).not.toHaveLength(0);
     expect(renderer!.root.findAllByProps({children: '냉장고 상태'})).not.toHaveLength(
@@ -553,9 +553,12 @@ describe('FridgeOperatorConsoleScreen', () => {
     expect(
       renderer!.root.findAllByProps({
         children:
-          '백엔드 inventory API가 빈 목록을 반환했습니다. 새 나눔이 보관되면 이 영역에 표시됩니다.',
+          '현재 점검할 항목이 없습니다. 새 나눔이 보관되면 이 영역에 표시됩니다.',
       }),
     ).not.toHaveLength(0);
+
+    expect(getRenderedText(renderer!)).not.toContain('백엔드');
+    expect(getRenderedText(renderer!)).not.toContain('API');
 
     await ReactTestRenderer.act(async () => {
       renderer?.unmount();

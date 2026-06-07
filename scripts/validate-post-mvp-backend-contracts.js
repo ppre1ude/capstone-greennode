@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const {fetchBackendTargetIdentity} = require('./backend-target');
 
 const repoRoot = path.resolve(__dirname, '..');
 const baseUrl = (process.env.FOODLINK_API_BASE_URL || 'http://localhost:8080').replace(
@@ -19,6 +20,7 @@ const reportPath = path.join(
 const report = {
   baseUrl,
   timestamp,
+  targetIdentity: null,
   results: [],
 };
 
@@ -526,6 +528,15 @@ const runAuthenticatedProbe = async probe => {
 };
 
 const main = async () => {
+  const targetIdentity = await fetchBackendTargetIdentity(baseUrl);
+  report.targetIdentity = targetIdentity;
+  addResult(
+    pass(
+      'target identity',
+      `target=${targetIdentity.kind}, evidence=${targetIdentity.evidence}`,
+    ),
+  );
+
   try {
     const {response, body} = await requestJson('GET', '/openapi.json');
     if (!response.ok) {

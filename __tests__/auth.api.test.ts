@@ -1,10 +1,11 @@
 import apiClient from '@/api/client';
-import { getMe, updateProfile } from '@/api/auth';
+import { getMe, login, updateProfile } from '@/api/auth';
 
 jest.mock('@/api/client', () => ({
   __esModule: true,
   default: {
     get: jest.fn(),
+    post: jest.fn(),
     patch: jest.fn(),
   },
 }));
@@ -50,6 +51,32 @@ describe('auth API user normalization', () => {
       operatorFridgeIds: [1, 3],
       emailVerifiedAt: null,
     });
+  });
+
+  it('sends login as form-urlencoded username credentials', async () => {
+    mockedApiClient.post.mockResolvedValue({
+      data: {
+        success: true,
+        message: 'ok',
+        data: {
+          accessToken: 'access-token',
+          tokenType: 'bearer',
+        },
+      },
+    });
+
+    const response = await login('member@example.com', 'Password123');
+
+    expect(mockedApiClient.post).toHaveBeenCalledWith(
+      '/api/v1/auth/login',
+      'username=member%40example.com&password=Password123',
+      {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+      },
+    );
+    expect(response.data?.accessToken).toBe('access-token');
   });
 
   it('normalizes verified email timestamp from snake_case auth responses', async () => {

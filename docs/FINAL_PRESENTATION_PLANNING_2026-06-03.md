@@ -282,12 +282,12 @@ FoodLink가 줄이는 마찰:
 문제:
 
 - Firebase 설정 부재 시 앱 시작 크래시 가능성
-- foreground/background/terminated 상태별 알림 라우팅 검증 필요
+- foreground/background/terminated 상태별 알림 라우팅은 2026-05-25 실기기 + emulator 2계정 QA로 닫힘
 
 해결:
 
 - Firebase Messaging fallback guard 추가
-- 실기기 + emulator 2계정으로 FCM 수신, 알림함 기록, 상세 화면 라우팅 검증
+- 실기기 + emulator 2계정으로 FCM 수신, 알림함 기록, 상세 화면 라우팅 검증 완료
 
 ### 4. QR lifecycle 시간대 처리
 

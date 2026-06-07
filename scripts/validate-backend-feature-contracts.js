@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const {fetchBackendTargetIdentity} = require('./backend-target');
 
 const repoRoot = path.resolve(__dirname, '..');
 const baseUrl = (process.env.FOODLINK_API_BASE_URL || 'http://localhost:8080').replace(
@@ -33,11 +34,32 @@ const report = {
   baseUrl,
   timestamp,
   mutate: shouldMutate,
+  targetIdentity: null,
   results: [],
 };
 
 const tunnelHelp =
   'API is not reachable. Open the SSH tunnel first, for example: ssh -N -L 8080:<backend-host>:80 <vm-user>@<vm-host>, or set FOODLINK_API_BASE_URL.';
+
+const positiveReviewTagIds = new Set([
+  'good_condition',
+  'matched_photo',
+  'easy_to_find',
+  'want_again',
+]);
+const issueReviewTagIds = new Set([
+  'different_from_photo',
+  'label_hard_to_find',
+  'pickup_location_unclear',
+  'condition_needs_check',
+]);
+const shareReportReasonIds = new Set([
+  'different_from_photo',
+  'condition_needs_check',
+  'label_or_zone_mismatch',
+  'missing_or_not_found',
+  'inappropriate_listing',
+]);
 
 const addResult = (status, id, detail, extra = undefined) => {
   const result = {status, id, detail};
@@ -162,6 +184,31 @@ const expectArray = (value, label) => {
   return value;
 };
 
+const getListData = body => {
+  const data = getData(body);
+  if (Array.isArray(data)) {
+    return data;
+  }
+
+  if (data && typeof data === 'object') {
+    for (const key of ['items', 'reports', 'shareReports', 'results']) {
+      if (Array.isArray(data[key])) {
+        return data[key];
+      }
+    }
+  }
+
+  return null;
+};
+
+const expectListData = (body, label) => {
+  const data = getListData(body);
+  if (!data) {
+    throw new Error(`${label} must be an array or list wrapper`);
+  }
+  return data;
+};
+
 const expectIsoUtcTimestamp = (value, label) => {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}T.+Z$/.test(value)) {
     throw new Error(`${label} must be an ISO-8601 UTC timestamp ending in Z`);
@@ -179,23 +226,24 @@ const runStep = async (id, fn) => {
 };
 
 const checkPreflight = async () => {
-  const targets = ['/openapi.json', '/docs'];
-  const failures = [];
+  const targetIdentity = await fetchBackendTargetIdentity(baseUrl);
+  report.targetIdentity = targetIdentity;
+  const reachable = targetIdentity.probes.find(probe => probe.ok);
 
-  for (const target of targets) {
-    try {
-      const response = await fetch(`${baseUrl}${target}`, {method: 'GET'});
-      if (response.ok) {
-        addResult('passed', 'preflight', `${target} reachable (${response.status})`);
-        return;
-      }
-      failures.push(`${target} -> ${response.status}`);
-    } catch (error) {
-      failures.push(
-        `${target} -> ${error instanceof Error ? error.message : String(error)}`,
-      );
-    }
+  if (reachable) {
+    addResult(
+      'passed',
+      'preflight',
+      `${reachable.path} reachable (${reachable.status}), target=${targetIdentity.kind}, evidence=${targetIdentity.evidence}`,
+    );
+    return;
   }
+
+  const failures = targetIdentity.probes.map(probe =>
+    probe.status
+      ? `${probe.path} -> ${probe.status}`
+      : `${probe.path} -> ${probe.error || 'unreachable'}`,
+  );
 
   throw new Error(`${tunnelHelp} Checked: ${failures.join('; ')}`);
 };
@@ -373,7 +421,11 @@ const createPost = async token => {
     headers: {'Content-Type': 'application/x-www-form-urlencoded'},
     body: `data=${encodeURIComponent(JSON.stringify(data))}`,
   });
-  const post = expectObject(getData(body), 'create post data');
+  const createPostData = getData(body);
+  const post = expectObject(
+    Array.isArray(createPostData) ? createPostData[0] : createPostData,
+    'create post data',
+  );
   if (!post.id) {
     throw new Error('create post response missing id');
   }
@@ -464,17 +516,21 @@ const getPostDetail = async (token, postId) => {
   return expectObject(getData(body), `post ${postId} detail`);
 };
 
-const createShareReview = async (token, requestId) => {
+const createShareReview = async (
+  token,
+  requestId,
+  payload = {
+    positiveTagIds: ['good_condition', 'matched_photo'],
+    issueTagIds: ['label_hard_to_find'],
+  },
+) => {
   const body = await expectOk(
     'share review',
     'POST',
     `/api/v1/share-requests/${requestId}/review`,
     {
       token,
-      json: {
-        positiveTagIds: ['good_condition', 'matched_photo'],
-        issueTagIds: ['label_hard_to_find'],
-      },
+      json: payload,
     },
   );
   const data = expectObject(getData(body), 'share review data');
@@ -487,20 +543,24 @@ const createShareReview = async (token, requestId) => {
   return data;
 };
 
-const createShareReport = async (token, requestId) => {
+const createShareReport = async (
+  token,
+  requestId,
+  payload = {
+    reasonId: 'missing_or_not_found',
+  },
+) => {
   const body = await expectOk(
     'share report',
     'POST',
     `/api/v1/share-requests/${requestId}/report`,
     {
       token,
-      json: {
-        reasonId: 'missing_or_not_found',
-      },
+      json: payload,
     },
   );
   const data = expectObject(getData(body), 'share report data');
-  if (data.requestId !== requestId || data.reasonId !== 'missing_or_not_found') {
+  if (data.requestId !== requestId || data.reasonId !== payload.reasonId) {
     throw new Error('report response requestId/reasonId mismatch');
   }
   if (
@@ -533,6 +593,18 @@ const getTrustSummary = async (token, userId) => {
     throw new Error('trust summary must not expose report or sanction history');
   }
   return data;
+};
+
+const getAdminShareReports = async (token, status = 'open') => {
+  const body = await expectOk(
+    'admin share reports',
+    'GET',
+    `/api/v1/admin/share-reports?status=${encodeURIComponent(status)}`,
+    {token},
+  );
+  const reports = expectListData(body, 'GET /admin/share-reports data');
+  reports.forEach(report => expectObject(report, 'admin share report item'));
+  return reports;
 };
 
 const getOperatorInventorySummary = async (token, fridgeId) => {
@@ -811,6 +883,163 @@ const runMutationMatrix = async () => {
           `duplicate=${duplicateReview.status}`,
           `report=${shareReport.id}`,
           `completedShares=${summary.completedShares}`,
+        ].join(', ');
+      } finally {
+        await cleanupActivePost(state.authorToken, postId);
+      }
+    },
+  );
+
+  await runLifecycleScenario(
+    'trust feedback rejects requested state before pickup',
+    async () => {
+      let postId;
+      try {
+        const post = await createStoredPost(state.authorToken);
+        postId = post.id;
+        const requested = await requestShare(state.requesterToken, post.id);
+        const reviewRejected = await expectHttpStatus(
+          'review requested share request',
+          409,
+          'POST',
+          `/api/v1/share-requests/${requested.request.id}/review`,
+          {
+            token: state.requesterToken,
+            json: {
+              positiveTagIds: [Array.from(positiveReviewTagIds)[0]],
+              issueTagIds: [],
+            },
+          },
+        );
+        const reportRejected = await expectHttpStatus(
+          'report requested share request',
+          409,
+          'POST',
+          `/api/v1/share-requests/${requested.request.id}/report`,
+          {
+            token: state.requesterToken,
+            json: {
+              reasonId: Array.from(shareReportReasonIds)[0],
+            },
+          },
+        );
+        return [
+          `request=${requested.request.id}`,
+          `review=${reviewRejected.status}`,
+          `report=${reportRejected.status}`,
+        ].join(', ');
+      } finally {
+        await cleanupActivePost(state.authorToken, postId);
+      }
+    },
+  );
+
+  await runLifecycleScenario(
+    'trust feedback rejects invalid actors and enums',
+    async () => {
+      let postId;
+      try {
+        const post = await createStoredPost(state.authorToken);
+        postId = post.id;
+        const requested = await requestShare(state.requesterToken, post.id);
+        await confirmPickup(state.requesterToken, post.id);
+        const authorReview = await expectHttpStatus(
+          'author review own completed share',
+          403,
+          'POST',
+          `/api/v1/share-requests/${requested.request.id}/review`,
+          {
+            token: state.authorToken,
+            json: {
+              positiveTagIds: [Array.from(positiveReviewTagIds)[0]],
+              issueTagIds: [],
+            },
+          },
+        );
+        const observerReport = await expectHttpStatus(
+          'observer report requester share',
+          403,
+          'POST',
+          `/api/v1/share-requests/${requested.request.id}/report`,
+          {
+            token: state.observerToken,
+            json: {
+              reasonId: Array.from(shareReportReasonIds)[0],
+            },
+          },
+        );
+        const unsupportedReviewTag = await expectHttpStatus(
+          'unsupported review tag',
+          422,
+          'POST',
+          `/api/v1/share-requests/${requested.request.id}/review`,
+          {
+            token: state.requesterToken,
+            json: {
+              positiveTagIds: ['unsupported_positive_tag'],
+              issueTagIds: [Array.from(issueReviewTagIds)[0]],
+            },
+          },
+        );
+        const unsupportedReportReason = await expectHttpStatus(
+          'unsupported report reason',
+          422,
+          'POST',
+          `/api/v1/share-requests/${requested.request.id}/report`,
+          {
+            token: state.requesterToken,
+            json: {
+              reasonId: 'unsupported_report_reason',
+            },
+          },
+        );
+        return [
+          `request=${requested.request.id}`,
+          `authorReview=${authorReview.status}`,
+          `observerReport=${observerReport.status}`,
+          `badTag=${unsupportedReviewTag.status}`,
+          `badReason=${unsupportedReportReason.status}`,
+        ].join(', ');
+      } finally {
+        await cleanupActivePost(state.authorToken, postId);
+      }
+    },
+  );
+
+  await runLifecycleScenario(
+    'trust feedback report enters admin review list',
+    async () => {
+      let postId;
+      try {
+        const post = await createStoredPost(state.authorToken);
+        postId = post.id;
+        const requested = await requestShare(state.requesterToken, post.id);
+        await confirmPickup(state.requesterToken, post.id);
+        const report = await createShareReport(
+          state.requesterToken,
+          requested.request.id,
+        );
+        const operatorContext = await loadOperatorContext();
+        const reports = await getAdminShareReports(operatorContext.token, 'open');
+        const listedReport = reports.find(item => {
+          const reportId = item.id ?? item.reportId ?? item.report_id;
+          const requestId = item.requestId ?? item.request_id;
+          return (
+            Number(reportId) === Number(report.id) ||
+            Number(requestId) === Number(requested.request.id)
+          );
+        });
+        if (!listedReport) {
+          throw new Error('admin share reports list missing created report');
+        }
+        const summary = await getTrustSummary(
+          state.requesterToken,
+          post.authorId ?? state.authorUser.id,
+        );
+        return [
+          `report=${report.id}`,
+          `listed=${listedReport.id ?? listedReport.reportId ?? 'by-request'}`,
+          `badges=${summary.badges.length}`,
         ].join(', ');
       } finally {
         await cleanupActivePost(state.authorToken, postId);
