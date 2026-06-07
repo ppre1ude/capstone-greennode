@@ -128,6 +128,14 @@ const ChatListScreen = () => {
     });
   };
 
+  const renderNotificationMeta = (label: string) => (
+    <View style={styles.notificationMetaChip}>
+      <Text style={styles.notificationMetaText} numberOfLines={1}>
+        {label}
+      </Text>
+    </View>
+  );
+
   const renderNotification = ({ item }: { item: NotificationRecord }) => (
     <TouchableOpacity
       style={styles.notificationCard}
@@ -145,15 +153,9 @@ const ChatListScreen = () => {
         {item.body}
       </Text>
       <View style={styles.notificationMetaRow}>
-        <Text style={styles.notificationMeta}>
-          {item.readAt ? '읽음' : '새 알림'}
-        </Text>
-        <Text style={styles.notificationMeta}>
-          {getSourceLabel(item.source)}
-        </Text>
-        <Text style={styles.notificationMeta}>
-          {item.fridgeName || '공유 냉장고'}
-        </Text>
+        {renderNotificationMeta(item.readAt ? '읽음' : '새 알림')}
+        {renderNotificationMeta(getSourceLabel(item.source))}
+        {renderNotificationMeta(item.fridgeName || '공유 냉장고')}
       </View>
     </TouchableOpacity>
   );
@@ -332,17 +334,26 @@ const styles = StyleSheet.create({
     marginTop: 12,
     flexDirection: 'row',
     gap: 8,
+    rowGap: 8,
     flexWrap: 'wrap',
+    alignItems: 'flex-start',
   },
-  notificationMeta: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.primary,
+  notificationMetaChip: {
+    minHeight: 28,
+    maxWidth: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: colors.primaryLight,
     paddingHorizontal: 8,
-    paddingVertical: 3,
     borderRadius: 6,
     overflow: 'hidden',
+  },
+  notificationMetaText: {
+    fontSize: 11,
+    lineHeight: 16,
+    fontWeight: '700',
+    color: colors.primary,
+    includeFontPadding: false,
   },
   emptyContainer: {
     flex: 1,
