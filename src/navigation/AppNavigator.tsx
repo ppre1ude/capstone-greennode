@@ -42,6 +42,7 @@ import InventoryQrScreen from '@/screens/inventory/InventoryQrScreen';
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 type DemoDeepLinkRoute =
+  | {name: 'Main'; params: RootStackParamList['Main']}
   | {name: 'InventoryQr'; params: RootStackParamList['InventoryQr']}
   | {name: 'PostDetail'; params: RootStackParamList['PostDetail']}
   | {
@@ -101,6 +102,20 @@ export const parseFoodlinkDeepLink = (
   const parts = rawPath.split('/').filter(Boolean);
   const queryParams = parseQueryParams(url);
 
+  if (parts[0] === 'home') {
+    const completedPostId = Number(queryParams.completedPostId);
+
+    return {
+      name: 'Main',
+      params: {
+        screen: 'Home',
+        params: Number.isFinite(completedPostId)
+          ? {completedPostId}
+          : undefined,
+      },
+    };
+  }
+
   if (parts[0] === 'inventory') {
     const mode = parts[1] === 'pickup' ? 'pickup' : 'store';
     const postId = Number(parts[2]);
@@ -159,6 +174,17 @@ export const parseFoodlinkDeepLink = (
   return null;
 };
 
+export const buildFoodlinkDeepLinkResetState = (route: DemoDeepLinkRoute) =>
+  route.name === 'Main'
+    ? {
+        index: 0,
+        routes: [route],
+      }
+    : {
+        index: 1,
+        routes: [{name: 'Main' as const}, route],
+      };
+
 const AppNavigator = () => {
   const user = useAuthStore(state => state.user);
   const isLoggedIn = useAuthStore(state => state.isLoggedIn);
@@ -177,10 +203,7 @@ const AppNavigator = () => {
     }
 
     pendingDeepLinkRoute.current = null;
-    rootNavigationRef.reset({
-      index: 1,
-      routes: [{name: 'Main'}, route],
-    });
+    rootNavigationRef.reset(buildFoodlinkDeepLinkResetState(route));
   }, [isLoggedIn, user]);
   const consumePendingDeepLinkRef = useRef(consumePendingDeepLink);
 

@@ -1,7 +1,10 @@
 import React from 'react';
 import ReactTestRenderer from 'react-test-renderer';
 import {Linking} from 'react-native';
-import AppNavigator, {parseFoodlinkDeepLink} from '@/navigation/AppNavigator';
+import AppNavigator, {
+  buildFoodlinkDeepLinkResetState,
+  parseFoodlinkDeepLink,
+} from '@/navigation/AppNavigator';
 import {
   flushPendingNotificationNavigation,
   registerForegroundNotificationHandlers,
@@ -102,6 +105,24 @@ describe('AppNavigator notification routing', () => {
     ).toEqual({
       name: 'MyShares',
       params: {initialTab: 'posted'},
+    });
+  });
+
+  it('parses home deep links without stacking Main twice', () => {
+    const route = parseFoodlinkDeepLink(
+      'foodlink://home?completedPostId=42',
+    );
+
+    expect(route).toEqual({
+      name: 'Main',
+      params: {
+        screen: 'Home',
+        params: {completedPostId: 42},
+      },
+    });
+    expect(buildFoodlinkDeepLinkResetState(route!)).toEqual({
+      index: 0,
+      routes: [route],
     });
   });
 });
