@@ -51,6 +51,8 @@ import { selectHomeRecommendations } from '@/utils/homeRecommendations';
 import { DSIcon, type DSIconName } from '@/design-system';
 import {
   formatPostLifecycleDate,
+  getPostDisplayName,
+  getPostRelativeTimeLabel,
   HOME_POST_LIFECYCLE_STATUSES,
   HOME_SHARE_REQUEST_LIFECYCLE_STATUSES,
   isPostAwaitingPickupConfirmation,
@@ -63,12 +65,29 @@ import { getHeaderTopPadding } from '@/utils/safeArea';
 type HomeAction = {
   key: string;
   title: string;
+  supportingText?: string;
   statusLabels?: string[];
   description: string;
   buttonLabel: string | null;
   icon: DSIconName;
   onPress?: () => void;
 };
+
+const getHomeActionTitle = (post: Pick<Post, 'detectedFruitKo' | 'detectedFruit' | 'fridgeName'>) => {
+  const fridgeName = post.fridgeName || '공유 냉장고 확인 중';
+  return `${getPostDisplayName(post)} · ${fridgeName}`;
+};
+
+const getHomeActionSupportingText = (
+  post: Pick<Post, 'createdAt' | 'labelCode' | 'storageZone'>,
+) =>
+  [
+    post.labelCode ? `라벨 ${post.labelCode}` : null,
+    post.storageZone ? `구역 ${post.storageZone}` : null,
+    getPostRelativeTimeLabel(post.createdAt),
+  ]
+    .filter(Boolean)
+    .join(' · ');
 
 const filterPostsByQuery = (
   items: PostNearbyRead[],
@@ -381,11 +400,10 @@ const HomeScreen = () => {
     myShareRequests.filter(isShareRequestAwaitingPickup).forEach(item => {
       actions.push({
         key: `pickup-${item.request.id}`,
-        title: '수령 QR 필요',
+        title: getHomeActionTitle(item.post),
+        supportingText: getHomeActionSupportingText(item.post),
         statusLabels: ['수령 QR 필요', '수령 제한 시간'],
-        description: `${
-          item.post.detectedFruitKo ?? '나눔 식재료'
-        } 수령 QR이 열려 있습니다. 수령 제한 시간 ${formatPostLifecycleDate(
+        description: `냉장고 앞에서 수령 QR을 인증해야 완료됩니다. ${formatPostLifecycleDate(
           item.post.requestExpiresAt,
           '마감 시간 확인 필요',
         )} 전까지 인증을 완료하세요.`,
@@ -406,11 +424,10 @@ const HomeScreen = () => {
     myPosts.filter(isPostAwaitingStoreQr).forEach(post => {
       actions.push({
         key: `store-${post.id}`,
-        title: '입고 QR 필요',
+        title: getHomeActionTitle(post),
+        supportingText: getHomeActionSupportingText(post),
         statusLabels: ['입고 QR 필요'],
-        description: `${
-          post.detectedFruitKo ?? '나눔 식재료'
-        }는 입고 QR 인증 전이라 주변 목록에 노출되지 않습니다. ${formatPostLifecycleDate(
+        description: `입고 QR 인증 전이라 주변 목록에 노출되지 않습니다. ${formatPostLifecycleDate(
           post.storeExpiresAt,
           '마감 시간 확인 필요',
         )} 전까지 입고를 완료하세요.`,
@@ -431,14 +448,13 @@ const HomeScreen = () => {
     myPosts.filter(isPostAwaitingPickupConfirmation).forEach(post => {
       actions.push({
         key: `posted-requested-${post.id}`,
-        title: '신청 접수',
+        title: getHomeActionTitle(post),
+        supportingText: getHomeActionSupportingText(post),
         statusLabels: [
           '신청 접수',
           ...(post.requestExpiresAt ? ['수령 제한 시간'] : []),
         ],
-        description: `${
-          post.detectedFruitKo ?? '나눔 식재료'
-        } 신청이 접수됐습니다. 수령 제한 시간 ${formatPostLifecycleDate(
+        description: `신청이 접수됐습니다. 수령 제한 시간 ${formatPostLifecycleDate(
           post.requestExpiresAt,
           '마감 시간 확인 필요',
         )} 전까지 수령 상태를 확인하세요.`,
@@ -452,7 +468,26 @@ const HomeScreen = () => {
     });
 
     if (actions.length > 0) {
-      return actions.slice(0, 3);
+      if (actions.length > 3) {
+        return [
+          ...actions.slice(0, 2),
+          {
+            key: 'manage-more-actions',
+            title: `나머지 ${actions.length - 2}건 보기`,
+            statusLabels: ['전체 관리'],
+            description:
+              '각 나눔의 입고 QR, 신청 접수, 수령 상태를 나눔 관리에서 확인하세요.',
+            buttonLabel: '내 나눔 관리',
+            icon: 'clipboard-list',
+            onPress: () =>
+              navigation.getParent()?.navigate('MyShares', {
+                initialTab: 'posted',
+              }),
+          },
+        ];
+      }
+
+      return actions;
     }
 
     if (requestedPostId != null) {
@@ -611,7 +646,14 @@ const HomeScreen = () => {
                   <DSIcon name={action.icon} size="small" color="primary" />
                 </View>
                 <View style={styles.actionHubItemBody}>
-                  <Text style={styles.actionHubTitle}>{action.title}</Text>
+                  <Text style={styles.actionHubTitle} numberOfLines={2}>
+                    {action.title}
+                  </Text>
+                  {action.supportingText ? (
+                    <Text style={styles.actionHubSupportingText}>
+                      {action.supportingText}
+                    </Text>
+                  ) : null}
                   {action.statusLabels?.length ? (
                     <View style={styles.actionHubStatusRow}>
                       {action.statusLabels.map((label, labelIndex) => (
@@ -943,7 +985,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '800',
     color: colors.textPrimary,
-    marginBottom: 6,
+    lineHeight: 21,
+    marginBottom: 3,
+  },
+  actionHubSupportingText: {
+    fontSize: 12,
+    lineHeight: 16,
+    color: colors.textTertiary,
+    marginBottom: 7,
   },
   actionHubStatusRow: {
     flexDirection: 'row',
@@ -953,12 +1002,16 @@ const styles = StyleSheet.create({
   },
   actionHubStatusLabel: {
     paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingTop: 3,
+    paddingBottom: 2,
     borderRadius: 8,
     backgroundColor: colors.surface,
     color: colors.textSecondary,
     fontSize: 11,
     fontWeight: '800',
+    lineHeight: 14,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   actionHubDescription: {
     fontSize: 13,

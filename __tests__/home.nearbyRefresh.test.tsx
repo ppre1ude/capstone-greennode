@@ -299,6 +299,7 @@ describe('HomeScreen nearby post refresh', () => {
         {
           id: 21,
           fridgeId: 1,
+          fridgeName: '전남대 공유 냉장고',
           authorId: 1,
           detectedFruit: 'banana',
           detectedFruitKo: '바나나',
@@ -376,6 +377,14 @@ describe('HomeScreen nearby post refresh', () => {
       renderer!.root.findAllByProps({ children: '입고 QR 필요' }),
     ).not.toHaveLength(0);
     expect(
+      renderer!.root.findAllByProps({
+        children: '바나나 · 전남대 공유 냉장고',
+      }),
+    ).not.toHaveLength(0);
+    expect(
+      renderer!.root.findAllByProps({ children: '방금 등록' }),
+    ).not.toHaveLength(0);
+    expect(
       renderer!.root.findAllByProps({ children: '신청 접수' }),
     ).not.toHaveLength(0);
     expect(renderer!.root.findAllByProps({ children: '3건' })).not.toHaveLength(
@@ -415,6 +424,114 @@ describe('HomeScreen nearby post refresh', () => {
     await ReactTestRenderer.act(async () => {
       findButtonByText(renderer!, '내 나눔 관리')?.props.onPress();
     });
+    expect(mockParentNavigate).toHaveBeenCalledWith('MyShares', {
+      initialTab: 'posted',
+    });
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
+  it('keeps crowded lifecycle hubs identifiable and sends overflow to share management', async () => {
+    mockedGetMyPosts.mockResolvedValue({
+      success: true,
+      message: 'ok',
+      data: [
+        {
+          id: 41,
+          fridgeId: 1,
+          fridgeName: 'Alpha Fridge',
+          authorId: 1,
+          detectedFruit: 'banana',
+          detectedFruitKo: '바나나',
+          freshnessLabel: 'Fresh',
+          confidenceScore: 0.9,
+          imageUrl: '/static/posts/41.jpg',
+          expirationDate: '2026-05-27',
+          status: 'pending_store',
+          storeExpiresAt: '2026-05-21T12:30:00Z',
+          createdAt: '2026-05-21T12:00:00Z',
+          updatedAt: '2026-05-21T12:00:00Z',
+        },
+        {
+          id: 42,
+          fridgeId: 2,
+          fridgeName: 'Beta Fridge',
+          authorId: 1,
+          detectedFruit: 'tomato',
+          detectedFruitKo: '토마토',
+          freshnessLabel: 'Fresh',
+          confidenceScore: 0.9,
+          imageUrl: '/static/posts/42.jpg',
+          expirationDate: '2026-05-27',
+          status: 'pending_store',
+          storeExpiresAt: '2026-05-21T12:35:00Z',
+          createdAt: '2026-05-21T11:58:00Z',
+          updatedAt: '2026-05-21T11:58:00Z',
+        },
+        {
+          id: 43,
+          fridgeId: 3,
+          fridgeName: 'Gamma Fridge',
+          authorId: 1,
+          detectedFruit: 'apple',
+          detectedFruitKo: '사과',
+          freshnessLabel: 'Fresh',
+          confidenceScore: 0.9,
+          imageUrl: '/static/posts/43.jpg',
+          expirationDate: '2026-05-27',
+          status: 'pending_store',
+          storeExpiresAt: '2026-05-21T12:40:00Z',
+          createdAt: '2026-05-21T11:56:00Z',
+          updatedAt: '2026-05-21T11:56:00Z',
+        },
+        {
+          id: 44,
+          fridgeId: 4,
+          fridgeName: 'Delta Fridge',
+          authorId: 1,
+          detectedFruit: 'lettuce',
+          detectedFruitKo: '상추',
+          freshnessLabel: 'Fresh',
+          confidenceScore: 0.9,
+          imageUrl: '/static/posts/44.jpg',
+          expirationDate: '2026-05-27',
+          status: 'pending_store',
+          storeExpiresAt: '2026-05-21T12:45:00Z',
+          createdAt: '2026-05-21T11:54:00Z',
+          updatedAt: '2026-05-21T11:54:00Z',
+        },
+      ],
+    });
+
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(<HomeScreen />);
+      await Promise.resolve();
+    });
+
+    expect(renderer!.root.findAllByProps({ children: '4건' })).not.toHaveLength(
+      0,
+    );
+    expect(
+      renderer!.root.findAllByProps({ children: '바나나 · Alpha Fridge' }),
+    ).not.toHaveLength(0);
+    expect(
+      renderer!.root.findAllByProps({ children: '토마토 · Beta Fridge' }),
+    ).not.toHaveLength(0);
+    expect(
+      renderer!.root.findAllByProps({ children: '사과 · Gamma Fridge' }),
+    ).toHaveLength(0);
+    expect(
+      renderer!.root.findAllByProps({ children: '나머지 2건 보기' }),
+    ).not.toHaveLength(0);
+
+    await ReactTestRenderer.act(async () => {
+      findButtonByText(renderer!, '내 나눔 관리')?.props.onPress();
+    });
+
     expect(mockParentNavigate).toHaveBeenCalledWith('MyShares', {
       initialTab: 'posted',
     });

@@ -76,7 +76,7 @@ To-do:
 
 - 분류: UX/QA
 - 배경: 사용자가 지금 처리해야 할 나눔 action을 앱에서 바로 봐야 한다.
-- 현재 상태: 홈의 `진행 중인 나눔` 허브와 내 나눔/받은 나눔 화면은 연결됐다. 2026-05-28 회귀 테스트 기준으로 계정 lifecycle action과 최근 신청/등록 fallback action이 노출된다. 2026-06-07 로컬 Jest 기준으로 홈 QR action은 냉장고 메타데이터와 제한 시각을 `InventoryQr`에 전달하고, `foodlink://` deep link는 로그인 및 root navigation 준비 이후 auth-gated route로 소비한다.
+- 현재 상태: 홈의 `진행 중인 나눔` 허브와 내 나눔/받은 나눔 화면은 연결됐다. 2026-05-28 회귀 테스트 기준으로 계정 lifecycle action과 최근 신청/등록 fallback action이 노출된다. 2026-06-07 로컬 Jest 기준으로 홈 QR action은 냉장고 메타데이터와 제한 시각을 `InventoryQr`에 전달하고, `foodlink://` deep link는 로그인 및 root navigation 준비 이후 auth-gated route로 소비한다. 같은 날 crowded lifecycle hub는 품목명/냉장고명/등록 시각을 표시하고 3건 초과 시 `내 나눔 관리` overflow action으로 이동하는 것을 `__tests__/home.nearbyRefresh.test.tsx`로 검증했다.
 - 기대 동작: QR 필요, 신청 접수, 제한 시간, 완료/만료/취소 상태가 사용자 언어로 표시된다.
 - 검증 방법: Android emulator 또는 실기기에서 등록자/신청자 2계정으로 홈, 상세, 내역 화면 기본 동작 점검.
 
