@@ -2,6 +2,8 @@
 
 > 읽기 전용 검토. 파일 수정, 문서 생성, 커밋 없이 수행한 디자인 리뷰 결과를 문서화한다.
 
+> 2026-06-07 상태 갱신: FCM delivery claim copy는 `나눔 알림을 보낼 준비를 했어요`로 낮췄고, FCM 실수신 QA는 2026-05-25에 닫혔다. 운영자 콘솔 프로필 진입은 operator metadata gate와 일반 사용자 비노출 테스트로 보강했다.
+
 ## UX / Design Scorecard
 
 | Dimension | Score | 판단 |
@@ -28,7 +30,7 @@ Overall: **6.8 / 10**
    문서상 수요자는 상세에서 “보관 공유 냉장고 확인 -> 나눔 신청”을 해야 하지만 [PostDetailScreen.tsx](../../src/screens/post/PostDetailScreen.tsx)는 `fridgeId` 중심이고 냉장고명/주소/거리/수령 안내가 약하다. 신청 전 확신을 주는 핵심 정보가 빠져 있다.
 
 3. 몇몇 copy가 backend/운영 현실보다 앞서간다.
-   [PostCompleteScreen.tsx](../../src/screens/post/PostCompleteScreen.tsx)는 “나눔 알림(푸시)이 전송되었습니다”처럼 읽힐 수 있는 copy를 갖는다. 실제 FCM 수신 QA가 남아 있으므로 “전송 요청됨” 또는 “알림 대상에게 알려요” 쪽이 더 안전하다.
+   [PostCompleteScreen.tsx](../../src/screens/post/PostCompleteScreen.tsx)는 당시 “나눔 알림(푸시)이 전송되었습니다”처럼 읽힐 수 있는 copy를 갖고 있었다. 이후 copy는 “나눔 알림을 보낼 준비를 했어요”로 낮췄고, FCM 수신 QA도 2026-05-25에 닫혔다.
 
 4. 홈/지도 UI에는 아직 placeholder가 보인다.
    홈의 `탄소 절감: 준비 중`, 카드의 `방금 전`, `전체보기` 미연결은 MVP 데모에서는 허용 가능하지만, 제품 경험에서는 신뢰도를 낮춘다.
@@ -48,7 +50,7 @@ Overall: **6.8 / 10**
 
 - AI 정량 신호: 품질 보증처럼 들린다. 문서상 confidence는 softmax max 확률이며 차단 기준이 아니다. 사용자/운영자 UI에는 숫자 confidence를 노출하지 않고 `확인 필요`, `AI 분석은 참고용` 같은 정성 안내로 처리한다.
 - `기한 만료`: 실제 expired flow가 MVP에 없으므로 상세 화면에서 무심코 노출되면 상태 체계가 앞서간다. `권장 수령일이 지났어요`처럼 운영/정책 여지를 남기는 표현이 안전하다.
-- `나눔 알림(푸시)이 전송되었습니다`: 실제 FCM 수신 검증 전에는 delivery claim으로 읽힌다.
+- `나눔 알림(푸시)이 전송되었습니다`: 당시에는 delivery claim으로 읽혔다. 현재 앱 copy는 `나눔 알림을 보낼 준비를 했어요`로 낮췄다.
 - `전체보기`: 연결된 화면이 없으면 제거하거나 지도 탭/필터 화면으로 명확히 연결해야 한다.
 - `냉장고 운영자 콘솔`: 도메인 용어로는 맞지만 일반 사용자 메뉴에 있으면 “관리자/admin” 기능처럼 오해된다.
 
@@ -72,7 +74,7 @@ Overall: **6.8 / 10**
 ## Decisions Blocked By Backend/API
 
 - Post detail 응답에 냉장고명, 주소, 거리, 운영 상태를 포함할지.
-- 실제 FCM 수신/읽음 상태를 UI에서 어떻게 claim할지.
+- 서버 저장형 알림 읽음 상태를 UI에서 어떻게 claim할지.
 - 냉장고 운영자 role, 접근 권한, 관리 가능한 fridge mapping.
 - inventory가 public available list의 확장인지, 별도 운영자 재고 레이어인지.
 - `basketId`/registration batch를 정식 도메인으로 채택할지.

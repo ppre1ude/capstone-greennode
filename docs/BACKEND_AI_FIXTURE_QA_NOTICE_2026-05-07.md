@@ -4,6 +4,8 @@
 우선순위: P0/P1
 상태: 프론트는 Phase 1.5 계약 반영, VM/API QA, 실기기 happy path QA, 무기기 fixture/fallback QA를 진행했습니다.
 
+> 2026-06-07 상태 갱신: 이 문서는 2026-05-07 백엔드 확인 요청 기록이다. 아래 FCM 실제 기기 수신 항목은 2026-05-25 실기기+emulator 2계정 QA로 닫혔고, 현재 남은 알림 항목은 서버 저장형 알림 읽음 동기화와 `/notifications` live VM/OpenAPI 재검증이다.
+
 ---
 
 ## 답변 방식 요청
@@ -15,7 +17,7 @@
 - MVP에서는 허용, Post-MVP로 이관
 - 추가 논의 필요
 
-프론트는 답변을 기준으로 MVP flow QA를 다시 돌릴 예정입니다. 특히 `generate -> create -> nearby/fridge list -> detail -> request -> requested 제외` 흐름과 FCM 수신 여부를 최종 확인하려고 합니다.
+프론트는 답변을 기준으로 MVP flow QA를 다시 돌릴 예정이었습니다. 특히 `generate -> create -> nearby/fridge list -> detail -> request -> requested 제외` 흐름과 FCM 수신 여부를 최종 확인하려고 했고, FCM 수신은 2026-05-25에 닫혔습니다.
 
 ---
 
@@ -197,7 +199,7 @@
 
 ## P1. FCM 발송 조건과 payload 확인
 
-프론트는 FCM 수신 handler와 로컬 알림함을 구현했지만, 실제 기기 foreground/background/terminated 수신 QA는 아직 최종 확인 전입니다.
+프론트는 FCM 수신 handler와 로컬 알림함을 구현했고, 실제 기기 foreground/background/terminated 수신 QA는 2026-05-25 실기기+emulator 2계정으로 닫혔습니다.
 
 ### 확인 질문
 
@@ -217,7 +219,7 @@
 ### 완료 기준
 
 - `share_created`와 `share_requested` payload 계약 확정
-- 실제 Android 기기에서 foreground/background/terminated 중 가능한 범위의 수신 확인
+- 실제 Android 기기와 emulator에서 foreground/background/terminated 중 가능한 범위의 수신 확인 완료
 - 수신 실패 시 백엔드 발송 문제인지, Firebase 설정 문제인지, 프론트 수신 문제인지 분리 가능
 
 ---
@@ -273,7 +275,7 @@
 7. `requested` 전환 후 nearby/fridge available 목록 제외
 8. `Stale`/generate 400/무효 `imageToken` 등록 차단 UX
 9. screenshot/UI/low-quality fixture의 rejection 또는 review 처리
-10. `share_created`/`share_requested` FCM 실제 기기 수신
+10. `share_created`/`share_requested` FCM 실제 기기 수신. 2026-05-25 실기기+emulator 2계정 QA로 닫힘
 
 ---
 
@@ -357,4 +359,4 @@
 7. `requested` 전환 후 nearby/fridge available 목록 제외
 8. `Stale`/generate 400/무효 `imageToken` 등록 차단
 9. screenshot fixture는 MVP에서 Fresh 통과 가능, 낮은 confidence면 `확인 필요`
-10. `share_created`/`share_requested` 실제 기기 FCM 수신
+10. `share_created`/`share_requested` 실제 기기 FCM 수신. 2026-05-25 실기기+emulator 2계정 QA로 닫힘

@@ -6,6 +6,8 @@
 MVP flow가 실제 데이터와 실제 실패 케이스에서 끝까지 성립하는지 반복
 점검하는 단계다.
 
+> 2026-06-07 상태 갱신: 이 문서는 2026-05-07 당시 CEO review 기록이다. FCM 실수신 QA는 2026-05-25에 닫혔고, 현재 active backlog는 [VALIDATION_AND_BACKLOG.md](./VALIDATION_AND_BACKLOG.md)를 기준으로 live VM/OpenAPI, AI 정확도/계약, 최신 운영자 계정 검증을 남긴다.
+
 권장 모드: `HOLD_SCOPE` with selective fixes. 범위는 고정하고, MVP 신뢰를
 깨는 결함만 선택적으로 고친다.
 
@@ -33,9 +35,9 @@ MVP flow가 실제 데이터와 실제 실패 케이스에서 끝까지 성립�
 
 - 사용자가 보는 핵심 약속은 남는 식재료를 등록하고, 근처 사용자가 발견해
   신청할 수 있다는 것이다.
-- 현재 남은 리스크는 새 기능 부재보다 "등록 후 식재료명이 fallback으로
+- 당시 남은 리스크는 새 기능 부재보다 "등록 후 식재료명이 fallback으로
   보임", "AI가 명백한 비식품/저품질/스크린샷을 Fresh로 통과시킴",
-  "실제 FCM 수신 QA가 닫히지 않음"처럼 신뢰를 직접 깎는 문제다.
+  "당시 실제 FCM 수신 QA 미완료"처럼 신뢰를 직접 깎는 문제였다.
 - 관리자, 채팅, 예약 확정, 수령 완료, 환경 지표, 소셜 로그인은 지금
   polish해도 MVP의 가장 위험한 구멍을 막지 못한다.
 
@@ -45,9 +47,9 @@ MVP flow가 실제 데이터와 실제 실패 케이스에서 끝까지 성립�
 | --- | --- | --- | --- |
 | P0 | Post AI metadata storage mismatch | 등록 직전에는 `바나나 / 상태가 좋아 보여요 / 91%`가 보이지만, 등록 후 홈/상세/지도 냉장고 목록에서 `나눔 식재료 / 분석 중` fallback이 보인다. 사용자는 내가 등록한 식재료가 제대로 저장됐는지 의심한다. | Backend fix after `POST /posts`, then re-run create -> nearby -> fridge posts -> detail QA |
 | P0 | AI false-positive contract | `stale-or-rotten`, `screenshot-or-ui`, `low-quality` fixture가 live VM API에서 `Fresh`로 통과했다. 프론트는 `imageToken`이 발급되면 최종 차단할 근거가 약하다. | Backend/AI rejection or review contract, then fixture QA with real images |
-| P1 | Real FCM receive QA incomplete | "등록 완료 후 근처 사용자에게 알림"과 "신청 후 공급자에게 알림"을 제품 약속으로 말하려면 foreground/background/terminated 수신 evidence가 필요하다. | Real Android device FCM send/receive QA |
+| P1 | Real FCM receive QA closed 2026-05-25 | "등록 완료 후 근처 사용자에게 알림"과 "신청 후 공급자에게 알림"의 실제 수신은 실기기+emulator 2계정 QA로 닫혔다. | Server notification read-sync live VM 재검증 |
 | P1 | `requested` copy risk | MVP에서 `requested`는 예약 확정이 아닌 신청 접수다. 문구가 흐리면 사용자는 수령이 확정됐다고 오해할 수 있다. | Detail/notification copy check against product brief |
-| P2 | Device-specific permission paths | 위치 권한 거부는 emulator에서 확인됐지만, camera/stale/token/FCM 조합의 실제 기기 QA는 일부 남아 있다. | Focused device QA matrix |
+| P2 | Device-specific permission paths | 위치 권한 거부, camera fallback, FCM token 경로는 후속 QA와 테스트로 보강됐다. | iOS simulator와 추가 기기 matrix |
 
 ## Scope To Hold
 
@@ -84,7 +86,7 @@ MVP flow가 실제 데이터와 실제 실패 케이스에서 끝까지 성립�
 | `POST /posts` after valid generate | AI metadata not persisted | Partially | VM/API and real device QA reproduced | Fallback ingredient/status |
 | `/posts/generate` | Screenshot/low-quality/stale passes as Fresh | No, if token issued | VM fixture basic check reproduced | False shareable result |
 | `requestShare(postId)` | self request or duplicate request | Yes | VM/API QA 403/409 | CTA becomes non-actionable/error copy |
-| FCM foreground/background/terminated | Message not received or not routed | Unknown | Not yet real-device verified | Silent missed notification |
+| FCM foreground/background/terminated | Message not received or not routed | Yes | 2026-05-25 real device + emulator QA | Server read-sync remains separate |
 | Location permission denied | User cannot save missing coordinates | Yes | Emulator/unit QA | Retry/settings CTA |
 | Camera unavailable in test/device | User cannot capture | Partially | Unit fallback QA | Gallery fallback/error alternatives |
 | Invalid or expired `imageToken` | Create should fail | Backend yes, UX needs focused QA | VM invalid token API QA | Registration failure |
@@ -100,9 +102,8 @@ demo is reliable.
 3. Treat AI false-positive handling as a backend/AI contract issue, not a
    front-end copy issue. Frontend warnings help only after the backend can name
    or withhold unsafe results.
-4. Make FCM a verification gate only for the notification claim. Do not let FCM
-   block the core create/discover/request demo if the demo can explicitly state
-   "notification receive QA pending".
+4. FCM 수신 QA는 닫혔으므로 notification claim은 수신 handler와 실제 수신 기준으로 말하고,
+   서버 저장형 읽음 동기화는 live VM/OpenAPI 재검증 대기로 분리한다.
 5. Keep `requested` honest in copy: "신청 접수" not "예약 확정".
 
 ## Next Vertical Slices
@@ -112,7 +113,7 @@ demo is reliable.
 | 1 | Persist AI metadata on created Post | P0 fix | Created item keeps detected fruit, freshness label, confidence across home, detail, fridge list |
 | 2 | Re-run end-to-end create/discover/request QA | P0 verification | `generate -> create -> nearby/fridge -> detail -> request -> requested excluded` is recorded with evidence |
 | 3 | AI false-positive contract | P0/P1 contract | stale, screenshot/UI, low-quality, not-food cases are rejected or marked review-required by server contract |
-| 4 | Real FCM receive QA | P1 verification | `share_created` and `share_requested` are observed on device states or explicitly documented as pending |
+| 4 | Server notification read-sync | P1 verification | `/notifications` OpenAPI 노출과 read/read-all/delete 저장 상태가 live VM에서 확인됨 |
 | 5 | Copy audit for requested state | P1 polish | UI and local notifications say request received, not reservation confirmed |
 
 ## Dream State Delta

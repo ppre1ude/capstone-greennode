@@ -6,7 +6,9 @@
 
 가장 설득력 있는 제품 논리는 명확하다. 남는 식재료를 버리기 전 AI로 나눔 가능성을 확인하고, 가까운 공유 냉장고를 통해 이웃에게 연결한다. 이 내러티브는 `generate -> create -> home/detail/map -> request -> requested 제외`까지 실제 Android/VM QA가 기록되어 있어 꽤 믿을 만하다.
 
-하지만 “알림이 간다”, “AI가 신선도를 판별한다”, “냉장고 운영자가 관리한다”는 문장은 아직 조심해야 한다. FCM 실수신은 환경 blocker로 남아 있고, screenshot/low-quality/stale false-positive는 MVP 허용 또는 Post-MVP 계약으로 분류되어 있다. 냉장고 운영자 콘솔과 바구니는 현재 정적 fixture 기반 운영 콘셉트다.
+하지만 “알림이 간다”, “AI가 신선도를 판별한다”, “냉장고 운영자가 관리한다”는 문장은 아직 조심해야 한다. FCM 실수신은 당시 환경 리스크였고 2026-05-25 실기기+emulator 2계정 QA로 닫혔다. screenshot/low-quality/stale false-positive는 MVP 허용 또는 Post-MVP 계약으로 분류되어 있다. 냉장고 운영자 콘솔과 바구니는 현재 정적 fixture 기반 운영 콘셉트다.
+
+> 2026-06-07 상태 갱신: 이 리뷰의 FCM 항목은 2026-05-17 당시 리스크 기록이다. 현재 active 항목은 live VM/OpenAPI 재검증, AI 정확도/계약, 최신 운영자 계정 검증이다.
 
 ## What Is Already Credible
 
@@ -19,8 +21,8 @@
 
 ## Biggest Product / Story Risks
 
-1. FCM blocker가 MVP claim을 흔든다.
-   “등록하면 근처 사용자에게 즉시 알림”은 아직 실수신 QA 없이는 말하면 안 된다. 데모에서는 “알림 payload/수신 handler/알림함 구현 완료, 실기기 FCM 수신 QA 대기”라고 좁혀야 한다.
+1. 당시 FCM 리스크가 MVP claim을 흔들었다.
+   “등록하면 근처 사용자에게 즉시 알림”은 당시 실수신 QA 없이는 말하면 안 됐다. 2026-05-25 실수신 QA 이후에는 “알림 payload/수신 handler/알림함 구현 완료”까지는 말할 수 있고, 서버 저장형 알림 읽음 동기화는 live VM/OpenAPI 재검증 대상으로 남긴다.
 
 2. AI freshness scan을 과장할 위험이 크다.
    현재 계약은 `Fresh/Mid/Stale` 중심이고, screenshot/UI/low-quality/stale false-positive가 남아 있다. “AI가 안전성을 보장한다”가 아니라 “AI가 나눔 가능성 초안을 제시하고, 위험 케이스는 후속 rejection/review 계약으로 닫는다”가 정확하다.
@@ -36,8 +38,8 @@
 
 ## What Must Be Closed Before Claiming MVP
 
-- FCM 실수신 QA: 2기기/2계정/2 FCM token, Firebase 설정 포함 빌드, VM Firebase credentials 또는 실제 발송 로그 확인.
-- 알림 claim 범위 결정: FCM이 닫히지 않으면 MVP 문장에서 “즉시 알림”을 빼고 “알림함/수신 처리 구현”으로 낮춘다.
+- FCM 실수신 QA: 2026-05-25 실기기+emulator 2계정, debug/release, background/terminated/process-killed/lockscreen tap routing으로 닫힘.
+- 알림 claim 범위 결정: FCM 수신은 닫혔지만, 서버 저장형 알림 읽음 동기화는 live VM/OpenAPI 확인 전에는 낮춰 말한다.
 - AI false-positive 포지셔닝: screenshot/low-quality/stale false-positive를 MVP blocker로 볼지, Post-MVP AI 계약으로 명시할지 문서와 발표 문구를 일치시킨다.
 - 유통기한 정책: 기본 3일 자동값을 MVP 한계로 명시하거나, 수동 수정 필드를 넣기 전까지 “유통기한 인식/OCR”을 말하지 않는다.
 - 운영자 콘솔 분리: MVP 본편이 아니라 “운영 확장 실험”으로만 보여준다.
@@ -72,7 +74,7 @@ Expand:
 ## Founder-Level Next Decisions
 
 1. MVP 발표 문장에 “푸시 알림”을 넣을 것인가?
-   넣으려면 FCM 실수신 QA가 필수다. 못 닫으면 “알림함 구조 구현, 실수신 검증 대기”로 말한다.
+   FCM 실수신 QA는 2026-05-25에 닫혔다. 다만 서버 저장형 알림 읽음 동기화는 live VM/OpenAPI 확인 전에는 “알림함 구조 구현, 읽음 동기화 확인 대기”로 말한다.
 
 2. AI를 “판정”으로 말할 것인가, “보조 확인”으로 말할 것인가?
    현재는 보조 확인이 맞다. “AI freshness guarantee”는 과장이다.
@@ -94,11 +96,11 @@ Expand:
 4. “근처 사용자는 홈과 지도에서 available 나눔 식재료를 발견한다.”
 5. “상세 화면에서 공유 냉장고 위치와 상태를 확인하고 나눔 신청을 누른다.”
 6. “첫 신청이 접수되면 상태는 `requested`가 되고, 홈/지도 available 목록에서 빠진다.”
-7. “알림은 제품 구조상 준비되어 있으며, 실기기 FCM 수신 검증이 마지막 blocker다.”
+7. “알림은 제품 구조와 실기기 FCM 수신까지 검증됐고, 서버 저장형 읽음 동기화는 live VM 재검증 대상이다.”
 8. “운영자 콘솔, 바구니, multi-object, OCR/유통기한 인식은 MVP 이후 신뢰 운영 레이어로 확장한다.”
 
 한 줄 피치:
 
 **FoodLink는 남는 식재료를 AI로 빠르게 확인하고, 가까운 공유 냉장고를 통해 이웃의 신청까지 연결하는 로컬 surplus food sharing MVP다.**
 
-현재 가장 좋은 데모 엔딩은 “우리는 큰 운영 시스템을 만든 척하지 않았다. 가장 중요한 `등록 -> 발견 -> 신청 접수` 루프를 실제 API와 기기에서 닫았고, 이제 알림 실수신과 AI 품질 계약을 닫으면 MVP라고 부를 수 있다”이다.
+현재 가장 좋은 데모 엔딩은 “우리는 큰 운영 시스템을 만든 척하지 않았다. 가장 중요한 `등록 -> 발견 -> 신청 접수` 루프와 FCM 실수신을 실제 API와 기기에서 닫았고, 이제 AI 품질 계약과 live VM 후속 계약을 닫으면 MVP 신뢰도가 더 단단해진다”이다.
