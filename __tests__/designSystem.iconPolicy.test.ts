@@ -42,6 +42,11 @@ const fontAwesome6Fonts = [
   'FontAwesome6_Solid.ttf',
 ];
 
+const vectorIconFonts = [
+  ...fontAwesome6Fonts,
+  'MaterialCommunityIcons.ttf',
+];
+
 const pretendardFonts = [
   'Pretendard-Black.ttf',
   'Pretendard-Bold.ttf',
@@ -70,14 +75,14 @@ describe('design system icon policy', () => {
     expect(filesWithTextIconGlyphs).toEqual([]);
   });
 
-  it('bundles FontAwesome6 fonts in native targets', () => {
+  it('bundles vector icon fonts in native targets', () => {
     const androidGradle = fs.readFileSync('android/app/build.gradle', 'utf8');
     const iosInfoPlist = fs.readFileSync('ios/greennode/Info.plist', 'utf8');
 
     expect(androidGradle).toContain('react-native-vector-icons/fonts.gradle');
     expect(iosInfoPlist).toContain('<key>UIAppFonts</key>');
 
-    fontAwesome6Fonts.forEach(fontName => {
+    vectorIconFonts.forEach(fontName => {
       expect(androidGradle).toContain(fontName);
       expect(iosInfoPlist).toContain(`<string>${fontName}</string>`);
     });

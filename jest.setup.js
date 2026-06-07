@@ -49,6 +49,24 @@ jest.mock('react-native-vector-icons/FontAwesome6', () => {
   };
 });
 
+jest.mock('react-native-vector-icons/MaterialCommunityIcons', () => {
+  const React = require('react');
+  const { Text } = require('react-native');
+
+  const MockIcon = props => React.createElement(Text, props, props.name);
+  MockIcon.hasIcon = jest.fn(() => true);
+  MockIcon.loadFont = jest.fn(() => Promise.resolve());
+  MockIcon.getImageSource = jest.fn(() =>
+    Promise.resolve({ uri: 'mock-icon' }),
+  );
+  MockIcon.getImageSourceSync = jest.fn(() => ({ uri: 'mock-icon' }));
+
+  return {
+    __esModule: true,
+    default: MockIcon,
+  };
+});
+
 jest.mock('react-native-vision-camera', () => {
   const React = require('react');
   const { View } = require('react-native');

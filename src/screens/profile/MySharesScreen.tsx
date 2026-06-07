@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import MaterialCommunityIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { DSButton, DSCard, DSChip, DSIcon, DSText } from '@/design-system';
 import type { RootStackParamList } from '@/navigation/types';
 import {
@@ -334,7 +335,11 @@ const MySharesScreen = ({ route, navigation }: Props) => {
                     initialMode: 'report',
                   })
                 }>
-                <DSIcon name="circle-exclamation" size="small" color="error" />
+                <MaterialCommunityIcon
+                  name="alarm-light-outline"
+                  size={18}
+                  color={colors.textTertiary}
+                />
               </TouchableOpacity>
             </View>
           ) : null}
@@ -568,8 +573,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: colors.error,
-    backgroundColor: '#FFF5F5',
+    borderColor: '#D9D9D9',
+    backgroundColor: '#F7F7F7',
   },
   emptyBox: {
     minHeight: 260,

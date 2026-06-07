@@ -46,6 +46,9 @@ const LABEL_SAMPLE = {
 const PENDING_STORE_TIMEOUT_MS = 10 * 60 * 1000;
 const REQUEST_HOLD_TIMEOUT_MS = 30 * 60 * 1000;
 const ANDROID_NAVIGATION_BAR_FALLBACK_INSET = 48;
+
+const createStoragePolicyStoredAt = (..._anchor: unknown[]): Date =>
+  new Date();
 const SCROLL_CONTENT_MIN_BOTTOM_PADDING = 36;
 const SCROLL_CONTENT_BOTTOM_INSET_GAP = 16;
 const UNKNOWN_FRIDGE_CODE_LABEL = 'QR 스캔 후 확인';
@@ -170,7 +173,13 @@ const InventoryQrContent = ({ navigation, params }: InventoryQrContentProps) => 
   const labelItemName =
     currentBatchLabel || routeItemName || LABEL_SAMPLE.itemName;
   const storagePolicyStoredAt = useMemo(
-    () => new Date(),
+    () =>
+      createStoragePolicyStoredAt(
+        postId,
+        scanMode,
+        batchIndex,
+        labelItemName,
+      ),
     [postId, scanMode, batchIndex, labelItemName],
   );
   const storagePolicy = useMemo(

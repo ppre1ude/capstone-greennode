@@ -8,6 +8,7 @@ import {
 } from '@/api/posts';
 import { getMyPosts, getMyShareRequests } from '@/api/users';
 import { useTrustFeedbackStore } from '@/store/trustFeedbackStore';
+import { colors } from '@/theme';
 import type { Post, UserShareRequestItem } from '@/types';
 
 jest.mock('@react-navigation/native', () => ({
@@ -384,6 +385,10 @@ describe('MySharesScreen', () => {
     expect(reportButton.findAllByProps({ children: '신고하기' })).toHaveLength(
       0,
     );
+    const reportIcon = reportButton.findByProps({
+      name: 'alarm-light-outline',
+    });
+    expect(reportIcon.props.color).toBe(colors.textTertiary);
 
     await ReactTestRenderer.act(async () => {
       reportButton.props.onPress();
