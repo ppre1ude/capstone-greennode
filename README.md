@@ -81,8 +81,6 @@ FoodLink의 목표는 **비대면으로, 가까운 공유 냉장고에서, 안�
 
 ## Core Features
 
-![FoodLink core features](./docs/readme-assets/foodlink-core-features.png)
-
 ### AI 신선도 스캔
 
 사진 한 장에서 식재료 품목과 상태를 확인합니다. AI 결과는 식품 안전 보증이 아니라 사용자가 상태를 판단할 수 있도록 돕는 참고 기준입니다.
@@ -114,6 +112,7 @@ QR은 냉장고 식별자입니다. 서버는 사용자, 냉장고, 진행 중�
 운영자 콘솔은 서비스 신뢰를 위해 필요한 현장 관리 기능입니다. 공유 냉장고가 실제 전달 거점으로 유지되도록 돕습니다.
 
 ## FoodLink Values
+![FoodLink core features](./docs/readme-assets/foodlink-core-features.png)
 
 ### 지역 식재료 순환
 
@@ -126,28 +125,6 @@ QR은 냉장고 식별자입니다. 서버는 사용자, 냉장고, 진행 중�
 ### 객관적 기준 제공
 
 식재료 상태를 사용자가 직접 설명하지 않아도 됩니다. AI가 품목과 상태에 대한 참고 기준을 제공하고, 사용자는 이를 바탕으로 나눔 여부를 판단합니다.
-
-### 유연한 확장
-
-초기에는 캠퍼스와 원룸촌을 중심으로 검증합니다. 이후 지자체, 기업, 커뮤니티가 운영하는 공유 냉장고 인프라와 연결할 수 있습니다.
-
-## Business Plan
-
-일반 사용자는 무료로 나눔에 참여합니다. 수익화는 사용자의 나눔 참여 자체가 아니라, 공유 냉장고 인프라와 데이터가 필요한 조직을 대상으로 확장합니다.
-
-| 대상 | 방향 |
-| --- | --- |
-| 지자체 | 공유 냉장고 위탁 운영, 음식물 쓰레기 감량 정책 연계 |
-| 기업 | Vision AI 신선도 분석 파이프라인 API 제공 |
-| 커뮤니티 | 아파트, 학교, 기관 단위 공유 냉장고 운영 대시보드 제공 |
-
-## Roadmap
-
-| 단계 | 목표 |
-| --- | --- |
-| 1단계: 현재 - 2026 | 전남대 캠퍼스 테스트베드, 공유 냉장고 3-5대 시범 운영 |
-| 2단계: 2026 - 2027 | 광주광역시 지자체 PoC, 음식물 쓰레기 감량 정책 연계 |
-| 3단계: 2027 이후 | 전국 확장, Vision AI 분석 API 사업화 |
 
 ## Team GreenNode
 
@@ -190,13 +167,4 @@ npm run ios
 ```sh
 ssh -L 8080:localhost:80 NHN-Cloud-Server
 ```
-
-## Documents
-
-| 문서 | 설명 |
-| --- | --- |
-| [Product Brief](./docs/PRODUCT_BRIEF.md) | 제품 비전, 사용자 흐름, MVP 경계 |
-| [Domain Model](./docs/DOMAIN_MODEL.md) | FoodLink 도메인 용어와 상태 모델 |
-| [Final Presentation Planning](./docs/FINAL_PRESENTATION_PLANNING_2026-06-03.md) | 최종 발표용 기획 정리 |
-| [Inventory QR PRD](./docs/INVENTORY_QR_PRD_V0.md) | QR 인증과 냉장고 운영 정책 |
 | [Trust Feedback Operating Model](./docs/TRUST_FEEDBACK_OPERATING_MODEL.md) | 평가, 신고, 나눔 신뢰 지표 운영 원칙 |
