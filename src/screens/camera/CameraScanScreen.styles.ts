@@ -15,6 +15,10 @@ export const styles = StyleSheet.create({
     borderRadius: 8,
     marginTop: 10,
   },
+  galleryFallbackButtonText: {
+    color: colors.primary,
+    fontWeight: 'bold',
+  },
   secondaryFallbackButton: {
     width: '100%',
     marginTop: 10,

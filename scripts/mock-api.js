@@ -316,7 +316,10 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST' && path === '/api/v1/posts') {
       const raw = await readBody(req);
       const data = parsePostDataField(raw);
-      if (!data || !imageTokens.has(data.imageToken)) {
+      const hasDemoImageToken =
+        typeof data?.imageToken === 'string' &&
+        data.imageToken.startsWith('demo-image-token-');
+      if (!data || (!imageTokens.has(data.imageToken) && !hasDemoImageToken)) {
         return fail(res, '이미지가 만료되었거나 유효하지 않습니다. 다시 촬영해주세요.');
       }
 
