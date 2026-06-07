@@ -1,270 +1,202 @@
 # FoodLink
 
-FoodLink는 남는 식재료를 Vision AI로 확인하고, 가까운 공유 냉장고의 QR 인증을 통해 실제 보관과 수령까지 연결하는 로컬 식재료 나눔 앱입니다. 이 저장소는 `greennode` 패키지명의 React Native Android/iOS 앱입니다.
+![FoodLink cover](./docs/readme-assets/foodlink-cover.png)
 
-핵심 가치는 사용자가 남는 식재료를 버리기 전에 빠르게 처리하도록 돕는 것입니다. 환경 성취 지표는 핵심 보상이 아니라, 수령까지 완료된 나눔을 바탕으로 사용자가 좋은 행동을 했다는 사실을 확인하는 보조 레이어로 둡니다.
+> Vision AI 및 GIS 기반 매칭 알고리즘을 활용한 친환경 로컬 식재료 나눔 플랫폼
 
-## 현재 기준선
+FoodLink는 집에 남은 식재료를 오늘 필요한 이웃에게 연결하는 비대면 식재료 나눔 서비스입니다. 사용자는 사진 한 장으로 식재료 상태를 확인하고, 가까운 공유 냉장고를 거점으로 보관과 수령을 완료할 수 있습니다.
 
-- 정식 제품 흐름은 `농산물 등록 흐름 -> 보관 QR 인증 -> available -> 신청 접수/임시 선점 -> 수령 QR 인증 -> 완료`입니다.
-- `POST /posts`는 사용자-facing 목록에 바로 노출되는 항목이 아니라 `pending_store` 등록 대기를 만듭니다.
-- 보관 QR 인증이 끝나야 홈, 지도, 냉장고별 목록, `share_created` 알림에 노출됩니다.
-- `requested`는 예약 확정이 아니라 신청 접수와 30분 임시 선점입니다.
-- 다중 감지 응답은 `detections[].shareable` 기준으로 등록 대상과 제외 대상을 나누며, `selectedDetectionId`는 전송하지 않습니다.
-- 서버 저장형 알림, 서버 검색, impact summary는 프론트 연결 경로와 검증 하네스가 준비되어 있지만 최신 live VM/OpenAPI 재검증이 남아 있습니다.
+## Background
 
-## 사용자와 역할
+1인 가구는 계속 늘고 있고, 가정과 소형 음식점에서 발생하는 음식물 쓰레기 비중도 큽니다. 혼자 살거나 소규모로 생활하는 사람은 식재료를 계획대로 모두 쓰지 못하는 일이 자주 생깁니다.
 
-| 역할 | 설명 |
+문제는 남은 식재료가 생겼을 때 선택지가 많지 않다는 점입니다. 그냥 버리기는 아깝고, 냉장고에 넣어두면 잊히기 쉽고, 누군가에게 나누려면 글쓰기와 연락, 약속 조율이 필요합니다.
+
+FoodLink는 초과 구매를 예방하는 앱이 아닙니다. 이미 생긴 여분 식재료를 버리기 전, 동네 안에서 처리할 수 있는 마지막 선택지를 만드는 서비스입니다.
+
+## Problem
+
+### 기존 플랫폼은 식재료 나눔에 맞춰져 있지 않음
+
+당근마켓 같은 하이퍼로컬 플랫폼에는 무료나눔 수요가 있지만, 식재료 나눔에 특화되어 있지는 않습니다. 식품 거래와 공유에는 제한이 많고, 사용자는 매번 게시글을 쓰고 댓글을 확인해야 합니다.
+
+### 대면 나눔의 마찰 비용이 큼
+
+나눔을 하려는 사람은 직접 사진을 찍고 글을 작성해야 합니다. 수령자와 시간과 장소를 맞춰 직접 만나야 하며, 노쇼나 지연이 생기면 식재료 가치보다 조율 비용이 더 커집니다.
+
+### 보관과 수령을 믿기 어려움
+
+비대면으로 나누려면 식재료가 실제로 어디에 보관됐는지, 누가 언제 수령했는지 확인할 장치가 필요합니다. 일반 게시글 기반 나눔은 이 과정을 충분히 보장하지 못합니다.
+
+## Solution
+
+FoodLink는 세 가지 장치로 식재료 나눔의 마찰을 줄입니다.
+
+| Pain Point | Solution |
 | --- | --- |
-| 공급자 | 남는 식재료를 촬영/선택하고, AI 확인 후 공유 냉장고에 보관하려는 사용자 |
-| 수요자 | 주변 공유 냉장고에 보관된 나눔 식재료를 신청하고 수령하려는 사용자 |
-| 냉장고 운영자 | 공유 냉장고의 현장 재고, 수령 확인, 폐기 처리를 관리하는 운영 역할 |
+| 나눔 과정이 번거로움 | 사진 한 장으로 AI가 식재료 종류와 나눔 가능 상태를 확인 |
+| 직접 연락과 대면 부담 | 공유 냉장고를 비대면 전달 거점으로 사용 |
+| 보관/수령 신뢰 부족 | 냉장고 QR로 실제 보관과 수령 흐름을 인증 |
 
-## 핵심 흐름
+FoodLink의 목표는 **비대면으로, 가까운 공유 냉장고에서, 안전한 나눔을 실현하는 것**입니다.
 
-### 농산물 등록 흐름
+## Service Flow
+
+### 공급자
 
 ```text
-식재료 촬영 또는 갤러리 선택
-  -> AI 분석
-  -> 나눔 가능/확인 필요/제외 대상 확인
-  -> 등록 가능 공유 냉장고 선택
-  -> POST /posts
-  -> status: pending_store
-  -> 10분 안에 공유 냉장고 QR 인증
-  -> status: available
-  -> 근처 사용자에게 나눔 알림
+남는 식재료 발견
+  -> 사진 촬영
+  -> AI 상태 확인
+  -> 공유 냉장고 선택
+  -> 냉장고 QR 보관 인증
+  -> 근처 사용자에게 알림
 ```
 
-한 이미지에서 여러 품목이 감지되면 앱은 `shareable=true` 품목만 등록 대상으로 보여줍니다. 최종 등록 payload는 `imageToken`, `fridgeId`, `flow`, 선택 `expirationDate`만 보내고, 서버가 품목별 `PostRead[]`를 반환합니다. 여러 `pending_store` 품목은 QR 화면에서 `1/N` 진행률로 순차 보관 인증합니다.
+공급자는 길게 설명글을 쓰지 않아도 됩니다. 앱이 사진 기반으로 식재료와 상태를 확인하고, 공급자는 실제 보관할 공유 냉장고만 선택합니다.
 
-### 나눔 신청과 수령
+### 수요자
 
 ```text
-홈/지도/알림에서 available 나눔 식재료 발견
-  -> 상세 화면 진입
-  -> 나눔 신청하기
-  -> status: available -> requested
+홈/지도에서 근처 나눔 식재료 발견
+  -> 상세 정보 확인
+  -> 나눔 신청
   -> 30분 임시 선점
-  -> 공유 냉장고 앞에서 수령 QR 인증
-  -> status: completed
+  -> 공유 냉장고 방문
+  -> 냉장고 QR 수령 인증
 ```
 
-`requested`는 신청이 접수되어 잠시 잡혀 있는 상태입니다. 수요자가 제한 시간 안에 수령 QR 인증을 완료해야 실제 나눔 완료가 됩니다.
+수요자는 모르는 사람과 직접 약속하지 않아도 됩니다. 신청 후 제한 시간 안에 공유 냉장고에서 식재료를 찾아 수령합니다.
 
-### 냉장고 운영
+### 냉장고 운영자
 
 ```text
 운영자 콘솔 진입
-  -> 담당 공유 냉장고 재고 요약 확인
-  -> 보관 품목 목록 확인
+  -> 냉장고 재고 요약 확인
+  -> 바구니 후보와 개별 식재료 점검
   -> 만료/폐기 대상 처리
-  -> disposed 상태 반영
 ```
 
-운영자 콘솔 진입은 `/auth/me`의 `isOperator`, `operatorRole`, `operatorFridgeIds`를 기준으로 제어합니다. 소비자 앱 안에서 운영자 권한을 부여하거나 변경하지 않습니다.
+운영자는 시스템 관리자라기보다 공유 냉장고 현장 점검자입니다. 앱 기록과 실제 냉장고 안의 식재료가 맞는지 확인하고, 필요한 항목을 정리합니다.
 
-## 주요 기능
+## Core Features
 
-### 인증과 동네 위치
+![FoodLink core features](./docs/readme-assets/foodlink-core-features.png)
 
-이메일 회원가입/로그인과 JWT 기반 인증을 제공합니다. 사용자는 주변 나눔 식재료와 공유 냉장고를 찾기 위해 동네 위치를 등록해야 합니다. 위치가 없으면 홈, 지도, 등록 흐름 진입 전에 위치 설정으로 안내합니다.
+### AI 신선도 스캔
 
-### Vision AI 나눔 가능 기준 확인
+사진 한 장에서 식재료 품목과 상태를 확인합니다. AI 결과는 식품 안전 보증이 아니라 사용자가 상태를 판단할 수 있도록 돕는 참고 기준입니다.
 
-카메라 촬영 또는 갤러리 선택 이미지로 `POST /posts/generate`를 호출합니다. 백엔드는 대표 식재료, 신선도 등급, `imageToken`, `detections[]`, 선택적 `rejectionReason`/`reviewReason`을 반환합니다.
+현재 흐름은 품목 탐지와 신선도 분류를 분리합니다. 사용자는 분석 결과를 확인한 뒤 공유 냉장고를 선택해 나눔을 진행합니다.
 
-앱은 `Fresh`와 `Mid`를 사용자 흐름에서 `상태가 좋아 보여요`와 `나눔 가능`으로 통합합니다. `Stale` 또는 hard block `rejectionReason`은 등록을 막고, 낮은 confidence나 soft review는 숫자 없이 `확인 필요`로 안내합니다.
+### 위치 기반 공유 냉장고 매칭
 
-### 나눔 식재료 등록과 QR 보관
+지도에서 가까운 공유 냉장고를 확인하고, 냉장고 안에 있는 나눔 식재료를 볼 수 있습니다. 홈은 냉장고 목록보다 오늘 가져갈 수 있는 나눔 식재료를 먼저 보여줍니다.
 
-등록은 `pending_store`에서 시작합니다. 공급자는 선택한 공유 냉장고 앞에서 10분 안에 냉장고 QR을 스캔해야 하고, 보관 인증이 성공해야 `available`로 전환됩니다.
+거리 기반 탐색은 사용자가 실제로 이동 가능한 범위에서만 나눔을 발견하게 합니다.
 
-QR은 냉장고에 고정된 식별자입니다. 인증 자체는 서버가 로그인 사용자, 진행 중인 action, 냉장고, 제한 시간을 검증해 처리합니다.
+### QR 보관/수령 인증
 
-### 홈 발견과 진행 중인 나눔
+공급자가 냉장고 앞에서 QR을 스캔해야 나눔이 공개됩니다. 수요자도 신청 후 QR 수령 인증을 완료해야 나눔이 끝납니다.
 
-홈은 냉장고 목록보다 가까운 `available` 나눔 식재료를 먼저 보여줍니다. 동시에 입고 QR 필요, 수령 QR 필요, 신청 접수, 남은 제한 시간 같은 진행 중인 action을 보여줍니다.
+QR은 냉장고 식별자입니다. 서버는 사용자, 냉장고, 진행 중인 행동, 제한 시간을 함께 확인해 보관과 수령을 처리합니다.
 
-검색은 홈/지도에서 서버 `q` 검색을 우선 시도하고, endpoint 미배포나 실패 시 마지막 unfiltered 목록의 로컬 필터로 fallback합니다.
+### 거리 기반 알림
 
-### 지도와 공유 냉장고 탐색
+공유 냉장고에 나눔이 등록되면 위치 조건에 맞는 사용자에게 알림을 보냅니다. 신청이 접수되면 공급자에게도 알림을 전달합니다.
 
-지도는 주변 공유 냉장고와 각 냉장고 안의 `available` 나눔 식재료를 탐색하는 화면입니다. 냉장고 선택 시 하단 primary surface에서 냉장고 정보, 빈 상태, 내부 목록, 상세 이동 흐름을 제공합니다.
+알림은 사용자가 앱을 계속 보고 있지 않아도 근처 나눔을 놓치지 않게 하는 보조 장치입니다.
 
-### 내 나눔과 받은 나눔
+### 운영자 콘솔
 
-프로필에서는 내가 등록한 나눔 식재료와 내가 신청/수령한 나눔 식재료를 확인합니다. `pending_store`, `available`, `requested`, `completed`, `cancelled`, `expired`, `disposed` 상태를 사용자-facing 문구로 번역해 보여줍니다.
+냉장고 운영자는 현재 재고, 신청 접수 상태, 폐기 후보, 개별 식재료 상태를 확인합니다.
 
-### 알림함과 알림 라우팅
+운영자 콘솔은 서비스 신뢰를 위해 필요한 현장 관리 기능입니다. 공유 냉장고가 실제 전달 거점으로 유지되도록 돕습니다.
 
-FCM payload는 문자열 + camelCase 형식으로 검증하고 로컬 알림함에 기록합니다. 알림을 누르면 관련 나눔 식재료 상세 화면으로 이동합니다.
+## FoodLink Values
 
-서버 저장형 알림 API는 Post-MVP source of truth로 채택했습니다. 앱은 서버 record를 우선하고, 로컬 FCM 기록은 offline/foreground fallback cache로 유지합니다.
+### 지역 식재료 순환
 
-### 수령 경험 평가와 나눔 신고
+남은 식재료를 걱정거리로 두지 않고, 가까운 동네 안에서 필요한 사람에게 연결합니다.
 
-수령 QR 인증으로 완료된 받은 나눔에만 평가와 신고를 허용합니다. 평가는 태그 기반 경험 피드백이고, 신고는 단일 사유를 가진 운영자 검토 큐입니다.
+### 시스템이 보장하는 신뢰
 
-공개 화면의 `나눔 신뢰 지표`는 QR 보관 인증, 수령 완료, 긍정 평가처럼 공개 가능한 긍정/검증 신호만 요약합니다. 신고 건수, 위반 여부, 제재 이력은 공개 뱃지에 노출하지 않습니다.
+사람의 선의에만 기대지 않습니다. AI 확인, 위치 기반 매칭, QR 인증, 알림 기록으로 보관과 수령 흐름을 확인합니다.
 
-### 냉장고 운영자 재고 관리
+### 객관적 기준 제공
 
-운영자는 담당 공유 냉장고의 요약과 보관 품목을 확인하고, `available` 또는 `expired` 품목을 폐기 처리할 수 있습니다. `requested`, `completed`, `pending_store`, `cancelled`, `disposed` 폐기는 서버가 409로 거절합니다.
+식재료 상태를 사용자가 직접 설명하지 않아도 됩니다. AI가 품목과 상태에 대한 참고 기준을 제공하고, 사용자는 이를 바탕으로 나눔 여부를 판단합니다.
 
-## 나눔 상태 모델
+### 유연한 확장
 
-| 상태 | 사용자-facing 의미 | 제품 규칙 |
-| --- | --- | --- |
-| `pending_store` | 입고 대기 | 보관 QR 인증 전이며 public 목록에 노출하지 않습니다. |
-| `available` | 신청 가능 | 보관 QR 인증 후 홈/지도/냉장고 목록에 노출됩니다. |
-| `requested` | 신청 접수/임시 선점 | 30분 동안 추가 신청을 막고 수령 QR 인증을 기다립니다. |
-| `completed` / `picked_up` | 수령 완료 | 수령 QR 인증 또는 예외 운영 처리로 완료됩니다. |
-| `cancelled` | 취소 | 등록자, 신청자, 정책에 따라 종료된 상태입니다. |
-| `expired` | 기한 만료 | 나눔 가능 기간 또는 QR 제한 시간이 지난 상태입니다. |
-| `disposed` | 폐기 완료 | 냉장고 운영자가 현장 폐기 처리한 상태입니다. |
+초기에는 캠퍼스와 원룸촌을 중심으로 검증합니다. 이후 지자체, 기업, 커뮤니티가 운영하는 공유 냉장고 인프라와 연결할 수 있습니다.
 
-`reserved`는 정식 QR 흐름에서 사용하지 않습니다.
+## Business Plan
 
-## 기술 스택
+일반 사용자는 무료로 나눔에 참여합니다. 수익화는 사용자의 나눔 참여 자체가 아니라, 공유 냉장고 인프라와 데이터가 필요한 조직을 대상으로 확장합니다.
+
+| 대상 | 방향 |
+| --- | --- |
+| 지자체 | 공유 냉장고 위탁 운영, 음식물 쓰레기 감량 정책 연계 |
+| 기업 | Vision AI 신선도 분석 파이프라인 API 제공 |
+| 커뮤니티 | 아파트, 학교, 기관 단위 공유 냉장고 운영 대시보드 제공 |
+
+## Roadmap
+
+| 단계 | 목표 |
+| --- | --- |
+| 1단계: 현재 - 2026 | 전남대 캠퍼스 테스트베드, 공유 냉장고 3-5대 시범 운영 |
+| 2단계: 2026 - 2027 | 광주광역시 지자체 PoC, 음식물 쓰레기 감량 정책 연계 |
+| 3단계: 2027 이후 | 전국 확장, Vision AI 분석 API 사업화 |
+
+## Team GreenNode
+
+| 역할 | 이름 |
+| --- | --- |
+| Back-End & Infra | 김구진 |
+| Front-End & Design | 최재원 |
+| PM & AI Engineer | 제혜정 |
+
+## Tech Stack
 
 | 영역 | 기술 |
 | --- | --- |
-| 앱 | React Native 0.85.0, React 19.2.3, TypeScript |
-| 네비게이션 | React Navigation |
-| 상태 관리 | Zustand |
-| HTTP 클라이언트 | Axios |
-| 카메라 | react-native-vision-camera |
-| 이미지 선택 | react-native-image-picker |
-| 지도/위치 | react-native-maps, react-native-geolocation-service |
-| 푸시 알림 | @react-native-firebase/messaging |
-| UI 기반 | `src/theme`, `src/design-system`, react-native-vector-icons |
-| 폼/검증 | react-hook-form, zod |
-| 테스트 | Jest, React Test Renderer |
+| App | React Native, TypeScript |
+| Backend | FastAPI, PostgreSQL/PostGIS, Nginx, Docker Compose |
+| AI | YOLOv8s, ResNet50, OpenCV |
+| Map / Location | Google Maps, GIS distance matching |
+| Notification | Firebase Cloud Messaging |
 
-## 프로젝트 구조
-
-```text
-src/
-  api/            API client와 응답 정규화
-  components/     도메인 데이터를 조합하는 제품 컴포넌트
-  config/         API base URL 등 실행 설정
-  design-system/  GreenNode 토큰 기반 DS 프리미티브
-  features/       inventory, QR, trust 같은 도메인 feature module
-  navigation/     Auth/Main/Root 네비게이션
-  screens/        화면 단위 구현
-  services/       FCM, 디바이스 등록, 알림 처리
-  store/          Zustand store
-  theme/          컬러, 타이포그래피, spacing, radius, layout 토큰
-  types/          API/도메인 타입
-  utils/          정책, validation, formatting helper
-docs/             제품/도메인/API/검증 문서
-scripts/          mock API와 QA 계약 검증 스크립트
-__tests__/        단위/화면/API 계약 테스트
-```
-
-## 시작하기
-
-### 1. 요구 사항
-
-- Node.js `>= 22.11.0`
-- npm
-- React Native 개발 환경
-- Android Studio 또는 Xcode
-- iOS 실행 시 CocoaPods와 Ruby Bundler
-
-React Native 공통 개발 환경은 공식 문서의 [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment)를 따릅니다.
-
-### 2. 의존성 설치
+## Running
 
 ```sh
 npm install
+npm start
+npm run android
 ```
 
-iOS에서 실행할 때는 CocoaPods 의존성을 설치합니다.
+iOS 실행 시에는 CocoaPods 의존성을 설치합니다.
 
 ```sh
 bundle install
 pushd ios
 bundle exec pod install
 popd
+npm run ios
 ```
 
-### 3. API 터널 열기
-
-NHN Cloud API는 SSH 터널을 통해 접근합니다. 실제 VM API를 사용하려면 별도 터미널에서 아래 명령을 실행하고 열어둡니다.
+실제 API는 NHN Cloud VM에 SSH 터널을 열어 접근합니다.
 
 ```sh
 ssh -L 8080:localhost:80 NHN-Cloud-Server
 ```
 
-환경별 base URL은 [src/config/api.ts](./src/config/api.ts)에 정의되어 있습니다.
+## Documents
 
-- Android 에뮬레이터: `http://10.0.2.2:8080`
-- iOS 시뮬레이터: `http://localhost:8080`
-- Android 실기기: [src/config/api.ts](./src/config/api.ts)의 `ANDROID_DEVICE_HOST`에 SSH 터널을 연 PC의 LAN IP 설정
-
-상세 API 계약은 [docs/API_INTEGRATION_CONTRACT.md](./docs/API_INTEGRATION_CONTRACT.md)를 확인합니다.
-
-### 4. Metro 실행
-
-```sh
-npm start
-```
-
-### 5. 앱 실행
-
-Android:
-
-```sh
-npm run android
-```
-
-iOS:
-
-```sh
-npm run ios
-```
-
-## 개발 명령
-
-```sh
-npm run lint
-npm run lint -- --quiet
-npm test -- --runInBand
-node ./node_modules/typescript/bin/tsc --noEmit
-npm run qa:ai-fixtures
-npm run qa:ai-fixtures -- --report-only --shape-only
-npm run qa:backend-contracts
-npm run qa:backend-contracts -- --mutate
-npm run qa:post-mvp-contracts
-npm run mock:api
-```
-
-`qa:backend-contracts -- --mutate`는 실제 VM 또는 격리된 mock API에 대해 상태 변경을 수행합니다. 최신 live VM 증거로 보려면 하네스 report의 `targetIdentity.kind`가 `local-mock`이 아니어야 합니다.
-
-## 문서 지도
-
-| 문서 | 역할 |
+| 문서 | 설명 |
 | --- | --- |
-| [docs/PRODUCT_BRIEF.md](./docs/PRODUCT_BRIEF.md) | 제품 비전, MVP 경계, 사용자 흐름 |
-| [docs/DOMAIN_MODEL.md](./docs/DOMAIN_MODEL.md) | FoodLink 도메인 용어와 상태 모델 |
-| [docs/API_INTEGRATION_CONTRACT.md](./docs/API_INTEGRATION_CONTRACT.md) | API 접속, 요청/응답 계약, FCM 계약 |
-| [docs/VALIDATION_AND_BACKLOG.md](./docs/VALIDATION_AND_BACKLOG.md) | 최신 검증 기준선, 활성 blocker, 다음 작업 |
-| [docs/IMPLEMENTATION_STATUS.md](./docs/IMPLEMENTATION_STATUS.md) | 구현 상태 요약과 검증 이력 |
-| [docs/INVENTORY_QR_PRD_V0.md](./docs/INVENTORY_QR_PRD_V0.md) | QR 인증, 30분 임시 선점, 냉장고 재고 운영 PRD |
-| [docs/TRUST_FEEDBACK_OPERATING_MODEL.md](./docs/TRUST_FEEDBACK_OPERATING_MODEL.md) | 수령 경험 평가, 나눔 신고, 나눔 신뢰 지표 운영 모델 |
-| [docs/POST_MVP_PRODUCT_CONTRACT_DECISIONS.md](./docs/POST_MVP_PRODUCT_CONTRACT_DECISIONS.md) | Post-MVP 제품/계약 결정과 보류 범위 |
-| [docs/DESIGN_SYSTEM.md](./docs/DESIGN_SYSTEM.md) | 디자인 토큰, DS 컴포넌트 레이어, UI 마이그레이션 규칙 |
-| [docs/AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md](./docs/AI_QA_FIXTURES_AND_CAMERA_CHECKLIST.md) | AI fixture와 카메라 QA 체크리스트 |
-| [docs/AUTH_EXPANSION_PHASE4_CONTRACT.md](./docs/AUTH_EXPANSION_PHASE4_CONTRACT.md) | 이메일 인증, 소셜 로그인, 계정 병합 Phase 4 계약 |
-
-## 용어 원칙
-
-- 사용자-facing 문구에는 `post`, `게시글`, `product`, `inventory item` 대신 `나눔 식재료`를 사용합니다.
-- `default_location` 대신 `동네 위치`를 사용합니다.
-- AI 결과를 `부패`, `상함`, `썩음`처럼 확정적으로 표현하지 않습니다.
-- `requested`는 `신청 접수`와 `임시 선점`이며 `예약 확정`이 아닙니다.
-- `pending_store`는 `입고 대기`이며 `등록 완료`나 `신청 가능`이 아닙니다.
-- 공개 화면에는 `trust-summary`, `공급자 신뢰`, `신뢰도 점수` 대신 `나눔 신뢰 지표`를 사용합니다.
+| [Product Brief](./docs/PRODUCT_BRIEF.md) | 제품 비전, 사용자 흐름, MVP 경계 |
+| [Domain Model](./docs/DOMAIN_MODEL.md) | FoodLink 도메인 용어와 상태 모델 |
+| [Final Presentation Planning](./docs/FINAL_PRESENTATION_PLANNING_2026-06-03.md) | 최종 발표용 기획 정리 |
+| [Inventory QR PRD](./docs/INVENTORY_QR_PRD_V0.md) | QR 인증과 냉장고 운영 정책 |
+| [Trust Feedback Operating Model](./docs/TRUST_FEEDBACK_OPERATING_MODEL.md) | 평가, 신고, 나눔 신뢰 지표 운영 원칙 |
