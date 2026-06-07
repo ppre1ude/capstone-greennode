@@ -235,6 +235,32 @@ describe('FridgeSelectScreen QR flow', () => {
     });
   });
 
+  it('shows the server retake message when imageToken is expired', async () => {
+    mockedCreatePost.mockRejectedValue({
+      response: {
+        status: 400,
+        data: {
+          success: false,
+          message: '이미지가 만료되었거나 유효하지 않습니다. 다시 촬영해주세요.',
+          data: null,
+        },
+      },
+    });
+    const { navigation, renderer } = await renderScreen();
+
+    await selectFridgeAndSubmitQr(renderer);
+
+    expect(navigation.replace).not.toHaveBeenCalled();
+    expect(alertSpy).toHaveBeenCalledWith(
+      '오류',
+      '이미지가 만료되었거나 유효하지 않습니다. 다시 촬영해주세요.',
+    );
+
+    await ReactTestRenderer.act(async () => {
+      renderer.unmount();
+    });
+  });
+
   it('keeps selected fridge text readable on the primary selected surface', async () => {
     const { renderer } = await renderScreen();
 

@@ -1141,19 +1141,19 @@ GET /posts/nearby → 근처 available 나눔 식재료
 
 > 이 체크리스트의 빈 항목은 매 개발/QA 실행 때 확인할 조건이다. 구현 완료 여부는 2.2와 [VALIDATION_AND_BACKLOG.md](./VALIDATION_AND_BACKLOG.md)를 기준으로 본다.
 
-- [ ] SSH 터널 열어둔 상태에서 개발
-- [ ] 로그인 요청은 `application/x-www-form-urlencoded` (JSON 아님)
-- [ ] 로그인 필드명은 `username` (email 아님)
-- [ ] **나눔 식재료 등록 전 반드시 generate 호출** → imageToken 획득
-- [ ] **나눔 식재료 등록 시 이미지 파일 보내지 않음** → `application/x-www-form-urlencoded`의 `data=<JSON>`에 imageToken 포함
-- [ ] generate에서 400 수신 시 FastAPI `detail`을 읽고 사용자-facing 안전 문구로 변환
-- [ ] imageToken은 1시간 내 사용 (만료 시 다시 촬영)
-- [ ] generate API Form 필드는 `image`, 선택 `user_hint`
-- [ ] 이미지 URL은 상대경로 → Base URL 붙여서 사용
-- [ ] JWT 토큰 만료 60분 → 401 수신 시 재로그인
-- [ ] 앱 실행 시 위치는 갱신하고, FCM 토큰은 명시적 알림 권한 허용 또는 기존 저장 토큰이 있을 때만 서버에 등록
-- [ ] 나눔 식재료 상세 작성자 판단은 실제 응답의 `authorId` 기준으로 처리
-- [ ] `POST /posts`에는 `imageToken + fridgeId + flow`와 선택 `expirationDate`만 보내고 AI 메타데이터/`selectedDetectionId`/`bbox`는 재전송하지 않는다
+- [ ] SSH 터널 열어둔 상태에서 개발. 2026-06-07 최신 하네스 기준 현재 `localhost:8080`은 `target=local-mock`으로 식별되어 live VM 개발/검증 증거로 보지 않는다.
+- [x] 로그인 요청은 `application/x-www-form-urlencoded` (JSON 아님). 검증: `__tests__/auth.api.test.ts`.
+- [x] 로그인 필드명은 `username` (email 아님). 검증: `__tests__/auth.api.test.ts`.
+- [x] **나눔 식재료 등록 전 반드시 generate 호출** → imageToken 획득. 검증: `__tests__/cameraScan.fallback.test.tsx`, `__tests__/analysisResult.fallback.test.tsx`.
+- [x] **나눔 식재료 등록 시 이미지 파일 보내지 않음** → `application/x-www-form-urlencoded`의 `data=<JSON>`에 imageToken 포함. 검증: `__tests__/posts.api.test.ts`.
+- [x] generate에서 400 수신 시 FastAPI `detail`을 읽고 사용자-facing 안전 문구로 변환. 검증: `__tests__/cameraScan.fallback.test.tsx`, `__tests__/apiError.test.ts`.
+- [x] imageToken은 1시간 내 사용 (만료 시 다시 촬영). 서버가 만료/무효 토큰을 400으로 거절하면 메시지를 보존해 재촬영을 안내한다. 검증: `__tests__/posts.api.test.ts`, `__tests__/fridgeSelect.qrFlow.test.tsx`.
+- [x] generate API Form 필드는 `image`, 선택 `user_hint`. 검증: `__tests__/posts.api.test.ts`.
+- [x] 이미지 URL은 상대경로 → Base URL 붙여서 사용. 검증: `__tests__/posts.api.test.ts`, `__tests__/nearbyPostCard.thumbnail.test.tsx`.
+- [x] JWT 토큰 만료 60분 → 401 수신 시 재로그인. 검증: `__tests__/apiClient.test.ts`.
+- [x] 앱 실행 시 위치는 갱신하고, FCM 토큰은 명시적 알림 권한 허용 또는 기존 저장 토큰이 있을 때만 서버에 등록. 검증: `__tests__/deviceRegistration.notificationPermission.test.ts`.
+- [x] 나눔 식재료 상세 작성자 판단은 실제 응답의 `authorId` 기준으로 처리. 검증: `__tests__/postPolicy.test.ts`, `__tests__/postDetail.requestShare.test.tsx`.
+- [x] `POST /posts`에는 `imageToken + fridgeId + flow`와 선택 `expirationDate`만 보내고 AI 메타데이터/`selectedDetectionId`/`bbox`는 재전송하지 않는다. 검증: `__tests__/posts.api.test.ts`, `__tests__/fridgeSelect.qrFlow.test.tsx`, `__tests__/postCreate.reviewNotice.test.tsx`.
 - [x] `/fridges/{id}/posts`와 `/posts/nearby`는 `PostNearbyRead`라 `confidenceScore`가 없다
 - [x] 백엔드 Phase 1.5 Post 구조 반영: `title/description/category` 의존 제거, 카드 요약은 `PostNearbyRead` 필드 중심, 상세/등록은 `detectedFruitKo/freshnessLabel/confidenceScore/status` 사용
 - [x] 나눔 신청 API 연동: `POST /posts/{id}/requests`, 201/403/409 처리, 신청 후 상세/홈 상태 갱신
