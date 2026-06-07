@@ -15,6 +15,13 @@
 | `large-image`      | 대용량 이미지    | 8MB 이상 또는 고해상도 원본                   | 8MB 초과는 업로드 전 차단                                       | 앱이 멈추지 않고 명확한 오류 문구를 제공한다.                                  |
 | `multi-object`     | 여러 식재료      | 한 장에 서로 다른 식재료가 2개 이상 있는 사진 | 현재 모델: 실제 감지 불가. Phase 4: `detections.length > 1` | 실제 `detections.length > 1`, normalized `bbox`, `reviewReason=multi_object_review`는 object detection 모델 도입 후 검증한다. |
 
+### Supplemental Synthetic Review Fixtures
+
+- 2026-06-07: Added project-owned synthetic fixtures for `shaky-blur`, `too-close`, `too-far`, `packaged-food`, `label-expiration`, and `hidden-interior` under `docs/qa-fixtures/`.
+- These fixtures close the missing image-candidate checklist only. Current-model accuracy remains report-only/shape-only until the AI pipeline can return explicit `rejectionReason` or `reviewReason` values.
+- Source and ownership details are recorded in `docs/qa-fixtures/SOURCES.md`.
+- Local mock shape-only validation passed on 2026-06-07 with all supplemental fixtures recorded as `model accuracy deferred`; `large-image` remains intentionally skipped.
+
 ## Fixture Storage Rule
 
 - 실제 식재료 사진은 저작권/개인정보가 없는 파일만 사용한다.

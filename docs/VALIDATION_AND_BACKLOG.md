@@ -292,12 +292,14 @@ To-do:
 - [x] 음식 하나가 선명하게 찍힌 사진
 - [x] 음식 여러 개가 함께 찍힌 사진. `docs/qa-fixtures/multi-object-review-20260505.jpg`가 `multi-object` fixture로 커밋되어 있으며, 2026-06-07 `npm run qa:ai-fixtures -- --report-only --shape-only`에서 model accuracy deferred 통과로 기록됐다.
 - [x] 어두운 사진. `docs/qa-fixtures/low-quality-review-20260505.jpg`는 `fresh-single`을 downsample/darken한 low-quality fixture이며, 2026-06-07 `npm run qa:ai-fixtures -- --report-only --shape-only`에서 model accuracy deferred 통과로 기록됐다.
-- [ ] 흔들린 사진
-- [ ] 너무 가까운 사진
-- [ ] 너무 먼 사진
-- [ ] 포장재가 있는 사진
-- [ ] 라벨이나 유통기한이 보이는 사진
-- [ ] 내부 상태가 보이지 않는 사진
+- [x] 흔들린 사진. `docs/qa-fixtures/shaky-blur-review-20260607.jpg` synthetic review fixture를 추가했다. 모델 품질 판별은 Phase 4/report-only 항목으로 유지한다.
+- [x] 너무 가까운 사진. `docs/qa-fixtures/too-close-review-20260607.jpg` synthetic framing fixture를 추가했다. 모델 품질 판별은 Phase 4/report-only 항목으로 유지한다.
+- [x] 너무 먼 사진. `docs/qa-fixtures/too-far-review-20260607.jpg` synthetic framing fixture를 추가했다. 모델 품질 판별은 Phase 4/report-only 항목으로 유지한다.
+- [x] 포장재가 있는 사진. `docs/qa-fixtures/packaged-food-review-20260607.jpg` synthetic review fixture를 추가했다. 포장 내부 상태 판별은 Phase 4/report-only 항목으로 유지한다.
+- [x] 라벨이나 유통기한이 보이는 사진. `docs/qa-fixtures/label-expiration-review-20260607.jpg` synthetic label fixture를 추가했다. 실제 라벨/개인정보 노출 없는 프로젝트 소유 이미지다.
+- [x] 내부 상태가 보이지 않는 사진. `docs/qa-fixtures/hidden-interior-review-20260607.jpg` synthetic covered-container fixture를 추가했다. 모델 품질 판별은 Phase 4/report-only 항목으로 유지한다.
+
+2026-06-07 local mock에서 `npm run qa:ai-fixtures -- --report-only --shape-only`로 전체 fixture set을 재검증했다. 새 synthetic review fixture 6개는 모두 `model accuracy deferred`로 통과했고, `large-image`는 의도대로 local-only skipped였다.
 
 ### 4. 한 장 촬영 UX와 multi-object 정책 정리
 

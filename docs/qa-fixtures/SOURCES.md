@@ -10,6 +10,12 @@ not a model-quality evaluation dataset.
 | `not-food` | `not-food-rejected-20260505.jpg` | [Full view of desk.jpg](https://commons.wikimedia.org/wiki/File:Full_view_of_desk.jpg) | Nono cocon | CC0 1.0 | Resized Wikimedia Commons file. |
 | `screenshot-or-ui` | `screenshot-or-ui-rejected-20260505.jpg` | Generated synthetic UI fixture | Codex | Project-owned generated test artifact | Avoids third-party app/map screenshot licensing issues. |
 | `low-quality` | `low-quality-review-20260505.jpg` | Derived from `fresh-single` | Renee Comet / National Cancer Institute, derived by Codex | Public domain derivative | Downsampled and darkened to create a hard-to-evaluate photo. |
+| `shaky-blur` | `shaky-blur-review-20260607.jpg` | Generated synthetic review fixture | Codex | Project-owned generated test artifact | Motion-blur style quality fixture. |
+| `too-close` | `too-close-review-20260607.jpg` | Generated synthetic review fixture | Codex | Project-owned generated test artifact | Extreme-close framing fixture. |
+| `too-far` | `too-far-review-20260607.jpg` | Generated synthetic review fixture | Codex | Project-owned generated test artifact | Distant-food framing fixture. |
+| `packaged-food` | `packaged-food-review-20260607.jpg` | Generated synthetic review fixture | Codex | Project-owned generated test artifact | Sealed package and barcode fixture. |
+| `label-expiration` | `label-expiration-review-20260607.jpg` | Generated synthetic review fixture | Codex | Project-owned generated test artifact | Label and expiration-date fixture. |
+| `hidden-interior` | `hidden-interior-review-20260607.jpg` | Generated synthetic review fixture | Codex | Project-owned generated test artifact | Covered-container fixture where condition is hidden. |
 | `multi-object` | `multi-object-review-20260505.jpg` | [Apples and Bananas.JPG](https://commons.wikimedia.org/wiki/File:Apples_and_Bananas.JPG) | Wilrondeau | CC BY-SA 3.0 / GFDL | Resized Wikimedia Commons file. Attribution and share-alike terms apply. |
 
 `large-image-local-only-20260505.jpg` is intentionally not committed. It is a

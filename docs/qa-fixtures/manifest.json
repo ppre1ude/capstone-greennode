@@ -52,6 +52,63 @@
       "notes": "Blurred, dark, occluded, or otherwise hard-to-evaluate photo. Current backend AI has no quality model; low confidence is review, not automatic blocking."
     },
     {
+      "id": "shaky-blur",
+      "case": "shaky or motion-blurred image",
+      "localPath": "docs/qa-fixtures/shaky-blur-review-20260607.jpg",
+      "expectedOutcome": "rejected_or_review",
+      "confidenceReviewThreshold": 0.9,
+      "expectedReviewReasons": ["low_quality"],
+      "expectedRejectionReasons": ["low_quality"],
+      "notes": "Synthetic motion-blur fixture. Expected to request retake/review once quality detection exists; keep model accuracy report-only until Phase 4."
+    },
+    {
+      "id": "too-close",
+      "case": "food photographed too close",
+      "localPath": "docs/qa-fixtures/too-close-review-20260607.jpg",
+      "expectedOutcome": "rejected_or_review",
+      "confidenceReviewThreshold": 0.9,
+      "expectedReviewReasons": ["low_quality", "review_required"],
+      "expectedRejectionReasons": ["low_quality", "review_required"],
+      "notes": "Synthetic extreme-close fixture with no full food outline. Expected to request retake/review after quality/framing checks land."
+    },
+    {
+      "id": "too-far",
+      "case": "food photographed too far away",
+      "localPath": "docs/qa-fixtures/too-far-review-20260607.jpg",
+      "expectedOutcome": "rejected_or_review",
+      "confidenceReviewThreshold": 0.9,
+      "expectedReviewReasons": ["low_quality", "review_required"],
+      "expectedRejectionReasons": ["low_quality", "review_required"],
+      "notes": "Synthetic wide-frame fixture where the food is too small to inspect. Expected to request retake/review after quality/framing checks land."
+    },
+    {
+      "id": "packaged-food",
+      "case": "packaged food with obscured condition",
+      "localPath": "docs/qa-fixtures/packaged-food-review-20260607.jpg",
+      "expectedOutcome": "rejected_or_review",
+      "expectedReviewReasons": ["review_required"],
+      "expectedRejectionReasons": ["review_required"],
+      "notes": "Synthetic sealed-package fixture. Expected to require review/retake when packaging prevents direct condition inspection."
+    },
+    {
+      "id": "label-expiration",
+      "case": "label or expiration date visible",
+      "localPath": "docs/qa-fixtures/label-expiration-review-20260607.jpg",
+      "expectedOutcome": "rejected_or_review",
+      "expectedReviewReasons": ["review_required"],
+      "expectedRejectionReasons": ["review_required"],
+      "notes": "Synthetic label/expiration fixture. Expected to preserve label-related review evidence without exposing private real labels."
+    },
+    {
+      "id": "hidden-interior",
+      "case": "interior condition not visible",
+      "localPath": "docs/qa-fixtures/hidden-interior-review-20260607.jpg",
+      "expectedOutcome": "rejected_or_review",
+      "expectedReviewReasons": ["review_required", "low_quality"],
+      "expectedRejectionReasons": ["review_required", "low_quality"],
+      "notes": "Synthetic covered-container fixture. Expected to require retake/review because food condition cannot be inspected."
+    },
+    {
       "id": "large-image",
       "case": "large image",
       "localPath": "docs/qa-fixtures/large-image-local-only-20260505.jpg",
