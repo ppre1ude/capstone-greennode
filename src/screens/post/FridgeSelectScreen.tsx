@@ -160,16 +160,26 @@ const FridgeSelectScreen = ({ route, navigation }: Props) => {
       }));
 
       if (response.success && firstCreatedPost) {
-        navigation.replace('InventoryQr', {
+        const inventoryQrParams: RootStackParamList['InventoryQr'] = {
           mode: 'store',
           postId: firstCreatedPost.id,
-          fridgePublicCode: selectedFridge?.publicCode,
-          fridgeName: selectedFridge?.name,
-          fridgeLocation: selectedFridge?.address,
+          itemName:
+            firstCreatedPost.detectedFruitKo ??
+            firstCreatedPost.detectedFruit ??
+            batchItems[0]?.label,
+          fridgePublicCode:
+            firstCreatedPost.fridgePublicCode ??
+            selectedFridge?.publicCode ??
+            undefined,
+          fridgeName: firstCreatedPost.fridgeName ?? selectedFridge?.name,
+          fridgeLocation:
+            firstCreatedPost.fridgeAddress ?? selectedFridge?.address,
           pendingExpiresAt: batchItems[0]?.pendingExpiresAt,
           batchItems: batchItems.length > 1 ? batchItems : undefined,
           batchIndex: batchItems.length > 1 ? 0 : undefined,
-        });
+        };
+
+        navigation.replace('InventoryQr', inventoryQrParams);
       } else {
         Alert.alert(
           '등록 실패',

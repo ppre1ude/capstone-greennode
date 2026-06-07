@@ -60,6 +60,7 @@ export type RootStackParamList = {
   InventoryQr: {
     mode: 'store' | 'pickup';
     postId: number;
+    itemName?: string | null;
     fridgePublicCode?: string;
     fridgeName?: string;
     fridgeLocation?: string;

@@ -391,19 +391,26 @@ describe('HomeScreen nearby post refresh', () => {
     await ReactTestRenderer.act(async () => {
       findButtonByText(renderer!, '수령 QR 열기')?.props.onPress();
     });
-    expect(mockParentNavigate).toHaveBeenCalledWith('InventoryQr', {
-      mode: 'pickup',
-      postId: 31,
-      pendingExpiresAt: '2026-05-21T12:20:00Z',
-    });
+    expect(mockParentNavigate).toHaveBeenCalledWith(
+      'InventoryQr',
+      expect.objectContaining({
+        mode: 'pickup',
+        postId: 31,
+        pendingExpiresAt: '2026-05-21T12:20:00Z',
+      }),
+    );
 
     await ReactTestRenderer.act(async () => {
       findButtonByText(renderer!, '입고 QR 열기')?.props.onPress();
     });
-    expect(mockParentNavigate).toHaveBeenCalledWith('InventoryQr', {
-      mode: 'store',
-      postId: 21,
-    });
+    expect(mockParentNavigate).toHaveBeenCalledWith(
+      'InventoryQr',
+      expect.objectContaining({
+        mode: 'store',
+        postId: 21,
+        pendingExpiresAt: '2026-05-21T12:30:00Z',
+      }),
+    );
 
     await ReactTestRenderer.act(async () => {
       findButtonByText(renderer!, '내 나눔 관리')?.props.onPress();

@@ -76,7 +76,7 @@ To-do:
 
 - 분류: UX/QA
 - 배경: 사용자가 지금 처리해야 할 나눔 action을 앱에서 바로 봐야 한다.
-- 현재 상태: 홈의 `진행 중인 나눔` 허브와 내 나눔/받은 나눔 화면은 연결됐다. 2026-05-28 회귀 테스트 기준으로 계정 lifecycle action과 최근 신청/등록 fallback action이 노출된다.
+- 현재 상태: 홈의 `진행 중인 나눔` 허브와 내 나눔/받은 나눔 화면은 연결됐다. 2026-05-28 회귀 테스트 기준으로 계정 lifecycle action과 최근 신청/등록 fallback action이 노출된다. 2026-06-07 로컬 Jest 기준으로 홈 QR action은 냉장고 메타데이터와 제한 시각을 `InventoryQr`에 전달하고, `foodlink://` deep link는 로그인 및 root navigation 준비 이후 auth-gated route로 소비한다.
 - 기대 동작: QR 필요, 신청 접수, 제한 시간, 완료/만료/취소 상태가 사용자 언어로 표시된다.
 - 검증 방법: Android emulator 또는 실기기에서 등록자/신청자 2계정으로 홈, 상세, 내역 화면 기본 동작 점검.
 
@@ -89,6 +89,7 @@ To-do:
 - [x] 홈 또는 전용 허브에서 사용자가 지금 처리해야 할 나눔 action을 볼 수 있다.
 - [x] 진행 중인 action은 `입고 QR 필요`, `수령 QR 필요`, `신청 접수`, `수령 제한 시간`, `완료/만료/취소` 같은 사용자-facing 상태로 표시된다. 홈은 active QR/request label을, MyShares는 완료/만료/취소 lifecycle 표면을 맡는다.
 - [x] 2026-05-28 실기기 QA에서 발견한 `requestExpiresAt` timezone 해석 문제를 수정한 뒤 진행 중인 나눔 허브와 받은 나눔 수령 QR 상태를 재검증한다. 증거는 `temp/android-device-qa-20260528T234844/19-home-after-request.png`, `20-received-shares-after-request.png`다.
+- [x] 2026-06-07 홈 QR action과 `foodlink://inventory`, `foodlink://posts`, `foodlink://my-shares`, `foodlink://operator/fridges` deep link parser 회귀 테스트를 추가했다. 검증: `npm test -- --runInBand __tests__/home.nearbyRefresh.test.tsx __tests__/appNavigator.notificationFlush.test.tsx`.
 
 ### Android 시각 회귀 QA
 
@@ -167,6 +168,7 @@ To-do:
 - [x] 등록 확인 화면에서 수동 권장일 선택과 `selectedDetectionId` 전송을 제거하고 `expirationDate: null`로 서버 자동 기한 계산을 사용한다.
 - [ ] 최신 VM에서 실제 `detections.length >= 2`, `shareable=false`, 절대 픽셀 `bbox`, `PostRead[]` 응답, 서버 crop `imageUrl`을 재검증한다.
 - [x] 일괄 생성된 여러 `pending_store` 품목은 QR 화면에서 `1/N` 진행률과 다음 품목 CTA로 순차 보관 인증한다.
+- [x] 2026-06-07 등록 성공 첫 품목의 `itemName`을 `InventoryQr` route로 전달하고 QR 보관 안내의 품목별 보관 정책 계산에 사용한다. 검증: `npm test -- --runInBand __tests__/fridgeSelect.qrFlow.test.tsx __tests__/inventoryQr.screen.test.tsx`.
 
 ### 운영자 role 관리 UI
 

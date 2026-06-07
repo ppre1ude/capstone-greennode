@@ -189,6 +189,7 @@ describe('FridgeSelectScreen QR flow', () => {
     expect(navigation.replace).toHaveBeenCalledWith('InventoryQr', {
       mode: 'store',
       postId: 55,
+      itemName: createdPost.detectedFruitKo,
       fridgePublicCode: 'GJ-STATION-001',
       fridgeName: '광주역 앞 공유냉장고',
       fridgeLocation: '광주 북구 중흥동',

@@ -395,6 +395,9 @@ const HomeScreen = () => {
           navigation.getParent()?.navigate('InventoryQr', {
             mode: 'pickup',
             postId: item.post.id,
+            fridgePublicCode: item.post.fridgePublicCode ?? undefined,
+            fridgeName: item.post.fridgeName ?? undefined,
+            fridgeLocation: item.post.fridgeAddress ?? undefined,
             pendingExpiresAt: item.post.requestExpiresAt ?? undefined,
           }),
       });
@@ -417,6 +420,10 @@ const HomeScreen = () => {
           navigation.getParent()?.navigate('InventoryQr', {
             mode: 'store',
             postId: post.id,
+            fridgePublicCode: post.fridgePublicCode ?? undefined,
+            fridgeName: post.fridgeName ?? undefined,
+            fridgeLocation: post.fridgeAddress ?? undefined,
+            pendingExpiresAt: post.storeExpiresAt ?? undefined,
           }),
       });
     });

@@ -44,12 +44,6 @@ const LABEL_SAMPLE = {
 };
 
 const HOLD_STARTED_AT = new Date('2026-05-19T00:00:00.000Z');
-const SAMPLE_STORAGE_POLICY = resolveStoragePolicy({
-  itemName: LABEL_SAMPLE.itemName,
-  quality: LABEL_SAMPLE.quality,
-  storedAt: HOLD_STARTED_AT,
-});
-
 const PENDING_STORE_TIMEOUT_MS = 10 * 60 * 1000;
 const REQUEST_HOLD_TIMEOUT_MS = 30 * 60 * 1000;
 const ANDROID_NAVIGATION_BAR_FALLBACK_INSET = 48;
@@ -172,6 +166,19 @@ const InventoryQrContent = ({ navigation, params }: InventoryQrContentProps) => 
     typeof currentBatchItem?.label === 'string'
       ? currentBatchItem.label.trim()
       : '';
+  const routeItemName =
+    typeof params.itemName === 'string' ? params.itemName.trim() : '';
+  const labelItemName =
+    currentBatchLabel || routeItemName || LABEL_SAMPLE.itemName;
+  const storagePolicy = useMemo(
+    () =>
+      resolveStoragePolicy({
+        itemName: labelItemName,
+        quality: LABEL_SAMPLE.quality,
+        storedAt: HOLD_STARTED_AT,
+      }),
+    [labelItemName],
+  );
   const nextBatchItem = hasBatchProgress
     ? batchItems[batchIndex + 1]
     : undefined;
@@ -360,10 +367,10 @@ const InventoryQrContent = ({ navigation, params }: InventoryQrContentProps) => 
     confirmedStoreResult?.storageZone === 'ETHYLENE_SEPARATED' ||
     confirmedPickupResult?.storageZone === 'ETHYLENE_SEPARATED'
       ? '에틸렌 분리 구역'
-      : SAMPLE_STORAGE_POLICY.zoneLabel;
+      : storagePolicy.zoneLabel;
   const deadlineLabel = confirmedStoreResult?.storageDeadlineAt
     ? new Date(confirmedStoreResult.storageDeadlineAt).toLocaleString()
-    : SAMPLE_STORAGE_POLICY.deadlineLabel;
+    : storagePolicy.deadlineLabel;
   const contentBottomPadding =
     Platform.OS === 'android'
       ? SCROLL_CONTENT_MIN_BOTTOM_PADDING
@@ -486,7 +493,7 @@ const InventoryQrContent = ({ navigation, params }: InventoryQrContentProps) => 
             <>
               <InventoryLabelInstructionCard
                 deadlineLabel={deadlineLabel}
-                itemName={LABEL_SAMPLE.itemName}
+                itemName={labelItemName}
                 labelCode={labelCode}
                 storageZone={storageZoneLabel}
                 testID="inventory-qr-label"
@@ -494,9 +501,9 @@ const InventoryQrContent = ({ navigation, params }: InventoryQrContentProps) => 
               <View style={styles.policyPanel}>
                 <Text style={styles.policyTitle}>보관 정책 안내</Text>
                 <Text style={styles.policyText}>
-                  {SAMPLE_STORAGE_POLICY.guidance}
+                  {storagePolicy.guidance}
                 </Text>
-                {SAMPLE_STORAGE_POLICY.needsReview ? (
+                {storagePolicy.needsReview ? (
                   <Text style={styles.policyReviewText}>
                     운영자 확인 대상입니다. 이 기준은 서비스 노출과 회수
                     판단용입니다.
