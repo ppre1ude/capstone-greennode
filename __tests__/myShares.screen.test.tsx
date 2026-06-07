@@ -347,6 +347,62 @@ describe('MySharesScreen', () => {
     });
   });
 
+  it('keeps report as a compact icon action for completed received shares', async () => {
+    mockedGetMyShareRequests.mockResolvedValue({
+      success: true,
+      message: 'ok',
+      data: [
+        {
+          ...receivedItem,
+          request: {
+            ...receivedItem.request,
+            status: 'completed',
+          },
+          post: {
+            ...receivedItem.post,
+            status: 'completed',
+            pickedUpAt: '2026-05-26T00:35:00Z',
+          },
+        },
+      ],
+    });
+
+    let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
+
+    await ReactTestRenderer.act(async () => {
+      renderer = ReactTestRenderer.create(
+        <MySharesScreen
+          navigation={navigation as never}
+          route={{ params: { initialTab: 'received' } } as never}
+        />,
+      );
+      await Promise.resolve();
+    });
+
+    const reportButton = findTouchableByText(renderer!, '신고하기');
+
+    expect(reportButton.findAllByProps({ children: '신고하기' })).toHaveLength(
+      0,
+    );
+
+    await ReactTestRenderer.act(async () => {
+      reportButton.props.onPress();
+    });
+
+    expect(navigation.navigate).toHaveBeenCalledWith('ShareFeedback', {
+      requestId: 55,
+      postId: 41,
+      providerId: 4,
+      fruitName: '사과',
+      fridgeName: '중앙 공유 냉장고',
+      initialMode: 'report',
+    });
+
+    await ReactTestRenderer.act(async () => {
+      renderer?.unmount();
+    });
+  });
+
   it('marks completed received shares as reviewed after local feedback submission', async () => {
     mockedGetMyShareRequests.mockResolvedValue({
       success: true,

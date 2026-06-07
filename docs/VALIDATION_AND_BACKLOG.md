@@ -124,7 +124,7 @@ To-do:
 
 - 분류: 디자인 시스템 debt
 - 배경: DS primitive와 `DSIcon` 기준은 세웠지만 일부 테스트 fixture와 후속 화면의 glyph/emoji debt가 남아 있다.
-- 현재 상태: 앱 UI와 DS component fixture의 직접 glyph/emoji는 정책 테스트 범위에 들어갔다. `src`/`__tests__` grep상 남은 emoji는 앱 UI가 아닌 API 주석 경고 기호뿐이다.
+- 현재 상태: 앱 UI와 DS component fixture의 직접 glyph/emoji는 정책 테스트 범위에 들어갔다. `src`/`__tests__` grep상 남은 emoji는 앱 UI가 아닌 API 주석 경고 기호뿐이다. 2026-06-07 `MySharesScreen`의 완료 받은 나눔 신고 action은 텍스트 버튼 대신 접근성 label이 있는 compact icon action으로 정리했고 `__tests__/myShares.screen.test.tsx`로 회귀 확인했다.
 - 기대 동작: 사용자-facing UI는 emoji/Text glyph 대신 design-system icon을 우선 사용한다.
 
 To-do:
@@ -175,6 +175,7 @@ To-do:
 - 분류: Post-MVP/운영 기능
 - 배경: `/auth/me` role metadata는 연결됐지만 role 관리 자체는 아직 제품 UI가 아니다. 2026-05-29 결정으로 소비자 앱 안의 role 부여/변경 UI는 제외한다.
 - 기대 동작: 실제 운영자 계정만 운영자 콘솔에 진입하고, role 부여/변경은 backend seed, admin CLI, 또는 별도 web backoffice에서 처리한다.
+- 현재 상태: 2026-06-07 로컬 Jest 기준으로 운영자 콘솔은 재고/폐기 API 연결 상태를 사용자-facing 동기화 문구로 표시하고, `백엔드`/`API` 배포 상태 같은 내부 표현을 빈 상태에서 노출하지 않는다.
 
 To-do:
 

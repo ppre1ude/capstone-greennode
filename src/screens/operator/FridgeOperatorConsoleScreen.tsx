@@ -248,7 +248,7 @@ const FridgeOperatorConsoleScreen = ({ navigation, route }: Props) => {
         setInventoryError(
           summaryResponse.message ||
             itemsResponse.message ||
-            '운영자 inventory API를 불러오지 못했습니다.',
+            '운영자 재고를 불러오지 못했습니다.',
         );
       }
     } catch (error) {
@@ -261,7 +261,7 @@ const FridgeOperatorConsoleScreen = ({ navigation, route }: Props) => {
       setInventoryError(
         getApiErrorMessage(
           error,
-          '운영자 inventory API를 불러오지 못했습니다. 샘플 데이터를 읽기 전용으로 표시합니다.',
+          '운영자 재고를 불러오지 못했습니다. 기존 점검 예시를 참고용으로 표시합니다.',
         ),
       );
     } finally {
@@ -344,11 +344,11 @@ const FridgeOperatorConsoleScreen = ({ navigation, route }: Props) => {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.prototypeBanner}>
-          <Text style={styles.prototypeBadge}>실제 운영자 API 연결</Text>
-          <Text style={styles.prototypeText}>
-            폐기 후보 항목은 운영자 API로 바로 처분 요청을 보냅니다. 백엔드가
-            아직 배포되지 않았다면 실패 메시지가 표시됩니다.
+        <View style={styles.connectionBanner}>
+          <Text style={styles.connectionBadge}>운영자 재고 동기화</Text>
+          <Text style={styles.connectionText}>
+            폐기 후보 항목은 현장 재고와 바로 연결됩니다. 처리에 실패하면
+            상태를 유지하고 다시 시도할 수 있습니다.
           </Text>
           {isLoadingInventory ? (
             <View style={styles.syncRow}>
@@ -501,8 +501,8 @@ const FridgeOperatorConsoleScreen = ({ navigation, route }: Props) => {
                     점검할 식재료가 없습니다
                   </Text>
                   <Text style={styles.emptyText}>
-                    백엔드 inventory API가 빈 목록을 반환했습니다. 새 나눔이
-                    보관되면 이 영역에 표시됩니다.
+                    현재 점검할 항목이 없습니다. 새 나눔이 보관되면 이
+                    영역에 표시됩니다.
                   </Text>
                   <TouchableOpacity
                     style={styles.retryButton}
@@ -575,19 +575,19 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingBottom: 36,
   },
-  prototypeBanner: {
+  connectionBanner: {
     backgroundColor: '#FFF7ED',
     borderRadius: 12,
     padding: 14,
     borderWidth: 1,
     borderColor: '#FED7AA',
   },
-  prototypeBadge: {
+  connectionBadge: {
     fontSize: 13,
     fontWeight: '800',
     color: '#9A3412',
   },
-  prototypeText: {
+  connectionText: {
     marginTop: 4,
     fontSize: 12,
     color: '#9A3412',

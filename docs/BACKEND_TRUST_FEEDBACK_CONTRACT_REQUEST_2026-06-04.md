@@ -276,7 +276,7 @@ QR 보관 인증
 
 ## 프론트 데모와 실제 API 연결 차이
 
-현재 프론트 데모는 API 배포 전에도 발표 시연이 가능하도록 로컬 상태에 저장한다. 백엔드 API가 준비되면 다음 경로로 교체한다.
+2026-06-07 현재 프론트는 로컬 데모 저장소가 아니라 실제 API client 경로를 사용한다. 백엔드 최신 VM 재검증 전에는 local mock과 `npm run qa:backend-contracts -- --mutate` 하네스로 아래 계약 drift를 먼저 잡는다.
 
 - `ShareFeedbackScreen`의 평가 제출 -> `POST /share-requests/{requestId}/review`
 - `ShareFeedbackScreen`의 신고 제출 -> `POST /share-requests/{requestId}/report`
@@ -284,10 +284,12 @@ QR 보관 인증
 
 ## QA 체크리스트
 
-- [ ] `requested` 상태 신청은 평가/신고 거절
-- [ ] `completed` 상태 신청은 평가/신고 허용
-- [ ] 동일 requester/request 중복 평가 409
-- [ ] 작성자 본인은 자기 나눔 평가 불가
-- [ ] 미지원 태그 422
-- [ ] 신고 생성 후 운영자 검토 목록에 노출
-- [ ] 신고 처리 결과와 제재 이력은 공개 프로필/상세에 미노출
+최신 live VM 재검증은 [VALIDATION_AND_BACKLOG.md](./VALIDATION_AND_BACKLOG.md)의 QR lifecycle/trust/operator 하네스 항목으로 남긴다.
+
+- [x] `requested` 상태 신청은 평가/신고 거절. 2026-06-07 local mock backend feature-contract 하네스 기준 409 확인.
+- [x] `completed` 상태 신청은 평가/신고 허용. 2026-06-07 local mock backend feature-contract 하네스 기준 review/report 생성 확인.
+- [x] 동일 requester/request 중복 평가 409. 2026-06-07 local mock backend feature-contract 하네스 기준 확인.
+- [x] 작성자 본인은 자기 나눔 평가 불가. 2026-06-07 local mock backend feature-contract 하네스 기준 403 확인.
+- [x] 미지원 태그 422. 2026-06-07 local mock backend feature-contract 하네스 기준 확인.
+- [x] 신고 생성 후 운영자 검토 목록에 노출. 2026-06-07 local mock backend feature-contract 하네스 기준 admin report list 노출 확인.
+- [x] 신고 처리 결과와 제재 이력은 공개 프로필/상세에 미노출. 공개 trust summary는 긍정/검증 badge와 count만 정규화한다.
