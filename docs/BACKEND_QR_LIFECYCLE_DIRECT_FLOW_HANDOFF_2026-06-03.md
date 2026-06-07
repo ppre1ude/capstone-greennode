@@ -515,4 +515,4 @@ npm run qa:backend-contracts -- --mutate
 - [x] `POST /posts/{id}/complete`에 기대던 legacy author complete 검증 제거
 - [x] 운영자 계정 fixture 기본값 반영
 - [x] operator summary/items/dispose 권한 matrix를 같은 fixture 냉장고로 검증하도록 하네스 보강
-- [ ] 최신 VM에서 `generate -> create pending_store -> confirm-store -> request -> confirm-pickup -> review/report` E2E 재검증. 2026-06-07 15:23 KST 현재 기본 `localhost:8080`은 `target=local-mock`으로 식별되어 live VM 증거로 보지 않는다.
+- [ ] 최신 VM에서 `generate -> create pending_store -> confirm-store -> request -> confirm-pickup -> review/report` E2E 재검증. 2026-06-07 15:53 KST 현재 기본 `localhost:8080`은 `target=local-mock`으로 식별되어 live VM 증거로 보지 않는다.

@@ -1141,7 +1141,7 @@ GET /posts/nearby → 근처 available 나눔 식재료
 
 > 이 체크리스트의 빈 항목은 매 개발/QA 실행 때 확인할 조건이다. 구현 완료 여부는 2.2와 [VALIDATION_AND_BACKLOG.md](./VALIDATION_AND_BACKLOG.md)를 기준으로 본다.
 
-- [ ] SSH 터널 열어둔 상태에서 개발. 2026-06-07 15:23 KST 최신 하네스 기준 현재 `localhost:8080`은 `target=local-mock`으로 식별되고 `/openapi.json`도 404라 live VM 개발/검증 증거로 보지 않는다. 같은 날 15:24 KST 독립 포트 repo mock은 OpenAPI 계약을 통과했지만 이 역시 live VM 증거가 아니다.
+- [ ] SSH 터널 열어둔 상태에서 개발. 2026-06-07 15:53 KST 최신 하네스 기준 현재 `localhost:8080`은 `target=local-mock`으로 식별되고 `/openapi.json`도 404라 live VM 개발/검증 증거로 보지 않는다. 같은 날 15:24 KST 독립 포트 repo mock은 OpenAPI 계약을 통과했지만 이 역시 live VM 증거가 아니다.
 - [x] 로그인 요청은 `application/x-www-form-urlencoded` (JSON 아님). 검증: `__tests__/auth.api.test.ts`.
 - [x] 로그인 필드명은 `username` (email 아님). 검증: `__tests__/auth.api.test.ts`.
 - [x] **나눔 식재료 등록 전 반드시 generate 호출** → imageToken 획득. 검증: `__tests__/cameraScan.fallback.test.tsx`, `__tests__/analysisResult.fallback.test.tsx`.

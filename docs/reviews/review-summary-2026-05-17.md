@@ -4,21 +4,23 @@
 
 엔지니어링, CEO, 디자인 관점의 공통 결론은 같다.
 
-현재 GreenNode/FoodLink는 `generate -> create -> home/detail/map -> request -> requested 제외` 핵심 루프를 실제 API/Android QA로 상당 부분 검증했다. 다만 “완성된 MVP”라고 말하려면 FCM 실수신, AI false-positive 포지셔닝, 운영자 콘솔 노출, inventory/basket/status-event 계약을 더 닫아야 한다.
+현재 GreenNode/FoodLink는 `generate -> create -> home/detail/map -> request -> requested 제외` 핵심 루프를 실제 API/Android QA로 상당 부분 검증했다. 다만 2026-05-17 당시 “완성된 MVP”라고 말하려면 FCM 실수신, AI false-positive 포지셔닝, 운영자 콘솔 노출, inventory/basket/status-event 계약을 더 닫아야 했다.
+
+> 2026-06-07 상태 갱신: FCM 실수신 QA는 2026-05-25에 닫혔고, 운영자 콘솔 프로필 진입은 operator metadata gate와 테스트로 일반 사용자 노출을 막았다. 현재 남은 항목은 live VM/OpenAPI, AI 정확도/계약, 최신 운영자 계정 검증이다.
 
 가장 안전한 표현은 **“핵심 MVP 플로우가 검증된 프로토타입”**이다.
 
 ## Common P0
 
-1. **FCM 실수신 QA**
-   - `share_created`, `share_requested` 실제 foreground/background/terminated 수신 확인 필요.
-   - Android `google-services.json`, VM Firebase Admin/service account credentials, 2기기/2계정/2 FCM token 환경 필요.
-   - 백엔드 로그에서 실제 발송 완료, `[Mock FCM]`, 반경 내 대상 없음, token 없음, 발송 실패를 구분해야 한다.
+1. **FCM 실수신 QA (2026-05-25 닫힘)**
+   - `share_created`, `share_requested` 실제 foreground/background/terminated 수신은 2026-05-25 실기기+emulator 2계정 QA로 닫혔다.
+   - Android `google-services.json`, VM Firebase Admin/service account credentials, 2기기/2계정/2 FCM token 환경을 갖춘 뒤 검증했다.
+   - 서버 저장형 알림 읽음 동기화와 `/notifications` OpenAPI 노출은 별도 live VM 재검증 항목이다.
 
 2. **운영자 콘솔 release-safe 처리**
-   - 현재 프로필에 일반 사용자 메뉴처럼 노출된다.
-   - 실제 operator 권한, inventory API, 상태 변경 저장이 없으므로 release/demo에서 제품 기능처럼 보이면 위험하다.
-   - 단기 조치: 숨김, feature flag, role placeholder, “읽기 전용 프로토타입” 배너 중 하나를 적용한다.
+   - 프로필 진입은 operator metadata 기반으로 숨김 처리했고 일반 사용자 노출 회귀 테스트를 추가했다.
+   - 최신 VM 실제 operator 권한, inventory API, 상태 변경 저장은 release/demo claim 전에 재검증해야 한다.
+   - 단기 조치는 role gate와 권한 거부 fallback으로 반영했고, 최신 운영자 계정 live VM 확인은 active backlog에 남긴다.
 
 ## Common P1
 
@@ -66,8 +68,8 @@
 
 ## Recommended Execution Order
 
-1. FCM 실수신 QA 환경을 닫고 제품 알림 claim을 확정한다.
-2. 운영자 콘솔을 release-safe하게 격리한다.
+1. 최신 live VM에서 서버 저장형 알림 읽음 동기화와 제품 알림 claim을 재검증한다.
+2. 최신 운영자 계정으로 운영자 콘솔 gate와 권한 fallback을 재검증한다.
 3. 백엔드와 inventory/basket/status-event 계약을 문서로 확정한다.
 4. read-only operator API vertical slice를 만든다: summary/items 조회만.
 5. 상태 변경 event API와 UI는 별도 slice로 진행한다.
