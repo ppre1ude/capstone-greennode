@@ -43,7 +43,6 @@ const LABEL_SAMPLE = {
   quality: 'Mid' as const,
 };
 
-const HOLD_STARTED_AT = new Date('2026-05-19T00:00:00.000Z');
 const PENDING_STORE_TIMEOUT_MS = 10 * 60 * 1000;
 const REQUEST_HOLD_TIMEOUT_MS = 30 * 60 * 1000;
 const ANDROID_NAVIGATION_BAR_FALLBACK_INSET = 48;
@@ -170,14 +169,18 @@ const InventoryQrContent = ({ navigation, params }: InventoryQrContentProps) => 
     typeof params.itemName === 'string' ? params.itemName.trim() : '';
   const labelItemName =
     currentBatchLabel || routeItemName || LABEL_SAMPLE.itemName;
+  const storagePolicyStoredAt = useMemo(
+    () => new Date(),
+    [postId, scanMode, batchIndex, labelItemName],
+  );
   const storagePolicy = useMemo(
     () =>
       resolveStoragePolicy({
         itemName: labelItemName,
         quality: LABEL_SAMPLE.quality,
-        storedAt: HOLD_STARTED_AT,
+        storedAt: storagePolicyStoredAt,
       }),
-    [labelItemName],
+    [labelItemName, storagePolicyStoredAt],
   );
   const nextBatchItem = hasBatchProgress
     ? batchItems[batchIndex + 1]
