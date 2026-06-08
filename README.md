@@ -40,6 +40,11 @@ FoodLink는 세 가지 장치로 식재료 나눔의 마찰을 줄입니다.
 
 FoodLink의 목표는 **비대면으로, 가까운 공유 냉장고에서, 안전한 나눔을 실현하는 것**입니다.
 
+## Design System
+
+<img width="1920" height="1080" alt="18" src="https://github.com/user-attachments/assets/958a5930-0838-4de1-baa7-c93297c9f6ee" />
+
+
 ## Service Flow
 
 ### 공급자
