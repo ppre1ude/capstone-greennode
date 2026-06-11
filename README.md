@@ -6,6 +6,16 @@
 
 FoodLink는 집에 남은 식재료를 오늘 필요한 이웃에게 연결하는 비대면 식재료 나눔 서비스입니다. 사용자는 사진 한 장으로 식재료 상태를 확인하고, 가까운 공유 냉장고를 거점으로 보관과 수령을 완료할 수 있습니다.
 
+## Team GreenNode
+
+<img width="1920" height="1080" alt="2" src="https://github.com/user-attachments/assets/2b6147d6-b934-4626-bda5-6d6f54fd9e20" />
+
+| 역할 | 이름 |
+| --- | --- |
+| Back-End & Infra | 김구진 |
+| Front-End & Design | 최재원 |
+| PM & AI Engineer | 제혜정 |
+
 ## Background
 
 1인 가구는 계속 늘고 있고, 가정과 소형 음식점에서 발생하는 음식물 쓰레기 비중도 큽니다. 혼자 살거나 소규모로 생활하는 사람은 식재료를 계획대로 모두 쓰지 못하는 일이 자주 생깁니다.
@@ -86,6 +96,10 @@ FoodLink의 목표는 **비대면으로, 가까운 공유 냉장고에서, 안�
 
 ## Core Features
 
+<img width="1920" height="1080" alt="11" src="https://github.com/user-attachments/assets/0c09e165-f553-4d9f-b984-dbaddc1c7369" />
+<img width="1920" height="1080" alt="12" src="https://github.com/user-attachments/assets/5288c6b3-560a-4f22-99e8-9ee38bf0af92" />
+
+
 ### AI 신선도 스캔
 
 사진 한 장에서 식재료 품목과 상태를 확인합니다. AI 결과는 식품 안전 보증이 아니라 사용자가 상태를 판단할 수 있도록 돕는 참고 기준입니다.
@@ -125,19 +139,11 @@ QR은 냉장고 식별자입니다. 서버는 사용자, 냉장고, 진행 중�
 
 ### 시스템이 보장하는 신뢰
 
-사람의 선의에만 기대지 않습니다. AI 확인, 위치 기반 매칭, QR 인증, 알림 기록으로 보관과 수령 흐름을 확인합니다.
+신뢰도를 최우선 가치로 생각하며, 사람의 선의에만 기대지 않습니다. AI 확인, 위치 기반 매칭, QR 인증, 알림 기록으로 보관과 수령 흐름을 확인합니다.
 
 ### 객관적 기준 제공
 
 식재료 상태를 사용자가 직접 설명하지 않아도 됩니다. AI가 품목과 상태에 대한 참고 기준을 제공하고, 사용자는 이를 바탕으로 나눔 여부를 판단합니다.
-
-## Team GreenNode
-
-| 역할 | 이름 |
-| --- | --- |
-| Back-End & Infra | 김구진 |
-| Front-End & Design | 최재원 |
-| PM & AI Engineer | 제혜정 |
 
 ## Tech Stack
 
@@ -172,4 +178,3 @@ npm run ios
 ```sh
 ssh -L 8080:localhost:80 NHN-Cloud-Server
 ```
-| [Trust Feedback Operating Model](./docs/TRUST_FEEDBACK_OPERATING_MODEL.md) | 평가, 신고, 나눔 신뢰 지표 운영 원칙 |
