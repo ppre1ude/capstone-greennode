@@ -115,7 +115,7 @@ describe('ProfileScreen operator console entry', () => {
     });
   });
 
-  it('opens the temporary fridge operator console from profile', async () => {
+  it('opens the fridge operator console from an operator profile', async () => {
     useAuthStore.setState({
       user: {
         ...useAuthStore.getState().user!,

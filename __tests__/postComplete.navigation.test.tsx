@@ -50,7 +50,7 @@ describe('PostCompleteScreen navigation', () => {
     dateNow.mockRestore();
   });
 
-  it('keeps the home CTA lifted from the native navigation area', async () => {
+  it('uses the shared footer spacing without presentation-only padding', async () => {
     let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
 
     await ReactTestRenderer.act(async () => {
@@ -66,8 +66,8 @@ describe('PostCompleteScreen navigation', () => {
 
     const footer = renderer!.root.findByType(DSScreenFooter);
 
-    expect(footer.props.bottomInsetGap).toBe(88);
-    expect(footer.props.minBottomPadding).toBe(88);
+    expect(footer.props.bottomInsetGap).toBeUndefined();
+    expect(footer.props.minBottomPadding).toBeUndefined();
 
     await ReactTestRenderer.act(async () => {
       renderer?.unmount();

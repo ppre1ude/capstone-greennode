@@ -118,7 +118,7 @@ describe('FridgeOperatorConsoleScreen', () => {
     alertSpy.mockRestore();
   });
 
-  it('renders the temporary fridge operator verification sections', async () => {
+  it('renders fridge operator inventory verification sections', async () => {
     let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
 
     await ReactTestRenderer.act(async () => {

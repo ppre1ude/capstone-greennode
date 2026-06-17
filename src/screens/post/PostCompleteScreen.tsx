@@ -122,10 +122,7 @@ const PostCompleteScreen = ({ route, navigation }: Props) => {
         </Animated.View>
       </View>
 
-      <DSScreenFooter
-        bottomInsetGap={88}
-        minBottomPadding={88}
-        style={styles.footer}>
+      <DSScreenFooter style={styles.footer}>
         <DSButton
           label="홈으로 돌아가기"
           color="assistive"
