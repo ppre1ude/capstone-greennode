@@ -285,6 +285,7 @@ Montage Android/iOS는 GreenNode의 색상 팔레트 대체재가 아니라 **�
 ### 현재 적용 범위
 
 - 홈의 `NearbyPostCard`는 `DSCard`, `DSChip`, `DSText` 조합으로 마이그레이션했다.
+- 수령 경험 평가의 긍정 태그 선택은 `src/components/trust/ShareReviewPositiveTagSelector.tsx` 제품 컴포넌트가 담당한다. 기본 상태는 neutral outline, 선택 상태만 primary tint/check로 표시해 받은 나눔 카드 CTA와 같은 브랜드 밀도를 유지한다.
 - 로그인/회원가입/위치 설정/나눔 등록/나눔 상세의 반복 CTA, 입력, 상태 표시 패턴은 DS 프리미티브로 점진 치환한다.
 - 카드의 이미지, 상대 시각, 냉장고명 fallback, 상태 라벨 정책은 기존 제품 로직을 유지한다.
 - 새 DS 레이어 적용은 화면 전체 재작성보다 반복되는 버튼/칩/텍스트/입력/카드 패턴을 점진적으로 치환하는 방식으로 진행한다.
@@ -304,6 +305,7 @@ Montage Android/iOS는 GreenNode의 색상 팔레트 대체재가 아니라 **�
 - 기존 화면별 `StyleSheet`에 색상/폰트/간격을 직접 추가해야 한다면, 컴포넌트화하기 어려운 이유가 명확해야 한다.
 - Montage의 `semantic token`, `variant/size/status enum`, `slot-based API`, `loading/disabled/selected state`는 가져오되, Wanted의 blue/neutral 팔레트 값은 가져오지 않는다.
 - `DSChip.selected`는 필터/선택 UI처럼 실제 선택 상태일 때만 쓴다. 단순 상태 뱃지나 품질 라벨은 `tone="primary|success|warning|error|neutral"`로 시각 의도를 표현한다.
+- 도메인 카탈로그 기반의 반복 선택 태그는 화면에서 `DSChip`을 직접 map하지 않고 `src/components/`의 제품 selector로 감싼다. 제품 selector가 touch target, 선택/비선택 색, 아이콘, 폰트 굵기를 고정한다.
 - `DSChip`, `DSCard`, `DSListCell`은 `onPress`가 없으면 비상호작용 `View`로 렌더링한다. 동작하지 않는 요소에 `button` 접근성 역할을 노출하지 않는다.
 - `DSTextField`는 `label`을 기본 접근성 라벨로 사용하고, `status="error"`일 때 `caption`을 오류 힌트로 연결한다.
 

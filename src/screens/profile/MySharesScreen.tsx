@@ -11,8 +11,8 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import MaterialCommunityIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { DSButton, DSCard, DSChip, DSIcon, DSText } from '@/design-system';
+import MySharesSegmentedTabs from '@/components/profile/MySharesSegmentedTabs';
 import type { RootStackParamList } from '@/navigation/types';
 import {
   cancelPost,
@@ -319,28 +319,10 @@ const MySharesScreen = ({ route, navigation }: Props) => {
                   onPress={() =>
                     navigation.navigate('ShareFeedback', {
                       ...feedbackParams,
-                      initialMode: 'review',
                     })
                   }
                 />
               )}
-              <TouchableOpacity
-                accessibilityLabel="신고하기"
-                accessibilityRole="button"
-                activeOpacity={0.82}
-                style={styles.reportIconButton}
-                onPress={() =>
-                  navigation.navigate('ShareFeedback', {
-                    ...feedbackParams,
-                    initialMode: 'report',
-                  })
-                }>
-                <MaterialCommunityIcon
-                  name="alarm-light-outline"
-                  size={18}
-                  color={colors.textTertiary}
-                />
-              </TouchableOpacity>
             </View>
           ) : null}
         </View>
@@ -367,36 +349,12 @@ const MySharesScreen = ({ route, navigation }: Props) => {
         </View>
       </View>
 
-      <View style={styles.tabs}>
-        <TouchableOpacity
-          accessibilityRole="tab"
-          accessibilityState={{ selected: activeTab === 'posted' }}
-          onPress={() => setActiveTab('posted')}
-          style={[styles.tab, activeTab === 'posted' && styles.tabActive]}>
-          <DSText
-            variant="bodyBold"
-            color={activeTab === 'posted' ? 'primary' : 'textSecondary'}>
-            내 나눔
-          </DSText>
-          <DSText variant="small" color="textTertiary">
-            {postedCount}
-          </DSText>
-        </TouchableOpacity>
-        <TouchableOpacity
-          accessibilityRole="tab"
-          accessibilityState={{ selected: activeTab === 'received' }}
-          onPress={() => setActiveTab('received')}
-          style={[styles.tab, activeTab === 'received' && styles.tabActive]}>
-          <DSText
-            variant="bodyBold"
-            color={activeTab === 'received' ? 'primary' : 'textSecondary'}>
-            받은 나눔
-          </DSText>
-          <DSText variant="small" color="textTertiary">
-            {receivedCount}
-          </DSText>
-        </TouchableOpacity>
-      </View>
+      <MySharesSegmentedTabs
+        activeTab={activeTab}
+        postedCount={postedCount}
+        receivedCount={receivedCount}
+        onChange={setActiveTab}
+      />
 
       {isLoading ? (
         <View style={styles.centerBox}>
@@ -494,28 +452,6 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 4,
   },
-  tabs: {
-    flexDirection: 'row',
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
-  },
-  tab: {
-    flex: 1,
-    minHeight: 52,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 2,
-    backgroundColor: '#FFFFFF',
-  },
-  tabActive: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primaryLight,
-  },
   centerBox: {
     flex: 1,
     alignItems: 'center',
@@ -565,16 +501,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     marginLeft: 'auto',
-  },
-  reportIconButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#D9D9D9',
-    backgroundColor: '#F7F7F7',
   },
   emptyBox: {
     minHeight: 260,

@@ -8,7 +8,6 @@ import {
 } from '@/api/posts';
 import { getMyPosts, getMyShareRequests } from '@/api/users';
 import { useTrustFeedbackStore } from '@/store/trustFeedbackStore';
-import { colors } from '@/theme';
 import type { Post, UserShareRequestItem } from '@/types';
 
 jest.mock('@react-navigation/native', () => ({
@@ -340,7 +339,6 @@ describe('MySharesScreen', () => {
       providerId: 4,
       fruitName: '사과',
       fridgeName: '중앙 공유 냉장고',
-      initialMode: 'review',
     });
 
     await ReactTestRenderer.act(async () => {
@@ -348,7 +346,7 @@ describe('MySharesScreen', () => {
     });
   });
 
-  it('keeps report as a compact icon action for completed received shares', async () => {
+  it('does not expose report action for completed received shares', async () => {
     mockedGetMyShareRequests.mockResolvedValue({
       success: true,
       message: 'ok',
@@ -380,28 +378,9 @@ describe('MySharesScreen', () => {
       await Promise.resolve();
     });
 
-    const reportButton = findTouchableByText(renderer!, '신고하기');
-
-    expect(reportButton.findAllByProps({ children: '신고하기' })).toHaveLength(
-      0,
+    expect(() => findTouchableByText(renderer!, '신고하기')).toThrow(
+      'Touchable with text "신고하기" not found',
     );
-    const reportIcon = reportButton.findByProps({
-      name: 'alarm-light-outline',
-    });
-    expect(reportIcon.props.color).toBe(colors.textTertiary);
-
-    await ReactTestRenderer.act(async () => {
-      reportButton.props.onPress();
-    });
-
-    expect(navigation.navigate).toHaveBeenCalledWith('ShareFeedback', {
-      requestId: 55,
-      postId: 41,
-      providerId: 4,
-      fruitName: '사과',
-      fridgeName: '중앙 공유 냉장고',
-      initialMode: 'report',
-    });
 
     await ReactTestRenderer.act(async () => {
       renderer?.unmount();

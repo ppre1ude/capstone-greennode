@@ -1,7 +1,7 @@
 # Trust Feedback Operating Model
 
 > 목적: 수령 경험 평가, 나눔 신고, 공급자 신뢰 뱃지를 구현하거나 백엔드에 요청할 때 평가와 신고를 섞지 않도록 고정한다.
-> 기준일: 2026-06-04
+> 기준일: 2026-06-08
 
 ## 구현 전 결정 게이트
 
@@ -23,8 +23,8 @@
 ## 고정 결정
 
 - 평가와 신고는 모두 `ShareRequest.status=completed`와 `Post.status=completed` 이후에만 가능하다.
-- **수령 경험 평가**는 수령자가 남기는 경험 피드백이다. 여러 개의 긍정/불만족 태그를 선택할 수 있다.
-- **나눔 신고**는 운영자 검토 큐에 들어가는 사건이다. 태그가 아니라 단일 `reasonId`, 작업 상태 `status`, 판단 결과 `resolution`, 운영 조치 `action`을 가진다.
+- **수령 경험 평가**는 수령자가 남기는 경험 피드백이다. 현재 모바일 UI는 여러 개의 긍정 태그만 선택하고 `issueTagIds: []`를 전송한다.
+- **나눔 신고**는 운영자 검토 큐에 들어가는 사건이다. 태그가 아니라 단일 `reasonId`, 작업 상태 `status`, 판단 결과 `resolution`, 운영 조치 `action`을 가진다. 현재 모바일 평가 진입점에서는 신고 UI를 노출하지 않는다.
 - 신고 작업 상태는 `open`, `reviewing`, `closed`를 사용한다.
 - 신고 판단 결과는 `pending`, `dismissed`, `violation_confirmed`를 사용한다.
 - 신고 운영 조치는 `none`, `warning_issued`, `post_hidden`, `post_removed`, `temporary_share_restricted`, `account_suspended`를 사용한다.
@@ -42,7 +42,8 @@
 | `src/features/trust/feedback.ts` | 평가 가능 조건과 공급자 신뢰 뱃지 계산만 관리 |
 | `src/api/trust.ts` | 실제 평가/신고 생성과 공급자 신뢰 요약 조회 API client |
 | `src/store/trustFeedbackStore.ts` | 현재 세션에서 평가 완료 표시를 유지하는 보조 캐시 |
-| `src/screens/trust/ShareFeedbackScreen.tsx` | 수령 완료 건의 평가/신고 입력 UI |
+| `src/components/trust/ShareReviewPositiveTagSelector.tsx` | 긍정 평가 태그 목록과 선택/비선택 스타일을 고정하는 제품 UI |
+| `src/screens/trust/ShareFeedbackScreen.tsx` | 수령 완료 건의 긍정 평가 입력 UI |
 
 구조 규칙:
 
@@ -55,10 +56,10 @@
 
 | 화면 요소 | UI 패턴 | 이유 |
 | --- | --- | --- |
-| 좋았던 점 | 다중 선택 칩 | 수령 경험의 긍정 피드백 |
-| 아쉬웠던 점 | 다중 선택 칩 | 낮은 강도의 경험 피드백 |
-| 신고 사유 선택 | 라디오 버튼 | 운영자 큐 분류를 위한 단일 주 사유 |
-| 신고 제출 | 위험 색상 CTA | 운영자 검토 대상 생성 |
+| 좋았던 점 | `ShareReviewPositiveTagSelector` 다중 선택 태그 | 수령 경험의 긍정 피드백 |
+| 아쉬웠던 점 | 미노출 | 현재 모바일 UI는 긍정 태그만 수집 |
+| 신고 사유 선택 | 미노출 | 신고 UI 재도입 시 평가 태그와 별도 제품 컴포넌트로 구현 |
+| 신고 제출 | 미노출 | 현재 평가 진입점에서는 운영자 검토 대상을 생성하지 않음 |
 | 나눔 신뢰 지표 뱃지 | 표시용 칩 | 공개 가능한 긍정/검증 신호 요약 |
 | 공급자 신뢰 집계 대기/실패 | `0회`/`0건` fallback | 공개 프로필에서 `확인 중` placeholder, 뱃지 수치 불일치, 사용자 전환 stale 지표 노출 방지 |
 
@@ -125,7 +126,9 @@ GET  /api/v1/users/{userId}/trust-summary
 ## 검증 기준
 
 - `__tests__/trust.api.test.ts`: review/report/trust-summary endpoint와 request payload 검증
-- `__tests__/shareFeedback.screen.test.tsx`: 신고 사유가 radio option으로 렌더링되고 실제 API 호출 후 단일 `reasonId`, `open`, `pending`, `none`으로 캐시되는지 검증
+- `__tests__/shareFeedback.screen.test.tsx`: 긍정 태그만 렌더링되고 `아쉬웠던 점`, 신고 사유, radio option이 노출되지 않으며 review payload가 `issueTagIds: []`를 유지하는지 검증
+- `__tests__/shareReviewPositiveTagSelector.component.test.tsx`: 긍정 평가 태그 제품 selector의 neutral 기본 상태와 primary 선택 상태 검증
+- `__tests__/myShares.screen.test.tsx`: 완료된 받은 나눔에서 `평가하기`만 열리고 `신고하기`가 노출되지 않는지 검증
 - `__tests__/trustFeedback.policy.test.ts`: 평가 태그와 신고 사유가 분리된 도메인 카탈로그인지, 신고 상태가 공개 뱃지로 노출되지 않는지 검증
 - `__tests__/profile.operatorConsole.test.tsx`: 공급자 신뢰 요약 조회 실패/대기/사용자 불일치 시 공개 프로필이 `확인 중` placeholder 대신 `0회`/`0건` fallback을 쓰는지 검증
-- Android 에뮬레이터 QA: 신고 기본/선택 화면 스크린샷으로 라디오 UI 확인
+- Android 에뮬레이터 QA: 수령 경험 평가 화면이 positive-only 태그와 평가 CTA만 노출하는지 스크린샷으로 확인

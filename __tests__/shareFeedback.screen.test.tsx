@@ -2,19 +2,15 @@ import React from 'react';
 import { Alert, TouchableOpacity } from 'react-native';
 import ReactTestRenderer from 'react-test-renderer';
 import ShareFeedbackScreen from '@/screens/trust/ShareFeedbackScreen';
-import { createShareReport, createShareReview } from '@/api/trust';
+import { createShareReview } from '@/api/trust';
 import { useTrustFeedbackStore } from '@/store/trustFeedbackStore';
 
 jest.mock('@/api/trust', () => ({
   createShareReview: jest.fn(),
-  createShareReport: jest.fn(),
 }));
 
 const mockedCreateShareReview = createShareReview as jest.MockedFunction<
   typeof createShareReview
->;
-const mockedCreateShareReport = createShareReport as jest.MockedFunction<
-  typeof createShareReport
 >;
 
 const findTouchableByText = (
@@ -61,26 +57,9 @@ describe('ShareFeedbackScreen', () => {
         providerId: 4,
         requesterId: 3,
         positiveTagIds: ['good_condition'],
-        issueTagIds: ['different_from_photo'],
+        issueTagIds: [],
         createdAt: '2026-06-04T12:00:00.000Z',
         updatedAt: '2026-06-04T12:00:00.000Z',
-      },
-    });
-    mockedCreateShareReport.mockResolvedValue({
-      success: true,
-      message: '신고가 접수되었습니다.',
-      data: {
-        id: 2,
-        requestId: 55,
-        postId: 41,
-        providerId: 4,
-        requesterId: 3,
-        reasonId: 'inappropriate_listing',
-        status: 'open',
-        resolution: 'pending',
-        action: 'none',
-        createdAt: '2026-06-04T12:05:00.000Z',
-        updatedAt: '2026-06-04T12:05:00.000Z',
       },
     });
     useTrustFeedbackStore.getState().resetTrustFeedback();
@@ -90,21 +69,20 @@ describe('ShareFeedbackScreen', () => {
     alertSpy.mockRestore();
   });
 
-  it('records selected positive and issue tags as a share review', async () => {
+  it('records selected positive tags as a share review', async () => {
     let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
 
     await ReactTestRenderer.act(async () => {
       renderer = ReactTestRenderer.create(
         <ShareFeedbackScreen
           navigation={navigation as never}
-          route={{ params: { ...routeParams, initialMode: 'review' } } as never}
+          route={{ params: routeParams } as never}
         />,
       );
     });
 
     await ReactTestRenderer.act(async () => {
       findTouchableByText(renderer!, '상태가 좋아요').props.onPress();
-      findTouchableByText(renderer!, '사진과 달라요').props.onPress();
     });
 
     await ReactTestRenderer.act(async () => {
@@ -113,14 +91,14 @@ describe('ShareFeedbackScreen', () => {
 
     expect(mockedCreateShareReview).toHaveBeenCalledWith(55, {
       positiveTagIds: ['good_condition'],
-      issueTagIds: ['different_from_photo'],
+      issueTagIds: [],
     });
     expect(useTrustFeedbackStore.getState().reviews[55]).toMatchObject({
       requestId: 55,
       postId: 41,
       providerId: 4,
       positiveTagIds: ['good_condition'],
-      issueTagIds: ['different_from_photo'],
+      issueTagIds: [],
     });
     expect(alertSpy).toHaveBeenCalledWith(
       '평가 완료',
@@ -133,91 +111,102 @@ describe('ShareFeedbackScreen', () => {
     });
   });
 
-  it('records one report reason as an operator review case', async () => {
+  it('toggles positive tags and enables submit only while one is selected', async () => {
     let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
 
     await ReactTestRenderer.act(async () => {
       renderer = ReactTestRenderer.create(
         <ShareFeedbackScreen
           navigation={navigation as never}
-          route={{ params: { ...routeParams, initialMode: 'report' } } as never}
+          route={{ params: routeParams } as never}
         />,
       );
     });
 
-    await ReactTestRenderer.act(async () => {
-      findTouchableByText(renderer!, '이미 없거나 찾을 수 없었어요').props.onPress();
-      findTouchableByText(renderer!, '부적절한 등록이에요').props.onPress();
-    });
+    expect(
+      findTouchableByText(renderer!, '평가 제출').props.accessibilityState,
+    ).toMatchObject({ disabled: true });
+    expect(
+      findTouchableByText(renderer!, '상태가 좋아요').props.accessibilityState,
+    ).toMatchObject({ selected: false });
 
     await ReactTestRenderer.act(async () => {
-      findTouchableByText(renderer!, '신고 제출').props.onPress();
+      findTouchableByText(renderer!, '상태가 좋아요').props.onPress();
     });
 
-    expect(mockedCreateShareReport).toHaveBeenCalledWith(55, {
-      reasonId: 'inappropriate_listing',
+    expect(
+      findTouchableByText(renderer!, '상태가 좋아요').props.accessibilityState,
+    ).toMatchObject({ selected: true });
+    expect(
+      findTouchableByText(renderer!, '평가 제출').props.accessibilityState,
+    ).toMatchObject({ disabled: false });
+
+    await ReactTestRenderer.act(async () => {
+      findTouchableByText(renderer!, '다시 받고 싶어요').props.onPress();
     });
-    expect(useTrustFeedbackStore.getState().reports[55]).toMatchObject({
-      requestId: 55,
-      postId: 41,
-      providerId: 4,
-      reasonId: 'inappropriate_listing',
-      status: 'open',
-      resolution: 'pending',
-      action: 'none',
+
+    expect(
+      findTouchableByText(renderer!, '다시 받고 싶어요').props
+        .accessibilityState,
+    ).toMatchObject({ selected: true });
+
+    await ReactTestRenderer.act(async () => {
+      findTouchableByText(renderer!, '상태가 좋아요').props.onPress();
     });
-    expect(alertSpy).toHaveBeenCalledWith(
-      '신고 접수',
-      '신고가 접수되었습니다.',
-    );
-    expect(navigation.goBack).toHaveBeenCalled();
+
+    expect(
+      findTouchableByText(renderer!, '상태가 좋아요').props.accessibilityState,
+    ).toMatchObject({ selected: false });
+    expect(
+      findTouchableByText(renderer!, '다시 받고 싶어요').props
+        .accessibilityState,
+    ).toMatchObject({ selected: true });
+
+    await ReactTestRenderer.act(async () => {
+      findTouchableByText(renderer!, '다시 받고 싶어요').props.onPress();
+    });
+
+    expect(
+      findTouchableByText(renderer!, '평가 제출').props.accessibilityState,
+    ).toMatchObject({ disabled: true });
 
     await ReactTestRenderer.act(async () => {
       renderer?.unmount();
     });
   });
 
-  it('renders report reasons as radio options instead of feedback chips', async () => {
+  it('shows only positive feedback tags without report or issue sections', async () => {
     let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
 
     await ReactTestRenderer.act(async () => {
       renderer = ReactTestRenderer.create(
         <ShareFeedbackScreen
           navigation={navigation as never}
-          route={{ params: { ...routeParams, initialMode: 'report' } } as never}
+          route={{ params: routeParams } as never}
         />,
       );
     });
 
-    const reasonRows = renderer!.root.findAll(
-      node =>
-        node.type === TouchableOpacity &&
-        node.props.accessibilityRole === 'radio',
-    );
-
     expect(
-      renderer!.root.findAllByProps({ children: '신고 사유 선택' }),
+      renderer!.root.findAllByProps({ children: '수령 경험 평가' }),
     ).not.toHaveLength(0);
     expect(
-      renderer!.root.findAllByProps({ children: '운영자 처리 분류' }),
+      renderer!.root.findAllByProps({ children: '좋았던 점' }),
+    ).not.toHaveLength(0);
+    expect(
+      renderer!.root.findAllByProps({ children: '아쉬웠던 점' }),
     ).toHaveLength(0);
-    expect(reasonRows).toHaveLength(5);
-    expect(reasonRows[0].props.accessibilityState).toMatchObject({
-      checked: false,
-    });
-
-    await ReactTestRenderer.act(async () => {
-      findTouchableByText(renderer!, '등록 사진과 실제 식재료가 달라요').props.onPress();
-    });
-
-    const selectedReasonRows = renderer!.root.findAll(
-      node =>
-        node.type === TouchableOpacity &&
-        node.props.accessibilityRole === 'radio' &&
-        node.props.accessibilityState?.checked,
-    );
-
-    expect(selectedReasonRows).toHaveLength(1);
+    expect(renderer!.root.findAllByProps({ children: '신고' })).toHaveLength(0);
+    expect(
+      renderer!.root.findAllByProps({ children: '신고 사유 선택' }),
+    ).toHaveLength(0);
+    expect(
+      renderer!.root.findAll(
+        node =>
+          node.type === TouchableOpacity &&
+          node.props.accessibilityRole === 'radio',
+      ),
+    ).toHaveLength(0);
 
     await ReactTestRenderer.act(async () => {
       renderer?.unmount();

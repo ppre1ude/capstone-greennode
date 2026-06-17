@@ -35,9 +35,10 @@
 
 ## 2026-06-04 공급자 신뢰 피드백 데모 업데이트
 
-- 수령 QR 인증으로 `completed`가 된 받은 나눔에만 `평가하기`/`신고하기`를 노출하는 프론트 데모를 추가했다.
-- 평가는 별점 없이 태그 기반으로 처리한다. 긍정 태그와 불만족 태그를 분리하고, 신고는 라디오형 단일 사유와 `open`, `pending`, `none` 상태를 가진 별도 운영자 검토 요청으로 저장한다.
-- 나눔 상세와 프로필에 `나눔 신뢰 지표` 뱃지를 노출한다. 공개 뱃지는 `QR 보관 인증`, `수령 완료`, `긍정 평가`처럼 긍정/검증 신호만 포함하고 신고 건수/제재 이력은 노출하지 않는다. 현재 데모는 로컬 Zustand 상태로 즉시 반영하고, 신뢰 피드백 운영 모델은 [TRUST_FEEDBACK_OPERATING_MODEL.md](./TRUST_FEEDBACK_OPERATING_MODEL.md), 백엔드 요청 계약은 [BACKEND_TRUST_FEEDBACK_CONTRACT_REQUEST_2026-06-04.md](./BACKEND_TRUST_FEEDBACK_CONTRACT_REQUEST_2026-06-04.md)에 분리했다.
+- 수령 QR 인증으로 `completed`가 된 받은 나눔에만 `평가하기`를 노출한다. 2026-06-08 현재 모바일 평가 진입점에서는 신고 action을 노출하지 않는다.
+- 평가는 별점 없이 긍정 태그 기반으로 처리한다. 모바일 `ShareFeedbackScreen`은 `positiveTagIds`를 제출하고 `issueTagIds: []`를 유지한다.
+- 신고 API 계약은 별도 운영자 검토 요청으로 유지한다. 재도입 시 평가 태그와 섞지 않고 단일 `reasonId`, `open`, `pending`, `none` 상태 모델에 맞춘 별도 제품 UI로 연결한다.
+- 나눔 상세와 프로필에 `나눔 신뢰 지표` 뱃지를 노출한다. 공개 뱃지는 `QR 보관 인증`, `수령 완료`, `긍정 평가`처럼 긍정/검증 신호만 포함하고 신고 건수/제재 이력은 노출하지 않는다. 신뢰 피드백 운영 모델은 [TRUST_FEEDBACK_OPERATING_MODEL.md](./TRUST_FEEDBACK_OPERATING_MODEL.md), 백엔드 요청 계약은 [BACKEND_TRUST_FEEDBACK_CONTRACT_REQUEST_2026-06-04.md](./BACKEND_TRUST_FEEDBACK_CONTRACT_REQUEST_2026-06-04.md)에 분리했다.
 
 ## 2026-05-29 Post-MVP 백엔드 회신 반영
 

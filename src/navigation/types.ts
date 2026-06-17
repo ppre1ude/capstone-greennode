@@ -44,7 +44,6 @@ export type RootStackParamList = {
     providerId: number;
     fruitName: string;
     fridgeName: string;
-    initialMode?: 'review' | 'report';
   };
   MyShares:
     | {

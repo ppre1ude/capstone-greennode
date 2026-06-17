@@ -1,8 +1,8 @@
 # Backend Trust Feedback Contract Request
 
 > 목적: 수령 QR 인증 이후에만 가능한 태그 기반 평가, 운영자 처리용 신고 시스템, 공급자 신뢰 요약 API를 백엔드 계약으로 요청한다.
-> 기준일: 2026-06-04
-> 프론트 데모 상태: 로컬 Zustand 상태로 평가/신고 제출과 신뢰 뱃지 반영 UI 구현
+> 기준일: 2026-06-08
+> 프론트 데모 상태: 모바일 `ShareFeedbackScreen`은 긍정 평가 태그만 제출하고, 신고 UI는 현재 진입점에서 노출하지 않음
 > 운영 모델: [TRUST_FEEDBACK_OPERATING_MODEL.md](./TRUST_FEEDBACK_OPERATING_MODEL.md)
 
 ---
@@ -279,7 +279,7 @@ QR 보관 인증
 2026-06-07 현재 프론트는 로컬 데모 저장소가 아니라 실제 API client 경로를 사용한다. 백엔드 최신 VM 재검증 전에는 local mock과 `npm run qa:backend-contracts -- --mutate` 하네스로 아래 계약 drift를 먼저 잡는다.
 
 - `ShareFeedbackScreen`의 평가 제출 -> `POST /share-requests/{requestId}/review`
-- `ShareFeedbackScreen`의 신고 제출 -> `POST /share-requests/{requestId}/report`
+- 신고 endpoint -> `POST /share-requests/{requestId}/report` 유지. 현재 모바일 `ShareFeedbackScreen` 진입점에서는 신고 제출 UI를 노출하지 않으며, 신고 UI를 재도입할 때는 평가 태그와 분리된 제품 컴포넌트로 연결한다.
 - `PostDetailScreen`, `ProfileScreen`의 뱃지 -> `GET /users/{userId}/trust-summary`
 
 ## QA 체크리스트
